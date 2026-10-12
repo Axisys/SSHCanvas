@@ -10,8 +10,9 @@ Run: python tests/test_elevated_pane.py   (from the project root) or python test
 import os
 import sys
 
-from _common import (bootstrap, check, finish, wait_for, check_i18n_parity, check_i18n_format,
-                     check_release_state, clear_cfg, load_i18n_langs, EXPECTED_I18N_KEYS)
+from _common import (bootstrap, check, docs_mode, finish, rep_doc_text, wait_for, check_i18n_parity,
+                     check_i18n_format, check_release_state, clear_cfg, load_i18n_langs,
+                     EXPECTED_I18N_KEYS)
 
 ROOT, WORK = bootstrap()  # BEFORE the app imports (the HOME isolation)
 
@@ -634,13 +635,16 @@ check("§4 ...and an answer that still REACHES the slot elevates nothing and clo
 print("== §6 the contract, the documents and the release (ELEVATED_PANE.md §8) ==")
 # ════════════════════════════════════════════════════════════
 
-_contract = os.path.join(ROOT, "ELEVATED_PANE.md")
-check("§8 the frozen contract of the version is in the tree", os.path.isfile(_contract), _contract)
-_contract_text = open(_contract, encoding="utf-8").read() if os.path.isfile(_contract) else ""
-check("§8 ...and it declares the read-only surface, the third provider and the ONE refusal",
-      "READ-ONLY" in _contract_text and "THIRD provider" in _contract_text
-      and "sftp.elevated.read_only" in _contract_text
-      and "ELEVATED_PANE.md" in _contract_text)
+_contract_text = rep_doc_text("ELEVATED_PANE.md")
+if docs_mode():
+    # The frozen contract is INTERNAL and gitignored: its presence and the clauses read off it are
+    # audited under `run_all.py --docs` alone, so editing the document never turns the default run red.
+    _contract = os.path.join(ROOT, "ELEVATED_PANE.md")
+    check("§8 the frozen contract of the version is in the tree", os.path.isfile(_contract), _contract)
+    check("§8 ...and it declares the read-only surface, the third provider and the ONE refusal",
+          "READ-ONLY" in _contract_text and "THIRD provider" in _contract_text
+          and "sftp.elevated.read_only" in _contract_text
+          and "ELEVATED_PANE.md" in _contract_text)
 
 _src = open(os.path.join(ROOT, "modules", "sftp_pane_elevated.py"), encoding="utf-8").read()
 check("§5 the refusal is ONE sentence emitted from ONE place (no second wording of it)",

@@ -10,10 +10,12 @@ except ImportError:
 # longer read here, because the palette and the QSS are both the builder's job.
 try:
     from .ui import theme_qss
+    from .ui.main_window_settings import apply_saved_ui_font
     from .ui.settings_dialog import (load_theme_settings, theme_from_settings,
                                      apply_motion_setting, apply_density_setting)
 except ImportError:
     from ui import theme_qss
+    from ui.main_window_settings import apply_saved_ui_font
     from ui.settings_dialog import (load_theme_settings, theme_from_settings,
                                     apply_motion_setting, apply_density_setting)
 
@@ -45,6 +47,12 @@ def main():
 
         app = QApplication(sys.argv)
         app.setStyle('Fusion')
+
+        # v1.10rc1: the SAVED UI font goes on BEFORE the first widget exists — the theme's own rule
+        # extended to the font. A widget is polished with the application font it finds at that
+        # moment and Qt does not re-resolve it for a later `setFont()`, so a window built first keeps
+        # the system size however correct `app.font()` is afterwards (N89).
+        apply_saved_ui_font(app)
 
         # v1.8.1 (ROADMAP v1.8.1): the interactive TRUST SURFACE. A host key is verified and a private
         # key is unlocked on the CONNECT thread, so those questions are answered from a window here

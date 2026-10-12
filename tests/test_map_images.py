@@ -12,10 +12,10 @@ import os
 import re
 import struct
 
-from _common import (VERSION_FORMAT_RE, bootstrap, check, finish, check_i18n_parity,
+from _common import (VERSION_FORMAT_RE, bootstrap, check, docs_mode, finish, check_i18n_parity,
                      check_i18n_format, check_release_state, load_i18n_langs,
                      EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, releases_at_least,
-                     window_func_body)
+                     rep_doc_text, window_func_body)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation, offscreen)
 
@@ -340,9 +340,11 @@ check("§3 the generator exists and renders from the EXAMPLE map (never server_m
       and "build_example_project" in _src("tests", "_gen_docs_image.py")
       and "render_frame_to_pixmap" in _src("tests", "_gen_docs_image.py")
       and "server_map" not in _src("tests", "_gen_docs_image.py"))
-check("§3 ...and the refresh rule is written down where the workflow lives (DOCUMENTATION + README)",
-      "_gen_docs_image.py" in _src("DOCUMENTATION.md")
-      and "_gen_docs_image.py" in _readme)
+_doc_img = rep_doc_text("DOCUMENTATION.md")
+if docs_mode():
+    check("§3 ...and the refresh rule is written down where the workflow lives (DOCUMENTATION + README)",
+          "_gen_docs_image.py" in _readme and "_gen_docs_image.py" in _doc_img,
+          [ln for ln in _readme.splitlines() if "_gen_docs_image" in ln][:1])
 check("§3 the demo addresses of the poster can only be RFC 5737 (nothing real can be published)",
       all(EP.is_reserved_host(s["host"]) for s in EP.build_example_project()["servers"])
       and EP.RESERVED_NETWORK in _readme)
@@ -393,8 +395,8 @@ check("§4 the two actions live in the File family (the Hotkeys tab's grouping d
       HR.action_family("file.copy_map") == "file" and HR.action_family("file.docs_frame") == "file")
 
 _hub = SettingsDialog(None)
-check("§4 no new config key from this section (the hub collects 25)",
-      len(_hub.collect()) == 25, str(len(_hub.collect())))
+check("§4 no new config key from this section (the hub collects 26)",
+      len(_hub.collect()) == 27, str(len(_hub.collect())))
 _hub.close()
 check("§4 no new theme field (the palette is the v1.5rc1 one)",
       len(dataclasses.fields(theme.Theme)) == 60)

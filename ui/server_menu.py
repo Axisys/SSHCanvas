@@ -57,7 +57,8 @@ def rows(surface: str) -> tuple:
     """The declared rows of ONE surface: `(key, i18n key)` pairs and `SEPARATOR` markers.
 
     PURE — the surface is an argument, so the topical test can read the list each menu must render
-    without a widget. An unknown surface answers the rows every surface carries (`BOTH`).
+    without a widget. An unknown surface answers the rows every surface carries (`BOTH`), and so does
+    `BOTH` itself: a surface-only row is offered by the ONE surface it names, never by the union.
     """
     wanted = str(surface or BOTH)
     out = []
@@ -66,7 +67,7 @@ def rows(surface: str) -> tuple:
             out.append(SEPARATOR)
             continue
         key, i18n_key, surfaces = item
-        if surfaces == BOTH or wanted == surfaces or wanted not in (CARD, SIDEBAR):
+        if surfaces in (BOTH, wanted):
             out.append((key, i18n_key))
     return tuple(out)
 

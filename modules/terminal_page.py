@@ -174,9 +174,12 @@ SESSION_STATE_OFFLINE = "offline"   # the channel is closed
 def session_mark_status(page) -> str:
     """The DECLARED status token of one session ("" — nothing to show, the empty slot).
 
-    PURE and duck-typed: a page carrying the shipped state fields (`_session_ended` for a closed
-    channel, `last_error` for a failure it survived, `_shut_down` for a torn-down page) answers one
-    of the three states; anything else answers "" so a bare test stub keeps the transparent slot.
+    PURE and duck-typed: a page carrying the shipped state fields (`_connected` for a channel that
+    really came up, `_session_ended` for a closed one, `last_error` for a failure it survived,
+    `_shut_down` for a torn-down page) answers one of the three states; anything else answers "" so a
+    bare test stub keeps the transparent slot. A page that has NOT connected yet answers "" as well —
+    the dot of a live channel is a fact about the CHANNEL, and `connected_signal` is what establishes
+    it, so the connecting window is the empty slot (no fourth token, no new colour).
     """
     try:
         if getattr(page, "_shut_down", False):
@@ -185,6 +188,8 @@ def session_mark_status(page) -> str:
             return SESSION_STATE_OFFLINE
         if str(getattr(page, "last_error", "") or ""):
             return SESSION_STATE_WARN
+        if hasattr(page, "_connected") and not bool(getattr(page, "_connected", False)):
+            return ""
     except RuntimeError:
         return ""
     if hasattr(page, "_session_ended"):
@@ -597,6 +602,10 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # v1.9.1: the session's SECOND state — `closed_signal` has arrived, so `reconnect()` may
         # run (a live session is never re-armed). The re-arm clears it; `shutdown()` ends the page.
         self._session_ended = False
+        # v1.10rc1: the session's THIRD state — the channel is really UP (set by `connected_signal`,
+        # cleared by the close and by the re-arm). Without it a page that never connected wore the
+        # dot of a live channel: the state has to mean what its name says (`session_mark_status()`).
+        self._connected = False
         # v1.9.8 (task 3): the session's last FAILURE ("" — none): the reader behind the tab's WARN
         # state, written by `_show_error()` and cleared by the connect that answers it.
         self._last_error = ""
@@ -940,6 +949,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 pass  # Qt teardown of a dead thread — the new one is what matters
         self._session_password = password
         self._session_ended = False
+        # v1.10rc1: the re-armed session is CONNECTING again — the tab shows the empty slot until
+        # `connected_signal` arrives, exactly like the first connect.
+        self._connected = False
         self._initial_command = self._session_command
         self._write_reconnect_marker(t)
         self.terminal_thread = self._build_thread()
@@ -1405,6 +1417,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         if self._shut_down:
             return
         self._shut_down = True
+        self._connected = False     # v1.10rc1: a torn-down page owns no channel at all
         # v1.6.3: the cwd follow's hold-back is disarmed FIRST — a late chunk must not be
         # buffered by a session that is going away (nothing is lost: the bytes die with it).
         self._cwd_hold = None
@@ -1821,7 +1834,8 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         return self._session_status
 
     def _on_connected_state(self):
-        """`connected_signal`: clear the recorded failure and re-render the tab (v1.9.8, task 3)."""
+        """`connected_signal`: the channel is UP — clear the failure and re-render the tab."""
+        self._connected = True
         self._last_error = ""
         self._note_tab_state()
 
@@ -1843,6 +1857,8 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # v1.9.1: the ONE fact the Reconnect row reads — the session's channel is gone, so this
         # page can be brought back (`can_reconnect()`); the marker of a re-arm clears it again.
         self._session_ended = True
+        # v1.10rc1: the channel that was up is up no more — a tab without a channel is not `online`.
+        self._connected = False
         # v1.4.7 follow-up: one write — `_set_status_text` IS the bridge now (the line
         # and the host's status surface were two writes of the same text before).
         self._set_status_text(get_translator()("terminal.session_closed"))

@@ -370,8 +370,8 @@ collected = dlg.collect()
 check("dialog: saving is still possible — collect() carries the conflicting values",
       collected["hotkeys"]["file.new"] == "Ctrl+N"
       and collected["hotkeys"]["edit.duplicate"] == "Ctrl+N")
-check("dialog: collect() has exactly 25 config.json keys (+ the v1.7.5 Files page)",
-      len(collected) == 25 and "hotkeys" in collected and "theme" in collected,
+check("dialog: collect() has exactly 27 config.json keys (+ the v1.7.5 Files page, the auto-open and the TERM row)",
+      len(collected) == 27 and "hotkeys" in collected and "theme" in collected,
       str(sorted(collected)))
 
 # Disabling a hotkey through the table (an empty QKeySequenceEdit)

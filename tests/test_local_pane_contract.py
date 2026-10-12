@@ -11,7 +11,8 @@ import os
 import shutil
 import sys
 
-from _common import (bootstrap, check, finish, wait_until, wait_for, clear_cfg, write_cfg,
+from _common import (bootstrap, check, docs_mode, finish, rep_doc_text, wait_until, wait_for,
+                     clear_cfg, write_cfg,
                      load_i18n_langs, check_i18n_parity, check_i18n_format, check_release_state,
                      pane_family_files, pane_family_text, pane_func_body, pane_func_owner,
                      releases_at_least, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS)
@@ -40,8 +41,18 @@ TREE = os.path.join(WORK, "contract_tree")
 PANE_SRC = pane_family_text(ROOT)
 PANE_FILES = pane_family_files(ROOT)
 ENGINE_SRC = open(os.path.join(ROOT, "modules", "local_fs_worker.py"), encoding="utf-8").read()
-CONTRACT = open(os.path.join(ROOT, "LOCAL_PANE.md"), encoding="utf-8").read()
-PANES_CONTRACT = open(os.path.join(ROOT, "SFTP_PANES.md"), encoding="utf-8").read()
+def contract_doc(name):
+    """The text of an INTERNAL frozen contract — `""` unless the run asked for the docs regime.
+
+    `LOCAL_PANE.md` and `SFTP_PANES.md` are gitignored and hand-edited, so the clauses read off them
+    are audited under `run_all.py --docs` alone; the default run answers `""` and every check is
+    written `not text or …`, so the missing half is a SKIP rather than a crash.
+    """
+    return rep_doc_text(name)
+
+
+CONTRACT = contract_doc("LOCAL_PANE.md")
+PANES_CONTRACT = contract_doc("SFTP_PANES.md")
 LANGS = load_i18n_langs(ROOT)
 
 
@@ -328,8 +339,8 @@ check("§3 ...and the ALIAS wins, re-read the moment the session is identified",
       and _pane_named.header_label.text() == _pane_named.header_text_marked(),
       _pane_named.header_text())
 check("§3 the pane's SOURCE HEADER LINE is CARRIED (the v1.7.5 clause shipped with its widget)",
-      "header_label" in CONTRACT and "the pane's FIRST row" in CONTRACT
-      and "**`v1.7.5` (SHIPPED):**" in CONTRACT
+      (not CONTRACT or ("header_label" in CONTRACT and "the pane's FIRST row" in CONTRACT
+                        and "**`v1.7.5` (SHIPPED):**" in CONTRACT))
       and hasattr(_pane_l, "header_label")
       and _pane_l.header_label is _pane_l.source_header_label(),
       "the contract's amendment and its widget ship in ONE slot (ROADMAP v1.7.5, task 3)")
@@ -616,7 +627,8 @@ check("§8 the remote pane's behaviour does not move: it never stores a provider
       and _tab2.panes[0].provider is _worker2
       and "def worker" in PANE_SRC)
 check("§8 the ONE changed clause of the closed contract is the LOCAL exception, asserted beside it",
-      "a pane never stores one" in PANES_CONTRACT and "reads the container's" in PANES_CONTRACT
+      (not PANES_CONTRACT or ("a pane never stores one" in PANES_CONTRACT
+                              and "reads the container's" in PANES_CONTRACT))
       and "LOCAL_PANE.md §1" in PANE_SRC
       and _lpane._local_provider is not None,
       "SFTP_PANES.md §1 keeps its sentence for the remote pane")
@@ -649,20 +661,22 @@ check("§9 the version pin is the release this audit ships with",
       releases_at_least(EXPECTED_APP_VERSION, "1.7.4"), EXPECTED_APP_VERSION)
 check("§9 the i18n pin counts the shipped keys (the local pane's 18 + the v1.7.5 slot's 4 + "
       "the v1.7.5.1 slot's 6 + the v1.8 elevated pane's 20 + the v1.8.1 trust surface's 41 + the ONE "
-      "of v1.8.1.1) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row",
-      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13, str(EXPECTED_I18N_KEYS))
+      "of v1.8.1.1) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
+      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§9 VERSION_FORMAT did NOT move (a path is never written into a project)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§9 no new dependency was added for the local pane (the four pinned ones)",
       all(f"{d}>=" in open(os.path.join(ROOT, "requirements.txt"), encoding="utf-8").read()
           for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
-check("§9 the frozen contract and its topical files are in the repository",
-      os.path.exists(os.path.join(ROOT, "LOCAL_PANE.md"))
-      and os.path.exists(os.path.join(ROOT, "tests", "test_local_pane.py")))
+if docs_mode():
+    _contract_path = os.path.join(ROOT, "LOCAL_PANE.md")
+    _topical_path = os.path.join(ROOT, "tests", "test_local_pane.py")
+    check("§9 the frozen contract and its topical files are in the repository",
+          os.path.isfile(_contract_path) and os.path.isfile(_topical_path))
 check("§9 the contract carries its own acceptance for this slot (the audit is named there)",
-      "the clause-by-clause audit of THIS document" in CONTRACT
-      and "per clause group" in CONTRACT
-      and "ROADMAP.md` losing the" in CONTRACT)
+      not CONTRACT or ("the clause-by-clause audit of THIS document" in CONTRACT
+                       and "per clause group" in CONTRACT
+                       and "ROADMAP.md` losing the" in CONTRACT))
 check("§9 the LOCAL ERROR table is the contract's, read back clause by clause",
       all(key.startswith("sftp.local.") for key in _CODE_TABLE.values())
       and len([k for k in LANGS["en"]

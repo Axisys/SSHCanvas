@@ -118,7 +118,7 @@ of the file itself.
 | `test_context_menus.py` | — | Node and arrow context menus v0.7.3 (a former smoke-test part). |
 | `test_core.py` | — | Suite core (former smoke_test.py §1–5): compile, i18n, models, ANSI, profiles/keyring. |
 | `test_diagnostics.py` | network | `services/diagnostics.py`: `PingThread` + `ReverseDnsThread` (v0.9.9.3). |
-| `test_docs.py` | — | The documentation-consistency guards (the changelog family, ROADMAP, the counters, INDEX freshness, the code-comment budget). |
+| `test_docs.py` | docs | The documentation regime — run it with `--docs`, never by accident (see `_common.docs_mode`). |
 | `test_drawio_export.py` | — | Map export to drawio (.drawio) v0.9.5 (a former smoke test). |
 | `test_duplicate_multiselect.py` | — | Regression v0.9.3: node duplication + multi-select + group drag. |
 | `test_elevated_pane.py` | — | The ELEVATED Files pane (v1.8): the sudo command table and its allowlist, the handshake over a |
@@ -140,11 +140,14 @@ of the file itself.
 | `test_hotkeys_palette.py` | — | Hotkeys and command palette v0.9.2 (a former smoke-test part). |
 | `test_i18n_languages.py` | — | v1.3.3 — Languages without writing code ("name" in JSON + parity policy + documentation): the release's themed test. |
 | `test_i18n_live.py` | slow | v1.3.3.1 — Live i18n: the containers follow a language switch + the checks of the policy. |
+| `test_index.py` | — | The generated suite map — `tests/INDEX.md` is fresh and every test file carries its docstring. |
 | `test_inventory.py` | — | v1.5.5 — The inventory: the LIST mode becomes a report (ROADMAP v1.5.5). |
 | `test_keyring_fail_backend.py` | — | Regression v0.9.4b: the keyring fail backend + review notes. |
 | `test_keyring_validation.py` | — | Regression v0.9.5.5 (security #1): the keyring backend — validation and guard. |
 | `test_language_folder.py` | — | v1.3.3.8 — the user language folder, the import/export manager and ONE `terminal_max_open` range. |
 | `test_last_mile.py` | — | v1.6.8 — The last mile, closing the line: the gesture the map already had, and the problem set it already knew. |
+| `test_leftovers_v110.py` | — | v1.10rc1 — the leftovers of the closed line and the auto-open option. |
+| `test_leftovers_v110rc2.py` | — | v1.10rc2 — the leftovers the `1.10rc1` slot recorded: the marshalled send path, the PTY's |
 | `test_list_mode.py` | — | v1.4.6 — List mode: collapsing the map = server parameters (ROADMAP v1.4.6). |
 | `test_local_pane.py` | — | The LOCAL pane (v1.7.4rc2): the provider seam, the two path dialects, the OS listing of the |
 | `test_local_pane_contract.py` | — | v1.7.4 — the LOCAL pane, the closing release: the CLAUSE AUDIT of the frozen contract |

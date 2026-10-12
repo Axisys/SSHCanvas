@@ -96,8 +96,6 @@ LEVEL_STATUS = getattr(AL, "LEVEL_STATUS", "UI")
 
 #: The stamp of an event row — the activity ring's OWN renderer and format (date included).
 STAMP_FORMAT = getattr(AL, "STAMP_FORMAT", "%Y-%m-%d %H:%M:%S")
-#: The width of the stamp column: the full `STAMP_FORMAT` needs it whatever the rows hold.
-STAMP_COLUMN_WIDTH = 152
 #: How wide a CONTENT-measured column may grow (a long plugin or host name is a tooltip's job,
 #: not a column that pushes its neighbours off the pane).
 MEASURED_COLUMN_MAX = 240
@@ -395,6 +393,29 @@ class PluginsPanel(QDialog):
         except RuntimeError:
             pass  # Qt teardown — the tree is already destroyed
 
+    def _fit_stamp_column(self) -> None:
+        """Size the event tree's stamp column from the LIVE font — the reader both panels share.
+
+        An event row's first cell is `activity_log.stamp_text()`, so its width belongs to the module
+        that owns the FORMAT (`stamp_column_width()`), never to a literal: the literal cut the dated
+        stamp at the default font already, and a wider font needs more room still.
+        """
+        try:
+            self.event_tree.setColumnWidth(0, AL.stamp_column_width(self.event_tree.fontMetrics()))
+        except (RuntimeError, AttributeError):
+            pass  # Qt teardown — the tree is already destroyed
+
+    def _fit_measured_columns(self) -> None:
+        """Re-measure EVERY column sized from a font or from content (v1.10rc1) — never raises.
+
+        Called at construction and from `refresh_theme()`, the walk a live UI-font change already
+        runs (`ui/theme_qss.py` asks every top-level widget): a width measured once would otherwise
+        cut its value until something else rebuilt the tree.
+        """
+        self._fit_stamp_column()
+        self._fit_columns(self.plugin_tree, 2)
+        self._fit_columns(self.server_tree, 4)
+
     def _apply_caption_style(self):
         """Style the three captions as SECTION titles (the ONE registry, not a literal QSS)."""
         for caption in (getattr(self, "plugin_caption", None), getattr(self, "server_caption", None),
@@ -429,7 +450,7 @@ class PluginsPanel(QDialog):
 
         # ── the events (the session ring, newest first — the Activity panel's four cells) ──
         self.event_tree = self._make_tree(4)
-        self.event_tree.setColumnWidth(0, STAMP_COLUMN_WIDTH)
+        self._fit_stamp_column()
         self.splitter.addWidget(self._column("event_caption", self.event_tree,
                                              "event_empty"))
         try:
@@ -476,8 +497,13 @@ class PluginsPanel(QDialog):
             pass  # Qt teardown — the tree is already destroyed
 
     def refresh_theme(self):
-        """The theme walk of this window (its own painted icons; the QSS follows the application)."""
+        """The theme walk of this window (its own painted icons; the QSS follows the application).
+
+        v1.10rc1: the MEASURED columns are re-measured here too — this is the walk a live UI-font
+        change runs, and a width measured once at construction goes stale (or short) under it.
+        """
         self._apply_icons()
+        self._fit_measured_columns()
 
     # ── the chrome (translated) ────────────────────────────────────────────────
 

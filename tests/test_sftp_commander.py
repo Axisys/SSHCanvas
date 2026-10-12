@@ -13,7 +13,7 @@ import posixpath
 import re
 import sys
 
-from _common import (VERSION_FORMAT_RE, bootstrap, check, finish, wait_until, load_i18n_langs,
+from _common import (VERSION_FORMAT_RE, bootstrap, check, docs_mode, finish, wait_until, load_i18n_langs,
                      check_i18n_parity, check_i18n_format, check_release_state, clear_cfg,
                      read_cfg, releases_at_least, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS)
 
@@ -729,8 +729,12 @@ check("VERSION_FORMAT did NOT move (the project schema is unchanged)",
 check("no new dependency was added for the copy/move family (the four pinned ones)",
       all(f"{d}>=" in open(os.path.join(ROOT, "requirements.txt"), encoding="utf-8").read()
           for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
-check("the frozen contract of the line is in the repository (SFTP_PANES.md)",
-      os.path.exists(os.path.join(ROOT, "SFTP_PANES.md")))
+if docs_mode():
+    # The frozen contract of the line is an INTERNAL, gitignored document: its presence is audited
+    # under `run_all.py --docs` only, so editing the document never turns the default run red.
+    _contract_path = os.path.join(ROOT, "SFTP_PANES.md")
+    check("the frozen contract of the line is in the repository (SFTP_PANES.md)",
+          os.path.isfile(_contract_path))
 
 
 # ════════════════════════════════════════════════════════════

@@ -170,6 +170,12 @@ check(f"the session asks for the SSH keepalive ({ST.TERMINAL_KEEPALIVE_SEC} s �
 check("the session really opened (invoke_shell 120×32 + the connected signal)",
       _ev["connected"] == 1 and _client.shell_kwargs.get("width") == 120
       and _client.shell_kwargs.get("height") == 32, str(_client.shell_kwargs))
+# v1.10rc1 (N97): `TERM` is what the remote terminfo reads to decide its capabilities. The canvas
+# renders 256 colours and truecolor, so the entry has to DECLARE them — `xterm` says 8 and a program
+# that checks (mc with a 256-colour skin) chooses its safe fallback instead.
+check("the PTY asks for a 256-colour terminal (`TERM=xterm-256color`, the ONE place it crosses)",
+      _client.shell_kwargs.get("term") == ST.TERMINAL_TYPE == "xterm-256color",
+      str(_client.shell_kwargs.get("term")))
 
 # 1.2 EOF: the loop BREAKS instead of calling recv() forever, and the end is announced.
 check("EOF (recv() == b''): the loop ends inside the budget", _dt < 1.0, f"{_dt:.3f} s")
@@ -540,9 +546,9 @@ check("the 'Terminal' tab offers the three shapes (block / bar / underline)",
       _ids == ["bar", "block", "underline"], str(_ids))
 check("the combo opens on the STORED shape", _dlg.cursor_combo.currentData() == "underline",
       str(_dlg.cursor_combo.currentData()))
-check("collect() carries terminal_cursor_style (the 25th UI-facing key)",
+check("collect() carries terminal_cursor_style (the 27th UI-facing key is v1.10rc2's TERM row)",
       _dlg.collect().get("terminal_cursor_style") == "underline"
-      and len(_dlg.collect()) == 25, str(len(_dlg.collect())))
+      and len(_dlg.collect()) == 27, str(len(_dlg.collect())))
 check("the tab's label and its three values are translated (not the raw key)",
       _dlg._lbl_cursor.text() not in ("", "settings.terminal.cursor"),
       _dlg._lbl_cursor.text())

@@ -68,6 +68,44 @@ def bootstrap(faulthandler_timeout=180):
     return root, work
 
 
+REPO_DOCS_ENV = "SSHMAP_TEST_DOCS"
+
+
+def default_root():
+    """The repository root (this file lives in `<root>/tests/`)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def docs_mode():
+    """True when the run asked for HOLDING THE DOCUMENTS TO THE CONTRACT (`run_all.py --docs`).
+
+    The internal documents (`AGENTS.md`, `DOCUMENTATION.md`, `ROADMAP.md`, the changelog family, the
+    frozen contracts) are the maintainer's own files, edited by hand: a suite that fails while one of
+    them is half-written blocks the edit instead of guarding it. So every check that reads one is
+    OPT-IN — the default run is green whatever the documents say, and `--docs` turns the whole
+    documentation regime (the reference docs, the byte budgets, the comment ratchet, the contract
+    audits) back on in one command.
+    """
+    return os.environ.get(REPO_DOCS_ENV) == "1"
+
+
+def rep_doc_text(*parts):
+    """The text of ONE internal document — `""` when the audit is off, or when the file is absent.
+
+    The ONE reader the topical files use instead of reaching for `open()`: an internal document that
+    is missing (a fresh clone — they are all gitignored) or unguarded (the default run) answers `""`,
+    and every caller writes its check as `not text or …` so the missing half is a SKIP, never a crash.
+    """
+    if not docs_mode():
+        return ""
+    path = os.path.join(default_root(), *parts)
+    if not os.path.isfile(path):
+        print(f"  SKIP  {os.path.basename(path)} is not present (an internal, gitignored document)")
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
 def check(name, cond, detail=""):
     """One check: prints ok/FAIL and accumulates into PASS/FAIL.
 
@@ -458,8 +496,8 @@ def example_plugin_problems(name, source):
 # in 12 i18n files + the APP_VERSION/requirements pins in 7 release-state sections).
 # The misses of the keys themselves against the code are caught by check_i18n_keys.py.
 # ─────────────────────────────────────────────────────────────────────────────
-EXPECTED_APP_VERSION = "1.9.8"   # the current release (a sentinel: it catches "a bump to the wrong version")
-EXPECTED_I18N_KEYS = 1092       # the parity of the TRANSLATION keys of every language file vs en (the
+EXPECTED_APP_VERSION = "1.10"   # the current release (a sentinel: it catches "a bump to the wrong version")
+EXPECTED_I18N_KEYS = 1094       # the parity of the TRANSLATION keys of every language file vs en (the
                                 # "name"/"partial" meta keys are excluded) — ONE number per release; the
                                 # per-release counts live in the changelog family, never here
 VERSION_FORMAT_RE = re.compile(r"^\d+(\.\d+){1,3}([Rr][Cc]\d+)?$")  # "1.1.3", "1.0RC4", "0.9.9.7", "1.2.10rc1" (v1.2.10: + lowercase rc)

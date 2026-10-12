@@ -5,12 +5,56 @@ the window module (a cycle) — it duck-types the instance. The hub itself is `u
 (which knows nothing about the window: the `ui/sidebar.py` pattern), and the dialog OPENER
 (`_open_settings_dialog()`, the menu slot) stays on the window with the rest of the menubar cluster.
 
-Owned here: the `ui_*` options applied live without a restart (the UI font through `QApplication.setFont`,
-the sidebar buttons, the double-click mode, the collapse state and LIST mode) and the post-dialog pass —
-the theme, the autosave timer, the status settings, the hotkeys, and the live terminal settings of the
-ALREADY OPEN sessions. Mechanism — `DOCUMENTATION.md` §41."""
+Owned here: the `ui_*` options applied live without a restart (the UI font through the ONE
+`apply_saved_ui_font()`, the sidebar buttons, the double-click mode, the collapse state and LIST mode) and
+the post-dialog pass — the theme, the autosave timer, the status settings, the hotkeys, and the live
+terminal settings of the ALREADY OPEN sessions. Mechanism — `DOCUMENTATION.md` §41."""
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication
+
+
+def apply_saved_ui_font(app=None) -> bool:
+    """Put the SAVED UI font on the application — the ONE font applier, called BEFORE any widget.
+
+    The theme's own rule ("nothing is ever constructed with the wrong palette") holds for the font as
+    well: Qt resolves the application font when a widget is POLISHED, so a widget built before
+    `setFont()` keeps the old size however correct `app.font()` is afterwards. Hence the three call
+    sites of the same helper: `main.py` right after `QApplication` and before the theme,
+    `MainWindow.__init__` before its first widget (a directly built window behaves the same) and the
+    settings hub, where it runs BEFORE its theme pass — that pass re-polishes everything and re-runs
+    `refresh_theme()`, which is where a MEASURED column re-measures itself.
+
+    True when a font was applied; a config without the font keys leaves the application font alone.
+    Never raises: the font must not be able to break a startup or an apply.
+    """
+    try:
+        from ui.settings_dialog import load_ui_settings
+    except ImportError:  # flat launch from the project root
+        try:
+            from settings_dialog import load_ui_settings
+        except ImportError:
+            return False
+    try:
+        ui_cfg = load_ui_settings()
+    except Exception:  # noqa: BLE001 — an unreadable config is the system font
+        return False
+    family = ui_cfg["font_family"]
+    size = ui_cfg["font_size"]
+    if not family and size is None:
+        return False
+    try:
+        application = app if app is not None else QApplication.instance()
+        if application is None:
+            return False
+        font = QFont(application.font())
+        if family:
+            font.setFamily(family)
+        if size is not None:
+            font.setPointSize(int(size))
+        application.setFont(font)
+        return True
+    except Exception:  # noqa: BLE001 — the font must not break startup/apply
+        return False
 
 
 class SettingsMixin:
@@ -19,35 +63,25 @@ class SettingsMixin:
     def _apply_ui_options_from_config(self):
         """v1.1.1: apply the ui_* options from config.json (at startup and after the dialog's OK).
 
-        * UI font — QApplication.setFont (family/size; empty/0 = system);
-          applied to the widgets without a restart (Qt recomputes fonts not
-          set explicitly on each widget).
+        * UI font — the ONE `apply_saved_ui_font()` (family/size; empty/0 = system); every widget
+          built after it is born at the right size, and the hub applies it BEFORE its theme pass
+          so a live change re-polishes the whole interface.
         * The sidebar button block — SidebarPanel.set_buttons_visible (the layout
           reflows itself); the whole sidebar is hidden separately — the "View" menu item.
         * The node double-click mode — the self._node_double_click_mode cache
           ("properties" the default | "connect" -> _run_ssh_connect).
         """
+        # v1.10rc1: the font goes through the ONE applier (the startup call already ran before the
+        # first widget existed: `main.py` and the top of `MainWindow.__init__`), so this is the live
+        # re-apply of the same helper — the ordinary "unset" case applies nothing at all.
+        if not apply_saved_ui_font() and self.log:
+            self.log.debug("Apply UI font: no font configured (the system one stays)")
+
         try:
             from ui.settings_dialog import load_ui_settings as _load_ui
         except ImportError:  # flat launch from the project root
             from settings_dialog import load_ui_settings as _load_ui
         ui_cfg = _load_ui()
-
-        family = ui_cfg["font_family"]
-        size = ui_cfg["font_size"]
-        if family or size is not None:
-            try:
-                app = QApplication.instance()
-                if app is not None:
-                    f = QFont(app.font())
-                    if family:
-                        f.setFamily(family)
-                    if size is not None:
-                        f.setPointSize(int(size))
-                    app.setFont(f)
-            except Exception as e:  # noqa: BLE001 — the font must not break startup/apply
-                if self.log:
-                    self.log.warning(f"Apply UI font failed: {e}")
 
         panel = getattr(self, "sidebar", None)
         if panel is not None:
@@ -106,6 +140,11 @@ class SettingsMixin:
           open; this is what makes the OK authoritative (and what covers a config
           edited by hand between the two).
         """
+        # v1.10rc1: the FONT first — the theme pass below re-polishes every widget and re-runs each
+        # `refresh_theme()` (which is where a measured column re-measures), so the size has to be in
+        # place before it, exactly as the startup path puts it before the first widget.
+        apply_saved_ui_font()
+
         # v1.4.3 (ROADMAP task 6): the theme first — every other option below is
         # applied to widgets whose colours the switch may have just changed.
         # v1.5rc1: the motion flag travels in the SAME nested key, so it is

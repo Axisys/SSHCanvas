@@ -39,6 +39,49 @@ except ImportError:
 RECENT_PROJECTS_KEY = "recent_projects"
 RECENT_PROJECTS_MAX = 10
 
+# v1.10rc1: the AUTO-OPEN option — the CONFIG boolean `ui_reopen_last_project` (OFF by default) and
+# the path of the project the window was CLOSED on ("" for a NAMELESS one). They are the MRU's
+# siblings and this module owns both writers; the read is the PURE pair below.
+REOPEN_LAST_PROJECT_KEY = "ui_reopen_last_project"
+LAST_PROJECT_PATH_KEY = "last_project_path"
+
+
+def reopen_last_project_enabled(cfg=None) -> bool:
+    """Is the auto-open option ON? — the PURE reader of `ui_reopen_last_project`, OFF by default.
+
+    CONFIG and never the project (the `guard_commands` rule): a missing key, a foreign type and an
+    unreadable store all answer False, so only a real JSON `true` asks for the restore.
+    """
+    if cfg is None:
+        try:
+            from i18n import load_config
+            cfg = load_config()
+        except Exception:  # noqa: BLE001 — an unreadable store is the declared default
+            return False
+    try:
+        return cfg.get(REOPEN_LAST_PROJECT_KEY) is True
+    except Exception:  # noqa: BLE001 — a foreign config object is "off"
+        return False
+
+
+def last_project_path(cfg=None) -> str:
+    """The path the application was CLOSED on ("" — nothing recorded, or a nameless project). PURE.
+
+    A HINT, not a promise: the caller checks that the file is still there, so a project moved or
+    deleted between two runs is a quiet "nothing to reopen" instead of a dialog at startup.
+    """
+    if cfg is None:
+        try:
+            from i18n import load_config
+            cfg = load_config()
+        except Exception:  # noqa: BLE001 — an unreadable store restores nothing
+            return ""
+    try:
+        value = cfg.get(LAST_PROJECT_PATH_KEY)
+    except Exception:  # noqa: BLE001 — a foreign config object restores nothing
+        return ""
+    return value.strip() if isinstance(value, str) else ""
+
 
 class ProjectIOMixin:
     """Project (file) methods: new/open/load/save/autosave/backups/restore."""
@@ -426,6 +469,47 @@ class ProjectIOMixin:
                 self._populate_recent_menu(menu)
             return False
         return self._load_project_at(path)
+
+    # ── v1.10rc1: the auto-open option (`ui_reopen_last_project`) ─────────────
+
+    def _remember_last_project(self) -> None:
+        """Write the path THIS window is closing on — the ONE writer of `last_project_path`.
+
+        Called by `closeEvent` beside the geometry and the splitter (the same "even on a cancelled
+        close" rule), and a NAMELESS project — a new unsaved one, the demo map — writes an EMPTY
+        path: the declared "a new unsaved project has nothing to restore" stands, and the example
+        can never come back as if it were the user's own file.
+        """
+        try:
+            path = str(getattr(self, "_project_file", "") or "")
+            from i18n import save_config as _save_cfg
+            _save_cfg({LAST_PROJECT_PATH_KEY: os.path.abspath(path) if path else ""})
+        except Exception as e:  # noqa: BLE001 — the memory is a convenience, never a condition
+            if self.log:
+                self.log.warning(f"Could not remember the last project: {e}")
+
+    def _reopen_last_project_at_startup(self) -> bool:
+        """The startup call of the option: reopen the project the application was CLOSED on.
+
+        The LAST stage of `MainWindow.__init__` (everything a load touches already exists) and the
+        ordinary `_load_project_at()` path, so the MRU, the keyring, the status round, the title and
+        the view state are the shipped ones — the option decides only WHETHER a load happens. Two
+        deliberate narrowings: the option must be ON (`reopen_last_project_enabled()`, CONFIG and OFF
+        by default) and the recorded path must still be a FILE, so a project moved or deleted between
+        two runs is a quiet no-op rather than a dialog before the window is even shown.
+        `skip_autosave_prompt=True` is the rule the explicit restore path already takes: "which
+        source?" is a File → Open question, and a startup cannot ask it in context.
+        """
+        if not reopen_last_project_enabled():
+            return False
+        path = last_project_path()
+        if not path:
+            return False
+        if not os.path.isfile(path):
+            if self.log:
+                self.log.info(f"The project of the last run is gone, nothing to reopen: {path}")
+            return False
+        return bool(self._load_project_at(path, skip_autosave_prompt=True))
 
     def _load_project_at(self, path: str, skip_autosave_prompt: bool = False,
                          raw: dict = None, example: bool = False) -> bool:

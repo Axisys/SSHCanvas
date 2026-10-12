@@ -14,8 +14,8 @@ The key inventory and the live-application rule of each row are the DOCUMENTATIO
 
 import sys
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QKeySequence
+from PySide6.QtCore import Qt, QRegularExpression, Signal
+from PySide6.QtGui import QColor, QKeySequence, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QCheckBox,
@@ -137,12 +137,14 @@ def load_ui_settings():
        "font_size": int | None,       # None — not set (the system size; 0 = the same)
        "node_double_click": str,      # "properties" (default) | "connect"
        "show_sidebar_buttons": bool,  # default True — the sidebar button block is visible
-       "show_connection_type": bool}  # default False — the type on the connection plaque is not drawn
+       "show_connection_type": bool,  # default False — the type on the connection plaque is not drawn
+       "reopen_last_project": bool}   # default False — the project of the last run is NOT reopened
     Invalid values (foreign type, out of range) → default. Never raises.
     """
     defaults = {"font_family": "", "font_size": None,
                 "node_double_click": "properties",
-                "show_sidebar_buttons": True, "show_connection_type": False}
+                "show_sidebar_buttons": True, "show_connection_type": False,
+                "reopen_last_project": False}
     try:
         from i18n import load_config
     except Exception:
@@ -168,6 +170,12 @@ def load_ui_settings():
     v = cfg.get("ui_show_connection_type")
     if isinstance(v, bool):
         defaults["show_connection_type"] = v
+
+    # v1.10rc1: the auto-open option — OFF unless the config really says `true`
+    # (`ui/main_window_project_io.py` owns the path it reads back at startup).
+    v = cfg.get("ui_reopen_last_project")
+    if isinstance(v, bool):
+        defaults["reopen_last_project"] = v
 
     return defaults
 
@@ -651,6 +659,14 @@ class SettingsDialog(QDialog):
         self.sidebar_buttons_chk.setChecked(ui_cfg["show_sidebar_buttons"])
         form.addRow("", self.sidebar_buttons_chk)
 
+        # v1.10rc1: the auto-open option — the application may reopen the project it was CLOSED on.
+        # OFF by default (a startup that loads something the user did not ask for is a surprise) and
+        # the checkbox is the only WRITER of the policy: the PATH is `closeEvent`'s
+        # (`ui/main_window_project_io.py` owns both keys).
+        self.reopen_last_chk = QCheckBox(_t("settings.general.reopen_last_project"))
+        self.reopen_last_chk.setChecked(ui_cfg["reopen_last_project"])
+        form.addRow("", self.reopen_last_chk)
+
         self._register_form_rows(tab, form)   # v1.5rc4: the searchable rows of this tab
         self.tabs.addTab(tab, _t("settings.tab.general"))
 
@@ -913,9 +929,11 @@ class SettingsDialog(QDialog):
 
     def _build_terminal_tab(self):
         try:
-            from ..modules.ssh_terminal import load_terminal_settings, resolve_files_mode
+            from ..modules.ssh_terminal import (TERM_NAME_PATTERN, TERM_PRESETS,
+                                                load_terminal_settings, resolve_files_mode)
         except ImportError:
-            from modules.ssh_terminal import load_terminal_settings, resolve_files_mode
+            from modules.ssh_terminal import (TERM_NAME_PATTERN, TERM_PRESETS,
+                                              load_terminal_settings, resolve_files_mode)
         cfg = load_terminal_settings()
 
         tab = QWidget()
@@ -1036,6 +1054,31 @@ class SettingsDialog(QDialog):
         self.cursor_combo.setCurrentIndex(idx)
         self._lbl_cursor = QLabel(_t("settings.terminal.cursor"))
         form.addRow(self._lbl_cursor, self.cursor_combo)
+
+        # v1.10rc2: the PTY's `TERM` (`terminal_term`) — the value a REMOTE program reads to decide
+        # its capabilities. The presets are the common spellings and the field stays EDITABLE,
+        # because a terminfo entry is a remote-side fact; the validator IS the reader's allowlist
+        # (`resolve_term()`), so what the field shows is exactly what the key may carry. Read when a
+        # PTY is created (a NEW session, and every re-arm): an OPEN session keeps its own name.
+        self.term_combo = QComboBox()
+        self.term_combo.setEditable(True)
+        for _name in TERM_PRESETS:
+            self.term_combo.addItem(_name, _name)
+        _term = cfg["term"]
+        _term_idx = next((i for i in range(self.term_combo.count())
+                          if self.term_combo.itemData(i) == _term), -1)
+        if _term_idx >= 0:
+            self.term_combo.setCurrentIndex(_term_idx)
+        else:
+            self.term_combo.setCurrentIndex(0)
+            self.term_combo.setEditText(_term)
+        if self.term_combo.lineEdit() is not None:
+            # The field carries the SAME allowlist the reader applies (`resolve_term()`), ANCHORED so
+            # a character the rule does not allow never enters the field at all.
+            self.term_combo.lineEdit().setValidator(QRegularExpressionValidator(
+                QRegularExpression(r"\A" + TERM_NAME_PATTERN + r"\z"), self.term_combo))
+        self._lbl_term = QLabel(_t("settings.terminal.term"))
+        form.addRow(self._lbl_term, self.term_combo)
 
         self._register_form_rows(tab, form)   # v1.5rc4: the searchable rows of this tab
         self.tabs.addTab(tab, _t("settings.tab.terminal"))
@@ -1989,7 +2032,14 @@ class SettingsDialog(QDialog):
         CEILING, in BYTES, of the new "Files" tab; the slider and the value box give a
         value inside the module's declared range, so it is valid by construction).
         24 → 25 UI-facing keys.
+        v1.10rc2: +1 key — terminal_term (the PTY's `TERM` of the "Terminal" tab; the field is
+        editable and the reader's OWN allowlist (`resolve_term()`) judges what it carries, so a
+        value the field cannot express is impossible by construction). 26 → 27 UI-facing keys.
         """
+        try:  # the field's OWN allowlist — the SAME reader the key is validated by at load time
+            from ..modules.ssh_terminal import resolve_term
+        except ImportError:
+            from modules.ssh_terminal import resolve_term
         return {
             "external_terminal": self.ext_term_combo.currentData() or "auto",
             # v1.2.2 (task 4): the terminal display mode
@@ -2009,6 +2059,9 @@ class SettingsDialog(QDialog):
             "terminal_wheel": self.wheel_combo.currentData() or "scrollback",
             # v1.6.2 (ROADMAP task 4): the cursor shape — the 23rd UI-facing key
             "terminal_cursor_style": self.cursor_combo.currentData() or "bar",
+            # v1.10rc2: the PTY's `TERM` — the 27th UI-facing key. The reader's OWN allowlist
+            # judges the field, so a hand-typed name and the config key cannot disagree.
+            "terminal_term": resolve_term(self.term_combo.currentText()),
             # v1.4.3 (ROADMAP task 6): the appearance — the mode + the accent hue,
             # stored as the colour the user actually picked (the hue is derived
             # back). v1.5rc1: +`motion` — the "Reduce motion" switch of the same
@@ -2042,6 +2095,8 @@ class SettingsDialog(QDialog):
             "ui_node_double_click": self.node_dblclick_combo.currentData() or "properties",
             "ui_show_sidebar_buttons": bool(self.sidebar_buttons_chk.isChecked()),
             "ui_show_connection_type": bool(self.show_conn_type_chk.isChecked()),
+            # v1.10rc1: the auto-open option — the path beside it is closeEvent's own key
+            "ui_reopen_last_project": bool(self.reopen_last_chk.isChecked()),
             # v1.3.2 (ROADMAP task 2/3): the configurable hotkeys — the table's values
             # ({} — a dialog built without the tab, a defensive fallback)
             "hotkeys": self.hotkey_sequences(),
@@ -2131,6 +2186,7 @@ class SettingsDialog(QDialog):
         self.ui_font_size_spin.setSpecialValueText(_t("settings.ui_font_system"))
         self.ui_font_size_spin.setToolTip(_t("settings.general.ui_font_size_hint"))
         self.sidebar_buttons_chk.setText(_t("settings.general.sidebar_buttons"))
+        self.reopen_last_chk.setText(_t("settings.general.reopen_last_project"))
 
         # v1.2.2: the display mode ("Terminal" tab)
         self._lbl_mode.setText(_t("settings.terminal.mode"))
@@ -2202,6 +2258,10 @@ class SettingsDialog(QDialog):
             }.get(sid)
             if key:
                 self.cursor_combo.setItemText(i, _t(key))
+
+        # v1.10rc2: the PTY's `TERM` — the LABEL is the dialog's; the entries are terminfo names a
+        # remote host reads, so they are never translated.
+        self._lbl_term.setText(_t("settings.terminal.term"))
 
         self._lbl_status_interval.setText(_t("settings.statuses.interval"))
         self._lbl_probe_timeout.setText(_t("settings.statuses.timeout"))

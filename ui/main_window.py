@@ -179,7 +179,7 @@ try:
     from .main_window_ssh import SshMixin
     from .main_window_status import StatusMixin
     from .main_window_plugins import PluginMixin
-    from .main_window_settings import SettingsMixin
+    from .main_window_settings import SettingsMixin, apply_saved_ui_font
     from .main_window_scene import SceneCommandMixin
     from .main_window_exports import ExportMixin
     from .main_window_overlays import OverlaysMixin
@@ -204,7 +204,7 @@ except ImportError:  # flat layout without the package (same pattern as the impo
     from main_window_ssh import SshMixin
     from main_window_status import StatusMixin
     from main_window_plugins import PluginMixin
-    from main_window_settings import SettingsMixin
+    from main_window_settings import SettingsMixin, apply_saved_ui_font
     from main_window_scene import SceneCommandMixin
     from main_window_exports import ExportMixin
     from main_window_overlays import OverlaysMixin
@@ -317,11 +317,12 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
     def __init__(self):
         super().__init__()
 
-        # ── the SAVED theme, before anything is built ──
-        # `main.py` applies it too (even earlier, right after QApplication), but the window does not
-        # depend on that: a MainWindow created directly (a test, an embedder) must still come up in the
-        # user's theme, and every widget below is CONSTRUCTED with the right palette instead of being
-        # repainted afterwards (`theme_from_settings` never fails, `apply_theme` never raises).
+        # ── the SAVED theme and FONT, before anything is built ──
+        # `main.py` applies both too (even earlier, right after QApplication), but the window does not
+        # depend on that: a widget built directly (a test, an embedder) must still come up in the user's
+        # look, and every widget below is CONSTRUCTED with the right palette and font size instead of
+        # being repainted afterwards (`apply_theme` and the font helper never raise). §15, §41.
+        apply_saved_ui_font()
         if theme_qss is not None:
             try:
                 from ui.settings_dialog import (load_theme_settings, theme_from_settings,
@@ -637,6 +638,16 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         if self._autosave_enabled:
             self._autosave_timer.start()
 
+        # ── v1.10rc1: the auto-open option ──
+        # The LAST stage: the option asks and the recorded path answers, through the shipped
+        # `_load_project_at()` (which needs the scene, the sidebar, the status checker and the MRU
+        # machine — all of them exist by now). OFF by default; never fatal.
+        try:
+            self._reopen_last_project_at_startup()
+        except Exception as e:  # noqa: BLE001 — a restore must never break the startup
+            if self.log:
+                self.log.warning(f"Reopen the last project failed: {e}")
+
     def _update_window_title(self):
         """Rebuild the window title: base title + project file + [*] marker."""
         # AUDIT v0.8.3 (#1): base — APP_NAME/APP_VERSION from version.py (the single
@@ -897,6 +908,14 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         # still alive. Same rule as the geometry above: it must never block the close.
         try:
             self._save_remembered_dirs()
+        except Exception:  # noqa: BLE001 — the memory must not block closing
+            pass
+
+        # v1.10rc1: the path the NEXT start may reopen (`ui_reopen_last_project`) — written with the
+        # geometry and for the same reason, so a cancelled close still records the current project.
+        # A NAMELESS project writes an EMPTY path: there is nothing to restore for it.
+        try:
+            self._remember_last_project()
         except Exception:  # noqa: BLE001 — the memory must not block closing
             pass
 

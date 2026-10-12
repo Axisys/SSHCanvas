@@ -46,7 +46,7 @@ print("== §1 the PURE classifier: the declared token table ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§1 the declared families are the table this file drives",
-      CG.FAMILIES == ("reboot", "rm", "remove", "mkfs", "dd", "wipefs", "partition", "userdel",
+      CG.FAMILIES == ("reboot", "init", "rm", "remove", "mkfs", "dd", "wipefs", "partition", "userdel",
                       "kill", "fork_bomb"), str(CG.FAMILIES))
 check("§1 the reboot family matches, with a wrapper and a foreign path",
       [CG.dangerous_token(c) for c in ("reboot", "shutdown -h now", "/sbin/poweroff",
@@ -112,6 +112,27 @@ check("§1 an ordinary fleet command never matches (the everyday case stays quie
 check("§1 a QUOTED word is an argument, not a command (the quote-aware word split)",
       CG.dangerous_token('echo "rm -rf /"') == ""
       and CG.dangerous_token("echo reboot") == "reboot")
+check("§1 ...unless a POSITIONAL interpreter holds it: the `-c` payload, `eval` and `ssh host '…'`",
+      [CG.dangerous_token(c) for c in ('bash -c "rm -rf /tmp/x"', 'sudo sh -c "shutdown -h now"',
+                                       'bash -lc "mkfs.ext4 /dev/sda1"', 'eval "rm -rf /"',
+                                       "ssh prod 'sudo systemctl reboot'",
+                                       'ssh -p 2222 host "kill -9 1"')]
+      == ["rm -rf", "shutdown", "mkfs.ext4", "rm -rf", "reboot", "kill -9"],
+      str([CG.dangerous_token(c) for c in ('bash -c "rm -rf /tmp/x"', 'sudo sh -c "shutdown -h now"',
+                                           'bash -lc "mkfs.ext4 /dev/sda1"', 'eval "rm -rf /"',
+                                           "ssh prod 'sudo systemctl reboot'",
+                                           'ssh -p 2222 host "kill -9 1"')]))
+check("§1 ...while the two DECLARED blind spots stay blind (a FILE indirection and a foreign payload)",
+      CG.dangerous_token("echo 'rm -rf /' > run.sh && sh run.sh") == ""
+      and CG.dangerous_token('python -c "import shutil; shutil.rmtree(chr(47))"') == ""
+      and CG.dangerous_token('bash -c "echo \'rm -rf /\'"') == "")
+check("§1 the runlevel family needs its TARGET — `init 3` is a plain switch",
+      [CG.dangerous_token(c) for c in ("init 0", "init 6", "telinit 0", "/sbin/telinit 6",
+                                       "sudo init 6", "init -r", "init 3", "init", "initscript 0")]
+      == ["init", "init", "telinit", "telinit", "init", "init", "", "", ""],
+      str([CG.dangerous_token(c) for c in ("init 0", "init 6", "telinit 0", "/sbin/telinit 6",
+                                           "sudo init 6", "init -r", "init 3", "init",
+                                           "initscript 0")]))
 check("§1 a separator never hides the family that follows it",
       CG.dangerous_token("cd /tmp && rm -rf x") == "rm -rf"
       and CG.dangerous_token("true; shutdown -h now") == "shutdown"
@@ -546,8 +567,8 @@ print("== §7 release state + i18n parity ==")
 
 _NEW_KEYS = ("guard.command.text", "guard.command.broadcast", "plugins.command.guard_refused")
 check("§7 the release moved past v1.9.6 and the pin counts the guard's THREE new keys "
-      "plus v1.9.7's TWELVE",
-      releases_at_least(EXPECTED_APP_VERSION, "1.9.6") and EXPECTED_I18N_KEYS == 1064 + 3 + 12 + 13,
+      "plus v1.9.7's TWELVE, v1.9.8's THIRTEEN and v1.10rc1's ONE",
+      releases_at_least(EXPECTED_APP_VERSION, "1.9.6") and EXPECTED_I18N_KEYS == 1064 + 3 + 12 + 13 + 1 + 1,
       f"{EXPECTED_APP_VERSION} {EXPECTED_I18N_KEYS}")
 langs = load_i18n_langs(ROOT)
 _missing = {code: [k for k in _NEW_KEYS if not str(data.get(k) or "").strip()]

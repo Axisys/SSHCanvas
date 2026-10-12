@@ -15,6 +15,8 @@ try:
 except ImportError:
     from modules.terminal_screen import (DEFAULT_HISTORY_LINES, SCROLL_MODE_DEFAULT, SCROLL_MODES)
 
+import re
+
 try:
     from .terminal_widget import (CURSOR_STYLE_DEFAULT, CURSOR_STYLES,
                                   FONT_SIZE_MAX, FONT_SIZE_MIN)
@@ -25,6 +27,41 @@ except ImportError:
 #: The accepted values of `terminal_mode`, the DEFAULT first. `"single"` makes every new session
 #: join the LAST live terminal window as its next tab — one window that collects them all.
 TERMINAL_MODES = ("windows", "tabs", "single")
+
+# ── the PTY's terminal type — ONE key, ONE declared default, ONE allowlist ────
+# The value `invoke_shell(term=…)` puts on the wire. It is READ when a session is CREATED (like the
+# palette and the font), so a re-arm repeats the entry the session was opened with; `modules/
+# ssh_terminal.py` RE-EXPORTS the default as `TERMINAL_TYPE`, the family's live namespace.
+TERM_CONFIG_KEY = "terminal_term"
+
+#: The default entry AND the first preset. The canvas renders 256 colours and truecolor end to end,
+#: so the entry must DECLARE them: `xterm` says 8 colours and a program that checks the capability
+#: (mc with a 256-colour skin) chooses its safe fallback.
+TERM_DEFAULT = "xterm-256color"
+
+#: The entries the settings row offers BESIDE the free text: the common remote-side spellings.
+TERM_PRESETS = (TERM_DEFAULT, "xterm", "screen-256color", "tmux-256color", "linux", "vt100")
+
+#: The `TERM` a REMOTE program acts on is judged by an ALLOWLIST, in ONE pure predicate
+#: (`AGENTS.md` §4.4): a terminfo entry name — a letter or a digit first, then `._+-`, at most 64
+#: characters. The PATTERN is the ONE spelling the two readers share: Python's `re` in
+#: `resolve_term()` and the Qt validator of the settings field (which anchors it itself).
+TERM_NAME_PATTERN = r"[A-Za-z0-9][A-Za-z0-9._+-]{0,63}"
+TERM_NAME_RE = re.compile(TERM_NAME_PATTERN)
+
+
+def resolve_term(value) -> str:
+    """The `terminal_term` value as the PTY may send it — `TERM_DEFAULT` for anything else. PURE.
+
+    A missing key, a foreign type (a number, a bool), an empty or over-long string and a name with a
+    byte the rule does not allow all answer the DEFAULT: a broken config can never put an arbitrary
+    string on a remote program's wire.
+    """
+    if isinstance(value, str):
+        name = value.strip()
+        if TERM_NAME_RE.fullmatch(name):
+            return name
+    return TERM_DEFAULT
 
 # ── the terminal_* keys of `~/.sshmap/config.json` ───────────────────────────
 # All keys are OPTIONAL and a config without them behaves exactly like the shipped defaults:
@@ -46,6 +83,7 @@ def load_terminal_settings():
        "scroll": str,             # "live" (default) | "pin" — new output pulls the view to the
                                   #            live line, or holds it still
        "follow_cwd": bool,        # follow the shell's directory (OSC 7)
+       "term": str,               # the PTY's TERM — a declared name, TERM_DEFAULT for anything else
        "mode": str}               # "windows" (default) | "tabs" | "single" — display mode
     Invalid values (a foreign type, out of range) → default. Never raises.
     """
@@ -53,7 +91,7 @@ def load_terminal_settings():
                 "history_lines": DEFAULT_HISTORY_LINES, "close_behavior": "close",
                 "max_open": 4, "wheel": "scrollback", "mode": "windows",
                 "cursor": CURSOR_STYLE_DEFAULT, "scroll": SCROLL_MODE_DEFAULT,
-                "follow_cwd": False}
+                "follow_cwd": False, "term": TERM_DEFAULT}
     try:
         from i18n import load_config
     except Exception:
@@ -113,6 +151,10 @@ def load_terminal_settings():
     v = cfg.get("terminal_follow_cwd")
     if isinstance(v, bool):
         defaults["follow_cwd"] = v
+
+    # The PTY's terminal type — the ONE allowlist (`resolve_term()`), because the value indexes a
+    # REMOTE terminfo: an unusable name is the declared default, never an arbitrary string.
+    defaults["term"] = resolve_term(cfg.get(TERM_CONFIG_KEY))
 
     # The display mode: "windows" (separate SSHTerminalWindow windows) | "tabs" (the "Terminals"
     # QDockWidget in MainWindow) | "single" (every session joins the LAST live terminal window as

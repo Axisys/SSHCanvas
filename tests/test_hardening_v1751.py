@@ -265,8 +265,12 @@ _thread.channel = _ch2
 _errors = []
 _thread.error_signal.connect(_errors.append)
 _thread.send_data(DATA40K)
-check("N43 the SHIPPED `send_data()` delivers ALL 40000 bytes (the loop on the byte count)",
-      delivered(_ch2) == len(DATA40K) and _errors == [],
+check("N43 `send_data()` PARKS the whole payload and writes NOTHING on the GUI thread",
+      delivered(_ch2) == 0 and bytes(_thread._pending) == DATA40K,
+      f"delivered={delivered(_ch2)} parked={len(_thread._pending)}")
+check("N43 ...and the SESSION thread's drain delivers all 40000 bytes (the loop on the byte count)",
+      _thread._flush_pending() is True and delivered(_ch2) == len(DATA40K)
+      and not _thread._pending and _errors == [],
       f"delivered={delivered(_ch2)} errors={_errors}")
 
 
@@ -291,11 +295,14 @@ _statuses = []
 _thread2.error_signal.connect(_errors2.append)
 _thread2.status_signal.connect(_statuses.append)
 _thread2.send_data(b"X" * 100)
-check("N43 a stalled window emits NO error_signal (no modal, no closed session)",
-      _errors2 == [], str(_errors2))
+check("N43 a parked keystroke never touches the channel (the stalled window is not even asked)",
+      _stalled.calls == 0, f"calls={_stalled.calls}")
+check("N43 the drain asks the channel and emits NO error_signal (no modal, no closed session)",
+      _thread2._flush_pending() is False and _stalled.calls >= 1 and _errors2 == [],
+      f"calls={_stalled.calls} errors={_errors2}")
 check("N43 ...and the bytes are PARKED for the session thread, in order",
       bytes(_thread2._pending) == b"X" * 100, repr(bytes(_thread2._pending))[:40])
-check("N43 `send_data()` never calls `sendall` with a message-less timeout escaping",
+check("N43 a message-less `socket.timeout` never escapes the ONE writer",
       str(socket.timeout()) == "" and _stalled.calls >= 1)
 
 
@@ -374,9 +381,14 @@ _thread6.channel = _slow
 _t0 = time.time()
 _thread6.send_data(b"W" * 100000)
 _elapsed = time.time() - _t0
-check("N43 the GUI thread ASKS the window (`send_ready()`) instead of waiting for it",
+check("N43 a keystroke costs one append: the GUI thread writes nothing and returns at once",
+      _slow.buffer == bytearray() and _slow.waits == 0 and _elapsed < 0.05
+      and len(_thread6._pending) == 100000,
+      f"sent={len(_slow.buffer)} waits={_slow.waits} elapsed={_elapsed:.3f}s")
+check("N43 the ONE writer ASKS the window (`send_ready()`) instead of waiting for it",
       "send_ready" in inspect.getsource(ST.SSHTerminalThread._window_open)
-      and _slow.waits == 0 and _elapsed < 0.05, f"waits={_slow.waits} elapsed={_elapsed:.3f}s")
+      and _thread6._flush_pending() is True and _slow.waits == 0,
+      f"waits={_slow.waits}")
 check("N43 ...and the refused remainder is PARKED for the session thread, in order",
       bytes(_slow.buffer) == b"W" * 1024
       and bytes(_thread6._pending) == b"W" * (100000 - 1024),

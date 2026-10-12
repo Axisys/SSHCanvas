@@ -132,9 +132,9 @@ def get_translator():
 TERMINAL_KEEPALIVE_SEC = 30
 
 # The SEND path (AGENTS.md §4.3): `Channel.send()` is a PARTIAL write by contract (it answers the
-# bytes really put on the wire, clamped to `out_max_packet_size - 64`), so `send_data()` LOOPS on the
-# byte count and PARKS the remainder when the window is shut — `error_signal` reaches `_show_error()`,
-# which closes the session, so a bare `socket.timeout` must never travel there.
+# bytes really put on the wire, clamped to `out_max_packet_size - 64`), so the session thread's DRAIN
+# LOOPS on the byte count and PARKS the remainder when the window is shut — `error_signal` reaches
+# `_show_error()`, which closes the session, so a bare `socket.timeout` must never travel there.
 MAX_SEND_QUEUE_BYTES = 8 * 1024 * 1024
 
 # ── the terminal family's CONFIG surface ─────────────────────────────────────
@@ -146,16 +146,26 @@ try:
     from .terminal_config import (FILES_MODE_CONFIG_KEY, FILES_MODE_DEFAULT, FILES_MODES,
                                  FILES_PANEL_CONFIG_COLLAPSED, FILES_PANEL_MIGRATION_BOOL,
                                  FILES_PANEL_MIN_COLS, FILES_PANEL_MIN_PX,
-                                 FILES_PANEL_WIDTH_DEFAULT, TERMINAL_MODES,
+                                 FILES_PANEL_WIDTH_DEFAULT, TERM_CONFIG_KEY, TERM_DEFAULT,
+                                 TERM_NAME_PATTERN, TERM_PRESETS, TERMINAL_MODES,
                                  load_files_panel_settings, load_terminal_settings,
-                                 resolve_files_mode)
+                                 resolve_files_mode, resolve_term)
 except ImportError:  # flat launch from the project root
     from terminal_config import (FILES_MODE_CONFIG_KEY, FILES_MODE_DEFAULT, FILES_MODES,
                                  FILES_PANEL_CONFIG_COLLAPSED, FILES_PANEL_MIGRATION_BOOL,
                                  FILES_PANEL_MIN_COLS, FILES_PANEL_MIN_PX,
-                                 FILES_PANEL_WIDTH_DEFAULT, TERMINAL_MODES,
+                                 FILES_PANEL_WIDTH_DEFAULT, TERM_CONFIG_KEY, TERM_DEFAULT,
+                                 TERM_NAME_PATTERN, TERM_PRESETS, TERMINAL_MODES,
                                  load_files_panel_settings, load_terminal_settings,
-                                 resolve_files_mode)
+                                 resolve_files_mode, resolve_term)
+
+
+#: The PTY's `TERM` when no key answers — the family's declared default (`TERM_DEFAULT`, whose ONE home
+#: is `modules/terminal_config.py`, with the key, the presets and the allowlist), RE-EXPORTED here as
+#: the live namespace. The canvas renders 256 colours and truecolor end to end, so the remote terminfo
+#: must be told the entry that DECLARES them: `xterm` says 8 colours and a program that checks the
+#: capability (mc with a 256-colour skin) chooses its safe fallback.
+TERMINAL_TYPE = TERM_DEFAULT
 
 
 #: The names this module RE-EXPORTS as the terminal family's live namespace (`AGENTS.md` §4.3): the
@@ -164,6 +174,7 @@ except ImportError:  # flat launch from the project root
 MODULE_FACADE_SEAMS = (TERMINAL_MODES, FILES_MODE_CONFIG_KEY, FILES_MODE_DEFAULT, FILES_MODES,
                        FILES_PANEL_MIGRATION_BOOL, FILES_PANEL_CONFIG_COLLAPSED,
                        FILES_PANEL_MIN_COLS, FILES_PANEL_MIN_PX, FILES_PANEL_WIDTH_DEFAULT,
+                       TERM_CONFIG_KEY, TERM_PRESETS, resolve_term, TERM_NAME_PATTERN,
                        load_terminal_settings, resolve_files_mode, load_files_panel_settings)
 
 
@@ -227,7 +238,7 @@ class SSHTerminalThread(QThread):
     # command).
     connected_signal = Signal()
 
-    def __init__(self, host, user, port, password="", key_path=""):
+    def __init__(self, host, user, port, password="", key_path="", term=""):
         super().__init__()
         # v1.6.4 (ROADMAP task 1): the managed session thread names itself — Qt's abort on a
         # thread destroyed while running names an UNNAMED thread as '', and THIS is the class
@@ -238,14 +249,19 @@ class SSHTerminalThread(QThread):
         self.port = port
         self.password = password
         self.key_path = key_path
+        # The PTY's `TERM` (`terminal_term`, `AGENTS.md` §4.3): an EXPLICIT argument passes the ONE
+        # allowlist here, an empty one leaves the answer to the connect — `run()` reads the key on
+        # the SESSION thread, so the birth and every re-arm ask for it the same way.
+        self.term_type = resolve_term(term) if term else ""
         self.client = None
         self.channel = None
         self.running = True
-        # The bytes a send timeout parked (see MAX_SEND_QUEUE_BYTES). Written by the GUI thread
-        # (`send_data`) and by the session thread (`_flush_pending`); the lock serialises both the
-        # buffer and the channel writes, so two senders can never interleave inside one payload.
+        # The bytes the input point parked (see MAX_SEND_QUEUE_BYTES). APPENDED by the GUI thread
+        # (`send_data`) and emptied by the session thread ALONE (`_flush_pending`): the lock
+        # serialises the FIFO, and the channel has exactly ONE writer — the session thread.
         self._send_lock = threading.Lock()
         self._pending = bytearray()
+        self._wake = threading.Event()   # a parked keystroke WAKES the loop instead of awaiting 30 ms
         self._send_overflow_reported = False
 
     def run(self):
@@ -275,7 +291,11 @@ class SSHTerminalThread(QThread):
                                             timeout=CONNECT_TIMEOUT_S)
 
             self.client = client
-            self.channel = client.invoke_shell(term='xterm', width=120, height=32)
+            # The terminal type the remote terminfo is told: the session's OWN name (`terminal_term`,
+            # read HERE on the session thread — never on the GUI one) or the declared default. The
+            # entry must DECLARE what the canvas renders — see `TERMINAL_TYPE`.
+            term = self.term_type or load_terminal_settings()["term"]
+            self.channel = client.invoke_shell(term=term, width=120, height=32)
             self.channel.settimeout(0.2)
             # v1.6.2 (ROADMAP task 1): the SSH-level keepalive — see TERMINAL_KEEPALIVE_SEC.
             # A transport that cannot take it (a fake in a test, a future paramiko) must NOT
@@ -312,6 +332,10 @@ class SSHTerminalThread(QThread):
             # `closed_signal` and `_on_closed` writes the ONE status line (§12).
             while self.running and self.channel and not self.channel.closed:
                 try:
+                    # THE SESSION THREAD IS THE ONE WRITER (AGENTS.md §4.3): whatever the input point
+                    # parked goes out BEFORE the receive that could starve it, so a peer that keeps
+                    # talking can never delay a keystroke behind its own output.
+                    moved = self._flush_pending()
                     if self.channel.recv_ready():
                         # v0.8: raw bytes with no ANSI stripping — pyte (TerminalScreen) parses them
                         data = self.channel.recv(4096)
@@ -321,11 +345,11 @@ class SSHTerminalThread(QThread):
                     elif (getattr(self.channel, "eof_received", False)
                           or self.channel.exit_status_ready()):
                         break                # the peer announced the end of the channel
-                    else:
-                        # A send window a timeout parked bytes for may have opened: drain it here,
-                        # on the session thread, so the GUI-thread `send_data()` never waits.
-                        if not self._flush_pending():
-                            self.msleep(30)
+                    elif not moved:
+                        # Nothing to read and nothing left to write: sleep ONCE, and let a parked
+                        # keystroke cut the wait short (the drain above is what really writes).
+                        self._wake.wait(0.03)
+                        self._wake.clear()
                 except TimeoutError:
                     continue
                 except Exception as recv_error:
@@ -389,39 +413,27 @@ class SSHTerminalThread(QThread):
             self.closed_signal.emit()
 
     def send_data(self, data_bytes):
-        """The ONE input point of the session (AGENTS.md §4.3): ALL the bytes, or none lost.
+        """The ONE input point of the session (AGENTS.md §4.3): it PARKS the bytes, it never writes.
 
-        Four facts this method owes, each documented in the audit ledger as `N43`:
-        the write LOOPS on the byte count (`channel.send()` truncates at ~32 KB by contract), it asks
-        the window (`send_ready()`) instead of WAITING for it, so the GUI thread never blocks on the
-        peer, a closed or window-less channel PARKS the remainder for the session thread instead of
-        emitting an error, and an error message is never EMPTY (`socket.timeout` carries no text,
-        and `_show_error()` would show a bare `Error: ` and close the session).
+        The GUI thread owns no channel write at all — the drain of the receive loop is the ONE writer
+        — so a keystroke costs one append under `_send_lock` plus a wake, and neither a partial write
+        (`channel.send()` truncates by contract) nor a peer whose window is shut can reach it. A
+        missing or closed channel is a quiet no-op, and the parked FIFO is bounded (`_park`).
         """
         if not data_bytes:
             return
         if self.channel is None or self.channel.closed:
             return
         with self._send_lock:
-            if self._pending:
-                # A payload is already parked: keep the FIFO order, the drain owns the channel.
-                self._park(data_bytes)
-                return
-            try:
-                sent = self._write_all(data_bytes)
-            except Exception as e:  # noqa: BLE001 — the channel died mid-write
-                self.error_signal.emit(str(e) or type(e).__name__)
-                return
-            if sent < len(data_bytes):
-                self._park(data_bytes[sent:])
+            self._park(data_bytes)
+        self._wake.set()
 
     def _window_open(self) -> bool:
         """Is there room in the channel's send window RIGHT NOW? Never waits (v1.7.5.1).
 
-        `Channel.send()` BLOCKS until the peer opens the window (up to the channel timeout, 0.2 s,
-        per call) — and this loop runs on the GUI thread for a keystroke and on the session thread
-        for the drain, so waiting here costs a frozen window or a stalled receive loop. `send_ready()`
-        is paramiko's own non-blocking answer to exactly this question; a channel without it (a test
+        `Channel.send()` BLOCKS while the window is shut (up to the channel timeout, 0.2 s, per call),
+        and the drain runs on the SESSION thread — the thread that must keep receiving — so it ASKS
+        paramiko's own non-blocking question (`send_ready()`) first. A channel without it (a test
         double, an older client) is asked the shipped way, where the send timeout breaks the loop.
         """
         ready = getattr(self.channel, "send_ready", None)
@@ -473,11 +485,11 @@ class SSHTerminalThread(QThread):
                     pass
 
     def _flush_pending(self) -> bool:
-        """Write what the window refused. True when the window MOVED — the loop retries at once.
+        """Write what the input point parked — the session thread's drain, the ONE channel writer.
 
-        The drain is as non-blocking as the write that parked the bytes (`_window_open()`), so the
-        session thread's receive loop is never held behind a send window; a `False` answer is what
-        the loop's `msleep(30)` is for.
+        True when the window MOVED, so the loop retries at once instead of sleeping. The drain is as
+        non-blocking as the write that parked the bytes (`_window_open()`), so the receive loop is
+        never held behind a send window; it runs at the TOP of the loop, so output cannot starve it.
         """
         with self._send_lock:
             if not self._pending:
@@ -495,6 +507,7 @@ class SSHTerminalThread(QThread):
 
     def stop(self):
         self.running = False
+        self._wake.set()   # a loop asleep in its 30 ms wait ends the session at once, not 30 ms later
 
 
 # v1.2.9: the SSHTerminalTextEdit HTML path is gone — the keyboard lives in

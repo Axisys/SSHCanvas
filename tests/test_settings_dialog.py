@@ -384,24 +384,26 @@ check("'Autosave' reflects the config (off / 120 s / 3 backups)",
       not dlg2.autosave_enabled_chk.isChecked() and dlg2.autosave_interval_spin.value() == 120
       and dlg2.backup_count_spin.value() == 3)
 
-# collect() carries the 25 keys the hub owns (+1 per release: terminal_mode, hotkeys,
-# terminal_wheel, terminal_cursor_style, terminal_files_mode, ui_viewer_max_bytes); the types are
-# correct and the language is NOT included — it is immediate.
+# collect() carries the 27 keys the hub owns (+1 per release: terminal_mode, hotkeys,
+# terminal_wheel, terminal_cursor_style, terminal_files_mode, ui_viewer_max_bytes,
+# ui_reopen_last_project, terminal_term); the types are correct and the language is NOT included — it is immediate.
 dlg2.close_behavior_combo.setCurrentIndex(1)  # ask
 dlg2.status_interval_spin.setValue(60)
 dlg2.probe_timeout_spin.setValue(4.5)
 c = dlg2.collect()
-check("collect(): exactly 25 config.json keys (+ ui_viewer_max_bytes, v1.7.5)",
+check("collect(): exactly 27 config.json keys (+ ui_viewer_max_bytes, v1.7.5; the auto-open; the TERM row)",
       set(c) == {"external_terminal", "terminal_mode", "terminal_palette",
                  "terminal_font_size",
                  "terminal_history_lines", "terminal_close_behavior",
                  "terminal_wheel", "terminal_cursor_style", "terminal_files_mode",
+                 "terminal_term",
                  "ui_viewer_max_bytes",
                  "status_interval_sec", "status_probe_timeout_sec", "status_max_parallel",
                  "autosave_enabled", "autosave_interval_sec", "backup_count",
                  "ui_font_family", "ui_font_size", "terminal_font",
                  "terminal_max_open", "ui_node_double_click",
                  "ui_show_sidebar_buttons", "ui_show_connection_type",
+                 "ui_reopen_last_project",
                  "hotkeys", "theme"}, str(sorted(c)))
 check("collect(): the types (int/float/bool/str) and the changed values",
       isinstance(c["terminal_font_size"], int) and isinstance(c["status_interval_sec"], int)

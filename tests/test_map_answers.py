@@ -13,7 +13,7 @@ import os
 import sys
 
 from _common import (bootstrap, check, finish, check_i18n_parity, check_i18n_format, clear_cfg,
-                     placeholder_names, viewport_point)
+                     docs_mode, placeholder_names, rep_doc_text, viewport_point)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation + offscreen Qt)
 
@@ -644,7 +644,8 @@ check("the release carries the new keys and the pin of the run",
           __import__("version").APP_VERSION, "1.8.4"),
       f"{__import__('version').APP_VERSION} / {__import__('_common').EXPECTED_I18N_KEYS}")
 
-# The roster edit AGENTS.md §4.2 states: the new arrangement makes it TWENTY commands.
+# The roster edit AGENTS.md §4.2 states: the new arrangement makes it 20 commands. A fresh clone
+# holds no AGENTS.md (it is gitignored), so the document half of this pair is a SKIP there.
 _uc = source("modules/undo_commands.py")
 _roster = [n for n in ("CmdMoveNode", "CmdMoveNodes", "CmdMoveGroup", "CmdResizeGroup",
                        "CmdEditGroupName", "CmdAddRemoveNode", "CmdAddRemoveNodeBatch",
@@ -654,10 +655,11 @@ _roster = [n for n in ("CmdMoveNode", "CmdMoveNodes", "CmdMoveGroup", "CmdResize
                        "CmdMoveBackground", "CmdResizeBackground", "CmdArrangeGroup",
                        "CmdArrangeMap")
            if f"class {n}(" in _uc]
-check("the undo roster is the TWENTY commands the contract counts",
+check("the undo roster is the 20 commands the contract counts",
       len(_roster) == 20, str(_roster))
-check("the contract names the new count and the new command",
-      "TWENTY commands" in source("AGENTS.md")
-      and "CmdArrangeMap" in source("AGENTS.md"))
+_contract_text = rep_doc_text("AGENTS.md")
+if docs_mode():
+    check("the contract names the new count and the new command",
+          "20 Commands" in _contract_text and "CmdArrangeMap" in _contract_text)
 
 finish()

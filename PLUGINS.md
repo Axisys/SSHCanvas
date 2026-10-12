@@ -1,392 +1,187 @@
-# PLUGINS.md — the SSH Map plugin foundation (API v1)
-
-> **Status.** This document is the **frozen API v1 contract** of the plugin foundation
-> (the v1.4rc1 → v1.4 series). It was pinned BEFORE the first rc — the contract is frozen by
-> SPECIFICATION, not by the implementation: **the rc series implements this
-> contract, it does not change it.** A behaviour that is not described here is not part
-> of API v1; a change to what IS described here belongs to **API v2**, which ships as a
-> new entry-point group (`sshmap.plugins/v2`) next to this one — installed v1 plugins
-> keep working.
->
-> **What each rc ships.** **rc1:** discovery + the manager (`modules/plugin_manager.py`)
-> and the `Plugins` menu (a switch per plugin + `Reload`). **rc2 (SHIPPED):**
-> `PluginContext` (`modules/plugin_context.py`), `ctx.run_command` on its managed worker
-> (`modules/plugin_runner.py`), `ctx.status`, the `status_probe` merge inside a
-> `StatusChecker` round and the Main Thread isolation (the 200 ms / 1500 ms budgets, the
-> worker and orphan registries, the Qt guard). **rc3 (SHIPPED):** the UI hooks in the
-> interface — `register_commands` reaches the Ctrl+K palette and `extend_node_context_menu`
-> the node context menu of the map and of the sidebar — plus "Run on selected servers"
-> (`run_on_nodes` behind the Plugins-menu item) and the worked examples of §10. **Every
-> hook of API v1 is now called by the core.**
->
-> **v1.4 (SHIPPED — the base release of the line).** The API v1 contract is complete and
-> exercised from the OUTSIDE: the repository ships WORKING example plugins in
-> `examples/plugins/` (`hello.py` — the minimal two-hook plugin; `disk_monitor.py` — the
-> Disk Space Monitor: `run_on_nodes` collects `df -hP` into the plugin's own atomic cache
-> and `status_probe` warns from it). They are examples, not shipped plugins: not installed,
-> never auto-discovered, and they add no i18n key (§7). Dogfooding them found and fixed a
-> real defect of the rc line: a command started from a `run_on_nodes` **worker** thread
-> used to lose its results (`ctx.run_command` builds its runner on the manager's thread
-> now — §5 and §6 keep their promise that the callbacks arrive on the GUI thread). The
-> contract itself did not change: API v1 is exactly what rc1 froze.
+# PLUGINS.md — SSH Map Plugin API (v1)
 
 ---
 
-## 1. What a plugin is
-
-A plugin is an ordinary Python module that carries a `MANIFEST` dictionary and,
-optionally, some of the four hook functions. Nothing else is required: no base class,
-no registration call, no decorator — the core finds the module itself.
+## 1. Plugin Definition
+A plugin is a standard Python module containing a `MANIFEST` dictionary and optional hook functions. No base classes or decorators are required.
 
 ```python
-# ~/.sshmap/plugins/hello.py  (or my_plugin/__init__.py inside an installed package)
+# ~/.sshmap/plugins/hello.py (or my_plugin/__init__.py)
 MANIFEST = {
-    "name": "hello",              # REQUIRED — the plugin's identity (unique)
-    "version": "1.0",             # REQUIRED — the author's own version string
-    "api_version": 1,             # REQUIRED — must be 1 for this contract
-    "description": "Says hello",  # optional — shown in the tooltip
+    "name": "hello",              # REQUIRED: Unique identity (used in config, menus, and logs)
+    "version": "1.0",             # REQUIRED: Author's version string
+    "api_version": 1,             # REQUIRED: Must be 1
+    "description": "Says hello",  # Optional: Tooltip text
 }
 
 def register_commands(ctx):
     return []
 ```
 
-`name` is the plugin's identity everywhere: the key of the enable/disable switch in
-`~/.sshmap/config.json`, the row in the `Plugins` menu and the label in the log. Two
-plugins with the same `name` are a conflict — see §4.
+## 2. Shipping Methods
+| Method | Entry Point (Package) | Folder (Single File) |
+| :--- | :--- | :--- |
+| **How** | `pip install sshmap-hello-plugin` | Drop `hello.py` into `~/.sshmap/plugins/` |
+| **Declaration** | `[project.entry-points."sshmap.plugins/v1"]` | The file itself |
+| **Use Case** | Distribution, dependencies, versioning | Experiments, private scripts, local copies |
 
-## 2. Two ways to ship one
+*   **API Versioning:** The entry point group name carries the version (`sshmap.plugins/v1`).
+*   **Folder Plugins:** Loaded as top-level modules (no relative imports allowed). Files starting with `_` are ignored.
+*   **Reloading:** `Plugins → Reload` re-reads the folder immediately; import caches are bypassed.
 
-| | Entry point (a package) | Folder (one file) |
-|---|---|---|
-| How | `pip install sshmap-hello-plugin` | drop `hello.py` into `~/.sshmap/plugins/` |
-| Declaration | `[project.entry-points."sshmap.plugins/v1"]`<br>`hello = "sshmap_hello_plugin"` | the file itself |
-| For | distribution, dependencies, a real version | experiments, private scripts, an installed copy of the app |
+## 3. Hooks (All Optional)
+Exceptions in hooks are caught and logged; they will never crash the host application.
 
-The **entry point group name carries the API version**: `sshmap.plugins/v1`. This is the
-standard mechanism (`importlib.metadata.entry_points`) that pytest, Jupyter and flake8
-use — an installed plugin needs no cooperation from the application.
+### `register_commands(ctx) -> [PluginCommand]`
+Contributes commands to the **Command Palette** (Ctrl+K) and **Hotkeys**.
+*   **`PluginCommand`:** A record with `text`, `callback` (receives `ctx`), `description`, and `keywords`.
+*   **Flexibility:** Accepts `PluginCommand` objects, `(text, callback)` tuples, or `{"text": ..., "callback": ...}` dicts.
+*   **Isolation:** Commands live in a dedicated palette section; they cannot shadow core commands.
 
-A **folder plugin is a single file** and is loaded as a top-level module with a
-generated name (`sshmap_plugin_local_<file stem>`), *not* as a package: a relative
-import has nothing to resolve against. A file whose name starts with `_` is ignored (a
-private helper next to a plugin). `Plugins → Reload` re-reads the folder — a changed
-file is picked up without a restart; an import cache is never consulted.
+### `extend_node_context_menu(menu, nodes) -> None`
+Called during construction of the node context menu (Map or Sidebar).
+*   **`menu`:** A live `QMenu`.
+*   **`nodes`:** Lightweight node records (not scene objects).
+*   **Memory:** The manager owns all `QActions` created here. The plugin must keep its own references alive or hand them to the manager's guard.
 
-## 3. The hooks (all optional)
+### `status_probe(node) -> (kind, detail) | None`
+Runs in a worker thread during the parallel `StatusChecker` round.
+*   **Return:** `(kind, detail)` where `kind` is `online`, `warn`, or `offline`.
+*   **Detail:** Optional string appended to the node's tooltip.
+*   **Merging:** If both the SSH probe and this hook return a value, the **worst severity** wins and details are concatenated.
 
-Every hook is optional: a plugin may implement any subset, and a module without hooks is
-a valid plugin. Each call into a plugin is wrapped by the core — **a hook that raises
-never propagates into the application** (the exception is logged and the plugin's work
-is abandoned for that call only).
+### `run_on_nodes(nodes, ctx) -> None`
+The "Run on selected servers" hook.
+*   Receives node records and the context.
+*   Execution must use `ctx.run_command()`, which runs on managed worker threads.
 
-### `register_commands(ctx) -> [PluginCommand]` — *(rc3)*
-Contributes commands to the **command palette** (Ctrl+K) and to the action registry
-("Settings → Hotkeys"). `PluginCommand` is a small frozen record — `text` (the author's
-string, NOT an i18n key), `callback` (called with the plugin's own `ctx` when the user
-runs the command), optional `description` and optional `keywords` (extra search text):
-`PluginCommand(text="Say hello", callback=fn, description="…")`. The record also accepts
-a plain `(text, callback)` pair or a `{"text": …, "callback": …}` dict, and a nested list
-is flattened — the reading is deliberately lenient; an entry without usable text is
-skipped with a log line. Plugin commands live in their own palette section (after
-"servers"), so a plugin can never shadow a core command. The callbacks run through the
-core's wrapper: a command that raises is a log line plus a status-bar line, never a
-broken palette.
+## 4. Discovery, States, and Conflicts
+Discovery occurs at startup and on `Plugins → Reload`. Order: **Entry points first, then folder.**
 
-### `extend_node_context_menu(menu, nodes) -> None` — *(rc3)*
-Called while the node context menu of the map or of the sidebar is being built;
-`menu` is a live `QMenu`, `nodes` are lightweight node records (see §5), never the
-scene objects. The plugin adds its QActions; **the manager owns every QAction it
-creates** (see §6) — the plugin must keep the wrapper alive the ordinary way (a
-reference on its module or on a returned list) or hand it to the manager's guard.
+*   **Conflicts:** If a folder file shares a name with an installed package, the **packaged plugin wins** (the local file is skipped).
+*   **Error State:** Plugins with import errors, missing/invalid manifests, or incorrect `api_version` are moved to an "error" state. They are listed in the menu as disabled with the error reason in the tooltip.
+*   **Disabled State:** Disabled plugins are still imported (to read the `MANIFEST`) but their hooks are never called.
+*   **Configuration:** Settings are stored in `~/.sshmap/config.json` under the `plugins` key (e.g., `{"hello": false}`).
 
-### `status_probe(node) -> (kind, detail) | None` — *(rc2)*
-Runs inside the ordinary `StatusChecker` round (the parallel `ThreadPoolExecutor`), one
-call per node, **in a worker thread — never on the GUI thread**. Returns
-`(kind, detail)` where `kind ∈ {"online", "warn", "offline"}` and `detail` is an
-optional string (an HTTP code, a container count) that is appended to the node's
-tooltip; `None` means "no opinion" and the SSH probe's result stands. When both speak,
-the result is **the worse of the two by severity** and the details are concatenated.
+## 5. `PluginContext`
+Plugins interact with the core exclusively through the `ctx` object.
 
-### `run_on_nodes(nodes, ctx) -> None` — *(rc2)*
-The headless hook: "run this on the selected servers". It receives node records and the
-context; the actual execution goes through `ctx.run_command()` (§5), which the core runs
-on managed worker threads.
+### Read-only Properties
+*   `ctx.app_version`: Current SSH Map version.
+*   `ctx.api_version`: API version (1).
+*   `ctx.plugin_id`: The plugin's name from `MANIFEST`.
+*   `ctx.log(message)`: Logs a message prefixed with the plugin ID.
 
-## 4. Discovery, states and conflicts
+### Services
+*   **`ctx.run_command(nodes, command)`**: Non-interactive SSH execution.
+    *   **Credentials:** Resolved automatically by the core.
+    *   **Callbacks:** `on_result(node, result)` (per node) and `on_finished(results)` (all nodes) are delivered on the **GUI thread**.
+    *   **Timeout:** Bounds connection + command (default 30s).
+    *   **Guard:** Destructive commands trigger a one-time "Confirm" dialog for the whole fleet. Refusal returns an empty result list without throwing an error.
+*   **`ctx.status(text, timeout_ms=…)`**: Updates the status bar. The core manages widget ownership and prevents stale results from overwriting newer messages.
 
-Discovery runs ONCE at startup — after the main window exists and before the event loop
-(`main.py`), plus on every `Plugins → Reload`. Sources are read in this order:
-**entry points first, then the folder**, each sorted by name.
+## 6. Isolation Rules
+*   **Main Thread Discipline:** UI hooks (`register_commands`, `extend_node_context_menu`) run on the GUI thread.
+    *   **Budget:** Must complete within **200 ms**. Slower hooks trigger a log warning.
+    *   **No Blocking:** No IO, network, or `time.sleep` allowed.
+*   **Worker Threads:** `status_probe` and `run_on_nodes` run on managed worker threads.
+*   **Qt Objects:** Plugins must hand `QAction` references to the manager to prevent the PySide6 6.11 "detached menu" pitfall.
+*   **Never throws:** Every hook call is wrapped — an exception is a log line and a failed call, never a crash of the host and never a broken neighbour plugin.
+*   **Forbidden Actions:**
+    *   Touching the GUI outside of designated hooks.
+    *   Importing `ui.main_window`.
+    *   Writing to `~/.sshmap/config.json` directly.
+    *   Storing passwords/keys in plain text.
+    *   Editing `third_party/pyte`.
+*   **Process Isolation:** Plugins run in-process. A segfault in a C extension will crash the application.
 
-* the **folder plugin loses** a name conflict against an installed plugin (the packaged
-  one wins, the local file is skipped with a log line) — one identity cannot be switched
-  half-way;
-* a plugin that cannot be loaded goes into the **error** state: a record in the log
-  (`~/.sshmap/logs/sshmap.log`) and one status-bar line. The reasons are `import`
-  (the file/module could not be imported), `manifest` (no `MANIFEST`, not a dictionary,
-  no usable `name`/`version`) and `api_version` (the manifest declares another API —
-  install a v1 plugin or wait for the `sshmap.plugins/v2` group). **A broken plugin
-  never affects the application or the other plugins** — it is listed in the menu,
-  disabled, with the reason in its tooltip;
-* a plugin disabled by the user is still **imported** (the core must read its `MANIFEST`
-  to name it) but **never called**: disabling stops the hooks, not the import;
-* the switch lives in `plugins` of `~/.sshmap/config.json`:
-  `{"hello": false}`. A missing id is ENABLED (a new plugin is on by default), an
-  unknown id is ignored, a broken value falls back to the default.
+## 7. Strings & Translation
+Strings in `register_commands` and `extend_node_context_menu` belong to the **author**. The core does not translate them. Only core UI elements (e.g., the "Plugins" menu) use the standard i18n system.
 
-## 5. `PluginContext` — the only window into the core
+## 8. Out of Scope for API v1
+*   Event bus / Signal system.
+*   Custom settings tabs/panels or docks.
+*   Terminal I/O interception.
+*   Map scene manipulation (drawing, layout).
+*   Automatic updates / Marketplace / Sandboxing.
 
-A plugin does **not** receive the main window, the scene, `ServerData`, the keyring or a
-paramiko object. Everything arrives through the context, and everything on it is
-either a read-only fact or a service:
+**API v2, when it comes, is a SECOND entry-point group — never an edit of this one.** The group name carries the version, so v2 arrives as `sshmap.plugins/v2` BESIDE `sshmap.plugins/v1`: a plugin declares the group it was written for, `ctx.api_version` reports the matching version, and every plugin written against this document keeps working unchanged.
 
-| Read-only | |
-|---|---|
-| `ctx.app_version` | the running SSH Map version (`version.APP_VERSION`) |
-| `ctx.api_version` | the API version of the context (1) |
-| `ctx.plugin_id` | the plugin's own `MANIFEST["name"]` |
-| `ctx.log(message)` | a line into `~/.sshmap/logs/sshmap.log`, prefixed with the plugin id |
-
-| Service | |
-|---|---|
-| `ctx.run_command(nodes, command)` | *(rc2)* non-interactive execution over SSH — the credentials are resolved by the CORE (`services/credential_manager.py`); per-node results (output, exit code, error) arrive through callbacks. Interactive sessions are NOT available to plugins |
-| `ctx.status(text, timeout_ms=…)` | *(rc2)* a status-bar line (the core owns the widget and the token guard: a stale async result cannot overwrite a newer message) |
-
-The callbacks of `ctx.run_command` (rc2): `on_result(node, result)` is called for EVERY
-node as soon as its answer is known — `result` carries `output`, `exit_code` and `error`,
-and one node's failure is a result for that node, never a reason to stop the others —
-and `on_finished(results)` is called once with the whole list, in node order. Both are
-delivered on the GUI thread, so a plugin may touch its own Qt objects there; a node whose
-connection fails simply reports the error in its own result. `timeout` (seconds, default
-30) bounds ONE node's connect + command. The core marshals the call itself onto its own
-thread, so this holds whether `run_command` is called from a palette command (the GUI
-thread) or from a `run_on_nodes` hook (a worker thread).
-
-**`run_command()` and the command guard.** A command that looks destructive — judged by the
-core's own token table (`modules/command_guard.py`, CONFIG-only policy `guard_commands` of
-`~/.sshmap/config.json`, ON by default) — asks the USER once per CALL before a runner or a
-connection exists; the dialog names the matched token, the command and the number of servers.
-A refusal is NOT an error: the call ends with an EMPTY result list, `on_finished([])` still
-fires (and the core reports the same fact to the application), so a plugin that renders its
-results keeps working. It is ONE question per CALL, never per node: the ordinary way to ask
-once for a whole fleet is to pass every node in ONE `nodes` list, while a plugin that loops
-one node per call asks once per call. The guard is a confirmation and never a sandbox. From a
-`run_on_nodes` WORKER the call keeps answering `True` ("accepted"): the question is asked on
-the core's thread, and the outcome reaches that plugin through `on_finished`.
-
-A **node record** exposed to plugins is exactly `{id, alias, host, port, user}` plus the
-plugin's own data; a plugin that needs more asks the core for a service, it does not
-reach for the model.
-
-## 6. Isolation rules (what is allowed and what is not)
-
-* **Main Thread discipline.** UI hooks (`register_commands`, `extend_node_context_menu`)
-  are called synchronously, on the GUI thread, and must be FAST — no IO, no network, no
-  `time.sleep`: the contract's budget is **200 ms**, and a slower hook is a warning in
-  the log. Everything else (`status_probe`, `run_on_nodes`) runs on MANAGED worker
-  threads: the core's registry plus the orphan registry (the v1.2 semantics — a wait
-  budget, a thread that outlives it is registered instead of collected, self-cleanup on
-  `finished()`). A hook that does not return within the budget is abandoned and
-  reported; the application keeps living.
-* **Qt objects.** A plugin that creates a QAction (or any QObject) hands the reference
-  to the manager — the manager keeps every reference in its guard. A Python wrapper
-  whose C++ object has an attached menu and dies takes the C++ menu with it (the
-  PySide6 6.11 pitfall — that is why the manager's guard holds every reference it is
-  handed).
-* **Never throws.** Every call into a plugin is wrapped: an exception is a log line and
-  a failed call, never a crash of the host and never a broken neighbour plugin.
-* **Forbidden:** touching the GUI outside the hooks; blocking the GUI thread; importing
-  `ui.main_window`; writing to `~/.sshmap/config.json` directly (use the context);
-  reading or storing passwords in plain text (the keyring is the core's business);
-  editing `third_party/pyte`; assuming a specific SSH Map version beyond
-  `ctx.app_version` — the API version is the compatibility contract.
-* **Documented limitation — in-process execution.** A plugin runs in the application's
-  own process. Python gives no isolation from a **segfault in a C extension**: a plugin
-  with a broken ABI can take the host down, exactly as a pytest plugin can. Hard
-  isolation (a subprocess plus IPC) is a separate project and is explicitly NOT a goal
-  of the 1.4 line. Install plugins you trust, as you trust the packages you pip-install.
-
-## 7. Plugin strings and the application's translations
-
-The strings a plugin shows (command text, menu item text, descriptions) are the
-**author's** — the core never translates them and they are outside the i18n parity
-policy (a plugin ships its own translations, or none). Only the core's own lines — the
-`Plugins` menu, the load/error/disable status messages — are i18n keys.
-
-## 8. What is NOT in API v1
-
-An event bus; settings-dialog tabs or panels/docks contributed by a plugin; terminal
-input/output interception; a plugin API for the map scene (drawing, layout); automatic
-download or update of plugins; a marketplace; sandboxing. Some of these are on the
-horizon (no version promises them yet); the rest are rejected.
-
-**API v2, when it comes, is a SECOND entry-point group — never an edit of this one.** The
-group name carries the version (`sshmap.plugins/v1`), so v2 arrives as
-`sshmap.plugins/v2` BESIDE it: a plugin declares the group it was written for, the context
-reports the matching `api_version`, and everything this document froze keeps working exactly
-as it does. What v2 will carry is decided by the gaps listed above together with what real
-plugins ask the core for; what it will NOT carry is the other half of that same list — a
-plugin does not draw or lay out the map, does not replace the interface, and the in-process
-limitation of §6 is not lifted by a version number. This document gains its v2 sections only
-once that contract is frozen, in the same shape as this one.
-
-## 9. Coming with rc3
-
-*(Delivered — see §10: the package template, the "plugin in 20 minutes" walkthrough and
-the author checklist. `PLUGINS.md` is now the complete author documentation; the
-executable specifications are `tests/test_plugins.py` (discovery), `tests/test_plugin_runtime.py`
-(the context and the isolation) and `tests/test_plugin_ui.py` (the UI hooks).)*
+## 9. Author Documentation
+The package template, the "plugin in 20 minutes" walkthrough and the checklist of what to verify before sharing a plugin are **Section 10** below.
 
 ---
 
-## 10. Writing a plugin — the 20-minute path
+## 10. Writing a Plugin — The 20-Minute Path
 
-### 10.1 The folder plugin (no packaging, no install)
-
-Drop one `.py` file into `~/.sshmap/plugins/`. `Plugins → Reload` picks it up — a
-changed file is re-read (no restart, no import cache).
+### 10.1 Folder Plugin (No Packaging)
+Drop a `.py` file into `~/.sshmap/plugins/`.
 
 ```python
 # ~/.sshmap/plugins/k9s_launcher.py
 MANIFEST = {
-    "name": "k9s_launcher",          # the identity: the config key, the menu row, the log
+    "name": "k9s_launcher",
     "version": "1.0",
     "api_version": 1,
     "description": "Runs k9s on the servers you select",
 }
 
-from PySide6.QtGui import QAction   # a plugin may use Qt — inside the hooks only
-from modules.plugin_manager import PluginCommand   # the record of a palette command
-
+from PySide6.QtGui import QAction
+from modules.plugin_manager import PluginCommand
 
 def register_commands(ctx):
-    """Ctrl+K: one command per plugin, in the palette's own section."""
     return [PluginCommand(text="Run k9s on the selection",
                           callback=lambda c: _launch(c),
                           description="opens k9s on every selected server",
                           keywords="k9s kubernetes tui")]
 
-
 def extend_node_context_menu(menu, nodes):
-    """The right-click menu of a server (map AND sidebar)."""
     act = QAction("k9s here", menu)
     act.triggered.connect(lambda: _launch_single(nodes[0]))
     menu.addAction(act)
-    # The core keeps this QAction alive while the menu is open (PLUGINS.md §6) — a plugin
-    # that also stores its own reference is welcome to, but it does not have to.
-
 
 def status_probe(node):
-    """One extra opinion per server, merged into the ordinary probe round."""
-    if node.port == 6443:                      # a Kubernetes API port, say
+    if node.port == 6443:
         return ("online", "kube-apiserver")
-    return None                                # "no opinion" — the SSH probe stands
-
+    return None
 
 def run_on_nodes(nodes, ctx):
-    """Plugins → "Run on selected servers" (also assignable to a key)."""
     ctx.status(f"k9s: {len(nodes)} server(s)", 3000)
     ctx.run_command(nodes, "k9s --readonly",
                     on_result=lambda node, res: ctx.log(f"{node.alias}: {res.exit_code}"))
 
-
 def _launch(ctx):
-    _launch_many(ctx, None)                    # the whole registry, or the selection
-
+    _launch_many(ctx, None)
 
 def _launch_many(ctx, node):
     ...
 ```
 
-Notes that save time:
-
-* `register_commands` runs EVERY time the palette is opened and whenever the "Plugins"
-  menu is rebuilt: return the list, do no IO there (the 200 ms budget, §6).
-* the palette shows the command's `text` verbatim — it is the author's string, not an
-  i18n key (§7);
-* `extend_node_context_menu` is called while the menu is being built, on the GUI thread,
-  with the node records of what the user right-clicked (the map passes the clicked card,
-  the sidebar the row's id — both arrive narrowed, §5);
-* `status_probe` runs in a WORKER thread inside the SSH round: no Qt, no widget, fast or
-  it is abandoned;
-* `run_on_nodes` runs on a managed worker thread; the work it starts through
-  `ctx.run_command` gets its own managed worker and is waited for on shutdown.
-
-### 10.2 The packaged plugin (an ordinary Python package)
-
-```
+### 10.2 Packaged Plugin
+Structure for a standard Python package:
+```text
 sshmap-hello-plugin/
 ├── pyproject.toml
 └── sshmap_hello_plugin/
-    └── __init__.py        # the module with MANIFEST + the hooks
+    └── __init__.py
 ```
-
+**`pyproject.toml` excerpt:**
 ```toml
-# sshmap-hello-plugin/pyproject.toml
-[build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "sshmap-hello-plugin"
 version = "0.1.0"
-description = "A hello-world plugin for SSH Map"
 requires-python = ">=3.10"
 
-# THE declaration that makes it discoverable — the group name carries the API version.
 [project.entry-points."sshmap.plugins/v1"]
 hello = "sshmap_hello_plugin"
 ```
 
-`pip install .` (or `pipx inject sshmap ./sshmap-hello-plugin`, or `pip install` from a
-git URL) is the whole installation: SSH Map finds the package through the standard entry
-points on the next start — no registration file, no cooperation from the application.
-**A packaged plugin wins a name conflict** against a folder file with the same
-`MANIFEST["name"]` (§4).
-
-### 10.3 Dogfooding checklist (before you share a plugin)
-
-| | Check |
-|---|---|
-| ☐ | `MANIFEST` has `name`, `version`, `api_version: 1`; `name` is unique and stable |
-| ☐ | Hook names are spelled exactly as in §3 (`register_commands`, `extend_node_context_menu`, `status_probe`, `run_on_nodes`) |
-| ☐ | The plugin imports cleanly when the app is NOT running (`python -c "import my_plugin"`) |
-| ☐ | `Plugins → Reload` shows the plugin as checked; switching it off removes its commands/menu rows |
-| ☐ | No IO, no network, no `time.sleep` inside `register_commands` / `extend_node_context_menu` (the 200 ms budget is logged as a warning) |
-| ☐ | `status_probe` returns a `(kind, detail)` pair or `None`, with `kind` among `online` / `warn` / `offline`, and touches no Qt object |
-| ☐ | Every command/menu action is reachable and does its work through `ctx` (`ctx.log` / `ctx.status` / `ctx.run_command`) |
-| ☐ | `ctx.run_command` callbacks handle a per-node `error` (one server down must not break the run) |
-| ☐ | No password, key path or paramiko object is stored, logged or sent anywhere by the plugin |
-| ☐ | A broken state (an exception in a hook) is survivable: the app logs it and keeps working |
-| ☐ | The plugin's user-visible strings are the author's own (translated by the plugin, if at all — §7) |
-
-### 10.4 Working code in the repository
-
-`examples/plugins/` holds examples that really load (copy one into `~/.sshmap/plugins/`, then
-`Plugins → Reload`). **`examples/README.md` owns the list** — the table of the files and the "Using
-them" walk live there, so a file added to the folder is one edit in one place. What stays HERE is
-the choice of SHAPES an author picks between:
-
-* **the minimal plugin** — two UI hooks, no SSH, the smallest thing that does something;
-* **the collector + reporter** — `run_on_nodes` runs the command through `ctx.run_command()` and
-  writes the plugin's own atomic cache, while `status_probe` only READS that cache (a probe runs for
-  every node on every status round, so it may not open a connection);
-* **the collector that composes** — the same shape where two facts are ONE question: one generated
-  POSIX-sh probe with a marker protocol, and a detail composed by the plugin;
-* **the plugin that never touches SSH** — the fact comes from its own config and its own socket, so
-  it has an answer about a host whose SSH is down; the connector is injectable for the tests.
-
-`tests/test_plugin_examples.py`, `tests/test_plugin_examples_monitors.py` and the folder's
-`tests/test_plugin_examples_local.py` load the examples through the real discovery, drive their
-hooks and pin the "a plugin never imports the core" rule (`example_plugin_problems()`,
-`tests/_common.py`).
-
-### 10.5 Where to read more
-
-* The core's own side of this contract — `modules/plugin_manager.py` (the discovery, the
-  registry and the guard), `modules/plugin_context.py` (the context and `PluginNode`),
-  `modules/plugin_runner.py` (`ctx.run_command`) and the `Plugins` menu in
-  `ui/main_window.py`;
-* `tests/test_plugins.py` / `tests/test_plugin_runtime.py` / `tests/test_plugin_ui.py` /
-  `tests/test_plugin_examples.py` — the executable specification of what a plugin may rely on.
+### 10.3 Dogfooding Checklist
+*   [ ] `MANIFEST` includes `name`, `version`, and `api_version: 1`.
+*   [ ] Hook names are exactly as specified in §3.
+*   [ ] Plugin imports cleanly via `python -c "import my_plugin"`.
+*   [ ] No IO/Network/Sleep in `register_commands` or `extend_node_context_menu`.
+*   [ ] `status_probe` touches no Qt objects and returns `(kind, detail)` or `None`.
+*   [ ] All operations use `ctx` (no direct access to config/keyring).
+*   [ ] Callbacks handle `error` results without stopping the entire run.
+*   [ ] No passwords or keys are stored/logged.

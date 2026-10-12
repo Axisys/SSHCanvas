@@ -73,22 +73,26 @@ clear_cfg()
 s = load_ui_settings()
 check("load_ui_settings: the defaults (no config)",
       s == {"font_family": "", "font_size": None, "node_double_click": "properties",
-            "show_sidebar_buttons": True, "show_connection_type": False}, str(s))
+            "show_sidebar_buttons": True, "show_connection_type": False,
+            "reopen_last_project": False}, str(s))
 
 write_cfg({"ui_font_family": " Courier New ", "ui_font_size": 14,
            "ui_node_double_click": " connect ", "ui_show_sidebar_buttons": False,
-           "ui_show_connection_type": True})
+           "ui_show_connection_type": True, "ui_reopen_last_project": True})
 s = load_ui_settings()
 check("load_ui_settings: the valid values are read (the trimming of the spaces)",
       s == {"font_family": "Courier New", "font_size": 14, "node_double_click": "connect",
-            "show_sidebar_buttons": False, "show_connection_type": True}, str(s))
+            "show_sidebar_buttons": False, "show_connection_type": True,
+            "reopen_last_project": True}, str(s))
 
 write_cfg({"ui_font_family": 42, "ui_font_size": "big", "ui_node_double_click": "yell",
-           "ui_show_sidebar_buttons": "yes", "ui_show_connection_type": 1})
+           "ui_show_sidebar_buttons": "yes", "ui_show_connection_type": 1,
+           "ui_reopen_last_project": "yes"})
 s = load_ui_settings()
 check("load_ui_settings: the broken values (the foreign types) → the defaults",
       s == {"font_family": "", "font_size": None, "node_double_click": "properties",
-            "show_sidebar_buttons": True, "show_connection_type": False}, str(s))
+            "show_sidebar_buttons": True, "show_connection_type": False,
+            "reopen_last_project": False}, str(s))
 
 write_cfg({"ui_font_size": 0})
 check("load_ui_settings: the ui_font_size=0 → the system size (None)",
@@ -181,6 +185,27 @@ base_family, base_size = app_font.family(), app_font.pointSize()
 win._apply_settings_from_dialog()
 check("live: without the font keys in the config — the font is unchanged",
       app.font().family() == base_family and app.font().pointSize() == base_size)
+
+# v1.10rc1 (N89): the font has to be on the APPLICATION before the FIRST WIDGET — Qt resolves the
+# application font when a widget is polished and never re-resolves it, so a saved size applied at the
+# END of `MainWindow.__init__` left the menu bar, the sidebar and the status bar at the system size.
+# The checks above read `app.font()`, which was the one fact that was never wrong.
+write_cfg({"ui_font_family": "Consolas", "ui_font_size": 14})
+win_font = MW.MainWindow()
+win_font.show()
+app.processEvents()
+check("live: a window CONSTRUCTED under the font key carries it on its OWN widgets (N89)",
+      app.font().family() == "Consolas" and app.font().pointSize() == 14
+      and win_font.menuBar().font().pointSize() == 14
+      and win_font.sidebar.font().pointSize() == 14
+      and win_font.statusBar().font().pointSize() == 14,
+      f"app={app.font().pointSize()} menu={win_font.menuBar().font().pointSize()} "
+      f"sidebar={win_font.sidebar.font().pointSize()} "
+      f"status={win_font.statusBar().font().pointSize()}")
+win_font._dirty = False
+win_font.close()
+app.processEvents()
+clear_cfg()
 win._terminal_windows.clear()
 
 # ════════════════════════════════════════════════════════════

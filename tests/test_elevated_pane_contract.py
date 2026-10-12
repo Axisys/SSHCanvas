@@ -9,8 +9,8 @@ Run: python tests/test_elevated_pane_contract.py   (from the project root) or py
 import os
 import sys
 
-from _common import (bootstrap, check, finish, wait_for, pane_family_text, pane_func_body,
-                     pane_func_owner, check_release_state, clear_cfg, load_i18n_langs)
+from _common import (bootstrap, check, docs_mode, finish, rep_doc_text, wait_for, pane_family_text,
+                     pane_func_body, pane_func_owner, check_release_state, clear_cfg, load_i18n_langs)
 
 ROOT, WORK = bootstrap()  # BEFORE the app imports (the HOME isolation)
 
@@ -356,7 +356,7 @@ check("§6 the sentences the contract QUOTES really exist (the document is not a
       all(key in LANGS["en"] for key in
           ("sftp.elevated.unavailable", "sftp.elevated.bad_user", "sftp.elevated.read_only",
            "sftp.elevated.working", "sftp.elevated.header", "sftp.elevated.lost"))
-      and CONTRACT_TEXT.count("sftp.elevated.") >= 6)
+      and (not docs_mode() or CONTRACT_TEXT.count("sftp.elevated.") >= 6))
 
 check("§6 no sentence of the elevated family leaked into the local pane's family "
       "(18 sentences + v1.9.8's two switch tooltips)",
@@ -406,15 +406,22 @@ check("§7 the elevated pane's provider is started by the pane and stopped by it
 print("== 8. acceptance (ELEVATED_PANE.md §8) ==")
 # ════════════════════════════════════════════════════════════
 
-check("§8 the frozen contract and its two gates are in the tree",
-      os.path.isfile(CONTRACT)
-      and os.path.isfile(os.path.join(ROOT, "tests", "test_elevated_pane.py"))
-      and os.path.isfile(os.path.join(ROOT, "tests", "test_elevated_pane_contract.py")))
+_gate_files = (os.path.join(ROOT, "tests", "test_elevated_pane.py"),
+               os.path.join(ROOT, "tests", "test_elevated_pane_contract.py"))
+if docs_mode():
+    # The frozen contract is INTERNAL and gitignored: its presence is audited under `--docs` alone,
+    # while its two GATES ship and are asserted on every run.
+    check("§8 the frozen contract and its two gates are in the tree",
+          os.path.isfile(CONTRACT) and all(os.path.isfile(p) for p in _gate_files))
+else:
+    check("§8 the two gates of the contract audit are in the tree",
+          all(os.path.isfile(p) for p in _gate_files))
 
 check("§8 the contract declares the read-only half and the ONE refusal it ships",
-      "READ-ONLY" in CONTRACT_TEXT
-      and "sftp.elevated.read_only" in CONTRACT_TEXT
-      and "SEPARATE version" in CONTRACT_TEXT)
+      not docs_mode()
+      or ("READ-ONLY" in CONTRACT_TEXT
+          and "sftp.elevated.read_only" in CONTRACT_TEXT
+          and "SEPARATE version" in CONTRACT_TEXT))
 
 _IMPORTS = [ln.strip() for ln in _HANDSHAKE.splitlines()
             if ln.strip().startswith(("import ", "from "))]
@@ -426,10 +433,12 @@ check("§8 no new dependency came with the feature (stdlib, PySide6 and the ship
 check("§8 VERSION_FORMAT stays the shipped 0.9 (an elevation is not project state)",
       __import__("version").VERSION_FORMAT == "0.9")
 
-check("§8 the documents name the contract (the reference docs point a reader at it)",
-      "ELEVATED_PANE.md" in open(os.path.join(ROOT, "AGENTS.md"), encoding="utf-8").read()
-      and "ELEVATED_PANE.md" in open(os.path.join(ROOT, "DOCUMENTATION.md"),
-                                     encoding="utf-8").read())
+if docs_mode():
+    _agents_path = os.path.join(ROOT, "AGENTS.md")
+    _doc_path = os.path.join(ROOT, "DOCUMENTATION.md")
+    check("§8 the documents name the contract (the reference docs point a reader at it)",
+          "ELEVATED_PANE.md" in open(_agents_path, encoding="utf-8").read()
+          and "ELEVATED_PANE.md" in open(_doc_path, encoding="utf-8").read())
 
 check_release_state(ROOT)
 

@@ -24,8 +24,9 @@ except ImportError:  # flat layout: the project root is on sys.path
     import activity_log as AL  # type: ignore
 
 
-#: The slack a measured column keeps beside its own text (the header's frame and padding).
-STAMP_COLUMN_PADDING = 10
+#: The slack a measured column keeps beside its own text (the header's frame and padding) — the ONE
+#: owner of the stamp's format, its floor and this padding is `modules/activity_log.py`.
+STAMP_COLUMN_PADDING = AL.STAMP_COLUMN_PADDING
 
 
 def _t(key: str, **kw) -> str:
@@ -81,10 +82,10 @@ class ActivityPanel(QDialog):
     #: without the wait the same rows would be built dozens of times.
     REFRESH_MS = 80
 
-    #: The column widths (px) of the four columns; the message column stretches. The first number
-    #: is the FLOOR of the time column — the column itself is measured from the live font, because
-    #: the stamp carries the date now and a wider UI font may need more room than a constant.
-    COLUMN_WIDTHS = (152, 82, 190)
+    #: The column widths (px) of the four columns; the message column stretches. The first entry is
+    #: the FLOOR of the time column (`activity_log.STAMP_COLUMN_FLOOR`) — the column itself is
+    #: MEASURED from the live font by `stamp_column_width()`, which a font change re-runs.
+    COLUMN_WIDTHS = (AL.STAMP_COLUMN_FLOOR, 82, 190)
 
     def __init__(self, buffer=None, parent=None):
         super().__init__(parent)
@@ -168,13 +169,25 @@ class ActivityPanel(QDialog):
         self.clear_btn.setToolTip(_t("activity.clear_hint"))
 
     def stamp_column_width(self) -> int:
-        """The time column: the DECLARED floor or the live font's own measurement, whichever is
-        wider (a stamp carries the date now, and a wider UI font needs more room than a constant)."""
+        """The time column: the declared floor or the live font's own measurement, whichever is
+        wider — the ONE reader of `modules/activity_log.py`, which owns the format and the padding."""
         try:
-            needed = self.tree.fontMetrics().horizontalAdvance(AL.stamp_text(0.0))
+            return AL.stamp_column_width(self.tree.fontMetrics())
         except (RuntimeError, AttributeError, TypeError):
             return int(self.COLUMN_WIDTHS[0])
-        return max(int(self.COLUMN_WIDTHS[0]), int(needed) + STAMP_COLUMN_PADDING)
+
+    def refresh_theme(self) -> None:
+        """The theme walk of this panel: re-MEASURE the stamp column (v1.10rc1).
+
+        The panel paints nothing of its own (its QSS is the application's), so the one thing a live
+        change can stale is the width MEASURED for the font — a font change re-runs this hook
+        (`ui/theme_qss.py` asks every top-level widget), which is what keeps the column in step.
+        Never raises: this walk may run while the panel is closing.
+        """
+        try:
+            self.tree.setColumnWidth(0, self.stamp_column_width())
+        except (RuntimeError, AttributeError):
+            return
 
     def current_level(self) -> str:
         """The active level-filter key ("all" … — `activity_log.LEVEL_KEYS`)."""

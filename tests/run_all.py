@@ -3,6 +3,10 @@
 Run from the project root:
     python tests/run_all.py                 # all test_*.py + check_i18n_keys.py, the auto workers
     python tests/run_all.py --fast | --tag network | --failed-only | --junit | keyring | --workers N
+    python tests/run_all.py --docs           # + the documentation regime (the internal documents)
+
+`--docs` is the ONE opt-in of the suite: the internal documents are hand-edited local files, so the
+checks that hold them to the contract are skipped unless it is asked for (`_common.docs_mode()`).
 
 The workers default to the cores (capped by WORKER_CAP = 16) and the files go LONGEST FIRST, because
 the run is WAIT-bound; the artifacts (test-results/) are junit.xml and last_run.json."""
@@ -22,6 +26,10 @@ TESTS = os.path.join(ROOT, "tests")
 RESULTS_DIR = os.path.join(ROOT, "test-results")
 JUNIT_DEFAULT = os.path.join(RESULTS_DIR, "junit.xml")
 CACHE_PATH = os.path.join(RESULTS_DIR, "last_run.json")
+# The tag that marks a file as part of the DOCUMENTATION regime (`# tags: docs` in its first 40
+# lines). It is the ONLY tag the runner EXCLUDES by default — every other tag is a section marker.
+DOCS_TAG = "docs"
+DOCS_ENV = "SSHMAP_TEST_DOCS"    # `_common.docs_mode()` reads it inside the topical files
 
 # The auto workers: the machine cores, but no more than WORKER_CAP (each worker — a process with
 # PySide6, ~110 MB peak). v1.4.1: the cap was 8, which left half of a 16-core machine idle — the
@@ -81,17 +89,23 @@ def collect_files(filter_sub=None):
     return files
 
 
-def run_one(name, workdir_root, tag_env=None):
+def run_one(name, workdir_root, tag_env=None, docs=False):
     """One test file — a separate process; the output is captured (the parallelism).
 
     tag_env: the explicitly requested tag (--tag NAME) is passed into the env SSHMAP_TEST_TAGS —
     the files with the "opt-in" network sections (test_diagnostics.py) switch to it
     into the real mode; the regular run goes without the variable (hermetic).
+    docs: `--docs` — the topical files read `docs_mode()` from SSHMAP_TEST_DOCS to know whether
+    their half over an internal document runs at all.
     """
     env = dict(os.environ)
     env["SSHMAP_TEST_WORKDIR"] = os.path.join(workdir_root, name[:-3])
     if tag_env:
         env["SSHMAP_TEST_TAGS"] = tag_env
+    if docs:
+        env[DOCS_ENV] = "1"
+    else:
+        env.pop(DOCS_ENV, None)
     t0 = time.time()
     proc = subprocess.run(
         [sys.executable, os.path.join(TESTS, name)],
@@ -207,7 +221,7 @@ def parse_args(argv):
         print(__doc__.split("Run from the project root:")[1].split("\n\n")[0])
         return None
 
-    opts = {"workers": None, "fast": False, "tag": None,
+    opts = {"workers": None, "fast": False, "tag": None, "docs": False,
             "junit": JUNIT_DEFAULT, "failed_only": False, "filters": []}
     i = 0
     while i < len(argv):
@@ -222,6 +236,8 @@ def parse_args(argv):
                 return err(f"--workers: not a number — {argv[i]!r}")
         elif a == "--fast":
             opts["fast"] = True
+        elif a == "--docs":
+            opts["docs"] = True
         elif a == "--tag":
             i += 1
             if i >= len(argv):
@@ -264,6 +280,13 @@ def main():
     # Sampling by tags/profiles (the tags are read as text — without importing files).
     tags = {n: read_tags(n) for n in files}
     skipped = []
+    if not opts["docs"]:
+        # The documentation regime is OPT-IN: the files tagged `docs` audit the hand-edited internal
+        # documents, so the default run leaves them out entirely and editing a document cannot redden
+        # the suite. `--docs` runs them and turns the same switch on inside the topical files.
+        kept = [n for n in files if DOCS_TAG not in tags[n]]
+        skipped += [f"{n} (docs — run with --docs)" for n in files if n not in set(kept)]
+        files = kept
     if opts["fast"]:
         kept = [n for n in files if not (tags[n] & FAST_EXCLUDE)]
         skipped += [f"{n} ({', '.join(sorted(tags[n] & FAST_EXCLUDE))})"
@@ -298,6 +321,7 @@ def main():
     print(f"SSHMap test suite: {len(files)} file(s), workers={workers}"
           + (f" (filter: {sub})" if sub else "")
           + (" [--fast]" if opts["fast"] else "")
+          + (" [--docs]" if opts["docs"] else "")
           + (f" [--tag {opts['tag']}]" if opts["tag"] is not None else "")
           + (" [--failed-only]" if opts["failed_only"] else ""))
     if skipped:
@@ -307,7 +331,7 @@ def main():
     run_root = tempfile.mkdtemp(prefix="sshmap_test_run_")
     try:
         with ThreadPoolExecutor(max_workers=workers) as ex:
-            futures = [ex.submit(run_one, name, run_root, opts["tag"]) for name in files]
+            futures = [ex.submit(run_one, name, run_root, opts["tag"], opts["docs"]) for name in files]
             for fut in as_completed(futures):
                 name, code, dt, out, err = fut.result()
                 results.append((name, code, dt, out, err))

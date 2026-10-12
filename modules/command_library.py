@@ -872,6 +872,10 @@ class CommandLibraryPanel(QWidget):
             refresh_button_icon(self._file_btn, "menu_dots")
         except RuntimeError:
             pass  # Qt teardown — the buttons are already destroyed
+        # v1.10rc1: the Name column is re-MEASURED here as well — this walk is what a live UI-font
+        # change runs, and a column fitted once at construction would cut its names until the next
+        # `_rebuild_tree()` happened to run.
+        self._fit_name_column()
 
     def retranslate(self):
         """v1.3.3.1: re-text the panel in the current language.

@@ -32,6 +32,10 @@ import ui.hotkey_registry as HR  # noqa: E402
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".sshmap", "config.json")
 PLUGIN_DIR = PM.user_plugin_dir()
 PLUGINS_MD = os.path.join(ROOT, "PLUGINS.md")
+# The INTERNAL half of the contract (gitignored): the implementation status — which rc of the `1.4` line
+# delivered which hook — lives there, while `PLUGINS.md` is the author-facing document a plugin writer
+# reads. A checkout without the internal file SKIPS that ONE check, the `tests/test_docs.py` way.
+PLUGINS_INTERNAL_MD = os.path.join(ROOT, "PLUGINS_INTERNAL.md")
 
 NEW_I18N_KEYS = ["menu.plugins", "plugins.reload", "plugins.empty",
                  "plugins.status.loaded", "plugins.status.error",
@@ -631,8 +635,15 @@ check("the folder and the config key of the contract match the code",
       "~/.sshmap/plugins" in _plugins_doc and PM.CONFIG_KEY == "plugins")
 check("the in-process isolation limitation is documented (ROADMAP: hard isolation is NOT a goal)",
       "segfault" in _plugins_doc.lower() and "in-process" in _plugins_doc.lower())
-check("the document marks the rc1 implementation status (examples — rc3)",
-      "rc1" in _plugins_doc and "rc3" in _plugins_doc)
+if os.path.exists(PLUGINS_INTERNAL_MD):
+    with open(PLUGINS_INTERNAL_MD, encoding="utf-8") as f:
+        _internal_doc = f.read()
+    check("the INTERNAL contract marks the implementation status of the frozen API (rc1 → rc3)",
+          all(rc in _internal_doc for rc in ("rc1", "rc2", "rc3")) and "SHIPPED" in _internal_doc,
+          "PLUGINS_INTERNAL.md")
+else:
+    print("  SKIP  PLUGINS_INTERNAL.md is absent — the implementation status is an INTERNAL "
+          "document (a fresh clone has none of them)")
 
 # ════════════════════════════════════════════════════════════════════════════
 print("== §10 i18n + the release state ==")

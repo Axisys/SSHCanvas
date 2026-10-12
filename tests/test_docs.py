@@ -1,28 +1,36 @@
 # -*- coding: utf-8 -*-
-"""The documentation-consistency guards (the changelog family, ROADMAP, the counters, INDEX freshness, the code-comment budget).
+# tags: docs
+"""The documentation regime — run it with `--docs`, never by accident (see `_common.docs_mode`).
 
-§1 the section ownership of the changelog family and `ROADMAP.md` (the migration pin of the
-family's pairing rule included); §2 the counters the reference
-docs quote are the code's counters (the i18n key pin, the action registry in every spelling and
-its empty-default count); §3 `DOCUMENTATION.md` is self-consistent (every `§N` resolves, a dotted
-`§N.M` names `AGENTS.md`, the contents list is complete, the gotcha numbering is shared with §7);
-§4 `tests/INDEX.md` freshness, §5 the documentation rules over the two reference docs (and the
-repository's own closed world: an ignored `*.md` is untracked), §6 the CODE
-ratchet and §7 the byte budget of `AGENTS.md` (the harness TRUNCATES it) are the rest — a missing
-documentation set is a SKIP, never a defect (they are gitignored, so a fresh clone stays runnable).
-Run: python tests/test_docs.py   (from the project root) or python tests/run_all.py"""
+§1 the section ownership of the changelog family and `ROADMAP.md` (the pairing of the two families);
+§2 the counters the reference docs quote are the CODE's counters (the i18n key pin, the action
+registry); §3 `DOCUMENTATION.md` is self-consistent (every `§N` resolves, the contents list is
+complete, the gotcha numbering is shared with `AGENTS.md` §7); §5 the documentation rules over the
+two reference docs and the repository's closed world; §6 the code-comment ratchet; §7 the byte budget
+of `AGENTS.md`. Hand edits are FREE: the default suite skips this file, a missing set is a SKIP, and
+`tests/test_index.py` — the generated suite map — stays always on.
+Run: python tests/test_docs.py  (from the project root) or python tests/run_all.py --docs"""
 import collections
+import fnmatch
 import glob
 import os
 import re
 import subprocess
 import sys
 
-from _common import bootstrap, check, finish, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS
+from _common import (bootstrap, check, finish, docs_mode, EXPECTED_APP_VERSION,
+                     EXPECTED_I18N_KEYS)
 import _comment_budget as CB  # the ONE owner of the history markers + the code-comment ratchet (§6)
 import _docs_budget as DB     # the byte budget of AGENTS.md — the harness truncates it (§7)
 
 ROOT, WORK = bootstrap()  # HOME isolation + offscreen + sys.path (BEFORE any app import)
+
+if not docs_mode():
+    # The gate: the regime is OFF unless `run_all.py --docs` asked for it. Nothing below runs on a
+    # plain `run_all.py`, so a half-written document cannot turn the suite red while it is edited.
+    print("  SKIP  the documentation regime is off (run it with: python tests/run_all.py --docs)")
+    finish()
+    sys.exit(0)
 
 
 def _read(path):
@@ -63,8 +71,6 @@ def _without_rules(name, text):
     return None if i < 0 or j < 0 else text[:i] + text[j:]
 
 
-_rules_free = {n: _without_rules(n, _read(os.path.join(ROOT, n))) for n in REFERENCE_DOCS}
-
 _missing = [p for p in (_DOC, _AGENTS, _ROADMAP, _LIVE_CHANGELOG) if not os.path.exists(p)]
 if not _HISTORY:
     _missing.append(os.path.join(ROOT, "CHANGELOG_HISTORY_*.md"))
@@ -73,13 +79,18 @@ if _DETAILS and not os.path.exists(_LIVE_DETAILS):
     # the OPEN line are edited in place, exactly like `CHANGELOG.md`).
     _missing.append(_LIVE_DETAILS)
 if _missing:
-    print("  SKIP  the local documentation set is not present: "
+    print("  ERR   --docs was asked for, but the local documentation set is not present: "
           + ", ".join(os.path.basename(p) for p in _missing))
-    print("        (DOCUMENTATION.md / AGENTS.md / CHANGELOG*.md / ROADMAP.md are gitignored "
-          "local files — a fresh clone has none of them)")
-    CB.report(check)  # §6 guards the CODE, not a document: it runs on this path too
-    finish()          # 0 checks, 0 failures: a SKIP is not a defect
-    sys.exit(0)
+    print("        (DOCUMENTATION.md / AGENTS.md / CHANGELOG*.md / ROADMAP.md are gitignored local "
+          "files — the regime audits THIS checkout, so asking for it here guards nothing)")
+    check("§0 --docs finds the documentation set it audits (a guard over nothing is useless)",
+          False, f"missing: {[os.path.basename(p) for p in _missing]}")
+    finish()          # a defect, exactly once: asking to audit what is not here
+    sys.exit(1)
+
+# The reads below run ONLY on the path where the set is complete (every guard of §1–§3 and §5–§7
+# reads one of these files, so a read above the check is the crash that replaces the SKIP).
+_rules_free = {n: _without_rules(n, _read(os.path.join(ROOT, n))) for n in REFERENCE_DOCS}
 
 
 def _flat(path):
@@ -394,23 +405,6 @@ check("§3 every gotcha citation points inside that list",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 tests/INDEX.md is fresh ==")
-# ════════════════════════════════════════════════════════════════════════════
-
-sys.path.insert(0, os.path.join(ROOT, "tests"))   # _gen_index imports run_all from its own folder
-import _gen_index as GI  # noqa: E402
-from run_all import collect_files  # noqa: E402
-
-_names = [n for n in collect_files() if n.startswith("test_")]
-_block, _problems = GI.build_block(_names)
-check("§4 every test file carries a module docstring (the INDEX table needs it)",
-      not _problems, _problems[:3])
-check("§4 tests/INDEX.md is fresh (update: python tests/_gen_index.py)",
-      GI.extract_block(_read(GI.INDEX_PATH)) == _block,
-      f"the «Suite files» block differs ({len(_names)} files)")
-
-
-# ════════════════════════════════════════════════════════════════════════════
 print("== §5 the documentation rules are enforced ==")
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -591,6 +585,39 @@ if os.path.exists(_GITIGNORE):
               f"ignored yet TRACKED (untrack with: git rm --cached <path>): {_published}")
         check("§5 the closed world really has names to check (a guard over nothing is useless)",
               len(_ignored_md) >= 5, f"patterns={_ignored_md}")
+
+        # The OTHER direction (AUDIT N94): nothing caught a NEW internal document that is neither
+        # tracked nor ignored — `TOOLS.md` and `UI_UX_AUDIT.md` sat there (one with real topology)
+        # until a `git add -A` would have published them. Ignore entries are GLOBS, so a name is
+        # matched against the patterns, as `git check-ignore` does.
+        _public_root_md = {"README.md", "PLUGINS.md"}
+        _root_md = sorted(name for name in os.listdir(ROOT)
+                          if name.endswith(".md") and os.path.isfile(os.path.join(ROOT, name)))
+        _uncovered = [name for name in _root_md
+                      if name not in _public_root_md
+                      and not any(fnmatch.fnmatch(name, pat) for pat in _ignored_md)]
+        check("§5 every root-level *.md is a DECLARED public file or named by .gitignore (AUDIT N94)",
+              not _uncovered and len(_root_md) >= 5,
+              f"root *.md={len(_root_md)} untracked AND unignored: {_uncovered}")
+
+        # …and the list §13 keeps must resolve in the ignore file (a name it does not carry is a
+        # document about to be published). Both directions count: a member that IS a pattern
+        # (`CHANGELOG*.md`) covers the concrete names `.gitignore` spells out.
+        _s13_start = _agt_text.find("The internal, gitignored documents")
+        _s13_end = _agt_text.find("— are never linked", _s13_start)
+        _s13_list = sorted(set(re.findall(r"`([A-Za-z0-9_*.-]+\.md)`",
+                                          _agt_text[_s13_start:_s13_end]))) \
+            if _s13_start >= 0 and _s13_end > _s13_start else []
+
+        def _covers(name):
+            return name in _ignored_md or any(fnmatch.fnmatch(name, pat)
+                                              or fnmatch.fnmatch(pat, name)
+                                              for pat in _ignored_md)
+
+        _s13_missing = [name for name in _s13_list if not _covers(name)]
+        check("§5 the §13 internal-document list is named by .gitignore (the list and the file agree)",
+              len(_s13_list) >= 8 and not _s13_missing,
+              f"names={len(_s13_list)} not ignored: {_s13_missing}")
 
 
 # ════════════════════════════════════════════════════════════════════════════

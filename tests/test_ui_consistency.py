@@ -15,8 +15,8 @@ import re
 import sys
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap, check,
-                     check_i18n_format, check_i18n_parity, check_release_state, clear_cfg, finish,
-                     load_i18n_langs, read_cfg, releases_at_least, wait_for)
+                     check_i18n_format, check_i18n_parity, check_release_state, clear_cfg, docs_mode,
+                     finish, load_i18n_langs, read_cfg, releases_at_least, wait_for)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation, offscreen)
 
@@ -267,6 +267,14 @@ check("§2 the rows only ONE surface offers are DECLARED, not levelled",
       and _t("ctx.reveal_on_map") not in flat(_card)
       and _t("ctx.collapse_server") not in flat(_side),
       f"card={SM.keys(SM.CARD)} sidebar={SM.keys(SM.SIDEBAR)}")
+# v1.10rc1 (N88): `rows(BOTH)` answers the rows EVERY surface carries — a union of the surface-only
+# rows is what the third clause of the condition leaks into it (and into an unknown surface).
+check("§2 `BOTH` and an unknown surface answer the rows every surface carries (N88)",
+      SM.keys(SM.BOTH) == tuple(key for key in SM.keys(SM.CARD) if key in SM.keys(SM.SIDEBAR))
+      and SM.keys(SM.BOTH) == SM.keys("weird") == SM.keys("")
+      and "collapse" not in SM.keys(SM.BOTH) and "duplicate" not in SM.keys(SM.BOTH)
+      and "reveal" not in SM.keys(SM.BOTH),
+      f"both={SM.keys(SM.BOTH)} weird={SM.keys('weird')}")
 check("§2 the sidebar's own declaration is DERIVED from the table (no second copy)",
       CONTEXT_MENU_ITEMS == tuple(row for row in SM.rows(SM.SIDEBAR) if row is None or
                                   row[0] != "quick_launch")
@@ -356,9 +364,14 @@ check("§3 the identity reader is PURE (ip over host, no dangling `@`/`:` and no
           id="x", alias="a", host="", user="u")})()) == ""
       and TP.session_identity(object()) == "")
 check("§3 the tab's fixed icon slot carries the STATE of the session (the cards' own shapes)",
-      TP.session_mark_status(_page) == TP.SESSION_STATE_ONLINE
-      and icon_has_ink(TP.session_tab_icon(_page))
+      TP.session_mark_status(_page) == ""
       and TP.SESSION_STATE_OFFLINE == "offline" and TP.SESSION_STATE_WARN == "warn")
+# v1.10rc1 (N87): `online` is a fact about the CHANNEL — the connecting window is the empty slot.
+_page._on_connected_state()
+TP.render_session_activity(_term.session_tabs, _page, _t)
+check("§3 ...and the state becomes `online` only once the channel is really up",
+      TP.session_mark_status(_page) == TP.SESSION_STATE_ONLINE
+      and icon_has_ink(TP.session_tab_icon(_page)), TP.session_mark_status(_page))
 _page._session_ended = True
 TP.render_session_activity(_term.session_tabs, _page, _t)
 check("§3 ...and a dead channel switches it to `offline`, the ACTIVITY mark winning while set",
@@ -507,8 +520,8 @@ _win2._dirty = False
 _win2.close()
 
 check_release_state(ROOT)
-check("§6 the pin is the release this file describes (the `1.9` line's LAST version)",
-      EXPECTED_APP_VERSION == "1.9.8" and releases_at_least(EXPECTED_APP_VERSION, "1.9.7")
+check("§6 the pin is the release this file describes (the `1.9` line has shipped)",
+      releases_at_least(EXPECTED_APP_VERSION, "1.9.8")
       and VERSION_FORMAT_RE.fullmatch(EXPECTED_APP_VERSION) is not None,
       EXPECTED_APP_VERSION)
 check_i18n_parity(LANGS)
@@ -539,13 +552,17 @@ check("§6 no new dependency, no second config file, no pytest",
       and "pytest" not in _src("pyproject.toml"))
 check("§6 VERSION_FORMAT did NOT move (no schema change in this version)",
       __import__("version").VERSION_FORMAT == "0.9")
-check("§6 the plan LOST this version (ROADMAP.md's version sections are the open ones)",
-      "## v1.9.8" not in open(os.path.join(ROOT, "ROADMAP.md"), encoding="utf-8").read())
+_rollover_pair = (os.path.join(ROOT, "CHANGELOG_HISTORY_V198.md"),
+                  os.path.join(ROOT, "CHANGELOG_DETAILS_V198.md"))
+if docs_mode():
+    # `ROADMAP.md` and the changelog family are INTERNAL and hand-edited: their state is audited
+    # under `run_all.py --docs` alone, so editing a plan or a release entry never turns this red.
+    check("§6 the plan LOST this version (ROADMAP.md's version sections are the open ones)",
+          "## v1.9.8" not in open(os.path.join(ROOT, "ROADMAP.md"), encoding="utf-8").read())
+    check("§6 the 1.9 line's rollover PAIR exists (the history and its details beside it)",
+          all(os.path.isfile(p) for p in _rollover_pair))
 check("§6 the topical file is listed by the suite map (tests/INDEX.md regenerated)",
       "test_ui_consistency" in open(os.path.join(ROOT, "tests", "INDEX.md"),
                                     encoding="utf-8").read())
-check("§6 the 1.9 line's rollover PAIR exists (the history and its details beside it)",
-      os.path.exists(os.path.join(ROOT, "CHANGELOG_HISTORY_V198.md"))
-      and os.path.exists(os.path.join(ROOT, "CHANGELOG_DETAILS_V198.md")))
 
 finish()

@@ -66,6 +66,27 @@ def stamp_text(timestamp, fmt: str = STAMP_FORMAT) -> str:
         return ""
 
 
+#: The stamp column's declared FLOOR and the padding a MEASURED column adds to the live text width.
+#: The width itself is measured (`stamp_column_width()`): `STAMP_FORMAT` needs more room than a
+#: literal 152 px already at the default font, and a second literal per panel could drift.
+STAMP_COLUMN_FLOOR = 152
+STAMP_COLUMN_PADDING = 10
+
+
+def stamp_column_width(font_metrics) -> int:
+    """The width the stamp column needs for ONE font — the ONE reader both panels share. PURE.
+
+    `font_metrics` is anything answering `horizontalAdvance(text)` (a `QFontMetrics`); a broken one
+    answers the declared FLOOR. The caller re-measures in its `refresh_theme()`, which is the walk a
+    font change already runs — a width measured once at construction would go stale.
+    """
+    try:
+        needed = int(font_metrics.horizontalAdvance(stamp_text(0.0)))
+    except (AttributeError, TypeError, ValueError):
+        return STAMP_COLUMN_FLOOR
+    return max(STAMP_COLUMN_FLOOR, needed + STAMP_COLUMN_PADDING)
+
+
 def level_key(event) -> str:
     """The panel's FILTER key of an event — the ONE mapping of a level onto that vocabulary.
 

@@ -10,8 +10,9 @@ stops being true fails in the suite. ALL checks are offscreen, on the fake SFTP 
 import os
 import sys
 
-from _common import (bootstrap, check, finish, wait_until, clear_cfg, check_release_state,
-                     EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, releases_at_least, write_cfg)
+from _common import (bootstrap, check, docs_mode, finish, rep_doc_text, wait_until, clear_cfg,
+                     check_release_state, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS,
+                     releases_at_least, write_cfg)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (the HOME isolation)
 
@@ -373,8 +374,10 @@ check("§3b the READING pane keeps its listing and its cursor (the panel is a vi
 msgs7.clear()
 pane_l.tree.setCurrentItem(item_by_name(pane_l, "c.txt"))
 pane_l._cmd_view()
-for _ in range(6):
-    app.processEvents()
+# The worker really runs on a thread, so the settled FACT is what a check may wait for — a fixed
+# number of `processEvents()` rounds is a race under the parallel runner (`wait_until` is the
+# shipped pattern of this file).
+wait_until(lambda: pane_l.viewer_text.toPlainText() == "gamma", timeout_ms=5000)
 check("§3b a second file from the READING pane is not 'busy': its own panel is re-read",
       pane_l.viewer_text.toPlainText() == "gamma"
       and pane_l.viewer.parent() is pane_r.splitter
@@ -384,8 +387,8 @@ check("§3b a second file from the READING pane is not 'busy': its own panel is 
 msgs7.clear()
 pane_l.tree.setCurrentItem(item_by_name(pane_l, "b.bin"))
 pane_l._cmd_view()
-for _ in range(8):
-    app.processEvents()
+wait_until(lambda: i18n.t("sftp.viewer.binary") in msgs7 and pane_l._viewer_open is False,
+           timeout_ms=5000)
 check("§3b a read the worker REFUSES leaves the other pane a LISTING (no empty panel)",
       pane_l._viewer_open is False and tab7.preview_pane() is None
       and pane_r._viewer_borrowed is False
@@ -445,11 +448,11 @@ worker7.shutdown(wait_ms=2000)
 print("== 8. the line's state and the contract's own document ==")
 
 _contract = os.path.join(ROOT, "SFTP_PANES.md")
-check("§8 the frozen contract of the line is in the repository", os.path.exists(_contract))
-_contract_text = ""
-if os.path.exists(_contract):
-    with open(_contract, encoding="utf-8") as fh:
-        _contract_text = fh.read()
+# The frozen contract of the line is INTERNAL and gitignored: every clause read off it — and its own
+# presence — is audited under `run_all.py --docs`, so hand edits never turn the default run red.
+_contract_text = rep_doc_text("SFTP_PANES.md")
+if docs_mode():
+    check("§8 the frozen contract of the line is in the repository", os.path.isfile(_contract))
 _SECTIONS = ("## 1. The pane model", "## 2. The worker API surface",
              "### 2a. The directory boundary", "## 3. The pane-scoped key map",
              "### 3a. The walk (rc3)", "### 3b. The preview in the other pane (rc3)",
@@ -457,12 +460,13 @@ _SECTIONS = ("## 1. The pane model", "## 2. The worker API surface",
              "## 5. The persistence", "## 6. The follow rule",
              "## 7. The refactor boundary", "## 8. Acceptance per slot")
 _missing_sections = [s for s in _SECTIONS if s not in _contract_text]
-check("§8 every clause of the contract keeps its heading (§-numbers are stable identifiers)",
-      not _missing_sections, str(_missing_sections))
-check("§8 the contract names the slot THIS release closes",
-      "**`v1.7`:** the contract audit and the line's documents" in _contract_text)
-check("§8 the contract stays FROZEN: it is not a changelog (no release narrative in it)",
-      "used to" not in _contract_text and "previously" not in _contract_text)
+if docs_mode():
+    check("§8 every clause of the contract keeps its heading (§-numbers are stable identifiers)",
+          not _missing_sections, str(_missing_sections))
+    check("§8 the contract names the slot THIS release closes",
+          "**`v1.7`:** the contract audit and the line's documents" in _contract_text)
+    check("§8 the contract stays FROZEN: it is not a changelog (no release narrative in it)",
+          "used to" not in _contract_text and "previously" not in _contract_text)
 
 check_release_state(ROOT)
 check("§8 the version pin is the release this file describes",

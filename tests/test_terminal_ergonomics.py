@@ -308,7 +308,15 @@ _pa, _pb = _win.session_tabs.widget(0), _win.session_tabs.widget(1)
 check("§4 both tabs carry a FIXED icon slot from birth (a mark can never resize a tab)",
       not _win.session_tabs.tabIcon(0).isNull()
       and not _win.session_tabs.tabIcon(1).isNull()
-      and session_mark_status(_pa) == SESSION_STATE_ONLINE,
+      and session_mark_status(_pa) == "",
+      f"state={session_mark_status(_pa)!r}")
+# v1.10rc1 (N87): the state is a fact about the CHANNEL — a page that has not connected yet is the
+# empty slot, and `connected_signal` is what turns it into the live dot.
+_pa._on_connected_state()
+_pb._on_connected_state()
+check("§4 ...and it stays the EMPTY slot until the channel is really up (`connected_signal`)",
+      session_mark_status(_pa) == SESSION_STATE_ONLINE
+      and session_mark_status(_pb) == SESSION_STATE_ONLINE,
       f"state={session_mark_status(_pa)!r}")
 
 _win.session_tabs.setCurrentIndex(1)   # beta is on screen
@@ -386,6 +394,7 @@ _dock.add_session(_node_a)
 _dock.add_session(_node_b)
 app.processEvents()
 _da, _db = _dock.session_tabs.widget(0), _dock.session_tabs.widget(1)
+_da._on_connected_state()
 _dock.session_tabs.setCurrentIndex(1)
 _dock_width = _dock.session_tabs.tabBar().tabRect(0).width()
 _da._on_output(b"tail -f keeps talking\r\n")
