@@ -13,7 +13,7 @@ import os
 import re
 
 from _common import (bootstrap, check, check_i18n_parity, check_release_state, finish,
-                     load_i18n_langs, releases_at_least,
+                     load_i18n_langs, releases_at_least, VERSION_FORMAT_RE,
                      EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS)
 
 ROOT, WORK = bootstrap()
@@ -207,8 +207,9 @@ print("== §5 the release state ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check_release_state(ROOT)
-check("§5 the pin names the released 1.12 line (a patch on it keeps three components)",
-      releases_at_least(EXPECTED_APP_VERSION, "1.12") and EXPECTED_APP_VERSION.count(".") == 2,
+check("§5 the pin names the released 1.12 line (a patch on `X.Y.Z` adds a component)",
+      releases_at_least(EXPECTED_APP_VERSION, "1.12")
+      and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
       EXPECTED_APP_VERSION)
 check_i18n_parity(_langs)
 check("§5 the parity pin did NOT move (a rename adds no key)",

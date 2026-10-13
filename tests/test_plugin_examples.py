@@ -31,9 +31,57 @@ from PySide6.QtWidgets import QApplication, QMenu  # noqa: E402
 app = QApplication.instance() or QApplication(sys.argv)
 
 import modules.plugin_manager as PM  # noqa: E402
+import modules.command_guard as CG  # noqa: E402
 import modules.plugin_runner as PR  # noqa: E402
 import ui.main_window as MW  # noqa: E402
 from models.server import ServerData  # noqa: E402
+
+
+_GUARD_ASKED = []      # every question the guard asked (the dialog seam records into THIS list)
+
+
+class _GuardBox:
+    """The command guard's dialog seam: every question is answered and recorded.
+
+    `app_versions` generates a probe script of ~5.9 KB, which is PAST `MAX_COMMAND_CHARS` — the guard
+    therefore REFUSES it by default (a bound that silently read only the head was the `N99` defect) and
+    the run asks ONE confirmation. The suite answers it here, exactly as `test_command_guard.py` does,
+    and the checks below assert that the question really was asked.
+    """
+
+    class Icon:
+        Warning = 0
+
+    class StandardButton:
+        Yes = 1
+        No = 2
+
+    def __init__(self, parent=None):
+        self.parent = parent
+
+    def setIcon(self, icon):
+        pass
+
+    def setWindowTitle(self, title):
+        self.title = title
+
+    def setText(self, text):
+        self.text = text
+        _GUARD_ASKED.append(text)
+
+    def setStandardButtons(self, buttons):
+        pass
+
+    def setDefaultButton(self, button):
+        pass
+
+    def exec(self):
+        return _GuardBox.StandardButton.Yes
+
+
+# The guard's dialog is answered for the WHOLE file: the menu round of §7 runs the same plugins, and a
+# real modal box would block an offscreen run forever (`AGENTS.md` §12.3).
+CG.QMessageBox = _GuardBox
 
 EXAMPLES_DIR = os.path.join(ROOT, "examples")
 PLUGINS_SRC = os.path.join(EXAMPLES_DIR, "plugins")
@@ -587,6 +635,15 @@ try:
     _started = _manager.plugin_run_on_nodes(None)
     check("`run_on_nodes` starts EVERY capable example on the registry's nodes (one per plugin)",
           _started == 6, str(_started))
+    # The guard runs on the manager's thread (`_start_command_run` is the slot of `command_requested`),
+    # so the question arrives through the event loop — the round is driven until it does.
+    _asked_for_the_probe = wait_until(
+        lambda: any(str(CG.TOKEN_OVER_LONG) in text for text in _GUARD_ASKED))
+    check("the guard ASKED about `app_versions`' ~5.9 KB generated probe (past MAX_COMMAND_CHARS)",
+          _asked_for_the_probe is not False, str(_GUARD_ASKED)[:200])
+    check("...and it asked ONCE per run, never once per node",
+          len([t for t in _GUARD_ASKED if str(CG.TOKEN_OVER_LONG) in t]) == 1,
+          str(len(_GUARD_ASKED)))
     check("the round really finished — the cache has the answer and nothing is left running",
           wait_until(lambda: "srv-1" in local("disk_monitor").load_cache()) is not False
           and wait_until(lambda: _manager.active_workers() == []

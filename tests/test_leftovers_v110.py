@@ -88,8 +88,8 @@ check("§1 the declared families carry the runlevel spelling and nothing else mo
       str(CG.FAMILIES))
 check("§1 the classifier still never raises and stays bounded (a payload included)",
       CG.dangerous_token(None) == "" and CG.dangerous_token(5) == ""
-      and CG.dangerous_token('bash -c "rm -rf /' + "y" * 100000 + '"') == "rm -rf"
-      and CG.dangerous_token("x" * 200000) == "")
+      and CG.dangerous_token('bash -c "rm -rf /' + "y" * 100000 + '"') == CG.TOKEN_OVER_LONG
+      and CG.dangerous_token("x" * 200000) == CG.TOKEN_OVER_LONG)
 
 
 # ════════════════════════════════════════════════════════════════════════════

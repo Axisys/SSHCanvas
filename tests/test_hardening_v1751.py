@@ -487,7 +487,7 @@ check("N40 nothing was written outside the chosen folder",
 check("N40 ...and no provisional litter is left",
       [n for n in os.listdir(_dl) if n.endswith(SW.PART_SUFFIX)] == [])
 check("N40 the payload names the file, so the pane can spell the sentence",
-      _payload.get("name") == "..\\escape.txt", str(_payload))
+      _payload.get("name") == "escape.txt", str(_payload))
 _worker.shutdown(wait_ms=2000)
 
 # A hostile name INSIDE a tree: the tree is ONE task, so its failure is the PARTIAL payload.

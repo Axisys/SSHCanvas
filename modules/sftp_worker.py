@@ -273,24 +273,34 @@ def local_containment_problem(dest, base) -> Optional[str]:
     `startswith()` is NOT this check: `os.path.join(dir, "..\\\\x")` still BEGINS with `dir` while
     the bytes land in its parent. The belt is `os.path.commonpath((realpath(dest), realpath(base)))`
     — it also catches what the name rule cannot see (a symlinked component pointing outside the
-    folder) and a cross-drive join, which `commonpath` refuses with `ValueError`.
+    folder) and a cross-drive join, which `commonpath` refuses with `ValueError`. The destination is
+    the FILE, so `base` itself is not inside `base`: a path that resolves ONTO the folder is refused
+    with the same `outside` (`N98` — writing there means the file lands beside the tree, not in it).
     """
     try:
         root = os.path.realpath(base or ".")
         target = os.path.realpath(dest)
-        if os.path.commonpath((target, root)) != root:
+        if target == root or os.path.commonpath((target, root)) != root:
             return "outside"
     except (ValueError, OSError):
         return "outside"
     return None
 
 
-def local_destination_problem(name, local_dir, windows=None) -> Optional[str]:
-    """The name rule PLUS the containment belt for `join(local_dir, name)`. PURE."""
-    problem = local_name_problem(name, windows=windows)
+def local_destination_problem(path, local_dir, windows=None) -> Optional[str]:
+    """The name rule PLUS the containment belt for `path`, the path about to be WRITTEN. PURE.
+
+    `path` is the FILE's own name when it sits directly in `local_dir`, and the path of the entry
+    RELATIVE to `local_dir` when it does not — a nested file or a tree entry. The two halves then ask
+    about the SAME path: the name rule judges its last component and the belt judges the write.
+    Joining the last component back onto `local_dir` would validate a DIFFERENT path (`N98`), because
+    a POSIX name may legally carry a backslash (`..\\..\\x` is one component on the server and a
+    parent chain to `ntpath`), which is why the caller passes what it really opens.
+    """
+    problem = local_name_problem(os.path.basename(path), windows=windows)
     if problem:
         return problem
-    return local_containment_problem(os.path.join(local_dir or ".", name), local_dir)
+    return local_containment_problem(os.path.join(local_dir or ".", path), local_dir)
 
 
 class _SftpNameRefused(Exception):
@@ -1267,11 +1277,15 @@ class SftpWorker(QThread):
         (the task's own LABEL — the conflict dialog's "Rename" answer included) and the containment
         belt are checked HERE, before a byte is written — the only gate that cannot be bypassed. The
         provisional file is CREATED with `task.part_mode`, which is what gives a spool its tight mode.
+
+        `local_name` is the path of the file RELATIVE to `base_dir` — the tree walk hands its own
+        destination, so the belt judges the path `os.replace()` really publishes (`N98`); an empty
+        value means "the last component of `local_path` inside its own directory".
         """
         name = local_name or os.path.basename(local_path)
         problem = local_destination_problem(name, base_dir or os.path.dirname(local_path))
         if problem:
-            raise _SftpNameRefused(name, problem)
+            raise _SftpNameRefused(os.path.basename(name), problem)
         remote_fh = self._sftp.open(remote_path, "rb")  # no file → error
         # N49: the SOURCE entry's own mode/mtime travel to the local copy (a listing that reports no
         # mode carries nothing). N52: a read is prefetched up to the ceiling this read may consume.
@@ -1332,7 +1346,7 @@ class SftpWorker(QThread):
             if is_dir:
                 # The belt is BEFORE `os.makedirs()`, which would MAKE a hostile `..` chain real
                 # (v1.7.5.1, N40). A FILE entry is judged by `_download_file()`'s own authoritative
-                # check, so the two never disagree and the name is examined once per entry.
+                # check on the SAME path this walk writes (N98), so the two never disagree.
                 problem = (local_name_problem(os.path.basename(dest))
                            or local_containment_problem(dest, task.local_path))
                 if problem:
@@ -1345,8 +1359,7 @@ class SftpWorker(QThread):
                 continue
             try:
                 done += self._download_file(task, path, dest, total, done,
-                                            base_dir=task.local_path,
-                                            local_name=os.path.basename(dest))
+                                            base_dir=task.local_path, local_name=rel)
             except _SftpCancelled:
                 raise
             except _SftpNameRefused as e:

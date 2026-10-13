@@ -4,8 +4,9 @@
 The application keeps its OWN known_hosts store in `~/.sshmap/known_hosts`: a key the store does not
 know is SHOWN to the user (algorithm + SHA256 fingerprint, through `modules/interactive_ask.py`) and
 pinned only when it is accepted, and a key that differs from the stored one raises through paramiko and
-is offered as a REPLACE. Without an interactive surface the shipped TOFU accept applies, which is the
-declared fallback of `interactive_ask.ask()`.
+is offered as a REPLACE. An UNANSWERED question is a REFUSAL whenever an interactive surface exists
+(a dialog the user has not decided yet may never pin anything); the shipped TOFU accept is the fallback
+of the NO-SURFACE case alone — `interactive_ask.has_answerer()` tells the two apart (`N100`).
 
 The store has ONE owner, `KnownHostsStore`: every write re-reads the file, MERGES this session's entry
 and publishes the result with an atomic replace under a process-wide lock; a file that cannot be READ
@@ -348,20 +349,31 @@ def set_store(store) -> None:
 def ask_new_host_key(hostname: str, port, key) -> bool:
     """Does the user TRUST this key? The ONE decision point of a first connection.
 
-    `interactive_ask.ask()` answers `None` when no surface is installed; that is the DECLARED fallback
-    and it is the shipped TOFU accept — a host key is trusted by the very policy that trusted it
-    before this surface existed, and the log line names the fingerprint that was pinned.
+    `interactive_ask.ask()` answers `None` for two DIFFERENT situations, and this function separates
+    them with `interactive_ask.has_answerer()`:
+    * no interactive surface installed at all — the DECLARED fallback: TOFU, a key trusted by the very
+      policy that trusted it before the surface existed, with a log line naming the fingerprint;
+    * a surface EXISTS and did not answer (a dialog still on screen when the budget ran out, or one
+      that raised) — a REFUSAL. The app may never pin a host BEFORE the user answered, because a late
+      answer cannot take a pin back (`N100`, decision `R14(a)`).
+    The changed-key path answers `False` in both situations, so the two halves of the trust decision
+    now read the same value the same way.
     """
     keytype = key.get_name() if hasattr(key, "get_name") else ""
     shown = fingerprint(key)
-    answer = _ask.ask(_ask.KIND_HOST_KEY, timeout=HOST_KEY_ASK_TIMEOUT_S,
-                      host=hostname, port=port, keytype=keytype, fingerprint=shown)
-    if answer is None:
-        log = _log()
+    log = _log()
+    if not _ask.has_answerer():
         if log:
             log.warning("No interactive surface for the host key of %s:%s — the declared fallback "
                         "accepts and pins %s", hostname, port, shown)
         return True
+    answer = _ask.ask(_ask.KIND_HOST_KEY, timeout=HOST_KEY_ASK_TIMEOUT_S,
+                      host=hostname, port=port, keytype=keytype, fingerprint=shown)
+    if answer is None:
+        if log:
+            log.error("The host key of %s:%s was NOT shown to the user (no answer within %.0f s) — "
+                      "refused; nothing was pinned (%s)", hostname, port, HOST_KEY_ASK_TIMEOUT_S, shown)
+        return False
     return bool(answer)
 
 
@@ -477,16 +489,17 @@ class SshKnownHostsPolicy:
     def missing_host_key(self, client, hostname, key):
         """A host the store does not know: ASK, then pin — and a refusal stops the connection.
 
-        The key is accepted only when the user accepted it (or when no interactive surface exists, the
-        declared TOFU fallback). `pinned` answers whether the entry really reached the store: with an
-        unreadable file the key is accepted but NOTHING is remembered, and the caller says so.
+        The key is accepted only when the user accepted it, or when NO interactive surface exists (the
+        declared TOFU fallback); a question that stayed unanswered is a refusal, never a silent yes.
+        `pinned` answers whether the entry really reached the store: with an unreadable file the key is
+        accepted but NOTHING is remembered, and the caller says so.
         """
         self.last_fingerprint = fingerprint(key)
         self.last_keytype = key.get_name() if hasattr(key, "get_name") else ""
         if not ask_new_host_key(self.hostname, self.port, key):
             log = _log()
             if log:
-                log.warning("Host key for %s:%s REJECTED by the user (%s)",
+                log.warning("Host key for %s:%s REJECTED (%s)",
                             self.hostname, self.port, self.last_fingerprint)
             raise HostKeyRejected(
                 _t("ssh.host_key_rejected", host=self.hostname, port=self.port,

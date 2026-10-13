@@ -354,7 +354,7 @@ check("§3 the shipped false positives stay arguments (a quoted run is still ONE
                                            'printf "%s" "mkfs /dev/sdb"')]))
 check("§3 the nested reading is BOUNDED and never raises (a huge payload included)",
       CG.dangerous_token('ssh host "sh -c \'rm -rf /\'"') == "rm -rf"
-      and CG.dangerous_token("ssh host " + "x" * 200000) == ""
+      and CG.dangerous_token("ssh host " + "x" * 200000) == CG.TOKEN_OVER_LONG
       and CG.dangerous_token(None) == "" and CG.dangerous_token(7) == ""
       and CG.MAX_NESTED_DEPTH == 2,
       repr(CG.dangerous_token('ssh host "sh -c \'rm -rf /\'"')))

@@ -150,9 +150,9 @@ check("§2 a foreign value, an empty command and a broken quote are 'no match' (
       CG.dangerous_token(None) == "" and CG.dangerous_token(5) == ""
       and CG.dangerous_token(object()) == "" and CG.dangerous_token("   ") == ""
       and CG.dangerous_token("echo 'unclosed") == "")
-check("§2 a huge command is CLASSIFIED under the bound and never blows up",
-      CG.dangerous_token("x" * 200000) == ""
-      and CG.dangerous_token("rm -rf / " + "y" * 100000) == "rm -rf"
+check("§2 a huge command is REFUSED by the bound and never blows up",
+      CG.dangerous_token("x" * 200000) == CG.TOKEN_OVER_LONG
+      and CG.dangerous_token("rm -rf / " + "y" * 100000) == CG.TOKEN_OVER_LONG
       and CG.MAX_COMMAND_CHARS > 0 and CG.SHOWN_CHARS > 0)
 check("§2 the excerpt is ONE line and is capped (the dialog never prints a wall of text)",
       CG.excerpt("a\nb\tc") == "a b c" and "\n" not in CG.excerpt("a\nb")

@@ -6,9 +6,10 @@ The gate sits where the LAST chance to notice a mistake is: the run's own bounda
 plugin's `ctx.run_command()` pass it) and the `Enter` that SUBMITS a multi-input line. The policy is the
 boolean `guard_commands` of `~/.sshmap/config.json` — CONFIG and never the project — and its default is
 ON: a false positive costs one dialog, a false negative costs the fleet. It is a CONFIRMATION and never a
-lock. `dangerous_token()` / `needs_confirmation()` / `guard_enabled()` / `excerpt()` are PURE; the dialog
-is the module attribute seam and a guard that cannot ask REFUSES. Rule and owner — `AGENTS.md` §4.30;
-mechanism — `DOCUMENTATION.md` §74.
+lock. A line over `MAX_COMMAND_CHARS` is REFUSED, never read up to the bound. `dangerous_token()` /
+`needs_confirmation()` / `guard_enabled()` / `excerpt()` are PURE; the dialog is the module attribute
+seam and a guard that cannot ask REFUSES. Rule and owner — `AGENTS.md` §4.30; mechanism —
+`DOCUMENTATION.md` §74.
 """
 
 import re
@@ -21,7 +22,7 @@ except ImportError:
 from i18n import load_config, t
 
 GUARD_COMMANDS_KEY = "guard_commands"   # the policy: the guard is ON unless the user turns it off
-MAX_COMMAND_CHARS = 4096                # the classification's input bound (a policy, not a parser)
+MAX_COMMAND_CHARS = 4096                # the classification's input bound — over it the line is REFUSED
 SHOWN_CHARS = 200                       # the excerpt the dialog prints
 
 #: The words a shell puts IN FRONT of the real command (they are skipped, never matched).
@@ -59,6 +60,11 @@ TOKEN_DD = "dd"
 TOKEN_KILL = "kill -9"
 TOKEN_KILL_ONE = "kill -1"
 TOKEN_FORK_BOMB = "fork bomb"
+#: The token of a line the classifier REFUSES to read: `MAX_COMMAND_CHARS` is a bound, and a bound
+#: that silently drops the rest of a line is exactly the hole `N99` found (the guard read the head
+#: while the submission buffer keeps the tail). A refusal costs one dialog; a skipped tail costs a
+#: fleet, so the over-long line IS the finding (AGENTS.md §4.30).
+TOKEN_OVER_LONG = "input too long"
 
 #: The families the classifier knows. The token it answers is the MATCHED spelling (`shutdown`,
 #: `mkfs.ext4`, …) except where the danger is a flag pair or a shape (`rm -rf`, `kill -9`, `fork bomb`).
@@ -66,7 +72,9 @@ FAMILIES = ("reboot", "init", "rm", "remove", "mkfs", "dd", "wipefs", "partition
             "fork_bomb")
 
 _SEGMENT_SPLIT_RE = re.compile(r"[;|&\n\r()`]+")
-_FUNCTION_RE = re.compile(r"([:\w]+)\(\)\{([^}]*)\}")
+#: The self-replicating function definition, BOTH spellings: `name() { … }` and bash's
+#: `function name { … }` — the name is group 1 and the body group 2 in either one.
+_FUNCTION_RE = re.compile(r"(?:function)?([:\w]+)(?:\(\))?\{([^}]*)\}")
 
 
 def _text(value) -> str:
@@ -175,7 +183,12 @@ def _kill_token(words) -> str:
 
 
 def _fork_bomb(text: str) -> bool:
-    """The whitespace-normalised SELF-REPLICATING function (`:(){ :|:& };:` and its re-spellings)."""
+    """The whitespace-normalised SELF-REPLICATING function (`:(){ :|:& };:` and its re-spellings).
+
+    Both spellings of the definition count: the POSIX `name() { … }` and bash's `function name { … }`,
+    which the `_FUNCTION_RE` reads as the same shape (`N99`). The body must call the name and carry
+    BOTH the pipe and the background operator — the two parents that make it a bomb.
+    """
     for match in _FUNCTION_RE.finditer(text):
         name, body = match.group(1), match.group(2)
         if name and name in body and "|" in body and "&" in body:
@@ -275,7 +288,13 @@ def _segment_token(words) -> str:
 
 
 def _scan(text: str, depth: int) -> str:
-    """The token of the first destructive shape of ONE string, its NESTED payloads included."""
+    """The token of the first destructive shape of ONE string, its NESTED payloads included.
+
+    Every string this reads goes through `_bound_problem()` FIRST, so a nested payload can no more be
+    silently truncated than the top-level line can (`N99`).
+    """
+    if _bound_problem(text):
+        return TOKEN_OVER_LONG
     for segment in _segments(text):
         words = _words(segment)
         while words and _basename(words[0]) in WRAPPERS:   # a wrapper is never the command
@@ -286,23 +305,37 @@ def _scan(text: str, depth: int) -> str:
         if depth >= MAX_NESTED_DEPTH:
             continue
         for nested in _nested_commands(words):
-            token = _scan(nested[:MAX_COMMAND_CHARS], depth + 1)
+            token = _scan(nested, depth + 1)
             if token:
                 return token
     return ""
 
 
+def _bound_problem(command) -> str:
+    """`TOKEN_OVER_LONG` when the string is past `MAX_COMMAND_CHARS` — the ONE bound of the classifier.
+
+    PURE. `None` and a foreign value are empty strings (the shortest answer there is); the count is of
+    the string's own characters, never of its stripped form, so trailing whitespace cannot hide a line
+    that is over the bound.
+    """
+    return TOKEN_OVER_LONG if len(_text(command)) > MAX_COMMAND_CHARS else ""
+
+
 def dangerous_token(command) -> str:
     """The token of the first destructive shape in a FINAL command string; "" when nothing matched.
 
-    PURE and it never raises: a foreign value, a broken quote and a huge string are "no match"
-    (`MAX_COMMAND_CHARS` bounds what is really classified, the NESTED payloads included). The match is
-    DELIBERATELY generous — a destructive word is looked for at ANY word position of ANY segment, so a
-    `git`/`docker` prefix, a wrapper or a pipeline never hides it — because a false positive costs one
-    dialog. The POSITIONAL interpreter table adds the payload a quoted argument hides (`bash -c "…"`,
-    `eval "…"`, `ssh host '…'`) without re-opening the shipped `echo "rm -rf /"` false positive.
+    PURE and it never raises: a foreign value and a broken quote are "no match". A string over
+    `MAX_COMMAND_CHARS` is `TOKEN_OVER_LONG` — the line is REFUSED rather than read up to the bound,
+    which is what makes the bound a policy instead of a blind spot. The match is DELIBERATELY generous
+    — a destructive word is looked for at ANY word position of ANY segment, so a `git`/`docker` prefix,
+    a wrapper or a pipeline never hides it — because a false positive costs one dialog. The POSITIONAL
+    interpreter table adds the payload a quoted argument hides (`bash -c "…"`, `eval "…"`,
+    `ssh host '…'`) without re-opening the shipped `echo "rm -rf /"` false positive.
     """
-    text = _text(command)[:MAX_COMMAND_CHARS]
+    text = _text(command)
+    bound = _bound_problem(text)
+    if bound:
+        return bound
     if not text.strip():
         return ""
     if _fork_bomb(_squash(text)):

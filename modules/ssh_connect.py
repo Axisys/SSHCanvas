@@ -243,6 +243,9 @@ def connect_client(host, user, port, password="", key_path="", client=None,
     A CHANGED host key is ONE question, not a failure: `resolve_changed_key()` asks the user, and a yes
     replaces the stored entry and reconnects on a FRESH client (the failed one is closed here, so a
     caller that closes what it got back never leaks one). A no re-raises the original exception.
+    A FAILED `connect()` closes the client THIS FUNCTION created — a socket and an object graph nobody
+    holds would otherwise outlive the attempt — and a client handed IN belongs to its caller, so it is
+    never closed here (`N101`).
     """
     kwargs = build_connect_kwargs(
         host, user, port, password, key_path,
@@ -253,7 +256,8 @@ def connect_client(host, user, port, password="", key_path="", client=None,
         transport_factory=(transport_factory or interactive_transport_factory(host, user, port)))
     attempts_left = KEY_RETRY_ATTEMPTS
     while True:
-        if client is None:
+        ours = client is None
+        if ours:
             client = paramiko.SSHClient()
         policy = _host_key_policy.SshKnownHostsPolicy(hostname=host, port=port)
         policy.apply_to_client(client)
@@ -262,10 +266,43 @@ def connect_client(host, user, port, password="", key_path="", client=None,
             return client, policy
         except paramiko.BadHostKeyException as exc:
             attempts_left -= 1
-            if attempts_left <= 0 or not _host_key_policy.resolve_changed_key(exc, host, port):
-                raise
-            try:
-                client.close()
-            except Exception:  # noqa: BLE001 — a half-open client is not the failure to report
-                pass
-            client = None
+            # ONE question, and only while attempts remain: the decision is asked OUTSIDE the failure
+            # handler, so a raising ask cannot be mistaken for the connection's own failure.
+            replaced = attempts_left > 0 and _key_replaced(exc, host, port)
+            if replaced:
+                _close_quiet(client)
+                client = None
+                continue
+            _close_quiet(client if ours else None)
+            raise
+        except Exception:
+            # EVERY other failure — the refused login, the timeout, the prompt that never answered —
+            # would leave a client nobody can close: the caller never received it. (`N101`)
+            _close_quiet(client if ours else None)
+            raise
+
+
+def _key_replaced(exc, host, port) -> bool:
+    """`resolve_changed_key()`'s answer as a decision: a raising question REFUSES the replacement.
+
+    The user is asked whether the stored key may be replaced; a surface that blows up, a store that
+    cannot be written and a plain "no" all mean the same thing here — the original exception stands.
+    """
+    try:
+        return bool(_host_key_policy.resolve_changed_key(exc, host, port))
+    except Exception:  # noqa: BLE001 — a failed question is a refusal, never the caller's exception
+        return False
+
+
+def _close_quiet(client) -> None:
+    """Close a client this module created; a `None` is a no-op and a failing `close()` is not the news.
+
+    The failure the caller is about to see is the CONNECTION's, never the clean-up's — a half-open
+    client that refuses to close must not replace the real exception on its way out.
+    """
+    if client is None:
+        return
+    try:
+        client.close()
+    except Exception:  # noqa: BLE001 — the cleanup never masks the connection failure
+        pass

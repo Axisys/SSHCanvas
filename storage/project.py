@@ -55,15 +55,29 @@ def read_project_servers(path: str) -> list:
 
 
 def load_project(path: str) -> dict:
-    """Load a project from a JSON file."""
+    """Load a project from a JSON file.
+
+    Answers a JSON OBJECT — the only shape a project file has. A file that parses but is NOT one
+    (an array, a string, `null`) is the SAME answer as a file without the arrays: an empty mapping,
+    so every reader of this function asks its own question instead of meeting `AttributeError`
+    (`N104`). A missing file and unparseable JSON stay the caller's failure and still raise.
+    """
     log = _log()
     try:
         with open(path, 'r', encoding='utf-8') as f:
             raw = json.load(f)
 
+        if not isinstance(raw, dict):
+            if log:
+                log.error("Project file %s holds %s, not an object — read as an empty project",
+                          path, type(raw).__name__)
+            return {}
+
         if log:
-            server_count = len(raw.get('servers', []))
-            conn_count = len(raw.get('connections', []))
+            servers = raw.get('servers')
+            connections = raw.get('connections')
+            server_count = len(servers) if isinstance(servers, (list, tuple)) else 0
+            conn_count = len(connections) if isinstance(connections, (list, tuple)) else 0
             log.info("Project loaded", extra={"file": path, "servers": server_count, "connections": conn_count})
 
         return raw
