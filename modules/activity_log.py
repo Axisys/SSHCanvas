@@ -299,7 +299,7 @@ def _short_source(name) -> str:
 class ActivityLogHandler(logging.Handler):
     """The logging tap: every record of the app's logger tree → the ring (v1.5.2).
 
-    Attached to the `sshmap` logger by `modules/logger.py:setup_logging()` (beside the
+    Attached to the `sshcanvas` logger by `modules/logger.py:setup_logging()` (beside the
     rotating file handler) and by `install_activity_handler()` — ONE seam, so no module
     has to know that a panel exists. `emit()` never raises and never formats a
     traceback: the event line is ONE line (the exception's type and text are appended

@@ -36,7 +36,7 @@ except ImportError:
     try:
         from version import APP_NAME, APP_VERSION
     except ImportError:  # pragma: no cover - a stripped build
-        APP_NAME, APP_VERSION = "SSH Map", "0.0.0"
+        APP_NAME, APP_VERSION = "SSH Canvas", "0.0.0"
 
 try:  # v1.3.3.3: the hotkey cheat-sheet is generated from the action registry
     from .hotkey_registry import action_ids, action_label_key, configured_hotkeys

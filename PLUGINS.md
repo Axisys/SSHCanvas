@@ -1,4 +1,4 @@
-# PLUGINS.md — SSH Map Plugin API (v1)
+# PLUGINS.md — SSH Canvas Plugin API (v1)
 
 ---
 
@@ -67,7 +67,7 @@ Discovery occurs at startup and on `Plugins → Reload`. Order: **Entry points f
 Plugins interact with the core exclusively through the `ctx` object.
 
 ### Read-only Properties
-*   `ctx.app_version`: Current SSH Map version.
+*   `ctx.app_version`: Current SSH Canvas version.
 *   `ctx.api_version`: API version (1).
 *   `ctx.plugin_id`: The plugin's name from `MANIFEST`.
 *   `ctx.log(message)`: Logs a message prefixed with the plugin ID.

@@ -473,7 +473,7 @@ remove_plugin_file(versions_mod.BASELINE_NAME)
 remove_plugin_file(versions_mod.CACHE_NAME)
 _script = versions_mod.build_probe_script()
 check("the probe is ONE POSIX-sh script that COLLECTS evidence and ends with its own marker",
-      _script.startswith("# sshmap app_versions") and _script.rstrip().endswith("exit 0")
+      _script.startswith("# sshcanvas app_versions") and _script.rstrip().endswith("exit 0")
       and versions_mod.PROBE_MARKER in _script)
 check("coreutils' own `timeout` is preferred over a PATH lookup (an MSYS `timeout.exe`)",
       "if [ -x /usr/bin/timeout ]; then TMO=/usr/bin/timeout" in _script)

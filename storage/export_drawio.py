@@ -192,9 +192,9 @@ class DrawioExporter:
 
     # ── assembly ───────────────────────────────────────────────────────
     def build(self) -> ET.Element:
-        root = ET.Element("mxfile", {"host": "SSHMap"})
+        root = ET.Element("mxfile", {"host": "SSHCanvas"})
         diagram = ET.SubElement(root, "diagram", {
-            "id": "sshmap-0", "name": "SSH Map"})
+            "id": "sshcanvas-0", "name": "SSH Canvas"})
         model = ET.SubElement(diagram, "mxGraphModel", {
             "dx": "1000", "dy": "700", "grid": "1", "gridSize": "10",
             "guides": "1", "tooltips": "1", "connect": "1", "arrows": "1",

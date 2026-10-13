@@ -1,10 +1,10 @@
-# SSHMap (Visual Node Map + SSH Terminal and SFTP manager)
+# SSHCanvas (Visual Node Map + SSH Terminal and SFTP manager)
 
 A Python-based desktop application (PySide6) providing an interactive map of your IT infrastructure with direct SSH connections to nodes.
 
 > *"Draw your infrastructure. Organize it. Connect to it."*
 
-![The example map in SSH Map](docs/map-example.png)
+![The example map in SSH Canvas](docs/map-example.png)
 
 ***Note:** To view the example map, navigate to `Help → Open the example map`. It demonstrates six cards (one unmanaged), six connection types, groups, notes, and tags using documentation addresses (`192.0.2.0/24`) with emulated statuses; the picture above is generated from that file by `python tests/_gen_docs_image.py`.*
 
@@ -86,7 +86,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Navigation:** Command palette (`Ctrl`+K), searchable settings hub, and 62 assignable hotkeys (`?` or `F1` lists them). The map is fully navigable via keyboard (`Tab`, `Arrows`, `Enter`).
 
 ### Projects & Plugins
-*   **Project Management:** One JSON project file (`.json` / `.sshmap`) with autosave, a ring of backups, and a recent-files list; a project dropped on the window opens, and an unreadable file offers its newest autosave instead of a dead end.
+*   **Project Management:** One JSON project file (`.json` / `.sshmap`) with autosave, a ring of backups, and a recent-files list; a project dropped on the window opens, and an unreadable file offers its newest autosave.
 *   **Reopen the Last Project:** A checkbox on Settings → General (off by default) makes the next launch continue on the map you closed; a project with no file name yet remembers nothing.
 *   **First Screen:** Four doors — add your first server, import a list, open an existing map, open the example map. The minimap and the "double-click for node properties" hint stay away while the map is empty.
 *   **Add/Edit Server:** Four sections (*Identity*, *Connection*, *Hardware (optional)*, *Notes*) with example placeholders on the fields you meet first, the required alias and host marked, a labelled private-key row, and a footer whose `Save` and *Save & connect* say what each one does.
@@ -107,7 +107,7 @@ pip install -r requirements.txt   # PySide6, paramiko, keyring, wcwidth (pyte is
 # Run the GUI
 python main.py
 
-# Install as a command-line tool
+# Install the command-line tool ('sshcanvas'; 'sshmap' stays as an alias)
 pipx install .
 ```
 
@@ -224,10 +224,10 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 149 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 150 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |
 | `PLUGINS.md` | Plugin API contract (v1) |
-| `pyproject.toml`, `requirements.txt` | Project metadata and dependencies (`sshmap` command) |
+| `pyproject.toml`, `requirements.txt` | Project metadata and dependencies (`sshcanvas` command) |
 | `LICENSE` | MIT License |

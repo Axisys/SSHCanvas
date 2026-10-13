@@ -84,7 +84,7 @@ def main():
 
     chunk, chunk_src = load_chunk()
 
-    print("SSHMap bench D1 (v1.2.12): HistoryScreen overhead with a deep history")
+    print("SSHCanvas bench D1 (v1.2.12): HistoryScreen overhead with a deep history")
     print(f"  machine : {platform.system()} {platform.release()}, "
           f"Python {sys.version.split()[0]}, pyte {getattr(pyte, '__version__', '0.8.2 (installed)')}")
     # The page size — the same arithmetic as in pyte HistoryScreen.next_page:

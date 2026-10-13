@@ -579,7 +579,10 @@ check("§8 the pin names this line's release or a later one (the rc slots ride o
       releases_at_least(EXPECTED_APP_VERSION, "1.11"), EXPECTED_APP_VERSION)
 check("§8 the schema did NOT move (no project format change) and no new dependency arrived",
       'VERSION_FORMAT = "0.9"' in _read("version.py")
-      and "pyte" in _read("requirements.txt") and "sshmap" not in _read("requirements.txt"))
+      and "pyte" in _read("requirements.txt")
+      # pyte is VENDORED, so no line of the file may DECLARE it (a trailing comment is not a dependency).
+      and not any(ln.split("#", 1)[0].strip().lower().startswith("pyte")
+                  for ln in _read("requirements.txt").splitlines()))
 check("§8 the topical file is listed by the suite map (tests/INDEX.md regenerated)",
       "test_terminal_panel.py" in _read("tests", "INDEX.md"))
 

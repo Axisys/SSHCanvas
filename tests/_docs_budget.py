@@ -29,11 +29,13 @@ CHAPTER_ORDER = (12, 8, 3, 10, 9, 13, 7, 4, 1, 2, 5, 6, 11)
 
 # (name, the marker the section starts at, the pin) — the pins are byte offsets into AGENTS.md and
 # they only ever DECREASE. The name is what the check reports; the marker is a literal of the file.
+# v1.12.1 re-based all four: the product name grew in the header ("SSHMap" → "SSHCanvas", 6 bytes per
+# free occurrence), so every position shifted DOWN the file; the four still start inside the budget.
 SECTION_PINS = (
-    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 797),
-    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8150),
-    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11217),
-    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5241),
+    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 802),
+    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8155),
+    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11258),
+    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5246),
 )
 
 DOC = "AGENTS.md"

@@ -3,9 +3,10 @@
 
 The cross-check `pyproject.toml` ↔ `version.py` ↔ `requirements.txt` WITHOUT installing anything: the file
 exists and parses (`tomllib` / `tomli`); `[project].name` matches `APP_NAME` after normalization (lower case
-with the non-alphanumerics stripped — "SSH Map" → "sshmap"); `[project].version` equals `APP_VERSION` from
+with the non-alphanumerics stripped — "SSH Canvas" → "sshcanvas"); `[project].version` equals `APP_VERSION` from
 `version.py`, the single source of truth; `[project].dependencies` match `requirements.txt` name for name and
-pin for pin; the entry point `sshmap = main:main` points at a real top-level `main()` in `main.py` (checked
+pin for pin; the entry points `sshcanvas = main:main` (the product name) and `sshcanvas = main:main` (the legacy
+alias) point at a real top-level `main()` in `main.py` (checked
 with `ast`, without importing it) and the module is part of the build; and `[build-system]` is present, which is what `pip` / `pipx install .` need. The file is self-contained: `bootstrap()` → the checks → `finish()`."""
 import ast
 import os
@@ -124,32 +125,34 @@ check("[project].dependencies match requirements.txt (the same set of name+pin)"
       py_deps == reqs,
       f"pyproject={py_deps} vs requirements={reqs}")
 
-# ── 4. the entry point sshmap = main:main → the existing function ──────────────
+# ── 4. the console scripts → the existing main() (the product name + the legacy alias) ─────
 scripts = project.get("scripts") or {}
-ep = scripts.get("sshmap")
-check("entry point sshmap = main:main", ep == "main:main", f"got {ep!r}")
+# The product command AND the alias ship together (ROADMAP v1.12.1): both answer the ONE main().
+for _cmd in ("sshcanvas", "sshmap"):
+    _ep = scripts.get(_cmd)
+    check(f"entry point {_cmd} = main:main", _ep == "main:main", f"got {_ep!r}")
 
-if isinstance(ep, str) and ":" in ep:
-    mod, attr = ep.split(":", 1)
-    mod_path = os.path.join(ROOT, mod + ".py")
-    found = False
-    detail = f"{mod}.py is not found in the project root"
-    if os.path.isfile(mod_path):
-        with open(mod_path, encoding="utf-8") as f:
-            tree = ast.parse(f.read(), filename=mod_path)
-        for node in tree.body:  # top-level only — the entry point refers to module level
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == attr:
-                found = True
-                detail = ""
-    check(f"the entry point points to the existing function {mod}:{attr} (ast, without an import)",
-          found, detail)
+    if isinstance(_ep, str) and ":" in _ep:
+        mod, attr = _ep.split(":", 1)
+        mod_path = os.path.join(ROOT, mod + ".py")
+        found = False
+        detail = f"{mod}.py is not found in the project root"
+        if os.path.isfile(mod_path):
+            with open(mod_path, encoding="utf-8") as f:
+                tree = ast.parse(f.read(), filename=mod_path)
+            for node in tree.body:  # top-level only — the entry point refers to module level
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == attr:
+                    found = True
+                    detail = ""
+        check(f"the entry point points to the existing function {mod}:{attr} (ast, without an import)",
+              found, detail)
 
-    # The module must enter the build — otherwise it will not be in site-packages.
-    st = (pp or {}).get("tool", {}).get("setuptools", {})
-    if st:
-        installed = set(st.get("py-modules") or []) | set(st.get("packages") or [])
-        check(f"the module {mod!r} is in the build ([tool.setuptools])", mod in installed,
-              f"in the build: {sorted(installed)}")
+        # The module must enter the build — otherwise it will not be in site-packages.
+        st = (pp or {}).get("tool", {}).get("setuptools", {})
+        if st:
+            installed = set(st.get("py-modules") or []) | set(st.get("packages") or [])
+            check(f"the module {mod!r} is in the build ([tool.setuptools])", mod in installed,
+                  f"in the build: {sorted(installed)}")
 
 # ── 5. [build-system] — pipx / pip install . ──────────────────────────────
 bs = (pp or {}).get("build-system", {})

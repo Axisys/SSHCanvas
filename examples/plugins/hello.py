@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the minimal one: two UI hooks, no packaging, no core imports.
+"""SSH Canvas example plugin — the minimal one: two UI hooks, no packaging, no core imports.
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". Each hook does the smallest USEFUL thing and the

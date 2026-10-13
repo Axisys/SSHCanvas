@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The common test stubs of SSHMap (the suite optimization, phase 2).
+"""The common test stubs of SSHCanvas (the suite optimization, phase 2).
 
 Here live the fakes that were previously duplicated in several test files.
 Each test file — a separate process (the run_all.py convention), so the shared

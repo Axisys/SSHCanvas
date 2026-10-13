@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Watch Command (the user's own fact, the plugin's own settings).
+"""SSH Canvas example plugin — the Watch Command (the user's own fact, the plugin's own settings).
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". It answers the v1 question "where do a plugin's

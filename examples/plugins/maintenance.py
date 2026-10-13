@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Maintenance Check (TWO facts, ONE command).
+"""SSH Canvas example plugin — the Maintenance Check (TWO facts, ONE command).
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". It answers the two questions a fleet asks — "does
@@ -50,7 +50,7 @@ UPDATES_UNKNOWN = "unknown"
 def build_probe_script() -> str:
     """The ONE POSIX-sh probe: collect the family, the pending updates and the reboot verdict."""
     return "\n".join((
-        "# sshmap maintenance — evidence only; the reader is `parse_evidence()`.",
+        "# sshcanvas maintenance — evidence only; the reader is `parse_evidence()`.",
         "F=unknown",
         "U=" + UPDATES_UNKNOWN,
         "if command -v apt-get >/dev/null 2>&1; then",

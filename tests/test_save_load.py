@@ -37,7 +37,7 @@ cm = get_credential_manager()
 print("== main window ==")
 win = MW.MainWindow()
 check("MainWindow constructed offscreen", win is not None)
-check("title has no doubled prefix", win.windowTitle().count("SSH Map") == 1, win.windowTitle())
+check("title has no doubled prefix", win.windowTitle().count("SSH Canvas") == 1, win.windowTitle())
 
 nd = ServerData(id="snode001", alias="web-1", host="10.0.0.5", user="root",
                 password="NodePass999", key_path=r"C:\keys\web.pem", x=10, y=20)

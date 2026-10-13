@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Open Ports Monitor: collect `ss -tulpn`, report from the cache.
+"""SSH Canvas example plugin — the Open Ports Monitor: collect `ss -tulpn`, report from the cache.
 
 This file is an EXAMPLE (see `examples/README.md`), shaped like `disk_monitor.py`: a COLLECTOR and a
 REPORTER are two different hooks. `run_on_nodes(nodes, ctx)` runs `ss -tulpn` on every selected node

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Systemd Failed Monitor (the smallest honest monitor).
+"""SSH Canvas example plugin — the Systemd Failed Monitor (the smallest honest monitor).
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". ONE command, ONE count, ONE detail line:

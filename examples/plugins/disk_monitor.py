@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Disk Space Monitor (the first USEFUL example).
+"""SSH Canvas example plugin — the Disk Space Monitor (the first USEFUL example).
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". It demonstrates the design every real plugin needs —

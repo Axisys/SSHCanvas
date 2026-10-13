@@ -1113,8 +1113,8 @@ class MapScene(QGraphicsScene):
         generator.setFileName(path)
         generator.setSize(QSize(w, h))
         generator.setViewBox(QRect(0, 0, w, h))
-        generator.setTitle("SSH Map")
-        generator.setDescription("Infrastructure map exported from SSHMap")
+        generator.setTitle("SSH Canvas")
+        generator.setDescription("Infrastructure map exported from SSHCanvas")
 
         painter = QPainter(generator)
         if not painter.isActive():

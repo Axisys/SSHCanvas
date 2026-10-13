@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the Certificate Monitor (the first example that NEVER touches SSH).
+"""SSH Canvas example plugin — the Certificate Monitor (the first example that NEVER touches SSH).
 
 This file is an EXAMPLE, not a shipped plugin (see `examples/README.md`): copy it into
 `~/.sshmap/plugins/` and use "Plugins → Reload". Its fact does NOT come from `ctx.run_command` and
 it needs no SSH at all — which is exactly when a certificate fact matters, because a host whose SSH
 is down can still serve TLS. `status_probe(node)` reads this plugin's OWN config (a port per node,
-or one default), opens a TLS connection from the machine running SSHMap with the standard library
+or one default), opens a TLS connection from the machine running SSHCanvas with the standard library
 (`ssl` / `socket` — no dependency, no core import) and reports `("warn", …)` under a horizon. Two
 rules belong to it: an unreachable port or a refused handshake is **"no data"** (`None`), because a
 firewall is not an expiring certificate, and the connector is an INJECTABLE module attribute

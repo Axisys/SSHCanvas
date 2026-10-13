@@ -1,4 +1,4 @@
-"""A single run of all the tests of SSHMap (parallel).
+"""A single run of all the tests of SSHCanvas (parallel).
 
 Run from the project root:
     python tests/run_all.py                 # all test_*.py + check_i18n_keys.py, the auto workers
@@ -318,7 +318,7 @@ def main():
     files = order_files(files)
 
     t_start = time.time()
-    print(f"SSHMap test suite: {len(files)} file(s), workers={workers}"
+    print(f"SSHCanvas test suite: {len(files)} file(s), workers={workers}"
           + (f" (filter: {sub})" if sub else "")
           + (" [--fast]" if opts["fast"] else "")
           + (" [--docs]" if opts["docs"] else "")

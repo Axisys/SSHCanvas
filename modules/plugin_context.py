@@ -205,7 +205,7 @@ class PluginContext:
 
     @property
     def app_version(self) -> str:
-        """The running SSH Map version (`version.APP_VERSION`; "" when unreadable).
+        """The running SSH Canvas version (`version.APP_VERSION`; "" when unreadable).
 
         Deliberately a FACT and not a compatibility check: the API version is the
         contract, the application version is information (PLUGINS.md §6).

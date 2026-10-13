@@ -14,7 +14,8 @@ import os
 import sys
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, bootstrap, check, check_i18n_format,
-                     check_i18n_parity, check_release_state, clear_cfg, finish, load_i18n_langs)
+                     check_i18n_parity, check_release_state, clear_cfg, finish, load_i18n_langs,
+                     releases_at_least)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation + offscreen inside)
 
@@ -638,7 +639,8 @@ check("§7 the suites are listed by the suite map (tests/INDEX.md regenerated)",
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
-check("§7 the release is the one this file describes", EXPECTED_APP_VERSION == "1.12",
+check("§7 the release is the one this file describes (the v1.12 line; a PATCH keeps three components)",
+      releases_at_least(EXPECTED_APP_VERSION, "1.12") and EXPECTED_APP_VERSION.count(".") == 2,
       EXPECTED_APP_VERSION)
 check("§7 no new dependency and no schema move (the flag is a launch mode, not a format)",
       "VERSION_FORMAT = \"0.9\"" in _read("version.py")

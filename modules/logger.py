@@ -1,4 +1,4 @@
-"""Centralized logging for SSH Map — the ONE place that owns the logger tree.
+"""Centralized logging for SSH Canvas — the ONE place that owns the logger tree.
 
 Usage in any module:
     from modules.logger import get_logger
@@ -36,7 +36,7 @@ def _console_stream():
 
 
 def setup_logging(level: int = logging.DEBUG) -> logging.Logger:
-    """Configure root logger for SSH Map. Call once from main.py."""
+    """Configure root logger for SSH Canvas. Call once from main.py."""
     os.makedirs(LOG_DIR, exist_ok=True)
 
     root_logger = logging.getLogger("sshmap")

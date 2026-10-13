@@ -1,4 +1,4 @@
-# tests/ — SSHMap test suite map
+# tests/ — SSHCanvas test suite map
 
 The suite is plain-python scripts **without pytest**: each file is self-contained,
 prints `ok`/`FAIL` per check and exits 0 (all green) or 1.
@@ -184,6 +184,7 @@ of the file itself.
 | `test_quick_launch.py` | — | v1.0RC4 — Quick launch (server links and commands): the release's themed test. |
 | `test_rc2_map_import_sidebar.py` | — | v1.1.2RC2 — Map, import, sidebar (release theme). |
 | `test_rc3_terminal_window.py` | — | Terminal windows: the DECCKM arrows, the split pane and the window-level bridges. |
+| `test_rebrand.py` | docs | v1.12.1 — the name the project answers to: `SSHCanvas`, and the identifiers the rename FREEZES. |
 | `test_release_v15.py` | — | v1.5 — the release that closes the 1.5 line: the environment badge, the panel snap, |
 | `test_rubber_band_perf.py` | — | v1.2.10rc3 — rubber-band selection performance on large maps (the audit's auto #9). |
 | `test_save_load.py` | — | Headless project save/load + keyring passwords (former smoke_test.py §6 "main window"). |

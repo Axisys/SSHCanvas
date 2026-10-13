@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSH Map example plugin — the App Version Check: the versions of nginx, Grafana, Loki, Alloy,
+"""SSH Canvas example plugin — the App Version Check: the versions of nginx, Grafana, Loki, Alloy,
 Prometheus, Tempo, Telegraf and Promtail, compared against a baseline file YOU own.
 
 The shape is the disk-monitor one — the COLLECTOR and the READER are two different concerns.
@@ -304,7 +304,7 @@ def build_probe_script(apps=None) -> str:
             specs[str(name)] = good
 
     lines = [
-        "# sshmap app_versions — collects evidence only; the reader is pure Python on the other side.",
+        "# sshcanvas app_versions — collects evidence only; the reader is pure Python on the other side.",
         'TMO=""',
         # coreutils' own path FIRST: a PATH lookup can find a foreign binary of the same name (a
         # Windows `timeout.exe` in an MSYS shell), while `/usr/bin/timeout` is the one that honours
