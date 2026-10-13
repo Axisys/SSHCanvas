@@ -957,12 +957,17 @@ class CommandLibraryPanel(QWidget):
         self.edit_btn.clicked.connect(self._on_edit)
         self.del_btn.clicked.connect(self._on_delete)
 
-        # ── v1.11: the BOTTOM ROW — `Open map` / `Profiles`, the two doors a session's own window
-        # owns so it can start another session without going back to the map. `Open map` is INACTIVE
-        # in the dock (the map IS that window — see `map_is_this_window()`), `Profiles` is
-        # application-level and lives on every surface. v1.12: the FIRST control is the CONTAINER's
-        # own door — `set_project_door()` turns it into the standalone's `Open project`.
-        bottom = QHBoxLayout()
+        # ── v1.12.2: the BOTTOM ROW — `Open map` / `Profiles` (in the standalone the FIRST control
+        # is `Open project`). v1.11: the two doors a session's own window owns so it can start
+        # another session without going back to the map. `Open map` is INACTIVE in the dock (the map
+        # IS that window — see `map_is_this_window()`), `Profiles` is application-level. v1.12: the
+        # FIRST control is the CONTAINER's own door — `set_project_door()` turns it into the
+        # standalone's `Open project`. It opens a session's map or lists servers, so it belongs to
+        # the `Servers` head and travels with it (`_apply_panel_doors()`); a wrapper widget, because a
+        # layout cannot be hidden (the `cmd_buttons` pattern).
+        self.doors_row = QWidget()
+        bottom = QHBoxLayout(self.doors_row)
+        bottom.setContentsMargins(0, 0, 0, 0)
         bottom.setSpacing(4)
         self.open_map_btn = QPushButton(t("terminal.cmdlib.open_map"))
         self.open_map_btn.setToolTip(t("terminal.cmdlib.open_map_tooltip"))
@@ -971,7 +976,7 @@ class CommandLibraryPanel(QWidget):
         bottom.addWidget(self.open_map_btn)
         bottom.addWidget(self.profiles_btn)
         bottom.addStretch(1)
-        bl.addLayout(bottom)
+        bl.addWidget(self.doors_row)
         self.open_map_btn.clicked.connect(self._on_open_map)
         self.profiles_btn.clicked.connect(self._on_profiles)
         self._apply_container_door()
@@ -979,6 +984,8 @@ class CommandLibraryPanel(QWidget):
         # The INLINE hint of an INACTIVE control (the Plugins window's `run_hint` pattern): a tooltip
         # on a control that does nothing is the one place a user never looks, so the sentence stands
         # in the panel itself. It WRAPS, so a long sentence never sets the panel's minimum width.
+        # v1.12.2: it explains a control of the BOTTOM ROW, so it belongs to the SAME head. The
+        # visibility is `_apply_panel_doors()`'s job; an empty sentence never shows.
         self.hint_label = QLabel("")
         self.hint_label.setWordWrap(True)
         self.hint_label.setStyleSheet(f"color: {theme.TEXT_MUTED};")
@@ -989,10 +996,10 @@ class CommandLibraryPanel(QWidget):
 
         # The initial state — from the config (a read without a write-back). v1.11: the head state is
         # applied too, so a panel built before its container installs the provider pair already shows
-        # the `Commands` list and already explains an inactive control.
+        # the `Commands` head and the heads keep their own surfaces. v1.12.2: the bottom row and its
+        # hint follow the head through `_apply_head()` → `_apply_panel_doors()`, so no second call.
         self.set_collapsed(_load_collapse_state(), persist=False)
         self._apply_head()
-        self._apply_hint()
 
     # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
 
@@ -1075,7 +1082,6 @@ class CommandLibraryPanel(QWidget):
         try:
             self.reload()
             self._apply_head()
-            self._apply_hint()
         except RuntimeError:
             pass  # the C++ object is already deleted (a close race)
 
@@ -1151,7 +1157,7 @@ class CommandLibraryPanel(QWidget):
         application's profile manager. `None` marks the control inactive (its sentence explains why)."""
         self._map_sink = open_map if callable(open_map) else None
         self._profiles_sink = profiles if callable(profiles) else None
-        self._apply_hint()
+        self._apply_panel_doors()
 
     def set_project_door(self, open_project):
         """v1.12: the bottom row's FIRST control as the standalone's `Open project` door.
@@ -1163,7 +1169,7 @@ class CommandLibraryPanel(QWidget):
         """
         self._project_sink = open_project if callable(open_project) else None
         self._apply_container_door()
-        self._apply_hint()
+        self._apply_panel_doors()
 
     def project_mode(self) -> bool:
         """Does the first control open a PROJECT (the standalone) instead of raising a map?"""
@@ -1233,8 +1239,10 @@ class CommandLibraryPanel(QWidget):
         self._rebuild_servers()
 
     def _apply_head(self):
-        """Show the widgets of ONE head: the tree or the server list, the Add/Edit/Delete row (the
-        `Commands` head alone), the library-file button and the search placeholder. Never raises."""
+        """Show the widgets of ONE head: the tree or the server list, the Add/Edit/Delete row, the
+        library-file button and the search placeholder. v1.12.2: the BOTTOM ROW and its inline hint
+        belong to the `Servers` head too (`_apply_panel_doors()`), so the `Commands` head is exactly its
+        own tree, its Add/Edit/Delete row and the library-file menu. Never raises."""
         t = get_translator()
         commands = self._head == HEAD_COMMANDS
         try:
@@ -1249,8 +1257,26 @@ class CommandLibraryPanel(QWidget):
                 else t("terminal.cmdlib.servers_search"))
         except RuntimeError:
             return  # Qt teardown — the widgets are already gone
+        self._apply_panel_doors()
         self._apply_filter()
-        self._apply_hint()
+
+    def _apply_panel_doors(self):
+        """The ONE writer of the bottom row's visibility and of its inline hint.
+
+        v1.12.2: the row opens a session's map or lists its servers, so it is a control OF the
+        `Servers` head and the `Commands` head never shows it. The hint explains a control OF THAT
+        ROW, so it travels with the row — a surface whose controls all work shows no sentence at all
+        (the shipped "a hint under a working control is noise" rule). The TEXT stays `_hint_text()`'s
+        (the ONE answer a refusal also speaks); the head governs its VISIBILITY alone. Never raises.
+        """
+        servers = self._head == HEAD_SERVERS
+        try:
+            self.doors_row.setVisible(servers)
+            text = self._hint_text()
+            self.hint_label.setText(text)
+            self.hint_label.setVisible(servers and bool(text))
+        except RuntimeError:
+            pass  # Qt teardown — the widgets are already gone
 
     def _hint_text(self) -> str:
         """The sentence of an INACTIVE control ("" — everything on this surface works).
@@ -1266,15 +1292,6 @@ class CommandLibraryPanel(QWidget):
             # A container with a project door says WHAT to open; a map-backed one has no map behind it.
             return t("terminal.cmdlib.no_project" if self.project_mode() else "terminal.cmdlib.no_map")
         return ""
-
-    def _apply_hint(self):
-        """Write the inline hint: shown exactly while something on this surface is inactive."""
-        try:
-            text = self._hint_text()
-            self.hint_label.setText(text)
-            self.hint_label.setVisible(bool(text))
-        except RuntimeError:
-            pass  # Qt teardown — the label is already gone
 
     def _notify(self, text: str, timeout_ms: int = 4000):
         """One status line through the SHIPPED bridge (`status_message` → the container's status)."""

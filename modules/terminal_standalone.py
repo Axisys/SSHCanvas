@@ -94,6 +94,10 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
         super().__init__(None, parent=parent)
         # The bottom row's FIRST control is `Open project` on this surface — the ONE door of §7.
         self.cmdlib_panel.set_project_door(self._panel_open_project)
+        # …and this surface OPENS on the head that control belongs to: a container with no map lists
+        # its project's servers (`TERMINAL_STANDALONE.md` §7). The door above comes FIRST — an
+        # unavailable head is refused, and the refusal is a status-line sentence.
+        self.cmdlib_panel.set_head(HEAD_SERVERS)
 
     def _surface_hook(self, name):
         """A surface hook on the parent chain (`find_host_hook`, the §4.1 walk). Never raises."""
@@ -152,7 +156,6 @@ class StandaloneSurface(QWidget):
         super().__init__(parent)
         self._project_path = ""
         self._servers = []
-        self._loaded = False
         self.window = window if window is not None else StandaloneTerminalWindow(self)
 
     # ── the source of the `Servers` head ─────────────────────────────────────
@@ -160,11 +163,13 @@ class StandaloneSurface(QWidget):
     def project_nodes(self):
         """The `Servers` head's provider — the loaded project's servers, in FILE order.
 
-        `None` is the declared "nothing to list YET" (no project is open): the head stays INACTIVE and
-        the panel explains itself inline. An EMPTY list is a real answer — a project file whose
-        `servers` array is empty keeps the head usable and shows `terminal.cmdlib.project_empty`.
+        Before a project is open the answer is an EMPTY list, not `None`: this surface's own door
+        (`Open project`) sits on the `Servers` head, so the head is USABLE from the first second and
+        shows its own empty state (`terminal.cmdlib.project_empty`) while the door loads the file
+        (`TERMINAL_STANDALONE.md` §7). `None` stays the declared "nothing to list" of a container
+        whose head cannot work at all.
         """
-        return list(self._servers) if self._loaded else None
+        return list(self._servers)
 
     def project_path(self) -> str:
         """The file the list came from ("" — no project is open) — the surface's own memory."""
@@ -194,7 +199,6 @@ class StandaloneSurface(QWidget):
             return False
         self._project_path = chosen
         self._servers = servers
-        self._loaded = True
         self._refresh_servers()
         self._notify(t("terminal.standalone.project_opened",
                        name=os.path.basename(chosen), count=len(servers)))

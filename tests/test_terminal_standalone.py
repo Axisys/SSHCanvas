@@ -423,21 +423,40 @@ check("§5 a standalone panel is in PROJECT mode and says so on its first contro
       and _fpanel.open_map_btn.text() == i18n.t("terminal.cmdlib.open_project")
       and _fpanel.open_map_btn.toolTip() == i18n.t("terminal.cmdlib.open_project_tooltip"),
       _fpanel.open_map_btn.text())
-check("§5 with NO project open the `Servers` head is INACTIVE and explains itself inline",
-      _fpanel.servers_available() is False
-      and _fpanel.hint_label.isVisible() is True
-      and _fpanel.hint_label.text() == i18n.t("terminal.cmdlib.no_project"),
-      f"{_fpanel.hint_label.text()!r}")
+check("§5 the surface OPENS on the `Servers` head — the head its own door lives on",
+      _fpanel.head() == CL.HEAD_SERVERS and _fpanel.server_tree.isVisible() is True
+      and _fpanel.tree.isVisible() is False and _fpanel.doors_row.isVisible() is True
+      and _fpanel.open_map_btn.isVisible() is True,
+      f"head={_fpanel.head()!r} doors={_fpanel.doors_row.isVisible()}")
+check("§5 with NO project open the head is USABLE and shows its own empty state",
+      _fpanel.servers_available() is True
+      and _fpanel.server_tree.topLevelItemCount() == 0
+      and _fpanel.info_label.text() == i18n.t("terminal.cmdlib.project_empty")
+      and _fpanel.hint_label.isVisible() is False,
+      f"available={_fpanel.servers_available()} info={_fpanel.info_label.text()!r}")
+check("§5 …so the shipped start-up writes NO refusal sentence on the status line",
+      _fresh.window.statusBar().currentMessage() == ""
+      and _fresh.window._empty_label.isVisible() is True
+      and _fresh.window._empty_label.text() == i18n.t("terminal.standalone.empty_hint"),
+      f"{_fresh.window.statusBar().currentMessage()!r} {_fresh.window._empty_label.text()!r}")
 _msgs = []
 _fpanel.status_message.connect(lambda text, ms: _msgs.append(text))
+_fpanel.set_head(CL.HEAD_COMMANDS)
+app.processEvents()
+check("§5 a click on the `Commands` head takes the doors and the hint away with it",
+      _fpanel.head() == CL.HEAD_COMMANDS and _fpanel.doors_row.isVisible() is False
+      and _fpanel.tree.isVisible() is True
+      and _fpanel.hint_label.isVisible() is False and _msgs == [],
+      f"head={_fpanel.head()!r} doors={_fpanel.doors_row.isVisible()} msgs={_msgs}")
 _fpanel.set_head(CL.HEAD_SERVERS)
 app.processEvents()
-check("§5 a click on the inactive head changes nothing and says the SAME sentence",
-      _fpanel.head() == CL.HEAD_COMMANDS and _msgs == [i18n.t("terminal.cmdlib.no_project")],
-      f"head={_fpanel.head()} msgs={_msgs}")
-check("§5 the first control runs the PROJECT door even while the `Servers` head is inactive",
+check("§5 the return to `Servers` brings the row back (the head state is the ONE owner)",
+      _fpanel.head() == CL.HEAD_SERVERS and _fpanel.doors_row.isVisible() is True
+      and _msgs == [],
+      f"doors={_fpanel.doors_row.isVisible()} msgs={_msgs}")
+check("§5 the first control runs the PROJECT door of an EMPTY list",
       _fpanel._project_sink is not None and _fpanel.project_mode() is True
-      and _fpanel._hint_text() == i18n.t("terminal.cmdlib.no_project"))
+      and _fpanel._hint_text() == "")
 TS.QFileDialog = _FakeFileDialog
 _FakeFileDialog.calls = []
 _FakeFileDialog.answer = (_other, "")

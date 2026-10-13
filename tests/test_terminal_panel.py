@@ -116,6 +116,10 @@ check("§1 the `Servers` head shows the server list and hides the commands surfa
       and panel.head_servers_btn.isChecked() is True
       and panel.search.placeholderText() == i18n.t("terminal.cmdlib.servers_search"),
       f"head={panel.head()!r} placeholder={panel.search.placeholderText()!r}")
+check("§1 the bottom row `Open map` / `Profiles` belongs to the `Servers` head alone",
+      panel.doors_row.isVisible() is True and panel.open_map_btn.isVisible() is True
+      and panel.profiles_btn.isVisible() is True,
+      f"doors={panel.doors_row.isVisible()}")
 
 msgs_head = []
 panel.status_message.connect(lambda text, ms: msgs_head.append((text, ms)))
@@ -131,6 +135,10 @@ check("§1 Add/Edit/Delete and the library-file menu belong to the `Commands` he
       panel.cmd_buttons.isVisible() and panel._file_btn.isVisible()
       and panel.tree.isVisible() and not panel.server_tree.isVisible()
       and panel.search.placeholderText() == i18n.t("terminal.cmdlib.search_placeholder"))
+check("§1 …and the bottom row LEFT with the other head (the `Commands` head is its own list)",
+      panel.doors_row.isVisible() is False and panel.open_map_btn.isVisible() is False
+      and panel.profiles_btn.isVisible() is False,
+      f"doors={panel.doors_row.isVisible()}")
 
 panel.set_collapsed(True)
 app.processEvents()
@@ -303,10 +311,14 @@ win._panel_open_map = lambda: (_doors.append("map"), True)[1]
 win._panel_open_profiles = lambda: (_doors.append("profiles"), True)[1]
 panel.set_map_doors(win._panel_open_map, win._panel_open_profiles)
 app.processEvents()
+check("§4 the bottom row is a control OF the `Servers` head (the `Commands` head hides it)",
+      panel.head() == CL.HEAD_COMMANDS and panel.doors_row.isVisible() is False)
+panel.set_head(CL.HEAD_SERVERS)
+app.processEvents()
 panel._on_open_map()
 panel._on_profiles()
-check("§4 on a standalone window BOTH doors fire (the map window and the profile manager)",
-      _doors == ["map", "profiles"], str(_doors))
+check("§4 the `Servers` head shows the row again and BOTH doors fire (the map and the profiles)",
+      panel.doors_row.isVisible() is True and _doors == ["map", "profiles"], str(_doors))
 check("§4 the bottom row wears the shipped keys in every language",
       panel.open_map_btn.text() == i18n.t("terminal.cmdlib.open_map")
       and panel.profiles_btn.text() == i18n.t("terminal.cmdlib.profiles")
@@ -321,9 +333,13 @@ check("§4 the DOCK is the ONE predicate's other answer (the map IS that window)
       dpanel.container_kind() == "dock" and dpanel.map_is_this_window() is True
       and dpanel.servers_available() is False,
       f"{dpanel.container_kind()!r}")
-check("§4 ...so its `Servers` head and `Open map` are inactive and explain themselves INLINE",
-      dpanel.hint_label.text() == i18n.t("terminal.cmdlib.map_is_here")
-      and dpanel.hint_label.isHidden() is False
+check("§4 the dock shows NO bottom row at all (it lives with the head it belongs to)",
+      dpanel.head() == CL.HEAD_COMMANDS and dpanel.doors_row.isHidden() is True
+      and dpanel.hint_label.isHidden() is True,
+      f"doors={dpanel.doors_row.isHidden()} hint={dpanel.hint_label.isHidden()}")
+check("§4 …and the sentence of its inactive `Servers` head waits with the row it explains",
+      dpanel._hint_text() == i18n.t("terminal.cmdlib.map_is_here")
+      and dpanel.hint_label.text() == i18n.t("terminal.cmdlib.map_is_here")
       and dpanel._servers_provider is None,
       repr(dpanel.hint_label.text()))
 
@@ -335,16 +351,22 @@ check("§4 a click on the inactive head refuses the switch and answers in the st
       dpanel.head() == CL.HEAD_COMMANDS
       and dmsgs == [(i18n.t("terminal.cmdlib.map_is_here"), 4000)]
       and dpanel.head_commands_btn.isChecked() is True
-      and dpanel.head_servers_btn.isChecked() is False,
-      f"head={dpanel.head()!r} msgs={dmsgs}")
+      and dpanel.head_servers_btn.isChecked() is False
+      and dpanel.doors_row.isHidden() is True,
+      f"head={dpanel.head()!r} msgs={dmsgs} doors={dpanel.doors_row.isHidden()}")
 
 docked_doors = []
 dpanel.set_map_doors(None, lambda: (docked_doors.append("profiles"), True)[1])
 app.processEvents()
-dpanel._on_open_map()
 dpanel._on_profiles()
 app.processEvents()
-check("§4 `Open map` is dead in the dock while `Profiles` stays live (application-level)",
+check("§4 a refused head keeps the dock on `Commands` — and its dead `Open map` with it",
+      dpanel.head() == CL.HEAD_COMMANDS and dpanel.doors_row.isHidden() is True
+      and docked_doors == ["profiles"],
+      f"head={dpanel.head()!r} doors={dpanel.doors_row.isHidden()}")
+dpanel._on_open_map()
+app.processEvents()
+check("§4 the refusal path of the `Open map` door is untouched (one sentence, no crash)",
       docked_doors == ["profiles"]
       and dmsgs[-1] == (i18n.t("terminal.cmdlib.map_is_here"), 4000),
       f"doors={docked_doors} msgs={len(dmsgs)}")
@@ -423,8 +445,11 @@ try:
           f"{panel.head_servers_btn.text()!r} {panel.open_map_btn.text()!r}")
     check("§6 ...and the inline hint is re-texted with them (the dock's sentence is a key)",
           (dock.retranslate(), app.processEvents(),
-           dpanel.hint_label.text() == i18n.t("terminal.cmdlib.map_is_here"))[-1],
+           dpanel.hint_label.text() == i18n.t("terminal.cmdlib.map_is_here")
+           and dpanel.hint_label.isHidden() is True)[-1],
           repr(dpanel.hint_label.text()))
+    dpanel.set_head(CL.HEAD_COMMANDS)
+    app.processEvents()
     panel.set_head(CL.HEAD_SERVERS)
     app.processEvents()
     check("§6 the servers placeholder follows the language too",

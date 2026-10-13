@@ -340,11 +340,21 @@ check("§7 a loaded project answers ONE status line and a failed file keeps the 
       and "terminal.standalone.project_failed" in TS_SRC
       and "return False" in _body("open_project")
       and clause(7, "leaves the previous list ALONE"))
-check("§7 an inactive `Servers` head explains itself inline with the project sentence",
+check("§7 an unavailable `Servers` head explains itself inline with the shipped sentence",
       "terminal.cmdlib.no_project" in PANEL_SRC
       and "self.project_mode()" in _body("_hint_text", PANEL_SRC)
       and "if not self.servers_available():" in _body("_hint_text", PANEL_SRC)
-      and clause(7, "INLINE with `terminal.cmdlib.no_project`"))
+      and clause(7, "`terminal.cmdlib.no_project`"))
+check("§7 …while THIS surface always answers the EMPTY list and stays LIVE",
+      "return list(self._servers)" in _body("project_nodes")
+      and "if self._loaded" not in TS_SRC
+      and clause(7, "answers the EMPTY list"))
+check("§7 the container OPENS on the `Servers` head — the door is installed BEFORE the switch",
+      "self.cmdlib_panel.set_project_door(self._panel_open_project)" in TS_SRC
+      and "self.cmdlib_panel.set_head(HEAD_SERVERS)" in TS_SRC
+      and TS_SRC.index("set_project_door(self._panel_open_project)")
+      < TS_SRC.index("set_head(HEAD_SERVERS)")
+      and clause(7, "**The `Servers` head is the head this surface OPENS on.**"))
 check("§7 an EMPTY project keeps the head usable and shows its own empty state",
       "terminal.cmdlib.project_empty" in PANEL_SRC
       and "self.project_mode()" in _body("_apply_filter", PANEL_SRC)

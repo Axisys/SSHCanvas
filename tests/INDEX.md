@@ -216,6 +216,7 @@ of the file itself.
 | `test_terminal_colors.py` | — | v1.0RC1 — the color engine + per-cell canvas (ROADMAP v1.0RC1). |
 | `test_terminal_containers.py` | — | v1.7.2 — Terminal containers: the split in the dock, the single window, the merge and the titles. |
 | `test_terminal_dock.py` | — | Terminals docked in the map window (`terminal_mode`: windows/tabs). |
+| `test_terminal_doors.py` | — | The bottom row belongs to the `Servers` head (v1.12.2) — `Open map` / `Profiles` / `Open project`. |
 | `test_terminal_ergonomics.py` | — | v1.6.4 — the cheap batch: the thread names, the marked secret, the Ctrl+wheel zoom and the activity dot. |
 | `test_terminal_files_panel.py` | — | The Files tree as a right-hand panel of a standalone terminal window. |
 | `test_terminal_history.py` | — | v1.5.7 — the command history: the terminal's third tab, one history per server. |
