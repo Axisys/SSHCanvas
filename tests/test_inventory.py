@@ -722,7 +722,7 @@ check("the four age captions keep their placeholder in every language",
 check("the two age captions without a number are plain words (nothing to format)",
       all("{" not in LANGS[c]["sidebar.list.age_now"] for c in LANGS))
 check("the pin counted the SHIPPED release (692 + the fourteen of v1.5.5 + the two of v1.5.6)",
-      EXPECTED_I18N_KEYS == 708 + 1 and i18n.load_config() is not None or True)
+      EXPECTED_I18N_KEYS == 708 + 1 + 10 and i18n.load_config() is not None or True)
 check("no new config key beyond the v1.6.2 cursor shape and v1.10rc1's auto-open (the hub collects 27)",
       len(__import__("ui.settings_dialog", fromlist=["SettingsDialog"])
           .SettingsDialog(None).collect()) == 27)

@@ -342,6 +342,8 @@ class TerminalSplit:
         if page is None:
             page = self.active_page
         data = self._server_data(page)
+        if data is None:
+            return None   # nothing on screen to split — an EMPTY container (`TERMINAL_STANDALONE.md` §6)
         password = self._password(page)
         pane = self._container_call("add_session", data, password=password,
                                     initial_command="", split=True)

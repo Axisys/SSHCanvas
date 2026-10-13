@@ -271,7 +271,17 @@ MODULE_FACADE_SEAMS = (
 # `_load_project_at()` (the File → Open entry point), so every downstream rule (the autosave prompt,
 # the undo reset, the status round, the MRU) is shared instead of re-implemented (`AGENTS.md` §4.1).
 
-PROJECT_DROP_SUFFIXES = (".json", ".sshmap")
+try:  # the ONE declaration of a project FILE's suffixes (`storage/project.py`, §4.1)
+    from ..storage.project import PROJECT_SUFFIXES
+except ImportError:
+    try:
+        from storage.project import PROJECT_SUFFIXES
+    except ImportError:  # a stripped build — the shipped pair stands
+        PROJECT_SUFFIXES = (".json", ".sshmap")
+
+#: The shipped spelling of the same ONE tuple (`TERMINAL_STANDALONE.md` §3 keeps the declaration in
+#: `storage/project.py`; this name is what the drop gate of this window reads).
+PROJECT_DROP_SUFFIXES = PROJECT_SUFFIXES
 
 
 def _dropped_local_paths(mime_data) -> list:

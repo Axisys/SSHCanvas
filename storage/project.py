@@ -7,9 +7,9 @@ except ImportError:
     from .version import VERSION_FORMAT
 
 try:
-    from ..models.server import server_data_to_dict
+    from ..models.server import server_data_from_dict, server_data_to_dict
 except ImportError:
-    from models.server import server_data_to_dict
+    from models.server import server_data_from_dict, server_data_to_dict
 
 try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §71)
     from . import atomic
@@ -30,6 +30,28 @@ def _log():
         return get_logger("storage.project")
     except Exception:
         return None
+
+
+#: The suffixes a project FILE carries — the ONE declaration of "this path is a project": the drop
+#: gate (`ui/main_window.py`, under its shipped name `PROJECT_DROP_SUFFIXES`) and the `Open project`
+#: dialog of the standalone terminal (`TERMINAL_STANDALONE.md` §3) read the same tuple.
+PROJECT_SUFFIXES = (".json", ".sshmap")
+
+
+def read_project_servers(path: str) -> list:
+    """The `ServerData` list of a project file — the standalone terminal's ONE reader (PURE, no Qt).
+
+    READ-ONLY and conversion-free: the file is parsed by `load_project()` and every entry of the
+    `servers` array is handed to `models/server.py`'s `server_data_from_dict()`, so the standalone and
+    the map turn a JSON record into a node the SAME way (`TERMINAL_STANDALONE.md` §3). The array's FILE
+    ORDER is kept, an entry that is not a JSON object is DROPPED, and a file without the array answers
+    `[]` — nothing here writes, repairs or re-serializes anything.
+    """
+    raw = load_project(path)
+    entries = raw.get("servers") if isinstance(raw, dict) else None
+    if not isinstance(entries, (list, tuple)):
+        return []
+    return [server_data_from_dict(entry) for entry in entries if isinstance(entry, dict)]
 
 
 def load_project(path: str) -> dict:

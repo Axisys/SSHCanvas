@@ -825,8 +825,10 @@ class CommandLibraryPanel(QWidget):
         self._servers_provider = None      # () → the map's nodes (the `Servers` list's ONE source)
         self._connect_sink = None          # (node) → the HOST's connect door (`_run_ssh_connect`)
         self._map_sink = None              # () → raise the map window (`Open map`)
+        self._project_sink = None          # () → open a project file (`Open project`, the standalone)
         self._profiles_sink = None         # () → the profile manager (`Profiles`)
         self._server_nodes = []            # the rows as handed over (id → the live node)
+        self._servers_ready = False        # the provider answered something (`None` = nothing to list YET)
         self._by_node_id = {}
 
         layout = QVBoxLayout(self)
@@ -958,7 +960,8 @@ class CommandLibraryPanel(QWidget):
         # ── v1.11: the BOTTOM ROW — `Open map` / `Profiles`, the two doors a session's own window
         # owns so it can start another session without going back to the map. `Open map` is INACTIVE
         # in the dock (the map IS that window — see `map_is_this_window()`), `Profiles` is
-        # application-level and lives on every surface.
+        # application-level and lives on every surface. v1.12: the FIRST control is the CONTAINER's
+        # own door — `set_project_door()` turns it into the standalone's `Open project`.
         bottom = QHBoxLayout()
         bottom.setSpacing(4)
         self.open_map_btn = QPushButton(t("terminal.cmdlib.open_map"))
@@ -971,6 +974,7 @@ class CommandLibraryPanel(QWidget):
         bl.addLayout(bottom)
         self.open_map_btn.clicked.connect(self._on_open_map)
         self.profiles_btn.clicked.connect(self._on_profiles)
+        self._apply_container_door()
 
         # The INLINE hint of an INACTIVE control (the Plugins window's `run_hint` pattern): a tooltip
         # on a control that does nothing is the one place a user never looks, so the sentence stands
@@ -1051,8 +1055,7 @@ class CommandLibraryPanel(QWidget):
             self.add_btn.setText(t("terminal.cmdlib.add"))
             self.edit_btn.setText(t("terminal.cmdlib.edit"))
             self.del_btn.setText(t("terminal.cmdlib.delete"))
-            self.open_map_btn.setText(t("terminal.cmdlib.open_map"))
-            self.open_map_btn.setToolTip(t("terminal.cmdlib.open_map_tooltip"))
+            self._apply_container_door()
             self.profiles_btn.setText(t("terminal.cmdlib.profiles"))
             self.profiles_btn.setToolTip(t("terminal.cmdlib.profiles_tooltip"))
             self._file_btn.setToolTip(t("terminal.cmdlib.file_menu_tooltip"))
@@ -1150,6 +1153,35 @@ class CommandLibraryPanel(QWidget):
         self._profiles_sink = profiles if callable(profiles) else None
         self._apply_hint()
 
+    def set_project_door(self, open_project):
+        """v1.12: the bottom row's FIRST control as the standalone's `Open project` door.
+
+        A container with NO map behind it (`--only-terminal`, `TERMINAL_STANDALONE.md` §7) owns no map
+        to raise, so the ONE control names what it really does: `open_project()` picks a project file
+        and lists its servers. The control never becomes inactive through this door — a container
+        that can open a project always can. `None` restores the shipped `Open map` form.
+        """
+        self._project_sink = open_project if callable(open_project) else None
+        self._apply_container_door()
+        self._apply_hint()
+
+    def project_mode(self) -> bool:
+        """Does the first control open a PROJECT (the standalone) instead of raising a map?"""
+        return self._project_sink is not None
+
+    def _apply_container_door(self):
+        """Text + tooltip of the bottom row's first control, from the door the CONTAINER installed."""
+        t = get_translator()
+        project = self.project_mode()
+        try:
+            self.open_map_btn.setText(
+                t("terminal.cmdlib.open_project" if project else "terminal.cmdlib.open_map"))
+            self.open_map_btn.setToolTip(
+                t("terminal.cmdlib.open_project_tooltip" if project
+                  else "terminal.cmdlib.open_map_tooltip"))
+        except RuntimeError:
+            pass  # Qt teardown — the button is already gone
+
     def container_kind(self) -> str:
         """The `CONTAINER_KIND` of the container this panel sits in ("" — nobody answers)."""
         try:
@@ -1167,8 +1199,14 @@ class CommandLibraryPanel(QWidget):
         return self.container_kind() == CONTAINER_DOCK
 
     def servers_available(self) -> bool:
-        """Can the `Servers` head be used HERE? — the ONE question the head and its hint share."""
-        return (not self.map_is_this_window()) and self._servers_provider is not None
+        """Can the `Servers` head be used HERE? — the ONE question the head and its hint share.
+
+        A provider that answers `None` declares "there is nothing to list YET" — the standalone before
+        a project is open (`TERMINAL_STANDALONE.md` §7) — so the head is INACTIVE and the hint says
+        why. An EMPTY list is a real answer: the head stays usable and its own empty state names it.
+        """
+        return (not self.map_is_this_window()) and self._servers_provider is not None \
+            and self._servers_ready
 
     def head(self) -> str:
         """The head the panel shows (`commands` | `servers`) — a VIEW STATE of this container."""
@@ -1215,12 +1253,18 @@ class CommandLibraryPanel(QWidget):
         self._apply_hint()
 
     def _hint_text(self) -> str:
-        """The sentence of an INACTIVE control ("" — everything on this surface works)."""
+        """The sentence of an INACTIVE control ("" — everything on this surface works).
+
+        The QUESTION is `servers_available()` — the ONE predicate the head itself asks, so the sentence
+        and the control can never disagree: a provider with nothing to answer yet (the standalone
+        before a project is open) is inactive exactly like a container with no map behind it.
+        """
         t = get_translator()
         if self.map_is_this_window():
-            return t("terminal.cmdlib.map_is_here")     # `Servers` and `Open map` are inactive
-        if self._servers_provider is None:
-            return t("terminal.cmdlib.no_map")          # no map behind this window
+            return t("terminal.cmdlib.map_is_here")     # `Servers` and the first door are inactive
+        if not self.servers_available():
+            # A container with a project door says WHAT to open; a map-backed one has no map behind it.
+            return t("terminal.cmdlib.no_project" if self.project_mode() else "terminal.cmdlib.no_map")
         return ""
 
     def _apply_hint(self):
@@ -1242,7 +1286,14 @@ class CommandLibraryPanel(QWidget):
             pass  # Qt teardown — the signal's owner is already gone
 
     def _on_open_map(self):
-        """`Open map` — the map window comes to the front (INACTIVE in the dock: it IS this window)."""
+        """The bottom row's FIRST door — `Open project` where the container installed one (the
+        standalone), `Open map` otherwise (INACTIVE in the dock: the map IS this window)."""
+        if self.project_mode():
+            try:
+                self._project_sink()
+            except Exception:  # noqa: BLE001 — a door must never break the panel
+                pass
+            return
         if self.map_is_this_window() or self._map_sink is None:
             self._notify(self._hint_text() or get_translator()("terminal.cmdlib.no_map"))
             return
@@ -1368,12 +1419,16 @@ class CommandLibraryPanel(QWidget):
         self.server_tree.clear()
         self._by_node_id = {}
         nodes = []
+        self._servers_ready = False
         provider = self._servers_provider
         if provider is not None:
             try:
-                nodes = list(provider() or [])
-            except Exception:  # noqa: BLE001 — a source that fails is an EMPTY list, never a crash
-                nodes = []
+                answer = provider()
+            except Exception:  # noqa: BLE001 — a source that fails is an empty list, never a crash
+                answer = []
+            if answer is not None:      # `None` — no source yet (the head stays inactive)
+                self._servers_ready = True
+                nodes = list(answer)
         self._server_nodes = nodes
         for node in nodes:
             sid, alias, identity = server_row_facts(node)
@@ -1448,7 +1503,9 @@ class CommandLibraryPanel(QWidget):
                 servers_shown += 1
         if self._head == HEAD_SERVERS:
             if not self._server_nodes:
-                info = t("terminal.cmdlib.servers_empty")
+                # The project's own empty state where the container lists a FILE (the standalone).
+                info = t("terminal.cmdlib.project_empty" if self.project_mode()
+                         else "terminal.cmdlib.servers_empty")
             elif servers_shown == 0:
                 info = t("terminal.cmdlib.servers_no_matches")
             else:

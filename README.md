@@ -54,6 +54,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Window Management:** Sessions can exist as tabs in separate windows, in a detachable "Terminals" dock, or in a single shared window.
     *   **Merge Windows:** Consolidates sessions into one window while preserving scrollback and command history.
     *   **Split Terminal:** Create a second shell of the same node below the current tabs.
+*   **Standalone Terminal Mode:** `python main.py --only-terminal` runs the terminal alone — no map, no probes, no plugins, no autosave. Pick a project file in the window to list its servers; choosing one opens the connect dialog and the session, with the full terminal feature set (split, Files panel, multi-input, history, guards). A password never comes from the project file: an unknown one is asked for in the dialog.
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf`, `reboot`, or `mkfs`.
@@ -213,7 +214,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 
 | Path | Description |
 |---|---|
-| `main.py` | Entry point: logging, QApplication, plugin discovery, status checks |
+| `main.py` | Entry point: logging, QApplication, plugin discovery, status checks (`--only-terminal` starts the standalone terminal instead) |
 | `version.py` | Single source of truth for versioning |
 | `models/` | Data models for `ServerData` and SSH profiles |
 | `graphics/` | Scene rendering: cards, arrows, notes, groups, minimap |
@@ -223,7 +224,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 147 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 149 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

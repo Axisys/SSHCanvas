@@ -561,13 +561,28 @@ class SSHTerminalWindow(QMainWindow):
     marked `_is_split_pane` (the terminal_max_open limit and
     _find_terminal_window_for skip it, while the green dot and the multi-input
     provider still count it — ui/main_window_ssh.py).
+
+    A window may be born EMPTY: `server_data=None` means "this container holds no node" and
+    `ALLOWS_NO_SESSIONS` decides whether the LAST tab closes it (a map-backed window) or leaves an
+    empty container that can open the next session (`TERMINAL_STANDALONE.md` §6).
     """
 
     #: The container KIND a session registry can filter on (`terminal_split.container_windows`):
     #: the merge and the `"single"` mode collect terminal WINDOWS and never the dock.
     CONTAINER_KIND = CONTAINER_WINDOW
 
-    def __init__(self, server_data: ServerData, parent=None, password: str = None,
+    #: May this container hold ZERO sessions? False — the LAST tab closes the window (the shipped
+    #: behaviour of every map-backed window); True — the standalone surface opens empty and stays
+    #: open (`TERMINAL_STANDALONE.md` §6). The ONE predicate of the empty container.
+    ALLOWS_NO_SESSIONS = False
+
+    #: Does closing this container END THE RUN? False — a map-backed window is one surface of a
+    #: larger application; True — the standalone's ONLY window (`TERMINAL_STANDALONE.md` §2). Qt's
+    #: implicit "last window closed" cannot answer here: this container is a CHILD of its surface
+    #: (`isWindow()` is False), so `quitOnLastWindowClosed` never fires for it.
+    quit_on_close = False
+
+    def __init__(self, server_data: "ServerData | None" = None, parent=None, password: str = None,
                  initial_command: str = ""):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
@@ -575,7 +590,7 @@ class SSHTerminalWindow(QMainWindow):
         # BUGFIX v0.9.5.5 (kept): server_data on the window is a compat attribute
         # (the data of the FIRST session; the window hosts sessions of one node);
         # since v1.2 the MainWindow tracking reads it from the SESSION
-        # (page.server_data).
+        # (page.server_data). None — a container with no node (the standalone).
         self.server_data = server_data
 
         # v1.3.3.5: the split state — BEFORE the layout (add_session() below may ask
@@ -583,7 +598,7 @@ class SSHTerminalWindow(QMainWindow):
         self._split_config = load_split_settings()
 
         t = get_translator()
-        self.setWindowTitle(t("terminal.window_title", alias=server_data.alias, host=server_data.host))
+        self.setWindowTitle(self._base_window_title())
         # v1.2.3 (ROADMAP task 2): the base title for the multi-input mode highlight —
         # apply_container_highlight swaps in/removes the terminal.multi_title_prefix prefix.
         self._multi_base_title = self.windowTitle()
@@ -642,6 +657,9 @@ class SSHTerminalWindow(QMainWindow):
         # like `split_host`). The state/keys are read BEFORE the first session is added.
         self._files_config = load_files_panel_settings()
         self._files_panel_on = False
+        #: The saved Files display mode was ASKED for while the container had no session to serve
+        #: (a window born EMPTY): the request reaches its FIRST session (`_open_files_panel`).
+        self._files_mode_pending = False
         #: tab (SftpTab) → the two-pane view it had when the panel forced the mode OFF
         #: (the MUTUAL EXCLUSION: the panel is single-pane, the state is KEPT and restored).
         self._commander_kept = {}
@@ -697,6 +715,15 @@ class SSHTerminalWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self._sftp_progress)
         self._bridged_page = None
 
+        # The ZERO-SESSION sentence of a container that may open EMPTY (`ALLOWS_NO_SESSIONS`): a
+        # PERMANENT status-bar widget (the `_split_status_label` pattern above), shown exactly while
+        # the tab strip is empty — an empty window says what to do instead of showing a blank strip.
+        self._empty_label = QLabel("")
+        if theme_qss is not None:
+            self._empty_label.setStyleSheet(theme_qss.style("status.terminal_row"))
+        self._empty_label.hide()
+        self.statusBar().addPermanentWidget(self._empty_label)
+
         # v1.3.3.5 (ROADMAP task 6): the bridge follows the FOCUSED session. The
         # application-level focusChanged signal is the reliable trigger (see
         # _wire_page); PySide6 drops the connection together with this QObject.
@@ -707,8 +734,11 @@ class SSHTerminalWindow(QMainWindow):
         except Exception:  # noqa: BLE001 — a window without an application (a unit test)
             pass
 
-        # The first session — via the same path as a new tab (v1.2.1 task 1).
-        self.add_session(server_data, password=password, initial_command=initial_command)
+        # The first session — via the same path as a new tab (v1.2.1 task 1). A container built
+        # WITHOUT a node (`server_data is None`) is born EMPTY: the standalone surface adds the
+        # sessions of the project's server list, one connect at a time (`TERMINAL_STANDALONE.md` §6).
+        if server_data is not None:
+            self.add_session(server_data, password=password, initial_command=initial_command)
 
         # v1.3.3.5 (ROADMAP task 5): the RESTORED split state — through the ONE action
         # (toggled → set_split_enabled), so the button, the pane and the geometry can
@@ -725,6 +755,40 @@ class SSHTerminalWindow(QMainWindow):
         self.files_panel.set_collapsed(self._files_config["collapsed"], persist=False)
         if self._files_config["mode"] == "panel":
             self.act_files_panel.setChecked(True)
+
+        self._sync_empty_state()
+
+    # ── the ZERO-SESSION container (`TERMINAL_STANDALONE.md` §6) ──────────────────────────────
+
+    def _base_window_title(self) -> str:
+        """The title of a container with NO session on screen — the node's, or the surface's own.
+
+        A window born without a node (`server_data is None`) names the SURFACE until a session exists;
+        `_refresh_window_title()` takes over from there, so the title always names what is on screen.
+        """
+        data = self.server_data
+        if data is None:
+            return get_translator()("terminal.standalone.title")
+        return get_translator()("terminal.window_title", alias=data.alias, host=data.host)
+
+    def _sync_empty_state(self):
+        """The ONE writer of the empty-container state (`ALLOWS_NO_SESSIONS`).
+
+        A container that may hold ZERO sessions shows the permanent sentence and disables the two
+        controls that speak for a SESSION (the split and the Files panel): with nothing on screen
+        there is no shell to split and no session's files to show. A map-backed window (the flag is
+        False) keeps every control live and closes itself on its last tab. Never raises.
+        """
+        try:
+            empty = bool(self.ALLOWS_NO_SESSIONS) and self.session_tabs.count() == 0
+            self._empty_label.setText(
+                get_translator()("terminal.standalone.empty_hint") if empty else "")
+            self._empty_label.setVisible(empty)
+            for control in (getattr(self, "act_split", None), getattr(self, "act_files_panel", None)):
+                if control is not None:
+                    control.setEnabled(not empty)
+        except RuntimeError:
+            pass  # Qt teardown — the widgets are already gone
 
     # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
 
@@ -803,6 +867,8 @@ class SSHTerminalWindow(QMainWindow):
         # raw pane state is LIVE session data (never re-translated, §4.5), the prefix
         # around it is a string of the ACTIVE language.
         self._render_split_status()
+        # The zero-session sentence of a container that may open empty (its own language).
+        self._sync_empty_state()
 
     # ── v1.4.3 (ROADMAP task 4): live theme — the container and its sessions ──
 
@@ -842,6 +908,10 @@ class SSHTerminalWindow(QMainWindow):
         if theme_qss is not None:
             try:
                 theme_qss.refresh(self._split_status_label, "status.terminal_row")
+            except RuntimeError:
+                pass  # Qt teardown — the label is already destroyed
+            try:  # the zero-session line is the same kind of VALUE (an inline QSS string)
+                theme_qss.refresh(self._empty_label, "status.terminal_row")
             except RuntimeError:
                 pass  # Qt teardown — the label is already destroyed
         # v1.6.4 (ROADMAP task 4): the activity mark is a PIXMAP — a VALUE (§4.6): re-render it
@@ -928,6 +998,14 @@ class SSHTerminalWindow(QMainWindow):
         # is taken away here and comes back the moment the mode goes off (ONE attach path).
         if self._files_panel_on:
             self._attach_files_panel_page(page)
+        elif self._files_mode_pending:
+            # the SAVED display mode asked for the panel while there was nothing to serve: it reaches
+            # the FIRST session of a container that was born EMPTY (`_open_files_panel`). The ONE
+            # switch is asked directly — the action is already CHECKED (the setting is on), so its
+            # `toggled` could not fire again.
+            self.set_files_panel_enabled(True)
+        # A container that may open EMPTY leaves the empty state with its first session.
+        self._sync_empty_state()
         return page
 
     def close_page(self, page):
@@ -964,7 +1042,8 @@ class SSHTerminalWindow(QMainWindow):
             pass
         self.session_tabs.removeTab(idx)   # currentChanged → the bridge reconnects
         page.deleteLater()
-        if self.session_tabs.count() == 0:
+        self._sync_empty_state()
+        if self.session_tabs.count() == 0 and not self.ALLOWS_NO_SESSIONS:
             self.close()  # the last tab — close the window (WA_DeleteOnClose)
 
     def _on_tab_close_requested(self, index: int):
@@ -1480,6 +1559,10 @@ class SSHTerminalWindow(QMainWindow):
         Idempotent and teardown-safe.
         """
         on = bool(on)
+        if not on:
+            # an EXPLICIT "off" wins over the saved display mode: a window whose Files panel had
+            # nothing to serve yet must not re-open it behind the user's back (`_open_files_panel`).
+            self._files_mode_pending = False
         if on == self._files_panel_on:
             self._set_files_panel_action_checked(on)
             return
@@ -1493,9 +1576,13 @@ class SSHTerminalWindow(QMainWindow):
         """Show the panel and move every session's Files widget into it. Never raises."""
         pages = [p for p in self._tab_pages() if getattr(p, "sftp_tab", None) is not None]
         if not pages:
-            self._files_panel_on = False   # nothing to serve — the checkmark goes back
+            # nothing to serve YET (a container born EMPTY): the request is remembered, so the
+            # FIRST session that arrives gets the panel the setting asked for (`add_session`).
+            self._files_panel_on = False
+            self._files_mode_pending = True
             return
         self._files_panel_on = True
+        self._files_mode_pending = False
         self._keep_commander_state()
         for page in pages:
             self._attach_files_panel_page(page)
@@ -2123,8 +2210,8 @@ class SSHTerminalWindow(QMainWindow):
 
     def _session_tab_title(self, page) -> str:
         """The tab TEXT of a session — always the node alias (the remote title is the tooltip)."""
-        data = getattr(page, "server_data", None)
-        return str(getattr(data, "alias", "") or self.server_data.alias)
+        data = getattr(page, "server_data", None) or getattr(self, "server_data", None)
+        return str(getattr(data, "alias", "") or "?")
 
     def _title_page(self):
         """The session the window title NAMES — the one on screen (the focused pane wins)."""
@@ -2142,10 +2229,10 @@ class SSHTerminalWindow(QMainWindow):
         t = get_translator()
         page = self._title_page()
         data = getattr(page, "server_data", None) or getattr(self, "server_data", None)
-        alias = str(getattr(data, "alias", "") or "?")
-        host = str(getattr(data, "host", "") or "")
-        remote = str(getattr(page, "remote_title", "") or "")
-        base = t("terminal.window_title", alias=remote or alias, host=host)
+        base = t("terminal.standalone.title") if data is None else t(
+            "terminal.window_title",
+            alias=str(getattr(page, "remote_title", "") or getattr(data, "alias", "") or "?"),
+            host=str(getattr(data, "host", "") or ""))
         prefixed = False
         try:
             from .multi_input import get_hub as _get_hub
@@ -2315,5 +2402,12 @@ class SSHTerminalWindow(QMainWindow):
         except (TypeError, RuntimeError):
             pass  # it was never connected / the C++ object is already gone
         super().closeEvent(event)
+        # The container that IS the application (the standalone): a closed window leaves nothing to
+        # show, so the run ends HERE. An `ignored` event is a refused close (a page said so) — the
+        # run continues. `quit_on_close` is False for every map-backed container.
+        if event.isAccepted() and self.quit_on_close:
+            _app = QApplication.instance()
+            if _app is not None:
+                _app.quit()
 
 

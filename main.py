@@ -20,7 +20,35 @@ except ImportError:
                                     apply_motion_setting, apply_density_setting)
 
 
-def main():
+# ── the launch MODES (the frozen contract of `--only-terminal`: TERMINAL_STANDALONE.md §1) ────────
+# ONE row per mode: the map application (the default) or the terminal surface WITHOUT it. The parse
+# reads ONLY what it knows — an unknown `--flag` is REPORTED and never stops the launch, because the
+# platform and Qt own the rest of the command line. NO mode opens a listening socket.
+MODE_MAP = "map"
+MODE_TERMINAL = "terminal"
+LAUNCH_FLAGS = {"--only-terminal": MODE_TERMINAL}
+USAGE = "usage: python main.py [--only-terminal]"
+
+
+def parse_launch_args(argv) -> dict:
+    """The ONE argv parse (PURE): `{"mode", "unknown"}` — the mode and the options nobody owns.
+
+    A future subcommand is ONE row in `LAUNCH_FLAGS` plus its branch in `main()`; a `project` path is
+    the API seam of the standalone entry point, never a command-line form of the flag (§1).
+    """
+    mode, unknown = MODE_MAP, []
+    for token in (argv or []):
+        if not isinstance(token, str):
+            continue
+        if token in LAUNCH_FLAGS:
+            mode = LAUNCH_FLAGS[token]
+        elif token.startswith("--"):
+            unknown.append(token)
+    return {"mode": mode, "unknown": unknown}
+
+
+def main(argv=None):
+    args = parse_launch_args(sys.argv[1:] if argv is None else argv)
     # ── Setup logging (before anything else) ──────────────────
     log = None  # so that if logging fails, the code below does not crash with a NameError
     try:
@@ -39,6 +67,10 @@ def main():
         # the release description lives in CHANGELOG.md/DOCUMENTATION.md.
         log.info(f"{APP_NAME} v{APP_VERSION} starting up")
         log.info(f"Log file: {get_log_file_path()}")
+        if args["unknown"]:
+            # An option this parser does not own: reported, never fatal (Qt and the platform read
+            # the rest of the command line themselves).
+            log.warning(f"Unknown launch option(s) ignored: {', '.join(args['unknown'])} — {USAGE}")
     except Exception as e:
         print(f"[FATAL] Failed to setup logging: {e}", flush=True)
 
@@ -97,30 +129,47 @@ def main():
             if log is not None:
                 log.warning(f"The spool sweep did not run: {e}")
 
-        win = MainWindow()
-        win.show()
-
-        # v1.4rc1 (plugin foundation, rc series): the plugin discovery — after the
-        # window exists and BEFORE the event loop (ROADMAP rc1: "after MainWindow
-        # creation, before app.exec()"). A broken plugin is reported in the status bar
-        # and in the log; it can never stop the application (the call itself is
-        # defensive as well — a plugin must not be able to break the startup).
-        try:
-            win.start_plugin_discovery()
-        except Exception as e:
+        if args["mode"] == MODE_TERMINAL:
+            # `--only-terminal`: the terminal surface WITHOUT the map (`TERMINAL_STANDALONE.md` §5) —
+            # no scene, no plugins, no probes, no autosave, no undo and no info collection. The ONE
+            # window shows the shipped container (born EMPTY) and its panel lists the servers of a
+            # project file the user picks in it; closing that window ends the run (§2).
+            try:
+                from modules.terminal_standalone import start_standalone
+            except ImportError:
+                from .modules.terminal_standalone import start_standalone
+            # The surface is the ONE owner of the window and lives as long as its run: the value is
+            # bound to the application, because a top-level widget nobody references is collected by
+            # Python and destroys its own window before the loop starts (the `win` path below keeps
+            # its own reference the same way).
+            app.standalone_surface = start_standalone()
             if log is not None:
-                log.warning(f"Plugin discovery did not run: {e}")
+                log.info("Standalone terminal shown")
+        else:
+            win = MainWindow()
+            win.show()
 
-        # v0.7.1: periodic node status checks (online/warn/offline) —
-        # started once after show(): the first round in ~2 s, then driven by QTimer.
-        try:
-            win.start_status_checks()
-        except Exception as e:
+            # v1.4rc1 (plugin foundation, rc series): the plugin discovery — after the
+            # window exists and BEFORE the event loop (ROADMAP rc1: "after MainWindow
+            # creation, before app.exec()"). A broken plugin is reported in the status bar
+            # and in the log; it can never stop the application (the call itself is
+            # defensive as well — a plugin must not be able to break the startup).
+            try:
+                win.start_plugin_discovery()
+            except Exception as e:
+                if log is not None:
+                    log.warning(f"Plugin discovery did not run: {e}")
+
+            # v0.7.1: periodic node status checks (online/warn/offline) —
+            # started once after show(): the first round in ~2 s, then driven by QTimer.
+            try:
+                win.start_status_checks()
+            except Exception as e:
+                if log is not None:
+                    log.warning(f"Status checks did not start: {e}")
+
             if log is not None:
-                log.warning(f"Status checks did not start: {e}")
-
-        if log is not None:
-            log.info("MainWindow shown")
+                log.info("MainWindow shown")
         sys.exit(app.exec())
     except Exception:
         if log is not None:

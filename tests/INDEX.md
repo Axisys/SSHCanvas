@@ -228,6 +228,8 @@ of the file itself.
 | `test_terminal_scroll.py` | — | v1.0RC3 — PTY resize + scrollback + dirty rendering (ROADMAP v1.0RC3). |
 | `test_terminal_selection_menu.py` | — | v1.2.7 — Terminal: double/triple-click selection + context menu (ROADMAP v1.2.7). |
 | `test_terminal_split.py` | — | v1.3.3.5 — Terminal split: a second pane under the sessions (ROADMAP v1.3.3.5). |
+| `test_terminal_standalone.py` | — | The terminal on its own (v1.12) — `main.py --only-terminal` and the surface behind it. |
+| `test_terminal_standalone_contract.py` | — | The clause audit of `TERMINAL_STANDALONE.md` (v1.12) against the SHIPPED code — one section per |
 | `test_terminal_tabs.py` | — | v1.2.1 — Multiple SSH sessions as tabs in one terminal window (ROADMAP v1.2.1). |
 | `test_terminal_truth.py` | — | v1.6.2 — the terminal that stops lying: a dead session, the DEC graphics, the column, the cursor. |
 | `test_terminal_widget_split.py` | — | `1.8rc5` — the `terminal_widget.py` split: `TerminalWidget` becomes a facade over five canvas mixins. |
