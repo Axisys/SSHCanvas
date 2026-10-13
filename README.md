@@ -172,6 +172,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **Elevated Pane:** The elevated pane is strictly read-only for the remote user's permissions.
 *   **Command History:** Stored as a plain-text file per server under `~/.sshmap/history/`, so it can carry secrets (a token passed as an argument); the padlock marks a secret-shaped line but does not redact it. The file never enters a project, an export, or the log.
 *   **Endpoint-Bound Passwords:** A stored password belongs to the `user@host:port` it was saved for — change one of them and the connect dialog asks again.
+*   **Profile Store:** Profiles live in `~/.sshmap_profiles.json`. A file that cannot be parsed is never overwritten — the profile dialogs report it and name the file, so it can be repaired by hand.
 *   **Plugins:** They run inside the application's process, so a plugin with a broken C extension can take it down — install plugins you trust.
 
 ---
@@ -224,7 +225,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 152 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 153 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

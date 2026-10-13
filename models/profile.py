@@ -3,6 +3,10 @@
 Profiles are stored in ~/.sshmap_profiles.json and shared across all projects.
 Passwords are NOT saved to disk — they're stored in the system credential store (keyring) via CredentialManager.
 This prevents plaintext passwords from appearing in config files.
+
+The READ is three-state (`read_store()`): a MISSING file is an empty store, VALID JSON is the store,
+and a file that EXISTS but cannot be parsed is NEVER overwritten — every writer refuses through
+`ProfileStoreError` (`AGENTS.md` §4.4.2, the known_hosts rule). Mechanism — `DOCUMENTATION.md` §3.
 """
 
 import json
@@ -14,6 +18,15 @@ try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §
     from ..storage import atomic as _atomic
 except ImportError:  # flat launch from the project root
     from storage import atomic as _atomic
+
+
+def _log():
+    """Lazy-imported logger — the model keeps working without the logger tree."""
+    try:
+        from modules.logger import get_logger
+        return get_logger("models.profile")
+    except Exception:  # noqa: BLE001 — a build without the logger keeps the store working
+        return None
 
 
 @dataclass
@@ -36,10 +49,86 @@ class Profile:
 
 # ── Persistence helpers ────────────────────────────────────────────
 
+#: The three answers of ONE read of the profiles file.
+STORE_MISSING = "missing"      # no file yet — a fresh install (writers may create it)
+STORE_OK = "ok"                # the file parsed (the document is the store)
+STORE_UNREADABLE = "unreadable"  # the file EXISTS and cannot be parsed — writers REFUSE
+
+#: The sentence of a refused write, in English: the model owns no i18n (§4.5) and names the REAL path,
+#: because the profiles file is the LEGACY `~/.sshmap_profiles.json` (NOT under `~/.sshmap/`).
+PROFILE_STORE_ERROR = ("The profiles file {path} cannot be read, so nothing was changed. "
+                       "Repair or rename that file and try again.")
+
+
+class ProfileStoreError(OSError):
+    """A profiles WRITE refused because the file exists and cannot be parsed.
+
+    Raised by `save_profiles()` (and every writer reading through it) so the last surviving profiles
+    are never replaced by a file the reader could not understand (`AGENTS.md` §4.4.2). `path` is the
+    file the user has to repair; `str(error)` is the sentence `PROFILE_STORE_ERROR` composed.
+    """
+
+    def __init__(self, path: str, reason: str = ""):
+        self.path = str(path)
+        self.reason = str(reason or "")
+        self.message = PROFILE_STORE_ERROR.format(path=self.path)
+        detail = f" ({self.reason})" if self.reason else ""
+        super().__init__(self.message + detail)
+
+
 def _profiles_path() -> str:
     """Return the path to the profiles JSON file."""
     home = os.path.expanduser("~")
     return os.path.join(home, ".sshmap_profiles.json")
+
+
+def read_store():
+    """ONE read of the profiles file: `(state, profiles, path, reason)` — the three-state answer.
+
+    A MISSING file is `(STORE_MISSING, [], path, "")`; a file whose JSON is not a list is read as an
+    EMPTY store (the shipped tolerance, one log line); and a file that EXISTS but cannot be parsed or
+    opened is `(STORE_UNREADABLE, [], path, reason)` — the state every writer refuses to overwrite.
+    A race that removes the file between the `isfile()` probe and the read answers `STORE_MISSING`.
+    """
+    path = _profiles_path()
+    if not os.path.isfile(path):
+        return STORE_MISSING, [], path, ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return STORE_MISSING, [], path, "the file disappeared while it was read"
+    except json.JSONDecodeError as e:
+        return STORE_UNREADABLE, [], path, f"invalid JSON at line {e.lineno} column {e.colno}"
+    except (OSError, UnicodeDecodeError, ValueError) as e:
+        return STORE_UNREADABLE, [], path, str(e)
+    if not isinstance(raw, list):
+        return STORE_OK, [], path, ""
+    # AUDIT v0.7.2 (medium #13): the id from the file is kept as-is — only an empty one
+    # is generated (__post_init__). Corrupt entries are skipped, without breaking the load.
+    profiles = []
+    for p in raw:
+        if not isinstance(p, dict):
+            continue
+        profiles.append(Profile(
+            id=str(p.get("id") or ""),
+            name=str(p.get("name", "")),
+            user=str(p.get("user", "")),
+        ))
+    return STORE_OK, profiles, path, ""
+
+
+def unreadable_profiles_error() -> "Optional[ProfileStoreError]":
+    """The refusal of a WRITE — `None` when the file is missing or really parses.
+
+    Every writer asks this BEFORE it touches the file (the `_refuse_overwrite()` shape of
+    `modules/host_key_policy.py`): a file that exists and cannot be parsed is left exactly as it is,
+    so a repair by hand stays possible.
+    """
+    state, _profiles, path, reason = read_store()
+    if state == STORE_UNREADABLE:
+        return ProfileStoreError(path, reason)
+    return None
 
 
 # ── Credential Manager integration (lazy import) ────────────────
@@ -57,32 +146,33 @@ def _get_credential_manager():
 # ── Persistence ────────────────────────────────────────────────
 
 def load_profiles() -> List[Profile]:
-    """Load all profiles from disk. Returns empty list on failure."""
-    try:
-        with open(_profiles_path(), "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        # AUDIT v0.7.2 (medium #13): the id from the file is kept as-is — only an empty one
-        # is generated (__post_init__). Corrupt entries are skipped, without breaking the load.
-        profiles = []
-        for p in raw or []:
-            if not isinstance(p, dict):
-                continue
-            profiles.append(Profile(
-                id=str(p.get("id") or ""),
-                name=str(p.get("name", "")),
-                user=str(p.get("user", "")),
-            ))
-        return profiles
-    except (FileNotFoundError, json.JSONDecodeError, TypeError, ValueError):
-        return []
+    """Load all profiles from disk — an EMPTY list when there is nothing readable.
+
+    A missing file and a file that cannot be parsed both answer `[]`, so a caller that only lists
+    profiles keeps working; the difference is the ONE log line the second case writes (the path and
+    the reason) and `save_profiles()`'s refusal, which is what keeps such a file from being lost.
+    """
+    state, profiles, path, reason = read_store()
+    if state == STORE_UNREADABLE:
+        log = _log()
+        if log is not None:
+            log.warning("The profiles file %s cannot be read (%s) — read as an empty store; "
+                        "a write is refused until it is repaired", path, reason or "unreadable")
+    return profiles
 
 
 def save_profiles(profiles: List[Profile]) -> None:
-    """Save all profiles to disk.
+    """Save all profiles to disk — REFUSES to overwrite a file that cannot be parsed.
 
     Passwords are stripped before saving — they live only in the system credential store (keyring).
-    This prevents plaintext passwords from appearing in ~/.sshmap_profiles.json.
+    This prevents plaintext passwords from appearing in ~/.sshmap_profiles.json. A file that exists
+    and cannot be parsed raises `ProfileStoreError` BEFORE the write (`unreadable_profiles_error()`),
+    so the last surviving profiles are never replaced by a file nobody could read.
     """
+    refusal = unreadable_profiles_error()
+    if refusal is not None:
+        raise refusal
+
     # Save passwords to keyring BEFORE stripping them from memory
     cm = _get_credential_manager()
     for p in profiles:
@@ -101,7 +191,7 @@ def save_profiles(profiles: List[Profile]) -> None:
 
 
 def add_profile(name: str, user: str, password: str = "") -> Profile:
-    """Create a new profile and persist it."""
+    """Create a new profile and persist it (raises `ProfileStoreError` — the file is unreadable)."""
     profiles = load_profiles()
     import uuid
     p = Profile(
@@ -127,6 +217,7 @@ def update_profile(profile_id: str, name: str, user: str,
         None — do not change the stored password (the keyring entry is kept as-is);
         ""   — clear the password;
         str  — set a new password.
+    Raises `ProfileStoreError` when the file exists and cannot be parsed (nothing is written).
     """
     profiles = load_profiles()
     for i, p in enumerate(profiles):
@@ -156,7 +247,11 @@ def update_profile(profile_id: str, name: str, user: str,
 
 
 def delete_profile(profile_id: str) -> bool:
-    """Remove a profile by ID. Returns True if deleted."""
+    """Remove a profile by ID. Returns True if deleted.
+
+    An ID that is not in the store returns at once and never touches the file, so `False` stays the
+    only answer of a missing profile — `ProfileStoreError` reaches the caller only from a REAL write.
+    """
     profiles = load_profiles()
     new_profiles = [p for p in profiles if p.id != profile_id]
     if len(new_profiles) == len(profiles):

@@ -175,6 +175,18 @@ def server_row_facts(node) -> tuple:
     return sid, alias, identity
 
 
+def server_row_keys(ids) -> list:
+    """The row KEY of every entry of one provider answer — PURE, one key per ROW, positionally unique.
+
+    A row's key is its POSITION in the answer (`<id>@<index>`), so two entries sharing one id keep two
+    distinct keys and a click can never resolve to the other server (`N106`). The list is rebuilt for
+    every answer, so the index part is stable between two reads of the same answer; the `id` half is
+    what the IDENTITY check of `_server_for_item()` reads back, and a row whose record left the live
+    answer is therefore refused instead of connecting to a card that is no longer on the map.
+    """
+    return [f"{sid or '_'}@{i}" for i, sid in enumerate(ids)]
+
+
 # ── storage (pure Python, no Qt) ────────────────────────────────────────────
 
 def _default_store_path() -> str:
@@ -827,9 +839,9 @@ class CommandLibraryPanel(QWidget):
         self._map_sink = None              # () → raise the map window (`Open map`)
         self._project_sink = None          # () → open a project file (`Open project`, the standalone)
         self._profiles_sink = None         # () → the profile manager (`Profiles`)
-        self._server_nodes = []            # the rows as handed over (id → the live node)
+        self._server_nodes = []            # the answer as handed over (POSITION → the live node)
         self._servers_ready = False        # the provider answered something (`None` = nothing to list YET)
-        self._by_node_id = {}
+        self._row_position = {}            # the row KEY (`server_row_keys()`) → its position
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1175,6 +1187,43 @@ class CommandLibraryPanel(QWidget):
         """Does the first control open a PROJECT (the standalone) instead of raising a map?"""
         return self._project_sink is not None
 
+    def project_is_open(self) -> bool:
+        """Is a project really OPEN behind this provider — the empty state's OWN predicate (`N108`).
+
+        `project_mode()` answers what the first control DOES, so a container that can open a project
+        is in project mode before a file was ever picked. The empty state claims "this project has no
+        servers yet", which is only true of a LOADED one, so it asks the provider that owns the file:
+        `project_path()` on the panel's parent chain (the `StandaloneSurface`), reached by NAME — never
+        through a `graphics/` import or a map hook. The source asked is the nearest parent that
+        declares a servers provider (`project_nodes()`), so a chain holding several such sources never
+        mixes two projects; the panel's own reader is the fallback when the chain declares none.
+        """
+        source = self._project_scope()
+        path = getattr(source, "project_path", None)
+        if not callable(path):
+            return False
+        try:
+            return bool(path())
+        except Exception:  # noqa: BLE001 — a predicate must never break the panel
+            return False
+
+    def _project_scope(self):
+        """The nearest widget of the parent chain that declares a servers provider — else the panel.
+
+        A container answers its provider pair from ONE source (its window, then the surface behind
+        it), and that source is the one whose project the list shows, so the walk stops at the first.
+        """
+        node, hops = self, 0
+        while node is not None and hops < CONTAINER_HOPS_MAX:
+            try:
+                if callable(getattr(node, "project_nodes", None)):
+                    return node
+                node = node.parent()
+            except RuntimeError:
+                break  # Qt teardown — the C++ object is already gone
+            hops += 1
+        return self
+
     def _apply_container_door(self):
         """Text + tooltip of the bottom row's first control, from the door the CONTAINER installed."""
         t = get_translator()
@@ -1235,8 +1284,37 @@ class CommandLibraryPanel(QWidget):
         self._apply_head()
 
     def refresh_servers(self):
-        """Re-read the provider and rebuild the `Servers` list (the head switch, showEvent, a load)."""
+        """Re-read the provider and rebuild the `Servers` list (the head switch, showEvent, a load).
+
+        An answer identical to the one the list already shows (the same entries, in the same order)
+        rebuilds nothing: the map's door asks this after EVERY command it applies (`N105`), so a
+        rebuild without a change would only drop the selection and the scroll position.
+        """
+        if not self._servers_changed():
+            self._apply_filter()
+            return
         self._rebuild_servers()
+
+    def _servers_changed(self) -> bool:
+        """Does the provider answer something other than the entries the rows were built from?"""
+        provider = self._servers_provider
+        if provider is None:
+            return bool(self._server_nodes) or self._servers_ready
+        if not self._servers_ready:
+            return True          # nothing was read yet — the first answer always builds
+        try:
+            answer = provider()
+        except Exception:  # noqa: BLE001 — a source that fails is an empty list, never a crash
+            answer = []
+        if answer is None:
+            return bool(self._server_nodes)
+        nodes = list(answer)
+        if len(nodes) != len(self._server_nodes):
+            return True
+        for live, shown in zip(nodes, self._server_nodes):
+            if live is not shown or server_row_facts(live)[0] != server_row_facts(shown)[0]:
+                return True
+        return False
 
     def _apply_head(self):
         """Show the widgets of ONE head: the tree or the server list, the Add/Edit/Delete row, the
@@ -1427,14 +1505,16 @@ class CommandLibraryPanel(QWidget):
     def _rebuild_servers(self):
         """Rebuild the flat `Servers` list from the provider pair. Never raises.
 
-        The rows are the map's cards in the map's own order; a row carries ONLY the node id (Qt
-        gotcha #12: `setData` stores a copy of an object) and the live node is read back from
-        `self._by_node_id`. The identity (`user@host:port`) travels as the tooltip — the alias is
-        what the row shows.
+        The rows are the map's cards in the map's own order (the standalone's project file order).
+        A row carries ONLY its KEY in `Qt.UserRole` (Qt gotcha #12: `setData` stores a copy of an
+        object) and the live node is read back from `self._server_nodes` through
+        `self._row_position`; the key is POSITIONAL (`server_row_keys()`), so two entries sharing one
+        id stay two rows that resolve to their own server. The identity (`user@host:port`) travels as
+        the tooltip — the alias is what the row shows.
         """
         t = get_translator()
         self.server_tree.clear()
-        self._by_node_id = {}
+        self._row_position = {}
         nodes = []
         self._servers_ready = False
         provider = self._servers_provider
@@ -1447,25 +1527,46 @@ class CommandLibraryPanel(QWidget):
                 self._servers_ready = True
                 nodes = list(answer)
         self._server_nodes = nodes
-        for node in nodes:
+        keys = server_row_keys([server_row_facts(node)[0] for node in nodes])
+        for row_key, node in zip(keys, nodes):
             sid, alias, identity = server_row_facts(node)
-            sid = sid or alias or identity
-            self._by_node_id[sid] = node
-            row = QTreeWidgetItem([alias or sid])
-            row.setData(0, Qt.ItemDataRole.UserRole, sid)
+            self._row_position[row_key] = len(self._row_position)
+            row = QTreeWidgetItem([alias or sid or row_key])
+            row.setData(0, Qt.ItemDataRole.UserRole, row_key)
             row.setToolTip(0, identity or alias)
             self.server_tree.addTopLevelItem(row)
         self.server_tree.setHeaderLabels([t("terminal.cmdlib.head_servers")])
         self._apply_filter()
 
     def _server_for_item(self, item):
-        """The live node of a `Servers` row (None — a stale row / no selection)."""
+        """The live node of a `Servers` row — `None` for a stale row or no selection.
+
+        The key is split back into the `id` and the POSITION it was built with (`server_row_keys()`),
+        and the node is answered only while BOTH still agree with the provider's last answer: a card
+        that left the map, an id that moved to another row, or another answer with a different length
+        all refuse the row instead of opening a session for a server nobody is looking at.
+        """
         if item is None:
             return None
-        sid = item.data(0, Qt.ItemDataRole.UserRole)
-        if not isinstance(sid, str):
+        try:
+            row_key = item.data(0, Qt.ItemDataRole.UserRole)
+        except RuntimeError:
+            return None  # Qt teardown — the C++ item is already gone
+        if not isinstance(row_key, str) or "@" not in row_key:
             return None
-        return self._by_node_id.get(sid)
+        sid, _, index = row_key.rpartition("@")
+        try:
+            position = int(index)
+        except ValueError:
+            return None
+        if self._row_position.get(row_key) != position:
+            return None
+        if not 0 <= position < len(self._server_nodes):
+            return None
+        node = self._server_nodes[position]
+        if server_row_facts(node)[0] != sid:
+            return None
+        return node
 
     def _activate_server_item(self, item):
         """A double click / Enter on a server row — the HOST's connect door, never `add_session()`.
@@ -1473,8 +1574,10 @@ class CommandLibraryPanel(QWidget):
         The door is `_run_ssh_connect()` (`ui/main_window_ssh.py`), so the unmanaged gate, the
         `terminal_max_open` limit, the node's indicator, the window reuse and the info collection are
         all asked exactly as they are from the map — and the SAME `SSHConnectDialog` is shown on
-        every surface (`ROADMAP` v1.11: one path, one wording). A row with no door behind it reports
-        the same inline sentence the head does; nothing here raises.
+        every surface (`ROADMAP` v1.11: one path, one wording). The node is re-checked against the
+        provider's LIVE answer by `_server_for_item()` before the dialog is built, so a card that has
+        left the map (or whose id moved to another row) is a quiet no-op; a row with no door behind it
+        reports the same inline sentence the head does. Nothing here raises.
         """
         node = self._server_for_item(item)
         if node is None:
@@ -1510,9 +1613,11 @@ class CommandLibraryPanel(QWidget):
             top.setHidden(shown == 0)
             total_shown += shown
         servers_shown = 0
+        # A row is filtered by the provider's own answer, never by a resolution that may refuse
+        # (`N105`): filtering by a refused row would hide a server the map still carries.
         for i in range(self.server_tree.topLevelItemCount()):
             row = self.server_tree.topLevelItem(i)
-            node = self._server_for_item(row)
+            node = self._server_nodes[i] if 0 <= i < len(self._server_nodes) else None
             _, alias, identity = server_row_facts(node) if node is not None else ("", "", "")
             match = not q or q in f"{alias} {identity}".lower()
             row.setHidden(not match)
@@ -1520,9 +1625,16 @@ class CommandLibraryPanel(QWidget):
                 servers_shown += 1
         if self._head == HEAD_SERVERS:
             if not self._server_nodes:
-                # The project's own empty state where the container lists a FILE (the standalone).
-                info = t("terminal.cmdlib.project_empty" if self.project_mode()
-                         else "terminal.cmdlib.servers_empty")
+                # The project's OWN empty state where the container lists a FILE — and only while a
+                # file is really open: `project_empty` claims "this project has no servers yet", so a
+                # surface that has not picked one shows `no_project` instead (`N108` — the key's text
+                # is right, the predicate that chose it was not).
+                if not self.project_mode():
+                    info = t("terminal.cmdlib.servers_empty")
+                elif self.project_is_open():
+                    info = t("terminal.cmdlib.project_empty")
+                else:
+                    info = t("terminal.cmdlib.no_project")
             elif servers_shown == 0:
                 info = t("terminal.cmdlib.servers_no_matches")
             else:

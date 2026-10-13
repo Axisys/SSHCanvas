@@ -428,10 +428,12 @@ check("§5 the surface OPENS on the `Servers` head — the head its own door liv
       and _fpanel.tree.isVisible() is False and _fpanel.doors_row.isVisible() is True
       and _fpanel.open_map_btn.isVisible() is True,
       f"head={_fpanel.head()!r} doors={_fpanel.doors_row.isVisible()}")
-check("§5 with NO project open the head is USABLE and shows its own empty state",
+check("§5 with NO project open the head is USABLE and says so — no claim about a project",
       _fpanel.servers_available() is True
+      and _fpanel.project_is_open() is False
       and _fpanel.server_tree.topLevelItemCount() == 0
-      and _fpanel.info_label.text() == i18n.t("terminal.cmdlib.project_empty")
+      and _fpanel.info_label.text() == i18n.t("terminal.cmdlib.no_project")
+      and _fpanel.info_label.text() != i18n.t("terminal.cmdlib.project_empty")
       and _fpanel.hint_label.isVisible() is False,
       f"available={_fpanel.servers_available()} info={_fpanel.info_label.text()!r}")
 check("§5 …so the shipped start-up writes NO refusal sentence on the status line",
@@ -475,6 +477,7 @@ _fresh.open_project(_empty_project)
 app.processEvents()
 check("§5 an empty project keeps the head USABLE and names its own empty state",
       _fpanel.servers_available() is True and _fpanel.head() == CL.HEAD_SERVERS
+      and _fpanel.project_is_open() is True
       and _fpanel.server_tree.topLevelItemCount() == 0
       and _fpanel.info_label.text() == i18n.t("terminal.cmdlib.project_empty")
       and _fpanel.hint_label.isVisible() is False,
@@ -515,11 +518,16 @@ check("§6 the window it builds is the SHIPPED container, not a second terminal 
 check("§6 the application keeps exactly ONE MainWindow path (the map is untouched by the flag)",
       _read("main.py").count("MainWindow()") == 1
       and "class MainWindow" in _read("ui", "main_window.py"))
+check("§6 the ENTRY POINT imports no map either — `MainWindow` is built inside its own branch",
+      "MainWindow" not in _imports("main.py")
+      and "from .ui.main_window import MainWindow" in _read("main.py")
+      and "from ui.main_window import MainWindow" in _read("main.py"),
+      sorted(_imports("main.py")))
 
 # ── the LIFETIME of the surface — the two defects this release shipped: `main.py` threw
 #    `start_standalone()` away, so the ONE top-level widget was collected BEFORE `app.exec()` and the
-#    mode showed NO window at all; and the container is a CHILD of that surface (`isWindow()` False),
-#    so Qt's `quitOnLastWindowClosed` never fired and closing it left the process running forever. ──
+#    mode showed NO window at all; and the surface's own hidden top-level widget keeps Qt's
+#    `quitOnLastWindowClosed` out of reach, so closing the window left the process running forever. ──
 import gc  # noqa: E402  (this regression is about the collector, not about Qt)
 import weakref  # noqa: E402
 
@@ -574,8 +582,11 @@ class _QuitSpy(QObject):
     """Records the CLOSE of the window it is armed on and every `quit()` asked while it is armed.
 
     The order is the whole point: a closed standalone window must ASK the run to end — Qt's own
-    `quitOnLastWindowClosed` never fires here, because the container is a child of a parentless
-    surface that itself stays hidden (the defect the release shipped: a closed window, a live loop).
+    `quitOnLastWindowClosed` never fires here, because the window's OWNER (`StandaloneSurface`) stays
+    a live top-level widget beside it (the window IS a top-level window with a parent, so `isWindow()`
+    answers True; what Qt counts is the surface that never closes). Measured: with `app.quit`
+    intercepted so that only Qt's automatic path could end the loop, closing the window left
+    `app.exec()` RUNNING — the explicit `quit()` is load-bearing, not a courtesy.
     """
 
     def __init__(self, window):

@@ -7,9 +7,9 @@ except ImportError:
     from .version import VERSION_FORMAT
 
 try:
-    from ..models.server import server_data_from_dict, server_data_to_dict
+    from ..models.server import server_data_from_dict, server_data_to_dict, unique_id
 except ImportError:
-    from models.server import server_data_from_dict, server_data_to_dict
+    from models.server import server_data_from_dict, server_data_to_dict, unique_id
 
 try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §71)
     from . import atomic
@@ -45,13 +45,22 @@ def read_project_servers(path: str) -> list:
     `servers` array is handed to `models/server.py`'s `server_data_from_dict()`, so the standalone and
     the map turn a JSON record into a node the SAME way (`TERMINAL_STANDALONE.md` §3). The array's FILE
     ORDER is kept, an entry that is not a JSON object is DROPPED, and a file without the array answers
-    `[]` — nothing here writes, repairs or re-serializes anything.
+    `[]` — nothing here writes, repairs or re-serializes anything. An id two entries share is
+    REGENERATED for the second and every later one (`unique_id()` — the rule the map's own load asks),
+    because the id is the identity the `Servers` list resolves a row by.
     """
     raw = load_project(path)
     entries = raw.get("servers") if isinstance(raw, dict) else None
     if not isinstance(entries, (list, tuple)):
         return []
-    return [server_data_from_dict(entry) for entry in entries if isinstance(entry, dict)]
+    servers, taken = [], set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        data = server_data_from_dict(entry)
+        taken.add(unique_id(data, taken))
+        servers.append(data)
+    return servers
 
 
 def load_project(path: str) -> dict:

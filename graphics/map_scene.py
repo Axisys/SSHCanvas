@@ -1,9 +1,9 @@
 from typing import Optional, List, Dict, TYPE_CHECKING
 
 try:
-    from ..models.server import ServerData
+    from ..models.server import ServerData, unique_id
 except ImportError:
-    from models.server import ServerData
+    from models.server import ServerData, unique_id
 
 from .server_node import ServerNode
 from .connection_arrow import (ConnectionArrow, DEFAULT_CONNECTION_TYPE,
@@ -319,13 +319,9 @@ class MapScene(QGraphicsScene):
     def add_server(self, data: ServerData, animate: bool = False) -> ServerNode:
         # AUDIT v0.7.2 (low #17): a uuid[:8] collision — we regenerate the id instead of
         # silently clobbering an existing node (the notes already had such a check in add_note).
-        if data.id in self._nodes:
-            import uuid as _uuid
-            while True:
-                new_id = str(_uuid.uuid4())[:8]
-                if new_id not in self._nodes:
-                    break
-            data.id = new_id
+        # The rule has ONE home (`models/server.py`), because the standalone's file reader asks the
+        # same question before a project's duplicates can reach the panel (`N106`).
+        unique_id(data, self._nodes)
         node = ServerNode(data)
         self.addItem(node)
         self._nodes[data.id] = node

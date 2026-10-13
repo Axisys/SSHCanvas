@@ -6,10 +6,10 @@ Access via Menu → Profiles → Manage profiles.
 from typing import Optional
 
 try:
-    from ..models.profile import (Profile, load_profiles, add_profile,
+    from ..models.profile import (Profile, ProfileStoreError, load_profiles, add_profile,
                                   update_profile, delete_profile, get_profile_password)
 except ImportError:
-    from models.profile import (Profile, load_profiles, add_profile,
+    from models.profile import (Profile, ProfileStoreError, load_profiles, add_profile,
                                 update_profile, delete_profile, get_profile_password)
 
 try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
@@ -39,6 +39,36 @@ def password_cell_text(password, translate_fn=None) -> str:
     if password:
         return PASSWORD_MASK
     return translate_fn("profile.password_empty") if translate_fn else "(empty)"
+
+
+def _log():
+    """The app logger (lazy — a build without the logger keeps the dialog working)."""
+    try:
+        from modules.logger import get_logger
+        return get_logger("dialogs.profile_manager_dialog")
+    except Exception:  # noqa: BLE001 — a refused write is still answered on screen
+        return None
+
+
+def warn_store_refused(parent, translate, error) -> bool:
+    """ONE warning box for a refused profiles WRITE — True when `error` is a refusal.
+
+    `models.profile` raises `ProfileStoreError` when the profiles file exists and cannot be parsed
+    (`AGENTS.md` §4.4.2): the last surviving profiles stay in the file and the user gets the REAL path
+    back (`~/.sshmap_profiles.json` — not under `~/.sshmap/`), so a repair by hand is possible.
+    A refusal is answered with `msg.error_title` and the model's own English sentence; the message
+    box is the ONLY Qt call here, and a `Qt` teardown must not lose the refusal — hence the guard.
+    """
+    if not isinstance(error, ProfileStoreError):
+        return False
+    log = _log()
+    if log is not None:
+        log.warning("A profile write was refused: %s", error)
+    try:
+        QMessageBox.warning(parent, translate("msg.error_title"), str(error))
+    except RuntimeError:
+        pass  # Qt teardown — the box cannot be shown, the file is untouched either way
+    return True
 
 
 class ProfileManagerDialog(QDialog):
@@ -156,6 +186,10 @@ class ProfileManagerDialog(QDialog):
         profile = profiles[selected_row]
         self._on_edit_profile(profile)
 
+    def _warn(self, text: str):
+        """ONE warning box (`QMessageBox.Yes` on the delete confirmations is the shipped pattern)."""
+        QMessageBox.warning(self, self.t("msg.error_title") if self._i18n_available else "Error", text)
+
     def _on_edit_profile(self, profile: Optional[Profile]):
         """Open the add/edit dialog for a single profile."""
         dlg = ProfileEditDialog(self, existing=profile)
@@ -195,7 +229,14 @@ class ProfileManagerDialog(QDialog):
             )
             
         if reply == QMessageBox.Yes:
-            delete_profile(profile.id)
+            try:
+                delete_profile(profile.id)
+            except ProfileStoreError as e:
+                warn_store_refused(self, self.t, e)
+                return
+            except OSError as e:  # the atomic publish failed — the file is untouched
+                self._warn(str(e))
+                return
             self.refresh_table()
 
     def get_selected_profile(self) -> Optional[Profile]:
@@ -289,13 +330,24 @@ class ProfileEditDialog(QDialog):
             return
 
         if self.existing is None:
-            add_profile(name=name, user=user, password=password)
+            write, args = add_profile, {"name": name, "user": user, "password": password}
         else:
             # Empty field = "keep" (None), so we don't wipe the password from the keyring
-            update_profile(
-                profile_id=self.existing.id,
-                name=name,
-                user=user,
-                password=None if password == "" else password
-            )
+            write, args = update_profile, {
+                "profile_id": self.existing.id,
+                "name": name,
+                "user": user,
+                "password": None if password == "" else password,
+            }
+        try:
+            write(**args)
+        except ProfileStoreError as e:
+            # The refused write keeps THIS dialog open: the form is not lost and the model already
+            # answered with the real path (the manager's table is not refreshed either).
+            warn_store_refused(self, self.t, e)
+            return
+        except OSError as e:  # the atomic publish failed — the file is untouched
+            QMessageBox.warning(self, (self.t("msg.error_title") if self._i18n_available else "Error"),
+                                str(e))
+            return
         self.accept()

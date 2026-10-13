@@ -208,9 +208,14 @@ check("§4 the container moves the head at construction — the row is there fro
       f"head={spanel.head()!r} doors={spanel.doors_row.isVisible()}")
 check("§4 the head is LIVE before a project exists (an empty list is a real answer)",
       surface.project_nodes() == [] and spanel.servers_available() is True
+      and spanel.project_is_open() is False
       and spanel.server_tree.topLevelItemCount() == 0
-      and spanel.info_label.text() == i18n.t("terminal.cmdlib.project_empty"),
+      and spanel.info_label.text() == i18n.t("terminal.cmdlib.no_project"),
       f"available={spanel.servers_available()} info={spanel.info_label.text()!r}")
+check("§4 …and the sentence names the PROJECT it does not have, not one that has no servers",
+      spanel.info_label.text() != i18n.t("terminal.cmdlib.project_empty")
+      and i18n.t("terminal.cmdlib.no_project") in spanel.info_label.text(),
+      repr(spanel.info_label.text()))
 check("§4 …so nothing is explained away and no status line is written at start-up",
       spanel.hint_label.isHidden() is True and spanel._hint_text() == ""
       and surface.window.statusBar().currentMessage() == "",

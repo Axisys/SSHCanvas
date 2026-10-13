@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+import uuid
 
 
 @dataclass
@@ -220,17 +221,36 @@ def is_launchable_url(value) -> bool:
     return url_scheme(value) in LAUNCHABLE_URL_SCHEMES
 
 
+def new_short_id() -> str:
+    """A fresh node/note id — the 8-character UUID prefix the map, the notes and the JSON use."""
+    return str(uuid.uuid4())[:8]
+
+
+def unique_id(data, taken) -> str:
+    """The id of `data`, REGENERATED while it collides with a key of `taken` — the ONE rule.
+
+    An id is the identity everywhere it travels (the scene's registry, the keyring service, the
+    notes' `server_id`), so two records sharing one must not stay: the caller passes the ids it
+    already holds and gets an id no one carries. The map's own load asks this (`MapScene.add_server`)
+    and so does the standalone's file reader (`storage/project.py`), so both answer a project whose
+    duplicates are gone. A record with an empty id GETS one here as well.
+    """
+    current = str(getattr(data, "id", "") or "")
+    while not current or current in taken:
+        current = new_short_id()
+    data.id = current
+    return current
+
+
 def server_data_from_dict(raw: dict) -> ServerData:
     """Build a ServerData from a raw JSON dict.
 
     Unknown/extra keys are ignored, types are normalized.
     """
-    import uuid
-
     fields = ServerData.__dataclass_fields__
     data = {k: v for k, v in raw.items() if k in fields}
     if not data.get('id'):  # id is required — generate one if missing from JSON
-        data['id'] = str(uuid.uuid4())[:8]
+        data['id'] = new_short_id()
     else:
         # v1.2.10rc2 (manual AUDIT #5e): an explicit "id": 123 (int) in JSON earlier passed
         # through as-is — below, id is used as a string/key everywhere (keyring service name,

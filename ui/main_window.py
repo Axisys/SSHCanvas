@@ -828,7 +828,8 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         self._update_window_title()
 
     def _post_undo_refresh(self):
-        """Sync the UI with the scene's actual state (after undo/redo)."""
+        """Sync the UI with the scene's actual state (after undo/redo): the sidebar, the counters,
+        the status-check plan and every `Servers` list the map feeds (`N105`)."""
         try:
             self.refresh_sidebar()
         except Exception:
@@ -841,6 +842,28 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             self._sync_status_targets()
         except Exception:
             pass
+        try:
+            self._refresh_server_lists()
+        except Exception:
+            pass
+
+    def _refresh_server_lists(self):
+        """Re-read every `Servers` list this map feeds — the panel's own re-read (the sidebar's pair).
+
+        A card added or removed through an undo command changes the map's provider, and the `Servers`
+        head of EVERY terminal container over that map resolves its rows through it (the map's own
+        dock and any terminal window the map spawned), so they are re-read together with the sidebar
+        and the counters (`N105`) — a removed card must not stay clickable. Panels are found by their
+        method, never by a `modules/` import (the §4.1 rule), and `refresh_servers()` answers at once
+        when the provider says nothing changed (it is asked after EVERY command, a drag included) and
+        never raises.
+        """
+        for panel in self.findChildren(QWidget):
+            if callable(getattr(panel, "refresh_servers", None)):
+                try:
+                    panel.refresh_servers()
+                except Exception:  # noqa: BLE001 — one stale panel must not stop the others
+                    pass
 
     def _undo(self):
         try:
@@ -944,6 +967,10 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             self._autosave_timer.stop()
         except Exception:  # noqa: BLE001 — teardown robustness (C++ object RuntimeError)
             pass
+        # A window that does NOT close keeps the service it had: the timer was stopped for the
+        # question alone, so every refused close (and a save that failed) starts it again by the
+        # SAME predicate `__init__` asks — else one `Cancel` leaves the session without autosave.
+        refused = False
 
         # The "unsaved changes" question is asked BEFORE any teardown: the answer decides whether this
         # window is really going away, and `Cancel` must leave it WHOLE — the sessions, the probe
@@ -962,10 +989,13 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 # otherwise the data would be lost silently (former AUDIT.md, critical #1 — see CHANGELOG.md).
                 if not self._save_project():
                     event.ignore()
-                    return
+                    refused = True
             elif reply != QMessageBox.Discard:
                 event.ignore()
-                return
+                refused = True
+        if refused:
+            self._restart_autosave()
+            return
 
         # ── the window really closes from here on ──────────────────────────────
         # v1.10rc1: the path the NEXT start may reopen (`ui_reopen_last_project`). Written AFTER the
@@ -983,6 +1013,20 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         self._shutdown_background_threads()
 
         event.accept()
+
+    def _restart_autosave(self):
+        """Start the autosave timer again on a close the window REFUSED (`_autosave_enabled`).
+
+        `closeEvent` stops the timer while the user reads the question, and a `Cancel` (or a save that
+        failed) leaves the window open — so the service it had must come back with it (`N107`). The
+        predicate is the ONE `__init__` asks and the interval is unchanged; an autosave switched OFF
+        stays off. Never raises: the close path must not be broken by a timer.
+        """
+        try:
+            if self._autosave_enabled:
+                self._autosave_timer.start()
+        except Exception:  # noqa: BLE001 — a dead timer must not break a refused close
+            pass
 
     def _shutdown_background_threads(self):
         """Stop collectors, ping/DNS threads, and terminal sessions.

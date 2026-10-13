@@ -176,8 +176,8 @@ rows = [panel.server_tree.topLevelItem(i).text(0)
         for i in range(panel.server_tree.topLevelItemCount())]
 check("§2 the rows are the map's aliases, in the map's own order",
       rows == ["alpha", "beta"], str(rows))
-check("§2 a row carries the node ID as its data and the identity as its tooltip",
-      panel.server_tree.topLevelItem(0).data(0, Qt.ItemDataRole.UserRole) == "tp-alpha"
+check("§2 a row carries its row KEY as its data and the identity as its tooltip",
+      str(panel.server_tree.topLevelItem(0).data(0, Qt.ItemDataRole.UserRole)).startswith("tp-alpha@")
       and panel.server_tree.topLevelItem(0).toolTip(0) == "root@10.94.0.11:22"
       and panel._server_for_item(panel.server_tree.topLevelItem(1)) is beta,
       str(panel.server_tree.topLevelItem(1).toolTip(0)))
@@ -274,7 +274,8 @@ try:
     row = None
     for i in range(panel.server_tree.topLevelItemCount()):
         cand = panel.server_tree.topLevelItem(i)
-        if cand.data(0, Qt.ItemDataRole.UserRole) == "tp-unm":
+        if panel._server_for_item(cand) is not None \
+                and panel._server_for_item(cand).data.id == "tp-unm":
             row = cand
     _asked.clear()
     panel._activate_server_item(row)

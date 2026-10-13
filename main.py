@@ -1,9 +1,9 @@
 import sys
 
-try:
-    from .ui.main_window import MainWindow
-except ImportError:
-    from ui.main_window import MainWindow
+# `--only-terminal` imports NO map: `MainWindow` is built inside the branch that uses it, so the
+# standalone launch never pays for the scene, the plugins, the dialogs or the graphics tree — the
+# mode's own contract ("the standalone builds NO map … its IMPORTS are the enforcement",
+# `AGENTS.md` §4.3.9) holds at the ENTRY POINT and not only inside the surface.
 
 # v1.4.3 (ROADMAP task 4): the saved theme is applied through the ONE builder
 # (ui/theme_qss.py) before the window is built — the `theme` module itself is no
@@ -146,6 +146,10 @@ def main(argv=None):
             if log is not None:
                 log.info("Standalone terminal shown")
         else:
+            try:
+                from .ui.main_window import MainWindow
+            except ImportError:
+                from ui.main_window import MainWindow
             win = MainWindow()
             win.show()
 
