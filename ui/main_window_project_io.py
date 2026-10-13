@@ -475,10 +475,11 @@ class ProjectIOMixin:
     def _remember_last_project(self) -> None:
         """Write the path THIS window is closing on — the ONE writer of `last_project_path`.
 
-        Called by `closeEvent` beside the geometry and the splitter (the same "even on a cancelled
-        close" rule), and a NAMELESS project — a new unsaved one, the demo map — writes an EMPTY
-        path: the declared "a new unsaved project has nothing to restore" stands, and the example
-        can never come back as if it were the user's own file.
+        Called by `closeEvent` once the close is CERTAIN (after the "unsaved changes" question and
+        after a successful save), so the path a first `Save` picked in its own dialog is the path
+        recorded. A NAMELESS project — a new unsaved one, the demo map — writes an EMPTY path: the
+        declared "a new unsaved project has nothing to restore" stands, and the example can never come
+        back as if it were the user's own file.
         """
         try:
             path = str(getattr(self, "_project_file", "") or "")

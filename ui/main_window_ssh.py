@@ -540,6 +540,36 @@ class SshMixin:
         self._spawn_terminal_window(
             node, password=dlg.password_edit.text(), initial_command=initial_command)
 
+    # ── v1.11: the terminal panel's map hooks — the source and the two doors ──────────────
+
+    def map_server_nodes(self) -> list:
+        """The map's live cards, in the map's own order — the `Servers` head's node provider.
+
+        A terminal container finds it on the parent chain (`find_host_hook`, the
+        `_adopt_split_session` precedent) and hands it to `CommandLibraryPanel.set_server_sources()`
+        as the first half of the ONE provider pair, so the panel never touches `MapScene` itself
+        (`AGENTS.md` §4.1). Never raises: a source that fails is an EMPTY list.
+        """
+        try:
+            return list(self.scene.nodes())
+        except Exception:  # noqa: BLE001 — a source must never break the caller's surface
+            return []
+
+    def _raise_map_window(self):
+        """`Open map` of the terminal panel — the map window comes to the FRONT.
+
+        The terminal window is a sibling top-level window, so the door is show-normal (a MINIMISED
+        map is restored), raise and activate; a maximised map keeps its size, because `showNormal()`
+        is asked for a minimised window alone. Never raises.
+        """
+        try:
+            if self.isMinimized():
+                self.showNormal()
+            self.raise_()
+            self.activateWindow()
+        except RuntimeError:
+            pass  # Qt teardown — the window is already gone
+
     # ── v0.9: automatic server info collection (Linux) ───────────────────
 
     def _collect_node_info(self, node, password: str = "", auto: bool = False):

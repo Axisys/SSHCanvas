@@ -253,7 +253,7 @@ _ACTION_FIGURE = re.compile(r"\b(\d+)\*{0,2}\s+\*{0,2}actions\b")
 # survived the suite for a whole line.
 _REGISTRY_FIGURE = re.compile(r"registry\s+(?:holds|stays|is)\s+(?:at\s+)?\*{0,2}(\d+)\*{0,2}"
                               r"(?:\s+(?:actions|entries))?")
-_EMPTY_FIGURE = re.compile(r"\b(\d+)\s+(?:of the \d+(?:\s+actions)?\s+ship this way"
+_EMPTY_FIGURE = re.compile(r"\b(\d+)\*{0,2}\s+\*{0,2}(?:of the \d+(?:\s+actions)?\s+ship this way"
                            r"|of them empty|with an EMPTY default|empty defaults)")
 for _name in REFERENCE_DOCS:
     _text = _flat(os.path.join(ROOT, _name))
@@ -365,10 +365,21 @@ _headings = {m for m in re.findall(r"^#### ([0-9]{1,2}[a-z]?)\.", _doc, re.M)}
 # "§5b of tests/test_terminal_output.py" points INSIDE a test file, not into this document
 # (the topical-test convention: §Na lettered sections of a test are not document sections).
 _TEST_SECTIONS = {"1b", "1c", "2b", "5b"}
-_refs = {m for m in re.findall(r"§\s?([0-9]{1,2}[a-z]?)", _doc)}
+# A reference to ANOTHER document's OWN numbering ("`SFTP_PANES.md` §3a") is not a heading of this
+# file either — the same exclusion shape the dotted-ref rule below uses for "AGENTS.md §4.6". The
+# pattern is TIGHT on purpose: a backticked `*.md` name followed by a run of `§` references, so an
+# in-file reference that merely happens to sit near a document name is NOT excused, and §3 asserts
+# the exclusion is not vacuous.
+_REF_RE = re.compile(r"§\s?([0-9]{1,2}[a-z]?)")
+_FOREIGN_RUN = re.compile(r"`[A-Za-z0-9_./-]+\.md`\s*\**\s*((?:§\s?\d{1,2}[a-z]?[\s/*]*)+)")
+_external_sections = {m for run in _FOREIGN_RUN.findall(_doc)
+                      for m in _REF_RE.findall(run)}
+check("§3 the foreign-document exclusion really fires (a guard over nothing is useless)",
+      bool(_external_sections), sorted(_external_sections))
+_refs = {m.group(1) for m in _REF_RE.finditer(_doc)}
 check("§3 every §-reference resolves to a heading of this document",
-      not (_refs - _headings - _TEST_SECTIONS),
-      sorted(_refs - _headings - _TEST_SECTIONS))
+      not (_refs - _headings - _TEST_SECTIONS - _external_sections),
+      sorted(_refs - _headings - _TEST_SECTIONS - _external_sections))
 
 # The DOTTED form is AGENTS.md's ("§4.6"): this document numbers its sections 1..48 and has no §4.x,
 # so an unlabelled "§4.6" here resolves to §4 and quietly points the reader at the wrong section (the

@@ -243,6 +243,31 @@ QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
 #: reads this constant instead of carrying a second copy.
 FOCUS_RING_WIDTH = 2
 
+
+def _exclusive_button_qss(t) -> str:
+    """The look of an EXCLUSIVE row of checkable `QToolButton`s — the ONE body of two registry names.
+
+    The padding stays TIGHT on purpose: the row sets the minimum width of the surface it lives on
+    (the source switch is part of the Files pane's floor, the panel's heads part of the terminal
+    window's).
+    """
+    return f"""
+QToolButton {{
+    color: {t.text_primary};
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: 1px 3px;
+}}
+QToolButton:hover {{
+    border: 1px solid {t.accent};
+}}
+QToolButton:checked {{
+    color: {t.accent_strong};
+    border: 1px solid {t.accent_strong};
+}}
+"""
+
+
 STYLE_BUILDERS = {
     # status / hint labels (TEXT_MUTED, with the padding of their own layout)
     "status.muted": lambda t: f"color: {t.text_muted};",
@@ -313,26 +338,13 @@ QPushButton:checked {{
     border: 1px solid {t.accent_strong_hover};
 }}
 """,
-    # v1.9.8 (task 4): the source switch of a Files pane (`Server | Local | Elevated`). The
-    # INACTIVE state is what a user has to read — the platform's auto-raised QToolButton left it
-    # too close to the surface it sits on — so the ink is explicit and the ACTIVE state is the
-    # strong accent with a frame of its own. The padding stays TIGHT on purpose: this row sets the
-    # pane's minimum width, which the terminal window's own floor is built on.
-    "sftp.source_button": lambda t: f"""
-QToolButton {{
-    color: {t.text_primary};
-    background-color: transparent;
-    border: 1px solid transparent;
-    padding: 1px 3px;
-}}
-QToolButton:hover {{
-    border: 1px solid {t.accent};
-}}
-QToolButton:checked {{
-    color: {t.accent_strong};
-    border: 1px solid {t.accent_strong};
-}}
-""",
+    # v1.9.8 (task 4) / v1.11: the EXCLUSIVE row of checkable `QToolButton`s — the source switch of a
+    # Files pane (`Server | Local | Elevated`) and the two heads of the terminal panel
+    # (`Commands | Servers`). The INACTIVE state is what a user has to read — the platform's
+    # auto-raised QToolButton left it too close to the surface it sits on — so the ink is explicit and
+    # the ACTIVE state is the strong accent with a frame of its own. ONE body, TWO registry names.
+    "sftp.source_button": _exclusive_button_qss,
+    "panel.head": _exclusive_button_qss,
     # dialog separators and headings
     "separator": lambda t: f"color: {t.surface_alt};",
     "heading": lambda t: f"font-weight: bold; color: {t.text_primary};",

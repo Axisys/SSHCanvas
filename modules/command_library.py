@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-""""Terminal macros" — the command/script library of the terminal panel (DOCUMENTATION.md §14e).
+""""Terminal macros" — the command/script library panel of the terminal containers (DOCUMENTATION.md §14e).
 `CommandLibraryStore` owns `~/.sshmap/commands.json` — pure Python, no Qt: an atomic write of the WHOLE
-document and deliberately NO merge, because the file belongs to this module alone; the first run seeds
+document with deliberately NO merge, because the file belongs to this module alone; the first run seeds
 five examples (`seeded: true`) and a corrupt file or a foreign type is a log line plus an EMPTY library.
-The library FILE is first-class (ROADMAP v1.8.2): every write rotates the backup ring, a slot is
-restored through the shipped backup dialog, the import/export pair carries the WHOLE library and
-`add_from_history()` is where the History tab's door lands. `CommandLibraryPanel` is the panel left of
-the session tabs in BOTH containers: the search, the "category → command" tree, the Add/Edit/Delete
-buttons, the collapse into a thin strip whose state is the ONE key `ui_cmdlib_collapsed`, and a double
-click / Enter that sends a macro to the ACTIVE session (`page.widget.send_macro` →
-`terminal_thread.send_data()`, never the multi-input broadcast). `CommandLibraryDialog` is the add/edit
-dialog; test seams: an explicit `path=` / `store=`, the module attributes `QMessageBox` / `QMenu` / `BackupsDialog`, read at call time."""
+The library FILE is first-class: every write rotates the backup ring, a slot is restored through the
+shipped backup dialog and the import/export pair carries the WHOLE library. `CommandLibraryPanel` sits
+left of the session tabs in BOTH containers and holds TWO lists: the `Commands` head (the search, the
+"category → command" tree, the Add/Edit/Delete buttons, a double click / Enter sending a macro to the
+ACTIVE session through `page.widget.send_macro` → `terminal_thread.send_data()`, never the multi-input
+broadcast) and the `Servers` head (the map's aliases, whose click goes through the HOST's connect door).
+The collapse into a thin strip is the ONE key `ui_cmdlib_collapsed`. Test seams: explicit `path=`/`store=`,
+the module attributes `QMessageBox` / `QMenu` / `BackupsDialog`; `CommandLibraryDialog` is the form."""
 
 import hashlib
 import json
@@ -42,6 +42,14 @@ try:  # v1.2.5: the central theme (the terminal_page/terminal_dock pattern)
 except ImportError:
     from ui import theme
 
+try:  # v1.11: the ONE QSS registry — the two heads wear the declared exclusive-toggle look
+    from ..ui import theme_qss
+except ImportError:
+    try:
+        from ui import theme_qss
+    except ImportError:  # a stripped build — the platform's own QToolButton look stands
+        theme_qss = None
+
 try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §71)
     from ..storage import atomic as _atomic
 except ImportError:  # flat launch from the project root
@@ -54,6 +62,25 @@ except ImportError:  # flat launch from the project root
         from dialogs.backups_dialog import BackupsDialog
     except ImportError:  # a build without the dialogs package: the restore reports its refusal
         BackupsDialog = None
+
+# v1.11: the container KIND the `Servers` head and the `Open map` door are gated on. `terminal_split`
+# imports neither this module nor a container, so the constant travels without a cycle.
+try:
+    from .terminal_split import CONTAINER_DOCK
+except ImportError:  # flat launch from the project root
+    try:
+        from terminal_split import CONTAINER_DOCK
+    except ImportError:  # a stripped build — no container can answer the dock predicate
+        CONTAINER_DOCK = "dock"
+
+
+#: v1.11: the TWO heads of the panel. `self._head` is a VIEW STATE of the container — never a config
+#: key (`_SftpPane`'s sort column precedent): a window opened from the application shows `Commands`,
+#: and the shipped ONE `ui_cmdlib_collapsed` keeps covering the fold of BOTH heads.
+HEAD_COMMANDS = "commands"
+HEAD_SERVERS = "servers"
+
+CONTAINER_HOPS_MAX = 32   # how far `container_kind_of()` walks the parent chain (the find_host_hook bound)
 
 
 # ── i18n / config (cached helpers per the ssh_terminal.py pattern) ──────────
@@ -101,6 +128,51 @@ def _load_collapse_state() -> bool:
         return bool(v) if isinstance(v, bool) else False
     except Exception:
         return False
+
+
+# ── v1.11: the container predicate and the server rows (both pure readers) ──────────────────────
+
+def container_kind_of(widget) -> str:
+    """The `CONTAINER_KIND` of the container this panel sits in ("" — nobody answers). PURE.
+
+    `TerminalDockContent.CONTAINER_KIND` / `SSHTerminalWindow.CONTAINER_KIND` are class ATTRIBUTES,
+    so `find_host_hook()` (which looks callables up) cannot reach them and the walk reads them
+    itself. It is the ONE predicate of the dock: the map IS that window. Never raises.
+    """
+    node, hops = widget, 0
+    while node is not None and hops < CONTAINER_HOPS_MAX:
+        try:
+            kind = getattr(node, "CONTAINER_KIND", None)
+        except RuntimeError:
+            return ""  # Qt teardown — the C++ object is already gone
+        if isinstance(kind, str) and kind:
+            return kind
+        try:
+            node = node.parent()
+        except (RuntimeError, AttributeError):
+            return ""
+        hops += 1
+    return ""
+
+
+def server_row_facts(node) -> tuple:
+    """`(id, alias, identity)` of ONE entry of the servers provider — PURE and duck-typed.
+
+    The panel never imports `graphics/` (§4.1): a card is read through `node.data` (the `ServerNode`
+    shape) or directly (a plain `ServerData`), and a foreign object answers empty cells instead of an
+    exception. `identity` is the `user@host:port` half a row shows in its tooltip.
+    """
+    data = getattr(node, "data", node)
+    sid = str(getattr(data, "id", "") or "")
+    alias = str(getattr(data, "alias", "") or "")
+    host = str(getattr(data, "host", "") or "")
+    user = str(getattr(data, "user", "") or "")
+    try:
+        port = int(getattr(data, "ssh_port", 22))
+    except (TypeError, ValueError):
+        port = 22
+    identity = f"{user}@{host}:{port}" if user else f"{host}:{port}"
+    return sid, alias, identity
 
 
 # ── storage (pure Python, no Qt) ────────────────────────────────────────────
@@ -745,6 +817,17 @@ class CommandLibraryPanel(QWidget):
         self._by_id = {}                   # id → the live entry (item.data stores ONLY the id — see _rebuild_tree)
         self._collapsed = False
         self._expanded_width = 0           # v1.5rc5 (N8): the width to come back to on expand
+        # v1.11: the SECOND head. `_head` is a VIEW STATE of this container, never a config key, and
+        # `Commands` is what a panel shows until a click moves it. The `Servers` list is fed by the
+        # ONE provider pair the CONTAINER installs (`set_server_sources`), while the bottom row's two
+        # doors come from `set_map_doors` — nothing here imports `ui.main_window` or `graphics/` (§4.1).
+        self._head = HEAD_COMMANDS
+        self._servers_provider = None      # () → the map's nodes (the `Servers` list's ONE source)
+        self._connect_sink = None          # (node) → the HOST's connect door (`_run_ssh_connect`)
+        self._map_sink = None              # () → raise the map window (`Open map`)
+        self._profiles_sink = None         # () → the profile manager (`Profiles`)
+        self._server_nodes = []            # the rows as handed over (id → the live node)
+        self._by_node_id = {}
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -767,21 +850,36 @@ class CommandLibraryPanel(QWidget):
         bl.setContentsMargins(6, 6, 6, 6)
         bl.setSpacing(4)
 
+        # ── v1.11: the TWO heads (`Commands | Servers`) — an EXCLUSIVE pair of checkable
+        # QToolButtons (the `_SftpPane` source-switch pattern), so ONE state decides what the panel
+        # shows. A click on the ACTIVE head does nothing and the collapse keeps its OWN control.
         head = QHBoxLayout()
-        title = QLabel(t("terminal.cmdlib.title"))
-        self._title = title   # v1.3.3.1: retranslate() re-texts the panel header
-        tf = title.font()
-        tf.setBold(True)
-        title.setFont(tf)
+        head.setSpacing(4)
+        self.head_commands_btn = QToolButton()
+        self.head_servers_btn = QToolButton()
+        for button, key, wanted in ((self.head_commands_btn, "terminal.cmdlib.title", HEAD_COMMANDS),
+                                    (self.head_servers_btn, "terminal.cmdlib.head_servers", HEAD_SERVERS)):
+            button.setText(t(key))
+            button.setCheckable(True)
+            button.setAutoRaise(True)
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)   # the fields keep the keyboard
+            bold = button.font()
+            bold.setBold(True)
+            button.setFont(bold)
+            button.clicked.connect(lambda _checked=False, h=wanted: self.set_head(h))
+            head.addWidget(button)
+        # v1.3.3.1: the panel header `retranslate()` re-texts — it IS the `Commands` head.
+        self._title = self.head_commands_btn
+        head.addStretch(1)
         self._collapse_btn = QToolButton()
         self._collapse_btn.setIcon(_diamond_icon())
         self._collapse_btn.setToolTip(t("terminal.cmdlib.collapse_tooltip"))
         self._collapse_btn.clicked.connect(lambda: self.set_collapsed(True))
-        head.addWidget(title, 1)
         # v1.8.2: the library FILE — the ring's restore and the import/export pair. ONE QToolButton
         # with a QMenu whose actions are built ONCE here and re-texted by retranslate(); the menu and
         # the actions stay on the panel, because a dying Python QAction wrapper destroys its QMenu
-        # (Qt gotcha #9). The button's own label is a glyph — nothing to translate.
+        # (Qt gotcha #9). The button's own label is a glyph — nothing to translate. v1.11: it acts on
+        # `commands.json`, so it belongs to the `Commands` head and follows its visibility.
         self._file_btn = QToolButton()
         # v1.9.8 (task 3): the icon-only buttons of this header carry a GLYPH and a tooltip — the
         # shipped "…" was a text character no icon walk could re-theme.
@@ -799,6 +897,7 @@ class CommandLibraryPanel(QWidget):
         head.addWidget(self._file_btn)
         head.addWidget(self._collapse_btn)
         bl.addLayout(head)
+        self._apply_head_style()
 
         self.search = QLineEdit()
         self.search.setPlaceholderText(t("terminal.cmdlib.search_placeholder"))
@@ -821,27 +920,75 @@ class CommandLibraryPanel(QWidget):
         self.tree.customContextMenuRequested.connect(self._on_context_menu)
         bl.addWidget(self.tree, 1)
 
+        # ── v1.11: the `Servers` list — the map's aliases, ONE flat row per card. It is a
+        # `_CommandTree` for the SAME reason the commands tree is: Enter must be the explicit
+        # `entry_entered` signal (the native `itemActivated` duplicates a double click in Qt 6.11).
+        # The live node is looked up by the id the row carries (Qt gotcha #12: `setData` stores a
+        # COPY of the object). Hidden while the `Commands` head holds the panel.
+        self.server_tree = _CommandTree()
+        self.server_tree.setColumnCount(1)
+        self.server_tree.setHeaderLabels([t("terminal.cmdlib.head_servers")])
+        self.server_tree.setRootIsDecorated(False)
+        self.server_tree.itemDoubleClicked.connect(self._activate_server_item)
+        self.server_tree.entry_entered.connect(self._activate_server_item)
+        bl.addWidget(self.server_tree, 1)
+        self.server_tree.hide()
+
         self.info_label = QLabel("")
         self.info_label.setWordWrap(True)
         self.info_label.setStyleSheet(f"color: {theme.TEXT_MUTED};")
         bl.addWidget(self.info_label)
 
-        btns = QHBoxLayout()
+        # Add/Edit/Delete belong to the `Commands` head ALONE (§4.24: the second surface carries a
+        # hint row, not a second button row) — a wrapper widget, because a layout cannot be hidden.
+        self.cmd_buttons = QWidget()
+        btns = QHBoxLayout(self.cmd_buttons)
+        btns.setContentsMargins(0, 0, 0, 0)
         self.add_btn = QPushButton(t("terminal.cmdlib.add"))
         self.edit_btn = QPushButton(t("terminal.cmdlib.edit"))
         self.del_btn = QPushButton(t("terminal.cmdlib.delete"))
         for b in (self.add_btn, self.edit_btn, self.del_btn):
             btns.addWidget(b)
-        bl.addLayout(btns)
+        bl.addWidget(self.cmd_buttons)
 
         self.add_btn.clicked.connect(self._on_add)
         self.edit_btn.clicked.connect(self._on_edit)
         self.del_btn.clicked.connect(self._on_delete)
 
+        # ── v1.11: the BOTTOM ROW — `Open map` / `Profiles`, the two doors a session's own window
+        # owns so it can start another session without going back to the map. `Open map` is INACTIVE
+        # in the dock (the map IS that window — see `map_is_this_window()`), `Profiles` is
+        # application-level and lives on every surface.
+        bottom = QHBoxLayout()
+        bottom.setSpacing(4)
+        self.open_map_btn = QPushButton(t("terminal.cmdlib.open_map"))
+        self.open_map_btn.setToolTip(t("terminal.cmdlib.open_map_tooltip"))
+        self.profiles_btn = QPushButton(t("terminal.cmdlib.profiles"))
+        self.profiles_btn.setToolTip(t("terminal.cmdlib.profiles_tooltip"))
+        bottom.addWidget(self.open_map_btn)
+        bottom.addWidget(self.profiles_btn)
+        bottom.addStretch(1)
+        bl.addLayout(bottom)
+        self.open_map_btn.clicked.connect(self._on_open_map)
+        self.profiles_btn.clicked.connect(self._on_profiles)
+
+        # The INLINE hint of an INACTIVE control (the Plugins window's `run_hint` pattern): a tooltip
+        # on a control that does nothing is the one place a user never looks, so the sentence stands
+        # in the panel itself. It WRAPS, so a long sentence never sets the panel's minimum width.
+        self.hint_label = QLabel("")
+        self.hint_label.setWordWrap(True)
+        self.hint_label.setStyleSheet(f"color: {theme.TEXT_MUTED};")
+        self.hint_label.hide()
+        bl.addWidget(self.hint_label)
+
         layout.addWidget(self._body)
 
-        # The initial state — from the config (a read without a write-back).
+        # The initial state — from the config (a read without a write-back). v1.11: the head state is
+        # applied too, so a panel built before its container installs the provider pair already shows
+        # the `Commands` list and already explains an inactive control.
         self.set_collapsed(_load_collapse_state(), persist=False)
+        self._apply_head()
+        self._apply_hint()
 
     # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
 
@@ -855,6 +1002,8 @@ class CommandLibraryPanel(QWidget):
         """
         try:
             self.info_label.setStyleSheet(f"color: {theme.TEXT_MUTED};")
+            # v1.11: the bottom row's hint is the same kind of VALUE (an inline QSS string).
+            self.hint_label.setStyleSheet(f"color: {theme.TEXT_MUTED};")
         except RuntimeError:
             return  # Qt teardown — the label is already destroyed
         for widget in (getattr(self, "_strip", None), getattr(self, "_collapse_btn", None)):
@@ -872,6 +1021,8 @@ class CommandLibraryPanel(QWidget):
             refresh_button_icon(self._file_btn, "menu_dots")
         except RuntimeError:
             pass  # Qt teardown — the buttons are already destroyed
+        # v1.11: the two heads wear the ONE declared exclusive-toggle look — a QSS string is a value.
+        self._apply_head_style()
         # v1.10rc1: the Name column is re-MEASURED here as well — this walk is what a live UI-font
         # change runs, and a column fitted once at construction would cut its names until the next
         # `_rebuild_tree()` happened to run.
@@ -880,25 +1031,30 @@ class CommandLibraryPanel(QWidget):
     def retranslate(self):
         """v1.3.3.1: re-text the panel in the current language.
 
-        The tooltips (strip/collapse), the header title, the search placeholder, the
-        two tree column headers, the Add/Edit/Delete buttons — plus the tree and the
-        info label, which carry translated CATEGORY names ("Uncategorised" for an
-        empty category) and the empty/no-matches hint. Every string already has an
-        i18n key (ZERO new keys); the module translator is looked up at call time, so
-        its cache needs no invalidation. Never raises — the dead-C++-object
-        discipline of every container method.
+        The tooltips (strip/collapse), the TWO head labels, the search placeholder, the
+        two tree column headers, the Add/Edit/Delete buttons, the bottom row's two doors —
+        plus the trees and the labels, which carry translated CATEGORY names
+        ("Uncategorised" for an empty category) and the empty/no-matches hints. Every
+        string has an i18n key; the module translator is looked up at call time, so its
+        cache needs no invalidation. Never raises — the dead-C++-object discipline of
+        every container method.
         """
         t = get_translator()
         try:
             self._strip.setToolTip(t("terminal.cmdlib.expand_tooltip"))
-            self._title.setText(t("terminal.cmdlib.title"))
+            self.head_commands_btn.setText(t("terminal.cmdlib.title"))
+            self.head_servers_btn.setText(t("terminal.cmdlib.head_servers"))
             self._collapse_btn.setToolTip(t("terminal.cmdlib.collapse_tooltip"))
-            self.search.setPlaceholderText(t("terminal.cmdlib.search_placeholder"))
             self.tree.setHeaderLabels([t("terminal.cmdlib.name"),
                                        t("terminal.cmdlib.command")])
+            self.server_tree.setHeaderLabels([t("terminal.cmdlib.head_servers")])
             self.add_btn.setText(t("terminal.cmdlib.add"))
             self.edit_btn.setText(t("terminal.cmdlib.edit"))
             self.del_btn.setText(t("terminal.cmdlib.delete"))
+            self.open_map_btn.setText(t("terminal.cmdlib.open_map"))
+            self.open_map_btn.setToolTip(t("terminal.cmdlib.open_map_tooltip"))
+            self.profiles_btn.setText(t("terminal.cmdlib.profiles"))
+            self.profiles_btn.setToolTip(t("terminal.cmdlib.profiles_tooltip"))
             self._file_btn.setToolTip(t("terminal.cmdlib.file_menu_tooltip"))
             self.act_restore_backup.setText(t("terminal.cmdlib.restore_backup"))
             self.act_import_library.setText(t("terminal.cmdlib.import"))
@@ -911,13 +1067,32 @@ class CommandLibraryPanel(QWidget):
             self.set_collapsed(self._collapsed, persist=False)
         except RuntimeError:
             pass  # the C++ object is already deleted (a close race)
-        # The tree carries translated category names + the info label carries the
-        # empty/no-matches hint — rebuild both in the new language (the same path
-        # showEvent uses: a re-read of the store + a rebuild).
+        # The trees carry translated category names + the labels carry the empty/no-matches and the
+        # hint sentences — rebuild both in the new language (the same path showEvent uses).
         try:
             self.reload()
+            self._apply_head()
+            self._apply_hint()
         except RuntimeError:
             pass  # the C++ object is already deleted (a close race)
+
+    def _apply_head_style(self):
+        """Give BOTH heads the declared exclusive-toggle look (`panel.head`). Never raises.
+
+        The active/inactive contrast of a head is exactly the `_SftpPane` source switch's problem —
+        the platform's auto-raised QToolButton left it too close to the surface it sits on — so the
+        two states come from the ONE registry instead of the platform style.
+        """
+        if theme_qss is None:
+            return
+        for button in (getattr(self, "head_commands_btn", None),
+                       getattr(self, "head_servers_btn", None)):
+            if button is None:
+                continue
+            try:
+                theme_qss.refresh(button, "panel.head")
+            except RuntimeError:
+                continue  # Qt teardown — this button is already destroyed
 
     # ── host / data ─────────────────────────────────────────────────────────
 
@@ -953,10 +1128,143 @@ class CommandLibraryPanel(QWidget):
         except RuntimeError:
             return None  # the C++ object was already destroyed (a close race)
 
+    # ── v1.11: the `Servers` head, its provider pair and the bottom row's doors ─────
+
+    def set_server_sources(self, nodes_provider, connect_sink):
+        """The ONE provider pair of the `Servers` head — installed by the CONTAINER.
+
+        `nodes_provider()` answers the map's live cards (or None when no map is behind this window)
+        and `connect_sink(node)` is the HOST's connect door — `_run_ssh_connect()` (`ui/main_window_ssh.py`),
+        which asks the unmanaged gate, the `terminal_max_open` limit, the node's indicator, the window
+        reuse and the info collection. The panel NEVER calls `add_session()` itself: a container call
+        would silently bypass all five. `None` on either half leaves the head inactive.
+        """
+        self._servers_provider = nodes_provider if callable(nodes_provider) else None
+        self._connect_sink = connect_sink if callable(connect_sink) else None
+        self.refresh_servers()
+
+    def set_map_doors(self, open_map, profiles):
+        """The bottom row's two doors — `open_map()` raises the map window, `profiles()` opens the
+        application's profile manager. `None` marks the control inactive (its sentence explains why)."""
+        self._map_sink = open_map if callable(open_map) else None
+        self._profiles_sink = profiles if callable(profiles) else None
+        self._apply_hint()
+
+    def container_kind(self) -> str:
+        """The `CONTAINER_KIND` of the container this panel sits in ("" — nobody answers)."""
+        try:
+            return container_kind_of(self)
+        except Exception:  # noqa: BLE001 — a predicate must never break the panel
+            return ""
+
+    def map_is_this_window(self) -> bool:
+        """THE predicate of the dock: `CONTAINER_KIND is CONTAINER_DOCK` — the map IS this window.
+
+        It is what makes the `Servers` head AND `Open map` inactive on the dock's panel: listing or
+        raising the map from the map's own window is a no-op, and a control that does nothing
+        explains itself inline (`_hint_text()`).
+        """
+        return self.container_kind() == CONTAINER_DOCK
+
+    def servers_available(self) -> bool:
+        """Can the `Servers` head be used HERE? — the ONE question the head and its hint share."""
+        return (not self.map_is_this_window()) and self._servers_provider is not None
+
+    def head(self) -> str:
+        """The head the panel shows (`commands` | `servers`) — a VIEW STATE of this container."""
+        return self._head
+
+    def set_head(self, name: str):
+        """Show ONE head. A click on the ACTIVE head CHANGES nothing; one on the unavailable
+        `Servers` head is refused and answered with the SAME inline sentence the hint row carries
+        (a dead control explains itself — the Plugins window's `run_hint` rule). BOTH branches
+        re-sync the checkmarks, because Qt has already toggled the button that was clicked and the
+        LOOK must follow `_head`. Never raises.
+        """
+        wanted = name if name in (HEAD_COMMANDS, HEAD_SERVERS) else HEAD_COMMANDS
+        if wanted == HEAD_SERVERS and not self.servers_available():
+            self._apply_head()
+            self._notify(self._hint_text())
+            return
+        if wanted != self._head:
+            self._head = wanted
+        self._apply_head()
+
+    def refresh_servers(self):
+        """Re-read the provider and rebuild the `Servers` list (the head switch, showEvent, a load)."""
+        self._rebuild_servers()
+
+    def _apply_head(self):
+        """Show the widgets of ONE head: the tree or the server list, the Add/Edit/Delete row (the
+        `Commands` head alone), the library-file button and the search placeholder. Never raises."""
+        t = get_translator()
+        commands = self._head == HEAD_COMMANDS
+        try:
+            self.tree.setVisible(commands)
+            self.server_tree.setVisible(not commands)
+            self.cmd_buttons.setVisible(commands)
+            self._file_btn.setVisible(commands)
+            self.head_commands_btn.setChecked(commands)
+            self.head_servers_btn.setChecked(not commands)
+            self.search.setPlaceholderText(
+                t("terminal.cmdlib.search_placeholder") if commands
+                else t("terminal.cmdlib.servers_search"))
+        except RuntimeError:
+            return  # Qt teardown — the widgets are already gone
+        self._apply_filter()
+        self._apply_hint()
+
+    def _hint_text(self) -> str:
+        """The sentence of an INACTIVE control ("" — everything on this surface works)."""
+        t = get_translator()
+        if self.map_is_this_window():
+            return t("terminal.cmdlib.map_is_here")     # `Servers` and `Open map` are inactive
+        if self._servers_provider is None:
+            return t("terminal.cmdlib.no_map")          # no map behind this window
+        return ""
+
+    def _apply_hint(self):
+        """Write the inline hint: shown exactly while something on this surface is inactive."""
+        try:
+            text = self._hint_text()
+            self.hint_label.setText(text)
+            self.hint_label.setVisible(bool(text))
+        except RuntimeError:
+            pass  # Qt teardown — the label is already gone
+
+    def _notify(self, text: str, timeout_ms: int = 4000):
+        """One status line through the SHIPPED bridge (`status_message` → the container's status)."""
+        if not text:
+            return
+        try:
+            self.status_message.emit(str(text), int(timeout_ms))
+        except RuntimeError:
+            pass  # Qt teardown — the signal's owner is already gone
+
+    def _on_open_map(self):
+        """`Open map` — the map window comes to the front (INACTIVE in the dock: it IS this window)."""
+        if self.map_is_this_window() or self._map_sink is None:
+            self._notify(self._hint_text() or get_translator()("terminal.cmdlib.no_map"))
+            return
+        try:
+            self._map_sink()
+        except Exception:  # noqa: BLE001 — a door must never break the panel
+            pass
+
+    def _on_profiles(self):
+        """`Profiles` — the application's profile manager (live on every surface, the dock included)."""
+        if self._profiles_sink is None:
+            return
+        try:
+            self._profiles_sink()
+        except Exception:  # noqa: BLE001 — a door must never break the panel
+            pass
+
     def reload(self):
         """Re-read the file and rebuild the tree (showEvent + after changes)."""
         self._entries = self._store.load()
         self._rebuild_tree()
+        self.refresh_servers()
 
     def event(self, event):
         """v1.5rc5 (N8): (re-)apply the collapsed width when the panel joins its splitter.
@@ -1046,10 +1354,73 @@ class CommandLibraryPanel(QWidget):
             return None
         return self._by_id.get(eid)
 
+    # ── v1.11: the `Servers` list ───────────────────────────────────────────
+
+    def _rebuild_servers(self):
+        """Rebuild the flat `Servers` list from the provider pair. Never raises.
+
+        The rows are the map's cards in the map's own order; a row carries ONLY the node id (Qt
+        gotcha #12: `setData` stores a copy of an object) and the live node is read back from
+        `self._by_node_id`. The identity (`user@host:port`) travels as the tooltip — the alias is
+        what the row shows.
+        """
+        t = get_translator()
+        self.server_tree.clear()
+        self._by_node_id = {}
+        nodes = []
+        provider = self._servers_provider
+        if provider is not None:
+            try:
+                nodes = list(provider() or [])
+            except Exception:  # noqa: BLE001 — a source that fails is an EMPTY list, never a crash
+                nodes = []
+        self._server_nodes = nodes
+        for node in nodes:
+            sid, alias, identity = server_row_facts(node)
+            sid = sid or alias or identity
+            self._by_node_id[sid] = node
+            row = QTreeWidgetItem([alias or sid])
+            row.setData(0, Qt.ItemDataRole.UserRole, sid)
+            row.setToolTip(0, identity or alias)
+            self.server_tree.addTopLevelItem(row)
+        self.server_tree.setHeaderLabels([t("terminal.cmdlib.head_servers")])
+        self._apply_filter()
+
+    def _server_for_item(self, item):
+        """The live node of a `Servers` row (None — a stale row / no selection)."""
+        if item is None:
+            return None
+        sid = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(sid, str):
+            return None
+        return self._by_node_id.get(sid)
+
+    def _activate_server_item(self, item):
+        """A double click / Enter on a server row — the HOST's connect door, never `add_session()`.
+
+        The door is `_run_ssh_connect()` (`ui/main_window_ssh.py`), so the unmanaged gate, the
+        `terminal_max_open` limit, the node's indicator, the window reuse and the info collection are
+        all asked exactly as they are from the map — and the SAME `SSHConnectDialog` is shown on
+        every surface (`ROADMAP` v1.11: one path, one wording). A row with no door behind it reports
+        the same inline sentence the head does; nothing here raises.
+        """
+        node = self._server_for_item(item)
+        if node is None:
+            return
+        if self._connect_sink is None:
+            self._notify(self._hint_text() or get_translator()("terminal.cmdlib.no_map"))
+            return
+        try:
+            self._connect_sink(node)
+        except Exception as e:  # noqa: BLE001 — a refused connect must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The server row's connect door failed: {e}")
+
     def _apply_filter(self):
-        """A search by the name OR the command text (case-insensitive); the non-matching
-        entries and the categories without matches are hidden. The info label: an empty
-        library / no matches."""
+        """A search by name OR command text for the `Commands` tree and by alias/identity for the
+        `Servers` list (case-insensitive); the non-matching rows and the empty categories are hidden.
+        The info label carries the ACTIVE head's own empty/no-matches sentence."""
         t = get_translator()
         q = self.search.text().strip().lower()
         total_shown = 0
@@ -1066,12 +1437,32 @@ class CommandLibraryPanel(QWidget):
                     shown += 1
             top.setHidden(shown == 0)
             total_shown += shown
-        if not self._entries and not q:
-            self.info_label.setText(t("terminal.cmdlib.empty"))
+        servers_shown = 0
+        for i in range(self.server_tree.topLevelItemCount()):
+            row = self.server_tree.topLevelItem(i)
+            node = self._server_for_item(row)
+            _, alias, identity = server_row_facts(node) if node is not None else ("", "", "")
+            match = not q or q in f"{alias} {identity}".lower()
+            row.setHidden(not match)
+            if match:
+                servers_shown += 1
+        if self._head == HEAD_SERVERS:
+            if not self._server_nodes:
+                info = t("terminal.cmdlib.servers_empty")
+            elif servers_shown == 0:
+                info = t("terminal.cmdlib.servers_no_matches")
+            else:
+                info = ""
+        elif not self._entries and not q:
+            info = t("terminal.cmdlib.empty")
         elif total_shown == 0:
-            self.info_label.setText(t("terminal.cmdlib.no_matches"))
+            info = t("terminal.cmdlib.no_matches")
         else:
-            self.info_label.setText("")
+            info = ""
+        try:
+            self.info_label.setText(info)
+        except RuntimeError:
+            pass  # Qt teardown — the label is already gone
 
     # ── sending the macro to the active session ─────────────────────────────
 

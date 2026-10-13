@@ -31,8 +31,8 @@ CHAPTER_ORDER = (12, 8, 3, 10, 9, 13, 7, 4, 1, 2, 5, 6, 11)
 # they only ever DECREASE. The name is what the check reports; the marker is a literal of the file.
 SECTION_PINS = (
     ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 797),
-    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8164),
-    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11231),
+    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8150),
+    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11217),
     ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5241),
 )
 

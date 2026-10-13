@@ -57,7 +57,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf`, `reboot`, or `mkfs`.
-*   **Command Library:** Convert any historical command into a macro. Supports version history (ring of 10) and JSON import/export.
+*   **Command Library:** Convert any historical command into a macro. Supports version history (ring of 10) and JSON import/export. The panel beside the sessions holds **two lists** — `Commands` and `Servers`, the aliases of the map's cards — and its bottom row opens the map window or the profile manager, so a session can start another one without going back to the map (a session inside the map's own dock says so instead of offering the same window twice).
 *   **Command History:** A `History` tab per server, kept between sessions — import from disk or the server's `~/.bash_history`, filter and sort, copy a row back to the terminal, merge duplicates, clear the list. A command that looks like a secret is kept **and** marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position while a build talks (the default `"live"` pulls the view back), and an external system terminal (`ssh`) works as an alternative to the built-in one.
 *   **SFTP & Files Commander:**
@@ -223,7 +223,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 146 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 147 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

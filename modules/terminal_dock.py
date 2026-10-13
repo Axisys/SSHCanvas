@@ -148,6 +148,11 @@ class TerminalDockContent(QWidget):
         # signature matches).
         self.cmdlib_panel = CommandLibraryPanel(self.session_tabs, parent=self)
         self.cmdlib_panel.status_message.connect(self._on_page_status_message)
+        # v1.11: the panel's bottom row. `Profiles` lives on every surface (it is application-level),
+        # while `Open map` and the `Servers` head are INACTIVE here — the map IS this window, and the
+        # panel's ONE predicate (`CONTAINER_KIND is CONTAINER_DOCK`) is what says so. No provider pair
+        # is installed: listing the map's own cards from the map's own window would be a no-op.
+        self.cmdlib_panel.set_map_doors(None, self._panel_open_profiles)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.cmdlib_panel)
         splitter.addWidget(self.split.splitter)
@@ -426,6 +431,17 @@ class TerminalDockContent(QWidget):
             sink(page)
         except Exception:  # noqa: BLE001 — the registry must never break the split
             pass
+
+    def _panel_open_profiles(self) -> bool:
+        """v1.11: the panel's `Profiles` door — the map window owns the profile manager."""
+        hook = find_host_hook(self, "_open_profile_manager")
+        if hook is None:
+            return False
+        try:
+            hook()
+            return True
+        except Exception:  # noqa: BLE001 — a dialog must not break the panel
+            return False
 
     def attach_split_pane(self, pane) -> bool:
         """The pane is open: its live status joins the dock's ONE status line and the bridge."""

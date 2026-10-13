@@ -124,6 +124,15 @@ def get_translator():
     return _t_cache
 
 
+def _log():
+    """The module logger, imported lazily (the `command_library._log` pattern); None — no logger."""
+    try:
+        from modules.logger import get_logger as _gl
+        return _gl("modules.ssh_terminal")
+    except Exception:  # noqa: BLE001 — a build without the logger keeps the code, not a crash
+        return None
+
+
 # ── the session that says it ended ────────────────────────────────────────────
 # `TERMINAL_KEEPALIVE_SEC` (30 s) is the interval of the SSH keepalive: one declared constant,
 # deliberately NOT a config key — a protocol fact, below every common idle timeout. It is the
@@ -617,6 +626,12 @@ class SSHTerminalWindow(QMainWindow):
         self.cmdlib_panel = CommandLibraryPanel(self.session_tabs, parent=self)
         self.cmdlib_panel.status_message.connect(self._on_page_status_message)
         self.cmdlib_panel.set_active_session_provider(self.active_session)
+        # v1.11: the panel's `Servers` head and its two bottom-row doors. The ONE provider pair is
+        # (the map's node list, the HOST's connect door) and the doors are resolved at CALL time on
+        # the parent chain — a window without a map behind it keeps an inactive head (`_hint_text()`)
+        # instead of an import, and a click NEVER reaches `add_session()` directly (§4.1, §4.3).
+        self.cmdlib_panel.set_server_sources(self._panel_server_nodes, self._panel_connect_server)
+        self.cmdlib_panel.set_map_doors(self._panel_open_map, self._panel_open_profiles)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.cmdlib_panel)
         splitter.addWidget(self._v_splitter)
@@ -1261,6 +1276,64 @@ class SSHTerminalWindow(QMainWindow):
             sink(page)
         except Exception:  # noqa: BLE001 — the registry must never break the split
             pass
+
+    # ── v1.11: the panel's map hooks — the ONE provider pair and the two doors ──
+
+    def _panel_server_nodes(self):
+        """The `Servers` head's node provider — the MAP's own list (None — no map behind us).
+
+        Resolved at CALL time on the parent chain (`find_host_hook`): a window built without a map
+        behind it (a test, an embedder) has an inactive head instead of an import (`AGENTS.md` §4.1).
+        """
+        hook = find_host_hook(self, "map_server_nodes")
+        if hook is None:
+            return None
+        try:
+            return hook()
+        except Exception:  # noqa: BLE001 — a source that fails is an empty list, never a crash
+            return None
+
+    def _panel_connect_server(self, node) -> bool:
+        """A click on a server row — the HOST's connect door, NEVER `add_session()` here.
+
+        The door is `_run_ssh_connect()` (`ui/main_window_ssh.py`): it asks the unmanaged gate, the
+        `terminal_max_open` limit, the node's indicator, the window reuse and the info collection,
+        and it shows the SAME `SSHConnectDialog` the map shows (ROADMAP v1.11 — one path, one
+        wording). A container that called itself would bypass all five.
+        """
+        hook = find_host_hook(self, "_run_ssh_connect")
+        if hook is None:
+            return False
+        try:
+            hook(node)
+            return True
+        except Exception as e:  # noqa: BLE001 — a refused connect must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The terminal panel could not start a session: {e}")
+            return False
+
+    def _panel_open_map(self) -> bool:
+        """`Open map` — the map window comes to the front (the host owns the gesture)."""
+        hook = find_host_hook(self, "_raise_map_window")
+        if hook is None:
+            return False
+        try:
+            hook()
+            return True
+        except Exception:  # noqa: BLE001 — a window gesture must not break the panel
+            return False
+
+    def _panel_open_profiles(self) -> bool:
+        """`Profiles` — the application's profile manager (application-level, the dock has it too)."""
+        hook = find_host_hook(self, "_open_profile_manager")
+        if hook is None:
+            return False
+        try:
+            hook()
+            return True
+        except Exception:  # noqa: BLE001 — a dialog must not break the panel
+            return False
 
     def _attach_split_pane(self, pane) -> bool:
         """The container's half of "the pane is open": its status text and the keyboard bridge.

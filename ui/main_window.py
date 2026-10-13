@@ -224,6 +224,21 @@ except ImportError:  # flat layout without the package (same pattern as the impo
     from main_window_i18n import I18nMixin
     from main_window_layout import LayoutMixin
 
+
+def _bootstrap_log():
+    """The module logger of the STARTUP path (AGENTS.md §12.3).
+
+    `self.log` is a lazy property over `self._log`, which `__init__` assigns further down — the theme
+    block runs before it, so this helper is the one logger a window's constructor can use. The lazy
+    import keeps `modules.logger` out of the import graph of this facade. `None` — no logger at all.
+    """
+    try:
+        from modules.logger import get_logger
+        return get_logger(__name__)
+    except Exception:  # noqa: BLE001 — a build without the logger keeps the code, not a crash
+        return None
+
+
 # The LIVE-NAMESPACE SEAMS, declared once: every name a `ui/main_window_*.py` mixin resolves on THIS
 # module at call time (`host_attr`), every Qt facade a suite patches on the shared CLASS
 # (`MW.QFileDialog`, `MW.QMenu`, `MW.QMessageBox`) and every cluster widget the mixins re-export. The
@@ -348,7 +363,9 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                     if apply_density_setting is not None:
                         apply_density_setting(_saved_theme)
                 except Exception as e:  # noqa: BLE001 — the look must not break startup
-                    print(f"[theme] the saved theme was not applied: {e}", flush=True)
+                    _log = _bootstrap_log()
+                    if _log is not None:
+                        _log.warning(f"The saved theme was not applied: {e}")
         # v1.5rc1 (ROADMAP task 6): in the "Auto (system)" mode the window follows
         # the platform's colour scheme live. Installed once, guarded — a platform
         # without `QStyleHints.colorScheme` simply never emits.
@@ -911,14 +928,6 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         except Exception:  # noqa: BLE001 — the memory must not block closing
             pass
 
-        # v1.10rc1: the path the NEXT start may reopen (`ui_reopen_last_project`) — written with the
-        # geometry and for the same reason, so a cancelled close still records the current project.
-        # A NAMELESS project writes an EMPTY path: there is nothing to restore for it.
-        try:
-            self._remember_last_project()
-        except Exception:  # noqa: BLE001 — the memory must not block closing
-            pass
-
         # v0.9.7: autosave stops BEFORE the dialog — while the user decides
         # (Save/Discard/Cancel) no writes to ~/.sshmap/autosave are needed.
         try:
@@ -926,13 +935,10 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         except Exception:  # noqa: BLE001 — teardown robustness (C++ object RuntimeError)
             pass
 
-        # Stopping background QThreads happens on ANY exit, and the call stands on EVERY exit path
-        # (the early dialog branches included): with unsaved changes the running
-        # SystemInfoCollector / ping / DNS threads would otherwise be destroyed with the QObject
-        # ("QThread: Destroyed while thread is still running"). The threads are stopped BEFORE the
-        # dialog — it may keep the window open indefinitely.
-        self._shutdown_background_threads()
-
+        # The "unsaved changes" question is asked BEFORE any teardown: the answer decides whether this
+        # window is really going away, and `Cancel` must leave it WHOLE — the sessions, the probe
+        # rounds and the counters stay live instead of leaving a window that only looks open (AGENTS.md
+        # §4.1). Nothing below runs until the decision is a Save that succeeded or a Discard.
         if self._has_unsaved_changes:
             reply = QMessageBox.question(
                 self, 
@@ -944,15 +950,27 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             if reply == QMessageBox.Save:
                 # Close only if the save really succeeded —
                 # otherwise the data would be lost silently (former AUDIT.md, critical #1 — see CHANGELOG.md).
-                saved = self._save_project()
-                event.accept() if saved else event.ignore()
-                return
-            elif reply == QMessageBox.Discard:
-                event.accept()
-                return
-            else:
+                if not self._save_project():
+                    event.ignore()
+                    return
+            elif reply != QMessageBox.Discard:
                 event.ignore()
                 return
+
+        # ── the window really closes from here on ──────────────────────────────
+        # v1.10rc1: the path the NEXT start may reopen (`ui_reopen_last_project`). Written AFTER the
+        # question and after a save, because a first `Save` of a NAMELESS project picks the path IN its
+        # dialog — the recorded value is the file the window is closing on, never a stale empty string.
+        try:
+            self._remember_last_project()
+        except Exception:  # noqa: BLE001 — the memory must not block closing
+            pass
+
+        # Stopping background QThreads happens on EVERY exit path that reaches here — the running
+        # SystemInfoCollector / ping / DNS threads would otherwise be destroyed with the QObject
+        # ("QThread: Destroyed while thread is still running"). It stands AFTER the question (it is
+        # destructive) and BEFORE `event.accept()`, so the window is never destroyed with live threads.
+        self._shutdown_background_threads()
 
         event.accept()
 

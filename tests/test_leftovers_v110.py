@@ -409,7 +409,7 @@ check("§8 the schema did NOT move (no project format change) and no new depende
               for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
 _langs = load_i18n_langs(ROOT)
 check("§8 the ONE new key of the release is present and non-empty in every language",
-      EXPECTED_I18N_KEYS == 1092 + 1 + 1
+      EXPECTED_I18N_KEYS == 1092 + 1 + 1 + 10
       and all(str(data.get("settings.general.reopen_last_project") or "").strip()
               for data in _langs.values()),
       str({c: d.get("settings.general.reopen_last_project") for c, d in _langs.items()}))
