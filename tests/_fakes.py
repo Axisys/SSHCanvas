@@ -642,29 +642,98 @@ def wire_worker(worker, log):
 # The paramiko client fakes for the terminal window (get_transport/open_sftp)
 # ════════════════════════════════════════════════════════════
 
+class FakeSftpChannel:
+    """The session channel the bounded opener builds the client on (the two-stage real open).
+
+    `settimeout()` is recorded — the opener bounds the SFTP version read with it and CLEARS it once
+    the version answered — and `invoke_subsystem()` records the subsystem name. `sftp` is what the
+    fake `paramiko.SFTPClient` hands back; a None answer makes it raise (the subsystem is off).
+    """
+
+    def __init__(self, sftp_client=None, timeout=None):
+        self.sftp = sftp_client
+        self.timeout = timeout
+        self.timeouts = [] if timeout is None else [timeout]
+        self.subsystem = None
+        self.closed = False
+
+    def settimeout(self, value):
+        self.timeout = value
+        self.timeouts.append(value)
+
+    def invoke_subsystem(self, name):
+        self.subsystem = name
+
+    def close(self):
+        self.closed = True
+
+
+class FakeParamikoModule:
+    """The `paramiko` attribute `modules/sftp_open` reads at CALL time (the substitution seam)."""
+
+    def __init__(self, error=None):
+        self.error = error
+        self.channels = []
+
+    def SFTPClient(self, channel):   # noqa: N802 — the paramiko name
+        self.channels.append(channel)
+        if self.error is not None:
+            raise self.error
+        if getattr(channel, "sftp", None) is None:
+            raise Exception("SFTP subsystem disabled")
+        return channel.sftp
+
+
+def install_sftp_open_fakes(error=None):
+    """Point `modules/sftp_open` at the fake SFTP client class; answers the fake module object."""
+    import importlib
+    module = importlib.import_module("modules.sftp_open")
+    fake = FakeParamikoModule(error=error)
+    module.paramiko = fake
+    return fake
+
+
 class FakeTransport:
-    def __init__(self, active=True):
+    """The paramiko Transport surface the SFTP open rides: `is_active()` + `open_session(timeout=…)`.
+
+    `opens` records the timeout of every channel request (None is the paramiko default — the
+    3600 s `channel_timeout` the bounded opener must never leave in place).
+    """
+
+    def __init__(self, active=True, sftp_client=None, error=None):
         self._active = active
+        self._sftp = sftp_client
+        self.error = error
+        self.opens = []
 
     def is_active(self):
         return self._active
 
+    def open_session(self, timeout=None):
+        self.opens.append(timeout)
+        if self.error is not None:
+            raise self.error
+        if self._sftp is None:
+            raise Exception("SFTP subsystem disabled")
+        return FakeSftpChannel(self._sftp, timeout)
+
 
 class FakeSSHClient:
-    """The paramiko SSHClient surface for the terminal window: get_transport/open_sftp.
-    open_sftp() with sftp=None raises Exception ("SFTP subsystem disabled")."""
+    """The paramiko SSHClient surface for the terminal window: get_transport/open_session.
+
+    Wiring one POINTS `modules/sftp_open` at the fake `SFTPClient` (the opener resolves that class on
+    the paramiko MODULE at call time), so a test that hands a client to a page gets the in-memory
+    SFTP through the ordinary `_ensure_sftp()` — the wiring stays ONE line. A `None` sftp client
+    answers a transport whose `open_session()` raises (the server's SFTP subsystem is off).
+    """
 
     def __init__(self, sftp_client):
         self._sftp = sftp_client
-        self._tr = FakeTransport(True)
+        self._tr = FakeTransport(True, sftp_client)
+        install_sftp_open_fakes()
 
     def get_transport(self):
         return self._tr
-
-    def open_sftp(self):
-        if self._sftp is None:
-            raise Exception("SFTP subsystem disabled")
-        return self._sftp
 
     def close(self):
         pass

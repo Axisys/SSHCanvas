@@ -14,7 +14,7 @@ import sys
 from _common import (VERSION_FORMAT_RE, bootstrap, check, finish, load_i18n_langs,
                      check_i18n_parity, check_i18n_format, check_release_state, read_cfg,
                      merge_cfg, clear_cfg, write_cfg, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS,
-                     releases_at_least)
+                     releases_at_least, wait_until)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (the HOME isolation and faulthandler)
 
@@ -325,7 +325,7 @@ check("the panel is ON and its page really moved (the connection is still in fli
 # the mode has (there is no Files tab to switch to)
 fake_sftp(win2, page_l)
 page_l.terminal_thread.connected_signal.emit()
-app.processEvents()
+wait_until(lambda: page_l._sftp_worker is not None, timeout_ms=5000)
 check("connected_signal opened the channel even though the Files tab was never current",
       page_l._sftp_worker is not None and win2.files_panel.stack.currentWidget()
       is page_l.sftp_tab)
@@ -345,7 +345,7 @@ check("the session is connected but has no channel yet (its Files tab was never 
       win3.files_panel_on is False and page_late._sftp_worker is None
       and page_late.tabs.currentWidget() is page_late.widget)
 win3.act_files_panel.setChecked(True)
-app.processEvents()
+wait_until(lambda: page_late._sftp_worker is not None, timeout_ms=5000)
 check("switching the mode ON opens the channel for an already connected session",
       page_late._sftp_worker is not None and page_late.files_panel_on is True)
 close_window(win3)
@@ -713,8 +713,8 @@ check("§11 the pin counts the shipped release (863 + the 4 keys of the Files pa
       " + the 1 of v1.7.4rc2: the refusal of a move that would cross the two sources"
       " + the 4 of v1.7.5: the Files settings page, its ceiling row and warning, and the"
       " truncation notice + the 20 of v1.8: the elevated pane + the 41 of v1.8.1: the trust surface,"
-      " and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3, str(EXPECTED_I18N_KEYS))
+      " and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row, and v1.12.4.1 adds ONE: `sftp.opening`",
+      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1, str(EXPECTED_I18N_KEYS))
 check("§11 VERSION_FORMAT stays `0.9` (the mode lives in config.json, not in the project file)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§11 no new dependency was added for the panel (the four pinned ones)",

@@ -1139,7 +1139,10 @@ class CommandHistoryPanel(QWidget):
         t = get_translator()
         worker = self._ensure_worker()
         if worker is None:
-            self.status_message.emit(t("terminal.history.server_no_channel"), 6000)
+            # A channel that is still OPENING already spoke (`sftp.opening`): "no channel" would be
+            # a second, false answer to a question the session has not finished answering.
+            if not self._session_channel_pending():
+                self.status_message.emit(t("terminal.history.server_no_channel"), 6000)
             return False
         task_id = worker.queue_read(SERVER_HISTORY_PATH)
         if task_id is None:
@@ -1172,6 +1175,14 @@ class CommandHistoryPanel(QWidget):
                 self._worker = None
                 return None
         return worker
+
+    def _session_channel_pending(self) -> bool:
+        """Is the session still opening its channel? (then `server_no_channel` is not the answer)"""
+        ask = getattr(self._session, "sftp_channel_pending", None)
+        try:
+            return bool(ask()) if callable(ask) else False
+        except Exception:   # noqa: BLE001 — a session teardown race
+            return False
 
     def _unbind_worker(self):
         """Drop our two slots from the previous worker (a dead one is a safe no-op)."""

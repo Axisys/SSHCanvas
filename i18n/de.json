@@ -391,6 +391,7 @@
   "sftp.upload_dialog_title": "Dateien zum Hochladen auswählen",
   "sftp.download_dir_title": "Verzeichnis für den Download auswählen",
   "sftp.open_failed": "SFTP-Kanal konnte nicht geöffnet werden: {error}",
+  "sftp.opening": "SFTP-Kanal wird geöffnet…",
   "sftp.drop_queued": "{count} Datei(en) zum Hochladen nach {dir} in die Warteschlange gestellt",
   "sftp.drop_no_files": "Keine lokalen Dateien im Drop (Verzeichnisse werden nicht unterstützt)",
   "sftp.viewer.header": "{path} ({size})",

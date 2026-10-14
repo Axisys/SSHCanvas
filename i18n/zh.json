@@ -391,6 +391,7 @@
   "sftp.upload_dialog_title": "选择要上传的文件",
   "sftp.download_dir_title": "选择下载目录",
   "sftp.open_failed": "无法打开 SFTP 通道：{error}",
+  "sftp.opening": "正在打开 SFTP 通道…",
   "sftp.drop_queued": "已加入上传队列（目标 {dir}）：{count} 个文件",
   "sftp.drop_no_files": "拖放的内容中没有本地文件（不支持目录）",
   "sftp.viewer.header": "{path} ({size})",

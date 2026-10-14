@@ -441,7 +441,11 @@ CL.CommandLibraryDialog = _StubDialog
 try:
     _StubDialog.data = {"name": "Disk usage", "command": "df -h", "category": "System",
                         "enabled": True}
-    _row = hist._entry_for_item(hist.tree.topLevelItem(0))
+    # The row is picked BY ITS TEXT: two records made in the same tick share a timestamp and the
+    # `last`-first sort may order them either way, so `topLevelItem(0)` is not a stable answer.
+    _row_item = [it for it in (hist.tree.topLevelItem(k) for k in range(hist.tree.topLevelItemCount()))
+                 if "df -h" in it.text(hist.COL_COMMAND)][0]
+    _row = hist._entry_for_item(_row_item)
     _added = hist.send_to_library(_row)
     app.processEvents()
     _lib_names = [e["name"] for e in _win_store.load()]

@@ -772,6 +772,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # Visualisation — the bridge signals progress_* (in windows mode the window
         # attaches them to its QProgressBar in the status bar — the v1.1.x look).
         self._sftp_worker = None
+        # v1.12.4.1: the open of that worker's channel — ONE bounded handshake thread
+        # (`modules/sftp_open.py`); a channel that is still opening is a STATE the panel reads.
+        self._sftp_handshake = None
         self._sftp_tasks = {}      # task_id → (kind, label)
         self._sftp_busy = 0        # how many uploads/downloads are in flight
         # v1.3.3.4 (ROADMAP task 6): task_id → TransferMeter (the rate/ETA of a transfer;
@@ -1322,11 +1325,15 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         The ONE way the History tab reaches the channel the Files tab uses: the panel asks for
         the worker and queues its read into it, so the file of the server is read OFF the GUI
         thread. A page without the SFTP tab (`with_sftp=False`, the split pane) has no channel
-        and answers None — its History tab does not exist either.
+        and answers None — its History tab does not exist either. A channel that is still OPENING
+        answers None too, WITH the `sftp.opening` sentence on the status bridge: that moment is a
+        channel on its way, never the panel's `terminal.history.server_no_channel`.
         """
         try:
             if self._ensure_sftp():
                 return self._sftp_worker
+            if self.sftp_channel_pending():
+                self.status_message.emit(get_translator()("sftp.opening"), 4000)
         except RuntimeError:
             pass  # Qt teardown — the session is already going away
         return None
@@ -1432,6 +1439,18 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 sig.disconnect(slot)
             except TypeError:
                 pass  # the slot was not connected — nothing to do
+
+        # v1.12.4.1: the channel that is still OPENING dies with the session — the FIRST stage of
+        # the SFTP channel. `close()` releases what the handshake holds and unblocks a version
+        # read inside its bound; a thread that outlived the wait joins the orphan registry (§4.8).
+        handshake = getattr(self, "_sftp_handshake", None)
+        if handshake is not None:
+            self._sftp_handshake = None
+            try:
+                handshake.close()
+            except RuntimeError:
+                pass  # the C++ object is already gone
+            handshake.shutdown()
 
         # v1.1.3: the SFTP worker FIRST (it depends on the terminal thread's transport).
         sftp_worker = getattr(self, "_sftp_worker", None)

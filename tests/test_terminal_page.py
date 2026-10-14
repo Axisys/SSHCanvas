@@ -253,10 +253,15 @@ fs_c = _FakeSftpFS()
 fs_c.add_file("/a.txt", b"hello")
 pc = make_page("td-c")
 pc.terminal_thread.client = _FakeSshClient(_FakeSftpClient(fs_c))   # "connected"
-check("c: the worker is lazy — it does not exist before open_sftp", pc._sftp_worker is None)
-check("c: _ensure_sftp() opened SFTP on the shared transport and started the worker",
-      pc._ensure_sftp() is True and pc._sftp_worker is not None
-      and pc._sftp_worker.isRunning())
+check("c: the worker is lazy — it does not exist before the open is asked for",
+      pc._sftp_worker is None)
+check("c: _ensure_sftp() answers at ONCE (the open itself runs on its own handshake thread)",
+      pc._ensure_sftp() is False and pc.sftp_channel_pending() is True,
+      f"pending={pc.sftp_channel_pending()}")
+wait_until(lambda: pc._sftp_worker is not None and pc._sftp_worker.isRunning(), timeout_ms=5000)
+check("c: the answer built the worker over the shared transport's channel and started it",
+      pc._sftp_worker is not None and pc._sftp_worker.isRunning()
+      and pc.sftp_channel_pending() is False)
 worker_c = pc._sftp_worker
 pc.shutdown()
 check("c: the worker is stopped within the shutdown budget (wait_ms=2500)",
@@ -276,7 +281,9 @@ fs_c2 = _FakeSftpFS()
 fs_c2.add_file("/a.txt", b"hello")
 pc2 = make_page("td-c2")
 pc2.terminal_thread.client = _FakeSshClient(_FakeSftpClient(fs_c2))
-check("c2: the worker is up", pc2._ensure_sftp() is True and pc2._sftp_worker.isRunning())
+pc2._ensure_sftp()
+wait_until(lambda: pc2._sftp_worker is not None and pc2._sftp_worker.isRunning(), timeout_ms=5000)
+check("c2: the worker is up", pc2._sftp_worker is not None and pc2._sftp_worker.isRunning())
 pc2._on_sftp_task_started(7, "upload", "/a.txt")       # a transfer IS in flight at teardown
 check("c2: the in-flight transfer is recorded before the teardown",
       pc2._sftp_tasks == {7: ("upload", "/a.txt")} and pc2._sftp_busy == 1,
@@ -292,7 +299,9 @@ check("c2: N56 shutdown() leaves NO in-flight bookkeeping behind (the slots are 
 fs_c3 = _FakeSftpFS()
 pc3 = make_page("td-c3")
 pc3.terminal_thread.client = _FakeSshClient(_FakeSftpClient(fs_c3))
-check("c3: the worker is up", pc3._ensure_sftp() is True and pc3._sftp_worker.isRunning())
+pc3._ensure_sftp()
+wait_until(lambda: pc3._sftp_worker is not None and pc3._sftp_worker.isRunning(), timeout_ms=5000)
+check("c3: the worker is up", pc3._sftp_worker is not None and pc3._sftp_worker.isRunning())
 _worker_c3 = pc3._sftp_worker
 _emitted = threading.Event()
 

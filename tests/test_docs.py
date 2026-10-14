@@ -7,7 +7,7 @@
 registry); §3 `DOCUMENTATION.md` is self-consistent (every `§N` resolves, the contents list is
 complete, the gotcha numbering is shared with `AGENTS.md` §7); §5 the documentation rules over the
 two reference docs and the repository's closed world (every `*.md` registered in ONE of the two
-lists AND the §2 repository map read against the TREE); §6 the code-comment ratchet; §7 the byte
+lists AND the §2 repository map read against the TREE); §6 the code-comment gate; §7 the byte
 budget of `AGENTS.md`. Hand edits are FREE: the default suite skips this file, a missing set is a
 SKIP, and `tests/test_index.py` — the generated suite map — stays always on.
 Run: python tests/test_docs.py  (from the project root) or python tests/run_all.py --docs"""
@@ -711,14 +711,14 @@ check("§5 the §13.1 ALLOWED list names files this tree holds (the map and the 
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the code-comment budget (a ratchet — the pins live in _comment_budget.py) ==")
+print("== §6 the code-comment budget (a GATE — the pins live in _comment_budget.py) ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 # §6 applies the §5 rule to the text INSIDE the code: a release narrative belongs to the changelog
-# family, the mechanism to DOCUMENTATION.md, a rule and a name to AGENTS.md (§12 states the budget).
-# The debt that shipped before the rule existed is PINNED in `tests/_comment_budget.py` and the pins
-# may only go DOWN — cleaning a file is the only way to move them. Measure: `python tests/_comment_budget.py`.
-CB.report(check)
+# family, the mechanism to DOCUMENTATION.md, a rule and a name to AGENTS.md (§12.5 states the budget).
+# The budgets are a GATE now — the tree measures the goal state (12 lines per header, 5 per block, 0
+# over either), so the pins in `tests/_comment_budget.py` are what a release is asked to keep.
+CB.report(check, enforce=True)
 
 
 # ════════════════════════════════════════════════════════════════════════════

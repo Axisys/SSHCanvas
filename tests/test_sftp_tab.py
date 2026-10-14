@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication
 app = QApplication(sys.argv)
 
 import i18n
+import modules.sftp_open as SO
 import modules.sftp_worker as SW
 import modules.sftp_tab as STAB
 from modules.sftp_worker import SftpWorker
@@ -543,13 +544,18 @@ check("the connected_signal → the SFTP is opened (the user is already on the t
       win_b._sftp_worker is not None)
 win_b.close()
 
-# ── Scenario C: open_sftp failed (the subsystem is off) — the error in the status bar ──
-win_c = make_win("c", _FakeSshClient(None))  # a client whose open_sftp raises
+# ── Scenario C: the open failed (the subsystem is off) — the error in the status bar ──
+win_c = make_win("c", _FakeSshClient(None))  # a client whose transport refuses the session
 win_c.tabs.setCurrentIndex(1)
 app.processEvents()
-check("the open_sftp crashed: the worker is not created", win_c._sftp_worker is None)
+check("the open failed: the worker is not created", win_c._sftp_worker is None)
+wait_until(lambda: win_c.terminal_thread.client.get_transport().opens, timeout_ms=5000)
+_opens_c = win_c.terminal_thread.client.get_transport().opens
+check("the channel request carried the DECLARED bound (never paramiko's 3600 s default)",
+      _opens_c == [SO.SFTP_OPEN_TIMEOUT_SEC], f"opens={_opens_c}")
+wait_until(lambda: (win_c.statusBar().currentMessage() or "") != "", timeout_ms=5000)
 msg_c = win_c.statusBar().currentMessage() or ""
-check("the open_sftp crashed: the error is in the status bar (the i18n sftp.open_failed)",
+check("the open failed: the error is in the status bar (the i18n sftp.open_failed)",
       "SFTP" in msg_c, f"msg={msg_c!r}")
 win_c.close()
 

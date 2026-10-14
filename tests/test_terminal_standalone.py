@@ -640,8 +640,8 @@ _NEW_KEYS = ("terminal.standalone.title", "terminal.standalone.empty_hint",
 check("§7 the TEN keys of the release are present and non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS)
       # the 1104 the standalone left, plus the later follow-ups' own keys (the THREE of v1.12.3:
-      # the jump host's label, its hint and the import picker's column).
-      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3,
+      # the jump host's label, its hint and the import picker's column — and the ONE of v1.12.4.1).
+      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1,
       str({c: [k for k in _NEW_KEYS if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 `{patterns}` is the ONE placeholder of the filter and every language carries it",
       all(set(_placeholders(LANGS[c]["terminal.standalone.project_filter"])) == {"patterns"}

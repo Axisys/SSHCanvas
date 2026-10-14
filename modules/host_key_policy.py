@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 """SSH host key policy — the answer to the MITM risk of `paramiko.AutoAddPolicy()` (AGENTS.md §4.4).
 
-The application keeps its OWN known_hosts store in `~/.sshmap/known_hosts`: a key the store does not
-know is SHOWN to the user (algorithm + SHA256 fingerprint, through `modules/interactive_ask.py`) and
-pinned only when it is accepted, and a key that differs from the stored one raises through paramiko and
-is offered as a REPLACE. An UNANSWERED question is a REFUSAL whenever an interactive surface exists
-(a dialog the user has not decided yet may never pin anything); the shipped TOFU accept is the fallback
-of the NO-SURFACE case alone — `interactive_ask.has_answerer()` tells the two apart (`N100`).
+The application keeps its OWN known_hosts store in `~/.sshmap/known_hosts` — a TOFU CACHE, not a
+verbatim file: a key the store does not know is SHOWN to the user (algorithm + SHA256 fingerprint,
+through `modules/interactive_ask.py`) and pinned only when it is accepted, and a key that differs from
+the stored one raises through paramiko and is offered as a REPLACE. An UNANSWERED question is a
+REFUSAL whenever an interactive surface exists (a dialog the user has not decided yet may never pin
+anything); the shipped TOFU accept is the fallback of the NO-SURFACE case alone (`N100`).
 
 The store has ONE owner, `KnownHostsStore`: every write re-reads the file, MERGES this session's entry
-and publishes the result with an atomic replace under a process-wide lock; a file that cannot be READ
-puts the store in the DECLARED "unpinned" state, which the caller reports, and NO writer overwrites it.
-Mechanism — `DOCUMENTATION.md` §16."""
+and publishes it atomically. A write keeps what paramiko parses and only that; a file that cannot be
+READ is never overwritten and leaves the DECLARED "unpinned" state. Mechanism — `DOCUMENTATION.md` §16."""
 
 import base64
 import hashlib
@@ -165,11 +164,12 @@ def read_server_host_key(host: str, port, timeout=PROBE_HOST_KEY_TIMEOUT_S):
 class KnownHostsStore:
     """The ONE owner of `~/.sshmap/known_hosts`.
 
-    Read-modify-write, never write-a-snapshot: `pin()` re-reads the file under the lock, merges the
-    entry and publishes it through `storage/atomic.py` (a unique prefixed provisional file + `fsync`
-    + `os.replace`), so a long-lived session can no longer wipe a key pinned meanwhile and a crash
-    can no longer leave a half file. A file that fails to LOAD is never overwritten (it may be
-    repairable) and puts the store into the DECLARED "unpinned" state, which the caller reports.
+    A TOFU cache, so the FILE is not preserved verbatim: every write re-reads it, merges the entry and
+    publishes the result through `storage/atomic.py` (a unique prefixed provisional file + `fsync` +
+    `os.replace`), and paramiko's `save()` writes back the entries it PARSED — a comment, a blank line
+    or a line whose key type it does not know is not carried over. A file that fails to LOAD (a
+    base64 line it cannot decode) is never overwritten and puts the store into the DECLARED
+    "unpinned" state, which the caller reports.
 
     The cross-process answer is NOT restated here: it is the ONE declaration of `storage/atomic.py`.
     """

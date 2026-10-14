@@ -4,12 +4,12 @@ Profiles are stored in ~/.sshmap_profiles.json and shared across all projects.
 Passwords are NOT saved to disk — they're stored in the system credential store (keyring) via CredentialManager.
 This prevents plaintext passwords from appearing in config files.
 
-The READ is three-state (`read_store()`): a MISSING file is an empty store, VALID JSON is the store,
-and a file that EXISTS but cannot be parsed is NEVER overwritten — every writer refuses through
-`ProfileStoreError` (`AGENTS.md` §4.4.2, the known_hosts rule). Mechanism — `DOCUMENTATION.md` §3.
+The READ is three-state (`read_store()`, over the family's `storage/atomic.py:read_json_state`): a
+MISSING file is an empty store, VALID JSON is the store, and a file that EXISTS but cannot be parsed
+is NEVER overwritten — every writer refuses through `ProfileStoreError` (`AGENTS.md` §4.4.2, the
+known_hosts rule). Mechanism — `DOCUMENTATION.md` §3.
 """
 
-import json
 import os
 from dataclasses import dataclass, asdict
 from typing import Optional, List
@@ -49,10 +49,11 @@ class Profile:
 
 # ── Persistence helpers ────────────────────────────────────────────
 
-#: The three answers of ONE read of the profiles file.
-STORE_MISSING = "missing"      # no file yet — a fresh install (writers may create it)
-STORE_OK = "ok"                # the file parsed (the document is the store)
-STORE_UNREADABLE = "unreadable"  # the file EXISTS and cannot be parsed — writers REFUSE
+#: The three answers of ONE read — the family's reader (`storage/atomic.py:read_json_state`), named
+#: here as well because THIS store is the one that REFUSES to overwrite a file it cannot parse.
+STORE_MISSING = _atomic.STORE_MISSING          # no file yet — a fresh install (a writer may create it)
+STORE_OK = _atomic.STORE_OK                    # the file parsed (the document is the store)
+STORE_UNREADABLE = _atomic.STORE_UNREADABLE    # the file EXISTS and cannot be parsed — writers REFUSE
 
 #: The sentence of a refused write, in English: the model owns no i18n (§4.5) and names the REAL path,
 #: because the profiles file is the LEGACY `~/.sshmap_profiles.json` (NOT under `~/.sshmap/`).
@@ -85,23 +86,18 @@ def _profiles_path() -> str:
 def read_store():
     """ONE read of the profiles file: `(state, profiles, path, reason)` — the three-state answer.
 
-    A MISSING file is `(STORE_MISSING, [], path, "")`; a file whose JSON is not a list is read as an
-    EMPTY store (the shipped tolerance, one log line); and a file that EXISTS but cannot be parsed or
-    opened is `(STORE_UNREADABLE, [], path, reason)` — the state every writer refuses to overwrite.
-    A race that removes the file between the `isfile()` probe and the read answers `STORE_MISSING`.
+    The STATES are the family's (`storage/atomic.py:read_json_state`, the ONE reader every writer of
+    a user file shares). A MISSING file is `(STORE_MISSING, [], path, "")`; a file whose JSON is not
+    a list is read as an EMPTY store (the shipped tolerance, one log line); a file that EXISTS but
+    cannot be parsed or opened is `(STORE_UNREADABLE, [], path, reason)` — the state every writer
+    refuses to overwrite.
     """
     path = _profiles_path()
-    if not os.path.isfile(path):
-        return STORE_MISSING, [], path, ""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-    except FileNotFoundError:
-        return STORE_MISSING, [], path, "the file disappeared while it was read"
-    except json.JSONDecodeError as e:
-        return STORE_UNREADABLE, [], path, f"invalid JSON at line {e.lineno} column {e.colno}"
-    except (OSError, UnicodeDecodeError, ValueError) as e:
-        return STORE_UNREADABLE, [], path, str(e)
+    state, raw, reason = _atomic.read_json_state(path)
+    if state == STORE_MISSING:
+        return STORE_MISSING, [], path, reason
+    if state == STORE_UNREADABLE:
+        return STORE_UNREADABLE, [], path, reason
     if not isinstance(raw, list):
         return STORE_OK, [], path, ""
     # AUDIT v0.7.2 (medium #13): the id from the file is kept as-is — only an empty one

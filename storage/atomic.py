@@ -4,21 +4,31 @@
 `publish_atomic(path, write_temp)` is the publish: the caller fills a UNIQUE provisional file
 (`<name>.<random>.tmp`, same folder) and it is fsynced and `os.replace()`-d onto `path`, so a reader
 sees the whole document or the previous one, and a failed write removes the provisional file.
-`write_json_atomic()` adds the READ-MODIFY-WRITE half under `atomic_lock(path)` — the lock covers
-the read, the merge and the publish, which is what a MERGE-writer needs — and `dump_json()` is the
-JSON `write_temp`. Cross-process writers are deliberately OUT of scope and DECLARED, the ONE answer
-the known_hosts store gives as well: the lock is a `threading.Lock` (this application instance) and
-the atomic replace is what keeps a second instance from ever reading a truncated file.
-Mechanism — `DOCUMENTATION.md` §71.
-"""
+`write_json_atomic()` adds the READ-MODIFY-WRITE half under `atomic_lock(path)` — an `RLock`
+covering the read, the merge and the publish, which is what a MERGE-writer needs — and `dump_json()`
+is the JSON `write_temp`. `read_json_state()` is the family's THREE-state reader; a merge over a
+file that EXISTS and cannot be parsed COPIES it to `<file>.bad-<ts>` before the publish. The
+cross-process writers are deliberately OUT of scope and DECLARED, the ONE answer the known_hosts
+store gives as well: the atomic replace is what keeps a second instance from reading a truncated
+file. Mechanism — `DOCUMENTATION.md` §71."""
 import json
 import os
+import shutil
 import stat
 import tempfile
 import threading
+import time
 
 #: The suffix of the provisional file — a crash orphan reads as `<name>.<random>.tmp`.
 TEMP_SUFFIX = ".tmp"
+
+#: The three answers of ONE read of a user file — the policy every writer of the family shares.
+STORE_MISSING = "missing"        # no file yet — a fresh install (a writer may create it)
+STORE_OK = "ok"                  # the file parsed (the caller judges the SHAPE it expected)
+STORE_UNREADABLE = "unreadable"  # the file EXISTS and cannot be parsed — a merge COPIES it first
+
+#: The suffix of the copy a merge-writer keeps of a file it could not read: `<file>.bad-<stamp>`.
+BAD_SUFFIX = ".bad-"
 
 _locks = {}
 _locks_guard = threading.Lock()
@@ -39,6 +49,15 @@ def _default_mode() -> int:
 TEMP_MODE = _default_mode()
 
 
+def _log():
+    """The app logger, lazily imported — the writer keeps working without the logger tree."""
+    try:
+        from modules.logger import get_logger
+        return get_logger("storage.atomic")
+    except Exception:  # noqa: BLE001 — a build without the logger still writes files
+        return None
+
+
 def atomic_lock(path) -> threading.RLock:
     """The ONE lock of `path`'s read-modify-write: every writer of the same file gets one object.
 
@@ -53,14 +72,60 @@ def atomic_lock(path) -> threading.RLock:
         return lock
 
 
-def read_json(path) -> dict:
-    """The current document of a merge-writer: `{}` when the file is missing, broken or not an object."""
+def read_json_state(path):
+    """ONE read of a JSON document — `(state, data, reason)`, the three answers of the family.
+
+    `STORE_MISSING` when there is no file yet; `STORE_OK` with the parsed document, whose SHAPE the
+    caller judges; `STORE_UNREADABLE` with the reason (an `OSError` text, `invalid JSON at line L
+    column C`) when the file EXISTS and cannot be read — the state a merge-writer must not lose. A
+    race that removes the file between the probe and the read answers `STORE_MISSING`.
+    """
+    if not os.path.isfile(path):
+        return STORE_MISSING, None, ""
     try:
         with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-    except (OSError, ValueError):
+            return STORE_OK, json.load(handle), ""
+    except FileNotFoundError:
+        return STORE_MISSING, None, "the file disappeared while it was read"
+    except json.JSONDecodeError as e:
+        return STORE_UNREADABLE, None, f"invalid JSON at line {e.lineno} column {e.colno}"
+    except (OSError, UnicodeDecodeError, ValueError) as e:
+        return STORE_UNREADABLE, None, str(e)
+
+
+def read_json(path) -> dict:
+    """The current document of a merge-writer: `{}` when the file is missing, broken or not an object."""
+    state, data, _reason = read_json_state(path)
+    if state != STORE_OK or not isinstance(data, dict):
         return {}
-    return data if isinstance(data, dict) else {}
+    return data
+
+
+def keep_unreadable(path, reason: str = "") -> str:
+    """COPY a file nobody could parse to `<file>.bad-<stamp>`; the copy's path, or "" on failure.
+
+    The DECIDED policy of the merge-writers (`AGENTS.md` §4.4): a file the reader could not read is
+    never silently replaced — its bytes are kept BESIDE it before the publish, and ONE log line
+    names the copy. The stamp carries the second, so two merges in one second stay two copies.
+    """
+    logger = _log()
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target = f"{path}{BAD_SUFFIX}{stamp}"
+    index = 1
+    while os.path.exists(target):
+        target = f"{path}{BAD_SUFFIX}{stamp}-{index}"
+        index += 1
+    try:
+        shutil.copy2(path, target)
+    except OSError as e:
+        if logger is not None:
+            logger.error("The file %s cannot be read (%s) and could not be copied aside (%s) — it "
+                         "is about to be replaced", path, reason or "unreadable", e)
+        return ""
+    if logger is not None:
+        logger.warning("The file %s cannot be read (%s) — its bytes were kept in %s before the "
+                       "write", path, reason or "unreadable", target)
+    return target
 
 
 def dump_json(path, data, indent=2) -> None:
@@ -131,15 +196,22 @@ def publish_atomic(path, write_temp) -> None:
 def write_json_atomic(path, data, merge: bool = False, reader=None, indent: int = 2) -> bool:
     """Write a JSON document ATOMICALLY; False on any error, never a raise.
 
-    `merge=True` re-reads the file INSIDE the lock (`reader` — a zero-argument callable, default
-    `read_json(path)`) and updates it with `data`: the read, the merge and the publish are ONE
-    critical section, so two writers cannot publish each other's stale snapshot.
+    `merge=True` re-reads the file INSIDE the lock (a `reader`, a zero-argument callable, wins over
+    the default `read_json_state(path)` read) and updates it with `data`: the read, the merge and the
+    publish are ONE critical section, so two writers cannot publish each other's stale snapshot. A
+    file that EXISTS and cannot be parsed is COPIED aside first (`keep_unreadable`) and the merge
+    runs over an empty base: nothing is lost and the application never stops saving.
     """
     try:
         with atomic_lock(path):
             payload = data
             if merge:
-                current = read_json(path) if reader is None else reader()
+                state, current, reason = read_json_state(path)
+                if state == STORE_UNREADABLE:
+                    keep_unreadable(path, reason)
+                    current = None
+                if reader is not None:
+                    current = reader()
                 if not isinstance(current, dict):
                     current = {}
                 current.update(data)

@@ -481,8 +481,9 @@ check("§6 the TEN keys of the release are non-empty in every language",
       all(_langs[c].get(k) for c in _langs for k in _new_keys)
       # this release's TEN, read off the LIVE pin: the 1094 baseline + v1.11's ten + the later
       # releases' own additions (v1.12 adds TEN — the pin chain of every topical file follows it —
-      # and v1.12.3 adds THREE: the jump host's label, its hint and the import picker's column).
-      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3,
+      # and v1.12.3 adds THREE: the jump host's label, its hint and the import picker's column,
+      # and v1.12.4.1 adds ONE: `sftp.opening`).
+      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1,
       str({c: len(_langs[c]) for c in sorted(_langs)}))
 
 

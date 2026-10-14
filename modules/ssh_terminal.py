@@ -578,10 +578,9 @@ class SSHTerminalWindow(QMainWindow):
 
     #: Does closing this container END THE RUN? False — a map-backed window is one surface of a
     #: larger application; True — the standalone's ONLY window (`TERMINAL_STANDALONE.md` §2). Qt's
-    #: implicit "last window closed" cannot answer here: the container IS a top-level window (it has
-    #: a parent — a legal Qt state — so `isWindow()` is True), but the hidden `StandaloneSurface`
-    #: behind it stays a live top-level widget, so `quitOnLastWindowClosed` is never reached and the
-    #: `quit()` this flag asks for is the ONLY thing that ends the loop.
+    #: `quitOnLastWindowClosed` cannot answer: the container IS top-level (it has a parent, a legal
+    #: state), but the hidden `StandaloneSurface` beside it stays live, so the explicit `quit()` this
+    #: flag asks for is the ONLY thing that ends the loop.
     quit_on_close = False
 
     def __init__(self, server_data: "ServerData | None" = None, parent=None, password: str = None,

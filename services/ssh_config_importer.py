@@ -2,16 +2,15 @@
 """The `~/.ssh/config` importer: the parser, the loader and their reason codes (§27).
 
 `parse_hosts_file()` reads one file the way `ssh` does: a case-insensitive keyword, a value after
-whitespace or `=`, `"…"` quoting, a trailing `\`, `#` comments, `Host a b c` (three aliases at once),
-`!` as an exclusion, FIRST OBTAINED VALUE WINS per option, `Include` resolved recursively relative to
-`~/.ssh` (globs expanded); `load_ssh_config()` logs ONE record per call and answers the `skipped`/`notes` lists.
+whitespace or `=`, `"…"` quoting, a trailing `\`, `#` comments, `Host a b c` (three aliases), `!` as
+an exclusion, FIRST OBTAINED VALUE WINS per option, `Include` resolved recursively under `~/.ssh`
+(globs expanded); `load_ssh_config()` logs ONE record and answers `skipped`/`notes`.
 
 IMPORTED: `HostName` → host (unset → the alias), `User` (unset → the local user), `Port` (unset →
 22), `IdentityFile` (the first one; `none` clears it), `ProxyJump` → jump_host (the `-J` value of the
-external terminal). SKIPPED WITH A NOTE: a wildcard or `Match` block, `ProxyCommand` (a command
-line that is NOT a `-J` spec), a second `IdentityFile`, an unreadable `Include` — pattern matching
-and process launching stay connection-time logic. HEADLESS: no Qt, no i18n, no network; every user
-string is a `REASON_*`/`NOTE_*` code plus a `detail`."""
+external terminal). SKIPPED WITH A NOTE: a wildcard or `Match` block, `ProxyCommand` (a command line
+that is NOT a `-J` spec), a second `IdentityFile`, an unreadable `Include`. HEADLESS: no Qt, no i18n,
+no network; every user string is a `REASON_*`/`NOTE_*` code plus a `detail`."""
 
 import getpass
 import glob

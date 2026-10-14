@@ -969,13 +969,10 @@ class CommandLibraryPanel(QWidget):
         self.edit_btn.clicked.connect(self._on_edit)
         self.del_btn.clicked.connect(self._on_delete)
 
-        # ── v1.12.2: the BOTTOM ROW — `Open map` / `Profiles` (in the standalone the FIRST control
-        # is `Open project`). v1.11: the two doors a session's own window owns so it can start
-        # another session without going back to the map. `Open map` is INACTIVE in the dock (the map
-        # IS that window — see `map_is_this_window()`), `Profiles` is application-level. v1.12: the
-        # FIRST control is the CONTAINER's own door — `set_project_door()` turns it into the
-        # standalone's `Open project`. It opens a session's map or lists servers, so it belongs to
-        # the `Servers` head and travels with it (`_apply_panel_doors()`); a wrapper widget, because a
+        # ── The BOTTOM ROW — `Open map` / `Profiles` (the FIRST control is the CONTAINER's own door:
+        # `set_project_door()` turns it into the standalone's `Open project`). The row belongs to the
+        # `Servers` head and travels with it (`_apply_panel_doors()`); `Open map` is inactive in the
+        # dock, where the map IS the window (`map_is_this_window()`). A wrapper widget, because a
         # layout cannot be hidden (the `cmd_buttons` pattern).
         self.doors_row = QWidget()
         bottom = QHBoxLayout(self.doors_row)

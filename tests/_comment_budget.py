@@ -6,10 +6,10 @@ reference docs — a release narrative belongs to the changelog family, the mech
 `DOCUMENTATION.md`, a rule and a name to `AGENTS.md`. `HISTORY_MARKERS` is the ONE marker list:
 `tests/test_docs.py` §5 scans the two documents with it, §6 scans the code.
 
-The BUDGETS are a measurement, not a gate: `report(enforce=False)` — what the suite asks for — prints
-every figure beside its pin and only the NARRATIVE rule fails, because a hand edit that needs one
-more line must not be blocked by the tool that records it. The pins are a ratchet for the maintainer
-to re-base by hand: measure with `python tests/_comment_budget.py` and paste the block it prints.
+The BUDGETS are a GATE: `report(enforce=True)` — what the suite asks for — prints every figure beside
+its pin and fails a header or a block over it, because the tree measures the goal state itself (no
+header past 12 lines, no block past 5) and a release can now be asked to keep it. The pins stay a
+ratchet for the maintainer: measure with `python tests/_comment_budget.py` and paste the block it prints.
 """
 import ast
 import io
@@ -43,9 +43,9 @@ HISTORY_MARKERS = (
 HEADER_BUDGET_LINES = 12   # a module docstring: what it is, who owns it, a pointer to the mechanism
 BLOCK_BUDGET_LINES = 5     # a comment block in the body: the invariant + the pointer, never a story
 
-# ── The pins (the debt measured when the ratchet was introduced; LOWER them, never raise) ─────
-NARRATIVE_PIN = 0          # HISTORY_MARKERS matches in the code text — the goal state, reached by §7 step 5
-HEADER_LINES_PIN = 2893    # module docstring lines, all files — RAISED only by a NEW module or topical
+# ── The pins (the goal state, REACHED: every budget below is the rule itself) ─────────────────
+NARRATIVE_PIN = 0          # HISTORY_MARKERS matches in the code text — the goal state
+HEADER_LINES_PIN = 2912    # module docstring lines, all files — RAISED only by a NEW module or topical
                            # file, whose header the changelog family's own entry names
 MAX_HEADER_PIN = 12        # the longest module docstring — the budget itself
 HEADER_FILES_PIN = 0       # module docstrings longer than HEADER_BUDGET_LINES — the goal state
@@ -178,15 +178,13 @@ def _top(rows, limit=3, suffix=""):
     return ", ".join(f"{name}{suffix} ({n})" for n, name in rows[:limit]) or "none"
 
 
-def report(check, root=None, prefix="§6", enforce=False):
+def report(check, root=None, prefix="§6", enforce=True):
     """The §6 measurement: every figure printed against its pin. Returns the measurement.
 
-    `enforce=False` (the default) MEASURES. The budgets are a ratchet the maintainer negotiates by
-    hand — a module header genuinely needs a line, a block genuinely needs a sixth — so a suite that
-    fails on the measurement blocks the work it was meant to keep honest. The NARRATIVE rule (the
-    changelog's vocabulary inside the code) and the "the scan really read the sources" control stay
-    real checks: they are a policy, not a budget. The strict pins are asked for explicitly by
-    `python tests/_comment_budget.py` and by a release gate, never by the suite.
+    `enforce=True` (the default) is the GATE: a module header or a comment block over its budget fails
+    the suite, because the tree measures the goal state the budgets state (§12.5). The NARRATIVE rule
+    (the changelog's vocabulary inside the code) and the "the scan really read the sources" control
+    are checks either way — they are a policy, not a budget.
     """
     m = measure(root or default_root())
     print(f"  {prefix} code comments: narrative={m['narrative']} (pin {NARRATIVE_PIN}), "
