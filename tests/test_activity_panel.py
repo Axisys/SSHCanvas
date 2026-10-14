@@ -164,7 +164,7 @@ AL.install_activity_handler()
 L = logging.getLogger("sshmap")
 _old_level = L.level
 get_logger("services.somewhere").info("a fact from a module")
-check("§2 a record of ANY module reaches the ring (its logger is under `sshcanvas`)",
+check("§2 a record of ANY module reaches the ring (its logger is under `sshmap`)",
       "a fact from a module" in messages(), str(messages()))
 check("§2 ...with its SHORT source (the `sshmap.` prefix is not part of the row)",
       sources()[-1] == "services.somewhere", str(sources()))

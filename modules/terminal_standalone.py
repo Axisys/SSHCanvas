@@ -107,7 +107,11 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
             return None
 
     def _panel_server_nodes(self):
-        """The `Servers` head's source — the surface's project list (`None` while no project is open)."""
+        """The `Servers` head's source — the surface's project list.
+
+        The surface answers a LIST (empty while no project is open); `None` is this walk's own
+        answer when NO hook answers at all, which is what leaves the head inactive.
+        """
         hook = self._surface_hook("project_nodes")
         if hook is None:
             return None

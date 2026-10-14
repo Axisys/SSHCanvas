@@ -243,6 +243,25 @@ QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
 #: reads this constant instead of carrying a second copy.
 FOCUS_RING_WIDTH = 2
 
+#: The corner radius of a SMALL control, in pixels — the chips and the compact buttons whose
+#: stylesheet this module owns. Declared ONCE so a widget never writes a radius of its own
+#: (`AGENTS.md` §4.6, "No Hardcoding").
+CONTROL_RADIUS_PX = 4
+
+
+def accent_swatch_style(fill: str, selected: bool = False) -> str:
+    """The stylesheet of ONE accent swatch (`ui/settings_dialog.py`) — a chip of a PRESET colour.
+
+    `fill` is the swatch's own accent (it shows the colour it would install, so it does not follow
+    the theme); the frame and the radius are the theme's, and the SELECTED state is the stronger
+    frame of the two. A dialog therefore carries no QSS text of its own.
+    """
+    t = theme_module.THEME
+    return (f"QPushButton {{ background-color: {fill};"
+            f" border: {2 if selected else 1}px solid "
+            f"{t.text_primary if selected else t.surface_alt};"
+            f" border-radius: {CONTROL_RADIUS_PX}px; }}")
+
 
 def _exclusive_button_qss(t) -> str:
     """The look of an EXCLUSIVE row of checkable `QToolButton`s — the ONE body of two registry names.
@@ -290,7 +309,7 @@ QPushButton#EmptyStateButton {{
     background-color: {t.accent_strong};
     color: {t.canvas_bg};
     border: 1px solid {t.accent_strong_hover};
-    border-radius: 4px;
+    border-radius: {CONTROL_RADIUS_PX}px;
     padding: 4px 14px;
     font-weight: bold;
 }}
@@ -326,7 +345,7 @@ QPushButton {{
     background-color: {t.surface_alt};
     color: {t.text_primary};
     border: 1px solid {t.surface_alt};
-    border-radius: 4px;
+    border-radius: {CONTROL_RADIUS_PX}px;
     padding: 2px 6px;
 }}
 QPushButton:hover {{
@@ -431,7 +450,7 @@ QToolButton {{
     background-color: {t.surface_alt};
     color: {t.text_primary};
     border: 1px solid {t.base_bg};
-    border-radius: 4px;
+    border-radius: {CONTROL_RADIUS_PX}px;
     padding: 2px 6px;
 }}
 QToolButton:hover {{

@@ -28,6 +28,11 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
+try:  # the export header names the product — the name has ONE home (version.py, `APP_NAME`)
+    from ..version import APP_NAME
+except ImportError:
+    from version import APP_NAME
+
 try:  # v1.4.4 (ROADMAP task 3): the motion standards — the node scale-in
     from ..ui import motion
 except ImportError:
@@ -1109,8 +1114,8 @@ class MapScene(QGraphicsScene):
         generator.setFileName(path)
         generator.setSize(QSize(w, h))
         generator.setViewBox(QRect(0, 0, w, h))
-        generator.setTitle("SSH Canvas")
-        generator.setDescription("Infrastructure map exported from SSHCanvas")
+        generator.setTitle(APP_NAME)
+        generator.setDescription(f"Infrastructure map exported from {APP_NAME}")
 
         painter = QPainter(generator)
         if not painter.isActive():

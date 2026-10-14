@@ -1,4 +1,4 @@
-# SSH Canvas (Visual Node Map + SSH Terminal and SFTP manager) — installable identity for 1.0 (ROADMAP v0.9.9.6).
+# SSH Canvas (Visual Node Map + SSH Terminal and SFTP manager) — the installable identity.
 #
 # Minimal set: name, version, dependencies, entry point — enables
 # `pipx install .` / `pip install .` and PyInstaller without rework.
@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sshcanvas"               # normalized APP_NAME from version.py ("SSH Canvas") — verified by tests/test_pyproject.py
-version = "1.12.3"               # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
+version = "1.12.4"               # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
 description = "SSH Canvas: visual infrastructure map with direct SSH connections to nodes"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,7 +27,7 @@ dependencies = [
 
 [project.scripts]
 sshcanvas = "main:main"          # console entry point → the existing main() in main.py (QApplication + MainWindow)
-sshmap = "main:main"             # legacy alias — the SAME main(); both commands ship (ROADMAP v1.12.2)
+sshmap = "main:main"             # legacy alias — the SAME main(); both commands ship
 
 # Flat layout: 10 top-level packages + 2 modules in the root — auto-discovery would not
 # work here, so the list is explicit. tests/ and _tmp_testdata*/ are NOT included in the distribution.

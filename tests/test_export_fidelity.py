@@ -296,7 +296,7 @@ for _dirpath, _dirnames, _files in os.walk(ROOT):
 check("no file imports or calls the deleted helper any more",
       not _importers, str(_importers))
 check("the decision is recorded in the source (a tombstone, not a silent removal)",
-      "DELETED" in DRAWIO_SRC and "v1.3.3.7" in DRAWIO_SRC)
+      "EXPORT ONLY" in DRAWIO_SRC and "parses no drawio file" in DRAWIO_SRC)
 
 
 # ════════════════════════════════════════════════════════════════════════════

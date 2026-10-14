@@ -147,11 +147,17 @@ check("§3 the About dialog's English fallback equals en.json (the §4.5 rule)",
       'APP_NAME, APP_VERSION = "%s"' % APP_NAME in _read("ui", "about_dialog.py"),
       [ln.strip() for ln in _read("ui", "about_dialog.py").splitlines()
        if "APP_VERSION = " in ln][:1])
-check("§3 the SVG export header names the product (a file a user opens elsewhere)",
-      'generator.setTitle("%s")' % APP_NAME in _read("graphics", "map_scene.py")
-      and 'exported from SSHCanvas' in _read("graphics", "map_scene.py"))
-check("§3 the drawio export writes the new identity",
-      '"host": "SSHCanvas"' in _read("storage", "export_drawio.py"))
+# The two EXPORT headers carry the name a user opens elsewhere; the literal is the defect the
+# rebrand's own review found, so the check reads the CODE for `APP_NAME` rather than for the
+# spelling — a second literal would pass a spelling scan and drift at the next rename.
+check("§3 the SVG export header reads the name from `version.py` (never a literal)",
+      'generator.setTitle(APP_NAME)' in _read("graphics", "map_scene.py")
+      and 'from ..version import APP_NAME' in _read("graphics", "map_scene.py")
+      and APP_NAME not in _read("graphics", "map_scene.py"))
+check("§3 the drawio export reads the same ONE name",
+      'ET.Element("mxfile", {"host": APP_NAME})' in _read("storage", "export_drawio.py")
+      and '"id": "sshcanvas-0", "name": APP_NAME' in _read("storage", "export_drawio.py")
+      and APP_NAME not in _read("storage", "export_drawio.py"))
 
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -49,6 +49,14 @@ except ImportError:
     except ImportError:  # flat layout without ui/unmanaged — no row is ever gated
         unmanaged = None
 
+try:  # v1.4.3: the widget-level stylesheets are the ONE registry (ui/theme_qss.py, AGENTS.md §4.6)
+    from . import theme_qss
+except ImportError:
+    try:
+        from ui import theme_qss
+    except ImportError:  # flat layout without the ui package — the hint keeps the application style
+        theme_qss = None
+
 
 # v1.4rc3: the glyph of each palette section (a plugin command is not a core action).
 _ICON_BY_KIND = {"server": "add_server", "plugin": "plugin"}
@@ -139,7 +147,8 @@ class CommandPalette(QDialog):
 
         hint_row = QHBoxLayout()
         self._hint_label = QLabel(_t("palette.hint"), self)
-        self._hint_label.setStyleSheet("color: gray;")
+        if theme_qss is not None:
+            self._hint_label.setStyleSheet(theme_qss.style("status.muted"))
         hint_row.addWidget(self._hint_label)
         layout.addLayout(hint_row)
 

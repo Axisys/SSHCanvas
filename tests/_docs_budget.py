@@ -29,15 +29,13 @@ CHAPTER_ORDER = (12, 8, 3, 10, 9, 13, 7, 4, 1, 2, 5, 6, 11)
 
 # (name, the marker the section starts at, the pin) — the pins are byte offsets into AGENTS.md and
 # they only ever DECREASE. The name is what the check reports; the marker is a literal of the file.
-# v1.12.1 re-based all four: the product name grew in the header ("SSHMap" → "SSHCanvas", 6 bytes per
-# free occurrence), so every position shifted DOWN the file; the four still start inside the budget.
-# v1.12.2.1 re-based them by 2 bytes: the header's `Current release` and §1.1 gained the patch
-# component of the release number (ONE byte each, above every pinned marker).
+# Re-base a pin on the measurement after an edit ABOVE its marker (`python tests/_docs_budget.py`
+# prints them); what moved a pin in an earlier release is that release's changelog entry.
 SECTION_PINS = (
-    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 804),
-    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8157),
-    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11260),
-    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5248),
+    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 802),
+    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 8155),
+    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 11258),
+    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5246),
 )
 
 DOC = "AGENTS.md"

@@ -31,6 +31,14 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
 
+try:  # v1.4.3: the widget-level stylesheets are the ONE registry (ui/theme_qss.py, AGENTS.md §4.6)
+    from . import theme_qss
+except ImportError:
+    try:
+        from ui import theme_qss
+    except ImportError:
+        theme_qss = None
+
 try:  # i18n — top-level package (flat run from the project root)
     from i18n import t as _translate
 except Exception:  # pragma: no cover - fallback path
@@ -204,6 +212,13 @@ def accent_swatches():
                ("violet", 262.0),
                ("slate", 215.0)]
     return [(name, hue, theme.accent_hex(hue)) for name, hue in presets]
+
+
+def swatch_style(fill: str, selected: bool = False) -> str:
+    """The stylesheet of one accent swatch from the registry ("" without the ui package)."""
+    if theme_qss is None:
+        return ""
+    return theme_qss.accent_swatch_style(fill, selected)
 
 
 def load_theme_settings() -> dict:
@@ -747,9 +762,9 @@ class SettingsDialog(QDialog):
             btn = QPushButton()
             btn.setFixedSize(26, 26)
             btn.setToolTip(_t(f"settings.appearance.accent.{name}"))
-            btn.setStyleSheet(
-                f"QPushButton {{ background-color: {hex_value};"
-                f" border: 1px solid {theme.SURFACE_ALT}; border-radius: 4px; }}")
+            # The chip's frame and radius belong to the QSS registry (AGENTS.md §4.6): only the
+            # swatch's OWN preset colour is decided here.
+            btn.setStyleSheet(swatch_style(hex_value))
             btn.clicked.connect(lambda _checked=False, h=hue: self._on_accent_hue(h))
             swatch_row.addWidget(btn)
             self._swatch_buttons[name] = (btn, hex_value)
@@ -807,11 +822,7 @@ class SettingsDialog(QDialog):
         try:
             for _name, (btn, hex_value) in getattr(self, "_swatch_buttons", {}).items():
                 selected = hex_value.lower() == (self._accent_hex or "").lower()
-                btn.setStyleSheet(
-                    f"QPushButton {{ background-color: {hex_value};"
-                    f" border: 2px solid "
-                    f"{theme.TEXT_PRIMARY if selected else theme.SURFACE_ALT};"
-                    f" border-radius: 4px; }}")
+                btn.setStyleSheet(swatch_style(hex_value, selected))
         except RuntimeError:
             pass  # Qt teardown — a button is already destroyed
 

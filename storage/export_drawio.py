@@ -24,6 +24,11 @@ try:  # v1.5rc2: the export palette + the declared pen styles (pure data — no 
 except ImportError:
     from ui import theme
 
+try:  # the exported identity is the product name — ONE home (version.py, `APP_NAME`)
+    from ..version import APP_NAME
+except ImportError:
+    from version import APP_NAME
+
 # The application's dark palette (an approximation of the map canvas)
 NODE_FILL = "#0f172a"       # dark blue node background
 NODE_STROKE = "#38bdf8"     # light blue frame
@@ -43,15 +48,14 @@ LAYER_MAP = "layer-map"
 
 
 def export_palette_colors(palette=PALETTE_PRINT) -> dict:
-    """The colours the drawio writer paints with (v1.5rc2, ROADMAP task 3).
+    """The colours the drawio writer paints with.
 
     `print` (the default) FOLLOWS THE LIGHT THEME: the white card (`node_bg`), the
-    STRONG accent as the outline (`accent_strong` — the tone the v1.5rc1 contrast gate
+    STRONG accent as the outline (`accent_strong` — the tone the contrast gate
     measured at 4.83 on the light canvas, where the decorative sky sits at 2.05) and
     the six arrow colours of the same instance, so the file agrees with the raster
-    export instead of repeating a second palette. `theme` keeps the format's own dark
-    palette (the module constants above), which is what the pre-v1.5rc2 exporter
-    wrote; an unknown id resolves to the print one.
+    export instead of repeating a second palette. `theme` answers the format's own dark
+    palette (the module constants above); an unknown id resolves to the print one.
     """
     instance = theme.export_theme(palette)
     if theme.resolve_export_palette(palette) != PALETTE_PRINT:
@@ -192,9 +196,9 @@ class DrawioExporter:
 
     # ── assembly ───────────────────────────────────────────────────────
     def build(self) -> ET.Element:
-        root = ET.Element("mxfile", {"host": "SSHCanvas"})
+        root = ET.Element("mxfile", {"host": APP_NAME})
         diagram = ET.SubElement(root, "diagram", {
-            "id": "sshcanvas-0", "name": "SSH Canvas"})
+            "id": "sshcanvas-0", "name": APP_NAME})
         model = ET.SubElement(diagram, "mxGraphModel", {
             "dx": "1000", "dy": "700", "grid": "1", "gridSize": "10",
             "guides": "1", "tooltips": "1", "connect": "1", "arrows": "1",
@@ -305,7 +309,7 @@ class DrawioExporter:
             ctype = getattr(arrow, "connection_type", "ssh")
             color = type_color_safe(ctype, self._colors["arrow_colors"])
             label = getattr(arrow, "label_text", "") or ""
-            # v1.5rc2 (ROADMAP task 1/3): the DECLARED pen style of the type travels into
+            # v1.5rc2: the DECLARED pen style of the type travels into
             # the file as the edge's width + dash pattern — the six types stay apart
             # without their colour.
             style = theme.arrow_type_style(ctype)
@@ -376,7 +380,7 @@ def export_scene_to_drawio(scene, path: str, palette=PALETTE_PRINT) -> int:
     for groups and nodes without data.id, i.e. the "cells" log actually counted groups. Now —
     the real number of mxCell in the file (including structural ones: the root "0"/"1" and the 3 layers).
 
-    v1.5rc2 (ROADMAP task 3): ``palette`` decides the colours — PRINT-FRIENDLY by
+    v1.5rc2: ``palette`` decides the colours — PRINT-FRIENDLY by
     default (the light page + the high-contrast outlines, the same decision as the
     PNG/PDF/SVG exports), ``PALETTE_THEME`` for the current look.
     """
@@ -388,7 +392,6 @@ def export_scene_to_drawio(scene, path: str, palette=PALETTE_PRINT) -> int:
         fh.write(data)
     return cells
 
-# The drawio IMPORT has no parser and no ROADMAP owner: `load_drawio_structure()` is DELETED
-# (v1.3.3.7 — the counter the round-trip test used is gone, and the decision with its reason is in
-# CHANGELOG.md); bringing the import back starts with a version section in ROADMAP.md and the
-# round-trip test counts the XML inline.
+
+# EXPORT ONLY — this module parses no drawio file: the round-trip check counts the XML inline
+# (`tests/test_drawio_export.py`).

@@ -6,9 +6,10 @@
 §2 the counters the reference docs quote are the CODE's counters (the i18n key pin, the action
 registry); §3 `DOCUMENTATION.md` is self-consistent (every `§N` resolves, the contents list is
 complete, the gotcha numbering is shared with `AGENTS.md` §7); §5 the documentation rules over the
-two reference docs and the repository's closed world; §6 the code-comment ratchet; §7 the byte budget
-of `AGENTS.md`. Hand edits are FREE: the default suite skips this file, a missing set is a SKIP, and
-`tests/test_index.py` — the generated suite map — stays always on.
+two reference docs and the repository's closed world (every `*.md` registered in ONE of the two
+lists AND the §2 repository map read against the TREE); §6 the code-comment ratchet; §7 the byte
+budget of `AGENTS.md`. Hand edits are FREE: the default suite skips this file, a missing set is a
+SKIP, and `tests/test_index.py` — the generated suite map — stays always on.
 Run: python tests/test_docs.py  (from the project root) or python tests/run_all.py --docs"""
 import collections
 import fnmatch
@@ -275,6 +276,14 @@ for _name in REFERENCE_DOCS:
           not _stale_empty, f"stale={_stale_empty}")
     check(f"§2 {_name}: every registry-size figure is the live one or a chain successor",
           not _stale_registry, f"stale={_stale_registry}")
+
+# The DOCUMENTATION.md header declares WHICH release the file describes ("the code as of the
+# current release (vX.Y.Z)"). Nothing read that figure back, so it sat at v1.12.2.2 while the tree
+# carried v1.12.4 — the same class as the map's rows: a document claim no guard resolved.
+_doc_header = _read(_DOC).split("\n---\n")[0]
+_header_versions = sorted(set(re.findall(r"v(\d+(?:\.\d+)+)", _doc_header)))
+check(f"§2 DOCUMENTATION.md's header names the SHIPPED release ({EXPECTED_APP_VERSION})",
+      _header_versions == [EXPECTED_APP_VERSION], f"header={_header_versions}")
 
 # The TEST-FILE counter in every spelling these docs use. `tests/test_i18n_live.py` §6 owns the PUBLIC
 # form ("123 test files" in the README, via the shared `TEST_FILE_COUNTER_RE`); the reference docs write
@@ -629,6 +638,76 @@ if os.path.exists(_GITIGNORE):
         check("§5 the §13 internal-document list is named by .gitignore (the list and the file agree)",
               len(_s13_list) >= 8 and not _s13_missing,
               f"names={len(_s13_list)} not ignored: {_s13_missing}")
+
+
+# ── the repository MAP and the closed-world list, read against the TREE (AUDIT N103) ──────────
+# §2 names the directories and the ROOT documents, §13.1 what the public page may link to. Nothing
+# read either list back, so three map rows named directories this tree does not hold (`DOCS/`,
+# `PLUGINS/`, `AUDIT/`) and passed. Each name is now resolved with the CASE it was written with
+# (Windows answers `DOCS/` for `docs/`) and with the KIND the row declares.
+_ENTRY_RE = re.compile(r"`([^`]+)`")
+
+
+def _exact_entry(rel):
+    """The path of a repository-relative name, case-sensitively — None when the tree lacks it."""
+    node = ROOT
+    for part in [p for p in rel.replace("\\", "/").split("/") if p]:
+        try:
+            names = os.listdir(node)
+        except OSError:
+            return None
+        if part not in names:        # `in` over the real listing: `DOCS` is not `docs`
+            return None
+        node = os.path.join(node, part)
+    return node
+
+
+def _first_cells(text):
+    """The first cell of every table row of one chapter — the names that chapter maps."""
+    cells = []
+    for line in text.splitlines():
+        if line.startswith("|"):
+            parts = line.split("|")
+            if len(parts) > 1:
+                cells.append(parts[1])
+    return cells
+
+
+_s2_start = _agt_text.find("## 2. Repository map")
+_s2_end = _agt_text.find("\n## ", _s2_start + 4) if _s2_start >= 0 else -1
+_map_names, _map_globs, _map_broken = 0, 0, []
+for _cell in (_first_cells(_agt_text[_s2_start:_s2_end]) if _s2_start >= 0 else []):
+    for _token in _ENTRY_RE.findall(_cell):
+        if _token.startswith("§") or "(" in _token or " " in _token:
+            continue
+        _map_names += 1
+        _is_dir = _token.endswith("/")
+        _name = _token.rstrip("/")
+        if "*" in _name:
+            _map_globs += 1
+            if not fnmatch.filter(os.listdir(ROOT), _name):
+                _map_broken.append(f"{_token} (no entry matches)")
+            continue
+        _found = _exact_entry(_name)
+        if _found is None:
+            _map_broken.append(f"{_token} (this tree holds no such entry)")
+        elif _is_dir and not os.path.isdir(_found):
+            _map_broken.append(f"{_token} (not a directory)")
+        elif not _is_dir and not os.path.isfile(_found):
+            _map_broken.append(f"{_token} (not a file)")
+check("§5 AGENTS.md §2 really maps this repository (a guard over nothing is useless)",
+      _map_names >= 20 and _map_globs >= 1, f"names={_map_names} globs={_map_globs}")
+check("§5 every name of the repository map resolves in the tree, with its CASE and its KIND "
+      "(AUDIT N103)", not _map_broken, _map_broken)
+
+_s13_allowed_start = _agt_text.find("* **Allowed:**")
+_s13_allowed_end = _agt_text.find("* **Forbidden", _s13_allowed_start)
+_s13_allowed = sorted(set(_ENTRY_RE.findall(_agt_text[_s13_allowed_start:_s13_allowed_end]))) \
+    if 0 <= _s13_allowed_start < _s13_allowed_end else []
+_s13_allowed_missing = [name for name in _s13_allowed if _exact_entry(name) is None]
+check("§5 the §13.1 ALLOWED list names files this tree holds (the map and the list are read "
+      "against the tree TOGETHER)", len(_s13_allowed) >= 8 and not _s13_allowed_missing,
+      f"names={len(_s13_allowed)} missing: {_s13_allowed_missing}")
 
 
 # ════════════════════════════════════════════════════════════════════════════
