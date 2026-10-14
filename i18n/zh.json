@@ -663,6 +663,7 @@
   "sshconfig.col_port": "SSH 端口",
   "sshconfig.col_user": "用户",
   "sshconfig.col_key": "密钥文件",
+  "sshconfig.col_jump": "跳板主机",
   "sshconfig.select_all": "全选",
   "sshconfig.select_none": "全不选",
   "sshconfig.skipped": "未导入（{count}）：",
@@ -671,7 +672,7 @@
   "sshconfig.reason.match": "Match 块 — 未导入",
   "sshconfig.reason.include_missing": "Include 未找到或无法读取：{detail}",
   "sshconfig.reason.duplicate": "地图上已存在（主机、端口和用户相同）",
-  "sshconfig.note.proxy": "不支持 ProxyJump/ProxyCommand — 已导入该主机但忽略此项",
+  "sshconfig.note.proxy": "不支持 ProxyCommand — 已导入该主机但忽略此项",
   "sshconfig.note.identity_extra": "多余的 IdentityFile 已忽略：{detail}",
   "sshconfig.not_found": "未找到 SSH config 文件：{path}",
   "ctx.reveal_on_map": "在地图上显示",
@@ -1113,5 +1114,7 @@
   "server.user_hint": "例如 root",
   "server.key_hint": "例如 ~/.ssh/id_ed25519",
   "server.required_hint": "必填：卡片通过别名和地址标识。",
-  "server.key_tooltip": "选择此服务器用于身份验证的私钥文件。"
+  "server.key_tooltip": "选择此服务器用于身份验证的私钥文件。",
+  "server.jump_label": "跳板主机:",
+  "server.jump_hint": "例如 user@bastion:22"
 }

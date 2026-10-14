@@ -663,6 +663,7 @@
   "sshconfig.col_port": "SSH-Port",
   "sshconfig.col_user": "Benutzer",
   "sshconfig.col_key": "Schlüsseldatei",
+  "sshconfig.col_jump": "Sprung-Host",
   "sshconfig.select_all": "Alle auswählen",
   "sshconfig.select_none": "Auswahl aufheben",
   "sshconfig.skipped": "Nicht importiert ({count}):",
@@ -671,7 +672,7 @@
   "sshconfig.reason.match": "Match-Block — nicht importiert",
   "sshconfig.reason.include_missing": "Include nicht gefunden oder unlesbar: {detail}",
   "sshconfig.reason.duplicate": "bereits auf der Karte (gleicher Host, Port und Benutzer)",
-  "sshconfig.note.proxy": "ProxyJump/ProxyCommand wird nicht unterstützt — der Host wurde ohne ihn importiert",
+  "sshconfig.note.proxy": "ProxyCommand wird nicht unterstützt — der Host wurde ohne ihn importiert",
   "sshconfig.note.identity_extra": "zusätzliche IdentityFile ignoriert: {detail}",
   "sshconfig.not_found": "Die SSH-Config-Datei wurde nicht gefunden: {path}",
   "ctx.reveal_on_map": "Auf der Karte zeigen",
@@ -1113,5 +1114,7 @@
   "server.user_hint": "z. B. root",
   "server.key_hint": "z. B. ~/.ssh/id_ed25519",
   "server.required_hint": "Pflichtfeld: Die Karte wird durch Alias und Adresse identifiziert.",
-  "server.key_tooltip": "Wählen Sie die Datei des privaten Schlüssels, mit dem sich dieser Server anmeldet."
+  "server.key_tooltip": "Wählen Sie die Datei des privaten Schlüssels, mit dem sich dieser Server anmeldet.",
+  "server.jump_label": "Sprung-Host:",
+  "server.jump_hint": "z. B. user@bastion:22"
 }

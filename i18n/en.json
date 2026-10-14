@@ -676,6 +676,7 @@
   "sshconfig.col_port": "SSH Port",
   "sshconfig.col_user": "User",
   "sshconfig.col_key": "Key file",
+  "sshconfig.col_jump": "Jump host",
   "sshconfig.select_all": "Check all",
   "sshconfig.select_none": "Uncheck all",
   "sshconfig.skipped": "Not imported ({count}):",
@@ -684,7 +685,7 @@
   "sshconfig.reason.match": "Match block — not imported",
   "sshconfig.reason.include_missing": "Include not found or unreadable: {detail}",
   "sshconfig.reason.duplicate": "already on the map (same host, port and user)",
-  "sshconfig.note.proxy": "ProxyJump/ProxyCommand is not supported — the host was imported without it",
+  "sshconfig.note.proxy": "ProxyCommand is not supported — the host was imported without it",
   "sshconfig.note.identity_extra": "extra IdentityFile ignored: {detail}",
   "sshconfig.not_found": "The SSH config file was not found: {path}",
   "ctx.reveal_on_map": "Show on Map",
@@ -1113,5 +1114,7 @@
   "server.user_hint": "e.g. root",
   "server.key_hint": "e.g. ~/.ssh/id_ed25519",
   "server.required_hint": "Required: the card is identified by its alias and its address.",
-  "server.key_tooltip": "Pick the private key file this server authenticates with."
+  "server.key_tooltip": "Pick the private key file this server authenticates with.",
+  "server.jump_label": "Jump host:",
+  "server.jump_hint": "e.g. user@bastion:22"
 }

@@ -126,7 +126,7 @@ _wrong = [s for s, want in _SHAPES if CH.looks_like_secret(s) is not want]
 check("§2 the declared shapes are marked and an ordinary command is NOT (the pattern list)",
       not _wrong, str(_wrong))
 check("§2 the DECLARED list is the module's single source and the predicate never raises",
-      len(CH.SECRET_PATTERNS) == 6
+      len(CH.SECRET_PATTERNS) == 10
       and all(hasattr(p, "search") for p in CH.SECRET_PATTERNS)
       and CH.looks_like_secret(None) is False and CH.looks_like_secret(42) is False
       and CH.looks_like_secret(b"x") is False, str(len(CH.SECRET_PATTERNS)))

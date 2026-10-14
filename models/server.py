@@ -82,6 +82,12 @@ class ServerData:
     # the inventory's sort key parses that field WHOLE. Additive: a foreign value loads as "" / [].
     disk_device: str = ""
     disk_devices: "list | None" = None
+    # v1.12.3 (ROADMAP task 2): the JUMP HOST of the EXTERNAL terminal — the value the OS ssh client
+    # takes after `-J` (`[user@]host[:port]`, a comma-separated chain). REQUEST-like and additive: a
+    # project without the key loads as "" ("no jump") and an older version ignores it, so
+    # `VERSION_FORMAT` stays "0.9". `modules/external_terminal.py` is the ONLY consumer — the INTERNAL
+    # path would need `open_channel("direct-tcpip")` (`AGENTS.md` §4.4.2).
+    jump_host: str = ""
 
     def __post_init__(self):
         if self.tags is None:
@@ -267,13 +273,13 @@ def server_data_from_dict(raw: dict) -> ServerData:
                              ('comment', ''), ('os_name', ''), ('cpu_model', '')):
         if data.get(_field) is None:
             data[_field] = _default
-    # v1.6.6 (ROADMAP task 5): the four DATA-mount strings are coerced by ONE rule — the
-    # `disk_mount` precedent (`_optional_text()`): a missing key, an explicit null, a number, a
-    # list or any other foreign value all degrade to "" ("never measured"), so a hand-edited
-    # project file can never put a non-string into a field the card and the dialog render.
-    # v1.7.1.2: the device REQUEST joins them, and the discovered LIST is sanitized like `tags`.
+    # v1.6.6 (ROADMAP task 5): the DATA-mount strings, the device REQUEST (v1.7.1.2) and the jump
+    # host (v1.12.3) are coerced by ONE rule — the `disk_mount` precedent (`optional_text()`): a
+    # missing key, an explicit null, a number, a list or any other foreign value all degrade to ""
+    # ("never measured" / "no jump"), so a hand-edited project file can never put a non-string into a
+    # field the card, the dialog and the `-J` command line render.
     for _field in ('disk_mount', 'disk_path', 'disk_free', 'disk_size', 'disk_inodes',
-                   'disk_device', 'disk_note', 'disk_device_note'):
+                   'disk_device', 'disk_note', 'disk_device_note', 'jump_host'):
         data[_field] = optional_text(data.get(_field))
     data['disk_devices'] = sanitize_device_list(data.get('disk_devices'))
     try:

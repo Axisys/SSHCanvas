@@ -3,11 +3,11 @@
 
 `SftpPaneViewerMixin` owns the reader: the panel's share of the `QSplitter`, the read task and its
 answer, the header (size, the truncation notice, the encoding, the heuristic language), the pane's
-ONE `QSyntaxHighlighter` with its lazy window, the word-wrap mode and the ENCODING choice
-(`ui_viewer_encoding`), and the panel's MOVE into the other pane (`present_viewer_in()` /
-`restore_viewer()` — the mc/far preview of `SFTP_PANES.md` §3b). The reader's CEILING
-(`ui_viewer_max_bytes`) is resolved ONCE by the pane and travels in the task, so the workers read no
-config (`AGENTS.md` §4.8, §4.15).
+ONE `QSyntaxHighlighter` with its lazy window, the word-wrap mode and the ENCODING choice (a
+per-pane value whose default is `ui_viewer_encoding`), and the panel's MOVE into the other pane
+(`present_viewer_in()` / `restore_viewer()` — the mc/far preview of `SFTP_PANES.md` §3b). The
+reader's CEILING (`ui_viewer_max_bytes`) is resolved ONCE by the pane and travels in the task, so
+the workers read no config (`AGENTS.md` §4.8, §4.15).
 
 Contract — `SFTP_PANES.md` §3b; mechanism — `DOCUMENTATION.md` §38, §64.
 """
@@ -483,23 +483,34 @@ class SftpPaneViewerMixin:
         return menu
 
     def _on_encoding_chosen(self, codec):
-        """An encoding row was chosen: the CONTAINER owns the ONE global setting (v1.9.3)."""
-        apply_all = getattr(self._container, "apply_viewer_encoding", None)
-        if callable(apply_all):
+        """An encoding row was chosen: the PANE's own choice is applied (v1.12.3).
+
+        The reader's encoding is a per-pane value — the codec the user picked in THIS pane is the
+        codec THIS pane reads its file with, so a CP1251 preview and a Latin-1 one live side by side
+        instead of fighting over one key. The container still owns the ONE remembered DEFAULT
+        (`ui_viewer_encoding`), so the door is told WHICH pane asked
+        (`apply_viewer_encoding(codec, pane=self)`): the value is written as the default for the
+        panes to come and the sibling's own choice is left alone. A container that answers nothing
+        keeps the shipped writer.
+        """
+        apply_one = getattr(self._container, "apply_viewer_encoding", None)
+        if callable(apply_one):
             try:
-                apply_all(codec)
+                apply_one(codec, pane=self)
                 return
             except RuntimeError:
                 return   # Qt teardown — nothing left to re-read
         self.set_viewer_encoding(codec)
 
     def set_viewer_encoding(self, codec, persist: bool = True, reread: bool = True) -> str:
-        """Set the reader's encoding CHOICE for THIS pane (the container walks the rest).
+        """Set the encoding CHOICE of THIS pane (the container's walk reaches this method).
 
         The text on the screen was decoded with the PREVIOUS choice, so a real change re-reads the
         file the preview holds instead of leaving a mis-decoded document there; a panel with nothing
         open simply carries the new default into its next read. The value is normalised against the
         DECLARED list, so a hand-edited config cannot reach the decoder with an unknown codec.
+        `persist` writes the value as the container's remembered DEFAULT — the menu route asks
+        through the container instead, which is what keeps the sibling's own choice intact.
         Never raises.
         """
         resolved = normalize_viewer_encoding(codec)
@@ -518,7 +529,11 @@ class SftpPaneViewerMixin:
 
     @property
     def viewer_encoding_choice(self) -> str:
-        """The encoding this reader ASKS for (`auto` — the shipped utf-8 → latin-1 rule)."""
+        """The encoding this reader ASKS for — ITS OWN choice (v1.12.3).
+
+        It starts as the container's remembered default (`ui_viewer_encoding`) and moves only when
+        THIS pane's menu asks for another codec; `auto` is the shipped utf-8 → latin-1 rule.
+        """
         return str(getattr(self, "_viewer_encoding_choice", "") or VIEWER_ENCODING_DEFAULT)
 
     def _on_viewer_menu(self, pos):

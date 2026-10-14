@@ -422,6 +422,10 @@ class SSHConnectDialog(QDialog):
             user=user,
             port=port,
             key_path=key_path or None,
+            # v1.12.3 (ROADMAP task 2): the node's jump host rides into `ssh -J` — the field itself is
+            # edited in the server properties dialog, and this dialog writes nothing on the failure
+            # path, so the value it passes is exactly the one the card carries.
+            jump=(getattr(self.server_data, "jump_host", "") or "").strip() or None,
         )
         if not ok:
             if err == "no_ssh_client":

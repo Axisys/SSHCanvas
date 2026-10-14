@@ -1029,8 +1029,11 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # v1.7.3 (ROADMAP v1.7.3, task 4): the reader's word wrap — ONE global setting, read at
         # construction so both panes and every session agree.
         self._viewer_wrap = resolve_viewer_wrap()
-        # v1.9.3: the reader's ENCODING choice — the SAME "one global setting, resolved ONCE" rule
-        # as the wrap above, plus the path the preview holds (the choice re-reads THAT file).
+        # v1.9.3: the reader's ENCODING — the remembered DEFAULT of a pane, resolved ONCE at
+        # construction (the wrap rule above). v1.12.3: the value is a STARTING POINT, not a ceiling:
+        # each pane's own menu moves ITS value alone (`apply_viewer_encoding(codec, pane=self)`), so
+        # a CP1251 preview and a Latin-1 one live side by side. `_viewer_path` is the file the
+        # preview holds (a choice re-reads THAT file).
         self._viewer_encoding_choice = resolve_viewer_encoding()
         self._viewer_path = ""
         # v1.7.5: the reader's CEILING — the SAME "one global setting, resolved ONCE" rule as the
@@ -2130,18 +2133,22 @@ class SftpTab(QWidget):
                 continue   # Qt teardown — the pane is already gone
         return saved
 
-    def apply_viewer_encoding(self, codec) -> str:
-        """Write the ONE encoding key and apply it to EVERY pane of this container (v1.9.3).
+    def apply_viewer_encoding(self, codec, pane=None) -> str:
+        """Write the ONE encoding key and apply it to the pane(s) the caller names (v1.9.3, v1.12.3).
 
-        The reader's second global setting, on the word-wrap rule: ONE resolved value for both
-        panes and every session, and a pane whose preview is open RE-READS its file (the shown text
-        was decoded with the previous choice). Returns the NORMALISED value that was applied.
+        The reader's encoding is ONE remembered DEFAULT (`ui_viewer_encoding`) beside a PER-PANE
+        choice: `pane=None` walks EVERY pane of this container — a container-wide change, where every
+        pane follows — while a pane asks for ITSELF (`pane=self`) when the user picks a codec in its
+        own menu, and its sibling keeps whatever it holds. Either way the chosen value is written as
+        the remembered default, so the next pane (and the next session) starts where the last
+        explicit choice left off. Returns the NORMALISED value that was applied.
         """
         resolved = normalize_viewer_encoding(codec)
         save_viewer_encoding(resolved)
-        for pane in list(self._panes):
+        targets = list(self._panes) if pane is None else [pane]
+        for target in targets:
             try:
-                pane.set_viewer_encoding(resolved, persist=False)
+                target.set_viewer_encoding(resolved, persist=False)
             except RuntimeError:
                 continue   # Qt teardown — the pane is already gone
         return resolved

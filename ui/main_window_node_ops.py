@@ -406,6 +406,7 @@ class NodeOpsMixin:
                 user=str(host.user or ""),
                 password="",
                 key_path=str(host.key_path or ""),
+                jump_host=str(getattr(host, "jump_host", "") or ""),
                 ssh_port=int(host.port or 22),
                 # a HostName that IS an address gives the node its ip field for free
                 ip=host_name if is_ip_address(host_name) else "",

@@ -188,6 +188,12 @@ class AddServerDialog(QDialog):
         self.port = QSpinBox()
         self.port.setValue(22)
         self.port.setRange(1, 65535)
+        # v1.12.3 (ROADMAP task 2): the JUMP HOST — the `-J` value the EXTERNAL terminal uses
+        # (`AGENTS.md` §4.4.2). One optional field of the credential family: it is disabled and
+        # cleared for an unmanaged card, exactly like the login beside it.
+        self.jump_host = QLineEdit()
+        self.jump_host.setPlaceholderText(
+            self.t("server.jump_hint") if self._i18n_available else "e.g. user@bastion:22")
 
         # The two fields that identify the card carry the REQUIRED marker; the placeholder is a
         # hint, never a substitute for the label (ROADMAP task 3).
@@ -231,6 +237,11 @@ class AddServerDialog(QDialog):
         key_hbox.addWidget(self.key_path)
         key_hbox.addWidget(key_btn)
         self.connection_form.addRow(self.t("server.key_label"), key_hbox)
+
+        # The jump host sits BESIDE the credential family it belongs to: it is a property of the
+        # connection, not of the card, and the label carries the directive a config import fills it
+        # from (`ProxyJump`), so the value that arrives from `~/.ssh/config` is recognisable here.
+        self.connection_form.addRow(self.t("server.jump_label"), self.jump_host)
 
         # v1.9.7 (ROADMAP task 4): the footer says what its buttons DO — `Save` closes and writes,
         # `Save & connect` names the second action's promise in its tooltip.
@@ -384,17 +395,20 @@ class AddServerDialog(QDialog):
                 "password": self.password.text(),
                 "key_path": self.key_path.text(),
                 "port": self.port.value(),
+                "jump_host": self.jump_host.text(),
             }
             self.user.clear()
             self.password.clear()
             self.key_path.clear()
             self.port.setValue(22)
+            self.jump_host.clear()
         elif self._credential_stash is not None:
             stash = self._credential_stash
             self._credential_stash = None
             self.user.setText(stash.get("user", ""))
             self.password.setText(stash.get("password", ""))
             self.key_path.setText(stash.get("key_path", ""))
+            self.jump_host.setText(stash.get("jump_host", ""))
             try:
                 self.port.setValue(int(stash.get("port", 22) or 22))
             except (TypeError, ValueError):
@@ -412,6 +426,7 @@ class AddServerDialog(QDialog):
         """
         for widget in (getattr(self, "user", None), getattr(self, "password", None),
                        getattr(self, "port", None), getattr(self, "key_path", None),
+                       getattr(self, "jump_host", None),
                        getattr(self, "key_btn", None), getattr(self, "profile_combo", None)):
             if widget is None:
                 continue
@@ -538,6 +553,7 @@ class AddServerDialog(QDialog):
         self.password.setText(d.password)  # password loaded via CredentialManager (keyring); never stored in JSON
         self.port.setValue(d.ssh_port or 22)
         self.key_path.setText(d.key_path or "")
+        self.jump_host.setText(getattr(d, "jump_host", "") or "")  # v1.12.3
         self.os_name.setText(d.os_name)  # v0.9
         self.cpu.setText(d.cpu)
         self.ram.setText(d.ram)
@@ -595,6 +611,9 @@ class AddServerDialog(QDialog):
             password="" if unmanaged else self.password.text(),  # plaintext from UI (server credentials are per-server)
             key_path="" if unmanaged else self.key_path.text(),
             ssh_port=22 if unmanaged else self.port.value(),
+            # v1.12.3 (ROADMAP task 2): a card with no SSH access carries no jump host either — the
+            # same rule the login beside it obeys.
+            jump_host="" if unmanaged else self.jump_host.text().strip(),
             x=self._data.x if self._data else 0,
             y=self._data.y if self._data else 0,
             # collapsed was not passed earlier — in a new ServerData

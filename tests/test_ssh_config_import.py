@@ -202,8 +202,10 @@ check("§3 a Match block is a skip record and its inside is NOT imported",
       and "internal" not in _skh, str(reasons(_sk.skipped)))
 check("§3 a directive after the Match block is read again (the block ends at Host)",
       _skh["after-match"].host == "10.0.0.9", str(_skh["after-match"]))
-check("§3 ProxyJump AND ProxyCommand are notes — the host stays imported",
-      reasons(_sk.notes).count(("jump-1", SCI.NOTE_PROXY)) == 2, str(reasons(_sk.notes)))
+check("§3 `ProxyJump` is IMPORTED as the host's jump host (v1.12.3: the `-J` value of the door)",
+      _skh["jump-1"].jump_host == "bastion.example.com", _skh["jump-1"].jump_host)
+check("§3 `ProxyCommand` is a note — a command is not a `-J` spec, the host stays imported",
+      reasons(_sk.notes).count(("jump-1", SCI.NOTE_PROXY)) == 1, str(reasons(_sk.notes)))
 check("§3 an extra IdentityFile is a note carrying the dropped path",
       ("jump-1", SCI.NOTE_IDENTITY_EXTRA) in reasons(_sk.notes)
       and any(i.detail.endswith("two") for i in _sk.notes), str(reasons(_sk.notes)))
@@ -214,8 +216,8 @@ check("§3 an unreadable Include is a skip record, not a failure",
       str(reasons(_sk.skipped)))
 check("§3 the host that carried the broken Include is still imported",
       _skh["after-match"].host == "10.0.0.9")
-check("§3 one host with a proxy directive yields ONE record per directive, not per host",
-      len([i for i in _sk.notes if i.reason == SCI.NOTE_PROXY]) == 2,
+check("§3 one host with a refused proxy directive yields ONE record, not per host",
+      len([i for i in _sk.notes if i.reason == SCI.NOTE_PROXY]) == 1,
       str(len(_sk.notes)))
 
 
@@ -424,7 +426,8 @@ from dialogs.ssh_config_import_dialog import SshConfigImportDialog, reason_text 
 from PySide6.QtCore import Qt  # noqa: E402
 
 DH = [SCI.SshConfigHost("web-1", "10.0.0.5", "ubuntu", 2222,
-                        os.path.join(HOME, ".ssh", "k1"), "cfg", 3),
+                        os.path.join(HOME, ".ssh", "k1"), "cfg", 3,
+                        jump_host="ops@bastion.example.com"),
       SCI.SshConfigHost("db-1", "10.0.0.6", "postgres", 22, "", "cfg", 9)]
 D_SKIP = [SCI.SshConfigIssue("*", SCI.REASON_WILDCARD, "", "cfg", 1),
           SCI.SshConfigIssue("old", SCI.REASON_DUPLICATE, "10.0.0.5", "cfg", 12)]
@@ -436,6 +439,12 @@ check("§7 the columns carry the parsed values",
       [dlg.tree.topLevelItem(0).text(i) for i in range(5)]
       == ["web-1", "10.0.0.5", "2222", "ubuntu", DH[0].key_path],
       str([dlg.tree.topLevelItem(0).text(i) for i in range(5)]))
+check("§7 ...and the SIXTH column is the jump host the row was parsed with (v1.12.3)",
+      dlg.tree.columnCount() == 6
+      and dlg.tree.headerItem().text(5) == i18n.t("sshconfig.col_jump")
+      and [dlg.tree.topLevelItem(i).text(5) for i in range(2)]
+      == ["ops@bastion.example.com", ""],
+      str([dlg.tree.topLevelItem(i).text(5) for i in range(2)]))
 check("§7 every row starts CHECKED (one OK imports everything)",
       dlg.checked_count() == 2 and all(
           dlg.tree.topLevelItem(i).checkState(0) == Qt.CheckState.Checked for i in range(2)))

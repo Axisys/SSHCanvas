@@ -984,6 +984,10 @@ class SshMixin:
             user=(data.user or "").strip(),
             port=data.ssh_port or 22,
             key_path=(data.key_path or "").strip() or None,
+            # v1.12.3 (ROADMAP task 2): the node's own jump host — the ONE value `ssh -J` takes. The
+            # INTERNAL path stays out of it (`AGENTS.md` §4.4.2): the OS client is what carries the
+            # proxy here, and `validate_target()` refuses a value its parser could act on.
+            jump=(getattr(data, "jump_host", "") or "").strip() or None,
         )
         if not ok:
             if err == "no_ssh_client":

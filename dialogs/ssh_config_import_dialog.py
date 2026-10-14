@@ -9,7 +9,7 @@ no import to confirm).
 
 The report under the tree shows what the parse DROPPED: `skipped` (not imported at all — a wildcard pattern,
 a `Match` block, an unreadable `Include`, a host the map already knows) and `notes` (imported, but a
-directive was dropped — `ProxyJump`/`ProxyCommand`, an extra `IdentityFile`). Both are hidden while empty, so
+directive was dropped — `ProxyCommand`, an extra `IdentityFile`). Both are hidden while empty, so
 a clean config shows the table and nothing else; the reason CODES are the parser's and the translation lives here (`_REASON_KEYS`)."""
 
 try:
@@ -70,10 +70,10 @@ class SshConfigImportDialog(QDialog):
         layout.addWidget(hint)
 
         self.tree = QTreeWidget()
-        self.tree.setColumnCount(5)
+        self.tree.setColumnCount(6)
         self.tree.setHeaderLabels([
             t("sshconfig.col_alias"), t("sshconfig.col_host"), t("sshconfig.col_port"),
-            t("sshconfig.col_user"), t("sshconfig.col_key"),
+            t("sshconfig.col_user"), t("sshconfig.col_key"), t("sshconfig.col_jump"),
         ])
         self.tree.setRootIsDecorated(False)
         self.tree.setSelectionMode(QTreeWidget.ExtendedSelection)
@@ -82,6 +82,9 @@ class SshConfigImportDialog(QDialog):
             row = QTreeWidgetItem([
                 str(host.alias), str(host.host), str(host.port),
                 str(host.user), str(host.key_path or ""),
+                # v1.12.3 (ROADMAP task 2): the `ProxyJump` value the row was parsed with — the
+                # fifth column is the key FILE, this one is the proxy the connect will carry.
+                str(getattr(host, "jump_host", "") or ""),
             ])
             row.setFlags(row.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             row.setCheckState(0, Qt.CheckState.Checked)
@@ -97,6 +100,7 @@ class SshConfigImportDialog(QDialog):
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.Stretch)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
         layout.addWidget(self.tree, 1)
 
         buttons = QHBoxLayout()

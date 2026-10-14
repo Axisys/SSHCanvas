@@ -132,6 +132,7 @@ of the file itself.
 | `test_files_followup.py` | — | The Files surface's first follow-up (v1.7.5): the listing that SORTS, the preview the user SIZES |
 | `test_files_surface.py` | — | The Files surface (v1.7.3): the cross-session send, the per-server memory, the pane drop, the wrapping reader. |
 | `test_first_run.py` | — | v1.5rc3 — First run & confidence: the demo map, the undo affordance and the age of a status. |
+| `test_followups_v1123.py` | — | The panel and the terminal: the small follow-ups (v1.12.3). |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |

@@ -7,10 +7,11 @@ whitespace or `=`, `"…"` quoting, a trailing `\`, `#` comments, `Host a b c` (
 `~/.ssh` (globs expanded); `load_ssh_config()` logs ONE record per call and answers the `skipped`/`notes` lists.
 
 IMPORTED: `HostName` → host (unset → the alias), `User` (unset → the local user), `Port` (unset →
-22), `IdentityFile` (the first one; `none` clears it). SKIPPED WITH A NOTE: a wildcard or `Match`
-block, `ProxyJump`/`ProxyCommand`, a second `IdentityFile`, an unreadable `Include` — the app has
-no jump-host concept and pattern matching is connection-time logic. HEADLESS: no Qt, no i18n, no
-network; every user string is a `REASON_*`/`NOTE_*` code plus a `detail`."""
+22), `IdentityFile` (the first one; `none` clears it), `ProxyJump` → jump_host (the `-J` value of the
+external terminal). SKIPPED WITH A NOTE: a wildcard or `Match` block, `ProxyCommand` (a command
+line that is NOT a `-J` spec), a second `IdentityFile`, an unreadable `Include` — pattern matching
+and process launching stay connection-time logic. HEADLESS: no Qt, no i18n, no network; every user
+string is a `REASON_*`/`NOTE_*` code plus a `detail`."""
 
 import getpass
 import glob
@@ -37,7 +38,7 @@ REASON_INCLUDE_MISSING = "include_missing"   # an Include that cannot be read
 REASON_DUPLICATE = "duplicate"          # the caller's deduplication (already on the map)
 
 # ── notes: the host IS imported, one of its directives was dropped ───────────
-NOTE_PROXY = "proxy"                    # ProxyJump / ProxyCommand / Jump
+NOTE_PROXY = "proxy"                    # ProxyCommand / Jump — a proxy this app cannot carry
 NOTE_IDENTITY_EXTRA = "identity_extra"  # a second IdentityFile of the same host
 
 # ── loader error codes (the ENTRY file only; a broken Include is a skip record)
@@ -45,8 +46,12 @@ ERROR_MISSING = "missing"
 ERROR_UNREADABLE = "unreadable"
 
 WILDCARD_CHARS = "*?["
-PROXY_DIRECTIVES = frozenset({"proxyjump", "proxycommand", "jump"})
-_KNOWN_OPTIONS = frozenset({"hostname", "user", "port", "identityfile"})
+#: The proxy directives whose value is NOT a `-J` spec: `ProxyCommand` runs a foreign program and
+#: `Jump` is not an OpenSSH keyword at all (it is accepted here as the same refused shape).
+PROXY_DIRECTIVES = frozenset({"proxycommand", "jump"})
+#: The ONE proxy directive that IS the `-J` value (`[user@]host[:port]`, a comma-separated chain).
+JUMP_DIRECTIVE = "proxyjump"
+_KNOWN_OPTIONS = frozenset({"hostname", "user", "port", "identityfile", JUMP_DIRECTIVE})
 
 
 class SshConfigError(Exception):
@@ -69,6 +74,8 @@ class SshConfigHost:
     key_path: str = ""
     source: str = ""      # the config file the alias was first seen in
     line: int = 0         # …and the line number of its `Host` directive
+    jump_host: str = ""   # the `ProxyJump` value — the `-J` argument of the external terminal
+                          # (appended LAST: a positional caller keeps its meaning)
 
 
 @dataclass(frozen=True)
@@ -343,6 +350,16 @@ def _apply_option(state: _State, ctx: _Context, alias: str, option: str, value: 
     """Set one option of one alias — the FIRST obtained value wins (OpenSSH rule)."""
     opts = state.options[alias]
 
+    if option == JUMP_DIRECTIVE:
+        if value.lower() == "none":
+            # the documented idiom "no jump" CLEARS the value (the IdentityFile rule)
+            opts[JUMP_DIRECTIVE] = ""
+            return
+        if JUMP_DIRECTIVE in opts:
+            return                                  # the first ProxyJump wins, like every option
+        opts[JUMP_DIRECTIVE] = value
+        return
+
     if option == "identityfile":
         if value.lower() == "none":
             # the documented idiom "no identity file": it CLEARS the key (last wins)
@@ -401,6 +418,7 @@ def parse_ssh_config(text: str, source: str = "", *, home: Optional[str] = None,
             user=opts.get("user") or ctx.local_user,
             port=int(opts.get("port") or DEFAULT_PORT),
             key_path=opts.get("identityfile", "") or "",
+            jump_host=opts.get(JUMP_DIRECTIVE, "") or "",
             source=state.source_of.get(alias, source),
             line=state.line_of.get(alias, 0),
         ))

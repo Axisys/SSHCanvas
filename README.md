@@ -60,13 +60,13 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf`, `reboot`, or `mkfs`.
 *   **Command Library:** Convert any historical command into a macro. Supports version history (ring of 10) and JSON import/export. The panel beside the sessions holds **two lists**, each with its own controls — `Commands` (Add / Edit / Delete and the library-file menu) and `Servers` (the aliases of the map's cards, with **Open map** / **Profiles** beside them), so a session can start another one without going back to the map (a session inside the map's own dock says so instead of offering the same window twice).
 *   **Command History:** A `History` tab per server, kept between sessions — import from disk or the server's `~/.bash_history`, filter and sort, copy a row back to the terminal, merge duplicates, clear the list. A command that looks like a secret is kept **and** marked with a padlock.
-*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position while a build talks (the default `"live"` pulls the view back), and an external system terminal (`ssh`) works as an alternative to the built-in one.
+*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position while a build talks (the default `"live"` pulls the view back), and an external system terminal (`ssh`) works as an alternative to the built-in one, with an optional **jump host** (`ssh -J`) per server — an imported `~/.ssh/config` fills it from `ProxyJump`.
 *   **SFTP & Files Commander:**
     *   **SFTP:** Integrated over the live SSH transport (no second auth). Supports drag & drop, atomic transfers, and a read-only preview with syntax highlighting.
     *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete; `Enter` opens, `Insert` marks and steps down, `Backspace` goes up). The preview opens in the other pane, and an `F3`–`F8` typed into a shell still reaches the shell.
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort, click again to reverse — folders stay grouped above the files and `..` stays on top, in both panes.
     *   **Preview Limits:** The preview reads 1 MB by default (up to 250 MB in Settings → Files) and wraps long lines on request; a bigger file opens with its first megabyte named in the header instead of being refused.
-    *   **Encodings:** A preview reads eight encodings (automatic, UTF-8, CP1251, CP1252, CP866, KOI8-R, Latin-1, GBK), names the one that really read the file, and re-reads an open file when you switch.
+    *   **Encodings:** A preview reads eight encodings (automatic, UTF-8, CP1251, CP1252, CP866, KOI8-R, Latin-1, GBK), names the one that really read the file, and re-reads an open file when you switch. The choice is **per pane** (the last one picked stays the default), so a CP1251 file and a Latin-1 one keep their own decoding.
     *   **Local Pane:** Access your local filesystem within the Files Commander with the same UI and shortcuts.
     *   **Elevated Pane:** Read-only access to a server using `sudo`. Passwords are entered via a separate secure channel.
     *   **Cross-Session Transfer:** Send files between two sessions of different servers; the file is relayed through the local machine temporarily.
@@ -129,7 +129,7 @@ The project is stored in a single `.json` or `.sshmap` file:
   "version": "0.9",
   "servers":  [{"id": "710602ee", "alias": "...", "host": "...", "user": "...",
                 "x": 0.0, "y": 0.0, "cpu": "", "ram": "", "disk": "", "ip": "",
-                "comment": "", "ssh_port": 22, "key_path": "",
+                "comment": "", "ssh_port": 22, "key_path": "", "jump_host": "",
                 "os_name": "", "cpu_model": "", "tags": ["prod", "dev"],
                 "info_collected_at": 1750000000.0,
                 "quick_launch": [{"type": "url", "name": "Webmin", "value": "http://host:10000/"},
@@ -144,6 +144,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 
 ### Format Invariants
 *   **Passwords:** Never serialized; stored only in the OS keyring.
+*   **Jump host:** Optional per server (`[user@]host[:port]`), used by the external terminal only; it is not a credential and an older version ignores the key.
 *   **Connections:** Types: `ssh|vpn|http|database|nfs|kubernetes`. Default is `ssh`.
 *   **Groups:** Membership is inferred by the card's center position relative to the group's rectangle.
 *   **Tags/Launch:** Broken `tags` arrays are emptied; broken `quick_launch` records are dropped.
@@ -225,7 +226,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 153 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 154 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

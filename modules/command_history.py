@@ -134,10 +134,11 @@ COMMAND_WIDTH_SAVE_DEBOUNCE_MS = 600
 #: PROJECT's `VERSION_FORMAT` is a different schema and is deliberately untouched, §5).
 SECRET_FIELD = "secret"
 
-#: The DECLARED secret shapes — a literal list, never a heuristic: `-p<value>` (mysql/sshpass) and
-#: `-p <value>`; `password=` / `--password <value>`; `passwd:` / `passwd=<value>`; `token=` / `secret=`
-#: / `api_key=` / `access_key=<value>` (any separator `=` or `:`); `Bearer <value>`; and `-----BEGIN`
-#: (a pasted PEM block). The patterns themselves are `SECRET_PATTERNS` below — this line names them.
+#: The DECLARED secret shapes — a literal list, never a heuristic: `-p<value>` / `-p <value>`,
+#: `password=` / `--password <value>`, `passwd:` / `passwd=<value>`, `token|secret|api_key|access_key`
+#: with `=` or `:`, `Bearer <value>`, `-----BEGIN`, `scheme://user:pass@host`, `-u`/`--user` (the
+#: VALUE must hold a `:`, so `sudo -u root` stays ordinary), an `Authorization:`-family header and
+#: `openssl passwd` — `DOCUMENTATION.md` §49 lists them with their expressions.
 SECRET_PATTERNS = (
     re.compile(r"(?:^|\s)-p\s*\S"),
     re.compile(r"(?:^|\s)--?pass(?:word|wd)?\s*[:=]?\s*\S", re.I),
@@ -145,6 +146,10 @@ SECRET_PATTERNS = (
     re.compile(r"\b(?:token|secret|api_key|access_key)\s*[:=]\s*\S", re.I),
     re.compile(r"\bBearer\s+\S"),
     re.compile(r"-----BEGIN"),
+    re.compile(r"\b[a-z][a-z0-9+.\-]*://[^\s/@:]+:[^\s/@]+@", re.I),
+    re.compile(r"(?:^|\s)--?u(?:ser)?[=\s]*[^\s:]+:\S", re.I),
+    re.compile(r"\bauthorization\s*:\s*\S", re.I),
+    re.compile(r"\bopenssl\s+passwd\b"),
 )
 
 

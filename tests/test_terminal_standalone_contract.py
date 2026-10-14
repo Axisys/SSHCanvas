@@ -393,6 +393,11 @@ check("§8 a password is NEVER serialized, logged or shown (the §4.4 rule)",
       and '"password"' not in TS_SRC
       and all("password" not in line for line in TS_SRC.splitlines() if "log." in line)
       and clause(8, "**A project file never carries a password**"))
+check("§8 the session limit is deliberately NOT asked — the clause and the code agree",
+      clause(8, "deliberately NOT asked")
+      and clause(8, "`window.add_session()` directly")
+      and "max_open" not in TS_SRC and "terminal_max_open" not in TS_SRC
+      and "max_open" in _text("ui", "main_window_ssh.py"))
 
 # ════════════════════════════════════════════════════════════════════════════
 print("== 9. the sentences and the keys (§9) ==")

@@ -663,6 +663,7 @@
   "sshconfig.col_port": "SSH-порт",
   "sshconfig.col_user": "Пользователь",
   "sshconfig.col_key": "Файл ключа",
+  "sshconfig.col_jump": "Промежуточный хост",
   "sshconfig.select_all": "Отметить все",
   "sshconfig.select_none": "Снять все",
   "sshconfig.skipped": "Не импортировано ({count}):",
@@ -671,7 +672,7 @@
   "sshconfig.reason.match": "блок Match — не импортируется",
   "sshconfig.reason.include_missing": "Include не найден или недоступен: {detail}",
   "sshconfig.reason.duplicate": "уже есть на карте (тот же хост, порт и пользователь)",
-  "sshconfig.note.proxy": "ProxyJump/ProxyCommand не поддерживается — хост импортирован без него",
+  "sshconfig.note.proxy": "ProxyCommand не поддерживается — хост импортирован без него",
   "sshconfig.note.identity_extra": "лишний IdentityFile пропущен: {detail}",
   "sshconfig.not_found": "Файл SSH config не найден: {path}",
   "ctx.reveal_on_map": "Показать на карте",
@@ -1113,5 +1114,7 @@
   "server.user_hint": "напр. root",
   "server.key_hint": "напр. ~/.ssh/id_ed25519",
   "server.required_hint": "Обязательное поле: карточка опознаётся по алиасу и адресу.",
-  "server.key_tooltip": "Выберите файл закрытого ключа, которым аутентифицируется этот сервер."
+  "server.key_tooltip": "Выберите файл закрытого ключа, которым аутентифицируется этот сервер.",
+  "server.jump_label": "Промежуточный хост:",
+  "server.jump_hint": "напр. user@bastion:22"
 }
