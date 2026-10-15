@@ -67,6 +67,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort, click again to reverse — folders stay grouped above the files and `..` stays on top, in both panes.
     *   **Preview Limits:** The preview reads 1 MB by default (up to 250 MB in Settings → Files) and wraps long lines on request; a bigger file opens with its first megabyte named in the header instead of being refused.
     *   **Encodings:** A preview reads eight encodings (automatic, UTF-8, CP1251, CP1252, CP866, KOI8-R, Latin-1, GBK), names the one that really read the file, and re-reads an open file when you switch. The choice is **per pane** (the last one picked stays the default), so a CP1251 file and a Latin-1 one keep their own decoding.
+    *   **Archive Viewer:** Right-click a `zip`, `tar`, `tar.gz`, `tgz`, `tar.bz2`, `tar.xz`, `car`, `war`, `jar` or `ear` and pick **Open Archive** to list its contents in the other pane. The listing is one level of regular files; a member opens in the same read-only preview as any other file (same size limit, encoding choice and highlighting). An encrypted archive is listed but never read, and no password is ever asked for it.
     *   **Local Pane:** Access your local filesystem within the Files Commander with the same UI and shortcuts.
     *   **Elevated Pane:** Read-only access to a server using `sudo`. Passwords are entered via a separate secure channel.
     *   **Cross-Session Transfer:** Send files between two sessions of different servers; the file is relayed through the local machine temporarily.
@@ -164,6 +165,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **2FA/Passphrases:** Answered in a secure application window; closing the window cancels the connection.
 *   **Guardrails:** "Production tags" and "Command guards" act as confirmation checkpoints for potentially dangerous actions (e.g., multi-line pastes or destructive commands).
 *   **Relayed Files:** Files sent between different servers are relayed through the local machine's temporary folder and are deleted immediately after transfer; a file over 100 MB is refused before anything moves.
+*   **Archive Viewer:** An archive opened for reading is copied into that same temporary folder (a local file is read where it lies) and the copy is deleted when the view closes. The view opens archives up to 256 MB by default — a larger one is refused before anything is copied — and it never extracts or writes anything.
 
 ### Behavioral Constraints
 *   **Undo/Redo:** Covers map elements (nodes, connections, notes, groups, edits) but **not** node statuses.
@@ -226,7 +228,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 156 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 157 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

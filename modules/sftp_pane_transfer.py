@@ -64,7 +64,12 @@ class SftpPaneTransferMixin:
         operation and normalize branches of a local pane render `local_error_text()` — the
         listing note of a skipped entry (`KIND_LIST_PARTIAL`) is the one answer that is NOT a
         failure and comes BEFORE every task map (the listing itself has already arrived).
+
+        v1.13: the ARCHIVE view's spool leg is asked FIRST (`_archive_answer()`), so a download the
+        `Open archive` row queued reports itself and never falls through to a listing branch.
         """
+        if self._archive_answer("error", task_id, message):
+            return
         if kind == local_fs.KIND_LIST_PARTIAL:
             self.message.emit(host_attr(self, "local_error_text")(message))
             return
@@ -670,7 +675,12 @@ class SftpPaneTransferMixin:
 
         v1.8: a transfer that rode the pane's OWN engine reports itself — the OS disk and the
         ELEVATED client have no session page listening to them (`ELEVATED_PANE.md` §3).
+
+        v1.13: the ARCHIVE view's spool leg is asked FIRST (`_archive_answer()`) — it opens the
+        listing (or drops an abandoned spool) and owns its own report.
         """
+        if self._archive_answer("done", task_id, detail):
+            return
         kind = self._op_tasks.pop(task_id, None)
         if kind in (KIND_COPY, KIND_MOVE):
             pane, dest_dir = self._op_targets.get(task_id) or (None, "")
@@ -702,6 +712,8 @@ class SftpPaneTransferMixin:
         self._on_task_finished(task_id)
 
     def _on_task_cancelled(self, task_id: int, _kind: str):
+        if self._archive_answer("cancelled", task_id, ""):
+            return   # v1.13: a cancelled ARCHIVE spool leg drops the copy it was writing
         kind = self._op_tasks.pop(task_id, None)
         # A cancelled pre-flight listing: its batch will never be queued (the
         # bookkeeping must not leak into the next transport).

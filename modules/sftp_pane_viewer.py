@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
-"""The read-only PREVIEW of ONE Files pane (`_SftpPane` wave 1).
+"""The read-only PREVIEW of ONE Files pane — the reader AND the archive view (`_SftpPane` wave 1).
 
-`SftpPaneViewerMixin` owns the reader: the panel's share of the `QSplitter`, the read task and its
-answer, the header (size, the truncation notice, the encoding, the heuristic language), the pane's
-ONE `QSyntaxHighlighter` with its lazy window, the word-wrap mode and the ENCODING choice (a
-per-pane value whose default is `ui_viewer_encoding`), and the panel's MOVE into the other pane
-(`present_viewer_in()` / `restore_viewer()` — the mc/far preview of `SFTP_PANES.md` §3b). The
-reader's CEILING (`ui_viewer_max_bytes`) is resolved ONCE by the pane and travels in the task, so
-the workers read no config (`AGENTS.md` §4.8, §4.15).
+`SftpPaneViewerMixin` owns the panel: the share of the `QSplitter`, the read task and its answer, the
+header (size, the truncation notice, the encoding, the heuristic language), the pane's ONE
+`QSyntaxHighlighter` with its lazy window, the word-wrap mode, the per-pane ENCODING choice and the
+panel's MOVE into the other pane (`present_viewer_in()` / `restore_viewer()`). v1.13 adds the ARCHIVE
+view: the SAME slot carries the flat listing of a `zip` / `tar.gz` / `.car`, a member previews
+through the shipped reader, and the spool it reads goes with the close. The reader's CEILING
+(`ui_viewer_max_bytes`) is resolved ONCE by the pane and travels in the task (`AGENTS.md` §4.8).
 
-Contract — `SFTP_PANES.md` §3b; mechanism — `DOCUMENTATION.md` §38, §64.
+Contract — `SFTP_PANES.md` §3b, `ARCHIVES.md`; mechanism — `DOCUMENTATION.md` §38, §64, §76.
 """
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QPlainTextEdit, QTreeWidgetItem
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QTreeWidget,
+                               QTreeWidgetItem, QVBoxLayout, QWidget)
 
 try:
     from i18n import t as _t
@@ -24,6 +26,11 @@ try:  # v1.4.7 (ROADMAP task 4): detection + tokenizers + the ONE highlighter
     from . import syntax_highlight as syntax
 except ImportError:
     import syntax_highlight as syntax
+
+try:  # v1.13: the pure archive reader behind the `Open archive` row
+    from . import archive_view as archive
+except ImportError:
+    import archive_view as archive  # type: ignore
 
 try:  # v1.3.1: the shipped read policy — the FLOOR of the reader's ceiling
     from .sftp_worker import MAX_READ_BYTES
@@ -72,6 +79,31 @@ def viewer_freeze_seconds(cap) -> float:
     except (TypeError, ValueError):
         return 0.0
     return mib * VIEWER_FREEZE_MS_PER_MB / 1000.0
+
+
+#: v1.13: the ARCHIVE view of the SAME panel (`ARCHIVES.md` §3) — the shipped listing's three
+#: columns over the readable members of ONE level. The tree is FLAT on purpose: a member name carries
+#: its own path, so a hierarchy would only repeat it.
+ARCHIVE_COLUMNS = 3
+ARCHIVE_COLUMN_WIDTH = 320
+
+
+class _ArchiveTree(QTreeWidget):
+    """The FLAT listing of ONE archive: `Esc` closes the view, `Enter` previews the current member.
+
+    A SUBCLASS, never a patched slot (`AGENTS.md` §7): the two keys are the view's own and every
+    other key stays Qt's (the arrows, the type-ahead and the selection walk are the tree's). It takes
+    no drop — the archive panel is a READING surface (`ARCHIVES.md` §5).
+    """
+
+    def __init__(self, pane, parent=None):
+        super().__init__(parent)
+        self.pane = pane
+
+    def keyPressEvent(self, event):  # noqa: N802 — Qt's own spelling
+        pane = self.pane
+        if pane is None or not pane.archive_key(event):
+            super().keyPressEvent(event)
 
 
 class SftpPaneViewerMixin:
@@ -175,7 +207,14 @@ class SftpPaneViewerMixin:
         decoded with the previous codec, so a change re-reads the file instead of leaving a
         mis-decoded document on the screen — and ONE place asks `queue_read()`, so the ceiling
         travels with it exactly once (AGENTS.md §4.15).
+
+        v1.13: a path that names a MEMBER of the open archive is read from the ARCHIVE (the spool the
+        panel already holds) — a member name exists inside the file on the screen and nowhere on the
+        server, so asking a provider for it would read a stranger's path (`ARCHIVES.md` §4).
         """
+        state = getattr(self, "_archive", None)
+        if state and path in state["entries"]:
+            return self._preview_member_by_name(path)
         provider = self.provider
         if provider is None:
             self.message.emit(_t("sftp.waiting_connection"))
@@ -209,7 +248,7 @@ class SftpPaneViewerMixin:
                                                         encoding=self.viewer_encoding_choice)
         self._show_viewer(path, len(data), text, encoding)
 
-    def _show_viewer(self, path: str, size: int, text: str, encoding: str = "utf-8"):
+    def _show_viewer(self, path: str, size: int, text: str, encoding: str = "utf-8", total=None):
         """Fill the panel with the file and show it (an unshown panel gets sizes).
 
         v1.4.7: the language is decided from the path AND the content
@@ -226,6 +265,9 @@ class SftpPaneViewerMixin:
         v1.7.5: the header's SIZE becomes the truncation notice when the read stopped at the
         ceiling — the listing knows the real size, so the panel can say how much of how many it
         shows (`sftp.viewer.truncated`) instead of presenting a part as the whole.
+
+        v1.13: `total` is the size of what is on the screen when the LISTING does not carry it — a
+        member of the open archive has no row in the pane's tree, so its real size travels in.
         """
         # The parser has a declared budget (N57): over it the extension hint is accepted WITHOUT the
         # parse and the header owes the heuristic note — a 250 MiB `.json` is never `json.loads`-ed.
@@ -233,7 +275,7 @@ class SftpPaneViewerMixin:
         language = syntax.detect_syntax(path, text, verify=verifiable)
         format_bytes = host_attr(self, "format_size")
         size_text = format_bytes(size)
-        total = self._known_size(path)
+        total = self._known_size(path) if total is None else int(total or 0)
         if int(total or 0) > int(size or 0):
             size_text = _t("sftp.viewer.truncated", shown=format_bytes(size),
                            total=format_bytes(total))
@@ -272,9 +314,22 @@ class SftpPaneViewerMixin:
 
     # ── v1.7rc3: the preview moved to the other pane (the mc F3 of the two-pane view) ──
 
+    def panel_in_slot(self):
+        """The panel this pane SHOWS — the ARCHIVE listing while one is open, the reader otherwise.
+
+        ONE slot, ONE panel: the two are moved between the panes by the same two methods and the
+        container asks "is a panel open" once (`viewer_host()`), which is what keeps the one-panel
+        rule true for both (`ARCHIVES.md` §5).
+        """
+        if getattr(self, "_archive_open", False):
+            panel = getattr(self, "archive_panel", None)
+            if panel is not None:
+                return panel
+        return self.viewer
+
     def _viewer_splitter(self):
-        """The splitter that really carries the viewer (its HOME pane's by default)."""
-        parent = self.viewer.parent()
+        """The splitter that really carries the panel (its HOME pane's by default)."""
+        parent = self.panel_in_slot().parent()
         return parent if parent is not None else self.splitter
 
     def _layout_viewer_share(self):
@@ -283,7 +338,7 @@ class SftpPaneViewerMixin:
         Qt gotcha #13: a splitter member's share is set via `setSizes()` only. The splitter can hold
         a THIRD member — a pane carrying a borrowed panel keeps its OWN one in the layout (hidden,
         so it lands nowhere) while the borrowed one takes the slot it left — which is why the share
-        is computed over the members BY NAME: the listing takes `VIEWER_TREE_SHARE`, the viewer that
+        is computed over the members BY NAME: the listing takes `VIEWER_TREE_SHARE`, the panel that
         is really on screen takes the rest and a panel that stepped aside answers 0. A share handed
         out by POSITION would give the column to the hidden member and leave the borrowed panel zero
         pixels wide: the borrowing pane changed its look and showed nothing at all.
@@ -291,9 +346,9 @@ class SftpPaneViewerMixin:
         splitter = self._viewer_splitter()
         try:
             count = splitter.count()
-            index = splitter.indexOf(self.viewer)
+            index = splitter.indexOf(self.panel_in_slot())
         except RuntimeError:
-            return   # Qt teardown — the splitter or the viewer is already gone
+            return   # Qt teardown — the splitter or the panel is already gone
         if count <= 0 or index < 0:
             return
         total = max(splitter.width(), self.VIEWER_MIN_TOTAL_PX)
@@ -312,15 +367,16 @@ class SftpPaneViewerMixin:
         splitter.setSizes(sizes)
 
     def viewer_host(self):
-        """The pane whose splitter currently carries the viewer (None — no preview is open).
+        """The pane whose splitter currently carries a panel (None — no preview is open).
 
-        ONE answer for the whole container: the pane that BORROWED the viewer registers itself in
+        ONE answer for the whole container: the pane that BORROWED the panel registers itself in
         `_viewer_host`, so "close the preview and restore the listing" has a single subject and
-        the pane that opened it never has to guess. The state is the DECLARED `_viewer_open` flag,
-        never `QWidget.isVisible()` — a pane that is not on screen yet (a never-shown dock tab, the
-        offscreen test platform) reports its widgets as invisible while its preview is really open.
+        the pane that opened it never has to guess. The state is the DECLARED `_viewer_open` /
+        `_archive_open` flag, never `QWidget.isVisible()` — a pane that is not on screen yet (a
+        never-shown dock tab, the offscreen test platform) reports its widgets as invisible while
+        its preview is really open.
         """
-        if not getattr(self, "_viewer_open", False):
+        if not (getattr(self, "_viewer_open", False) or getattr(self, "_archive_open", False)):
             return None
         if self._viewer_host is not None:
             return self._viewer_host
@@ -346,14 +402,15 @@ class SftpPaneViewerMixin:
             pass  # Qt teardown / a pane built before the rows exist
 
     def present_viewer_in(self, host, source=None) -> bool:
-        """Move THIS pane's viewer into `host`'s splitter; True — it really moved.
+        """Move THIS pane's OPEN panel into `host`'s splitter; True — it really moved.
 
         The two-pane view shows a preview WHERE THE OTHER PANE IS (mc and far do the same): the
         listing that opened it keeps the cursor and the keyboard, and the panel takes the other
-        pane's place for as long as it is open. The viewer is ONE widget owned by the pane it was
+        pane's place for as long as it is open. The panel is ONE widget owned by the pane it was
         built in, so the move is a re-parent (`QSplitter.insertWidget()`) instead of a second
         `QPlainTextEdit` per pane — the highlighter, the content and the × belong to the same
-        object, and closing the preview puts it back where it came from.
+        object, and closing the preview puts it back where it came from. v1.13: the ARCHIVE listing
+        takes the same slot, so both panels travel through this ONE method.
 
         **The host is a PANEL for as long as it carries the preview**: its address bar and its key
         row were already gone, and since v1.7 its LISTING leaves the layout too (`tree.hide()`), so
@@ -367,16 +424,17 @@ class SftpPaneViewerMixin:
         """
         if host is None or host is self or host is not self._container.other_pane(self):
             return False
+        panel = self.panel_in_slot()
         try:
             # The host's OWN panel steps aside — it stays in the splitter, hidden (a hidden member
             # takes no room) — and the borrowed one is inserted in the very slot it left, so the
             # panel is the pane's RIGHT column and not a third member squeezed to nothing.
-            index = host.splitter.indexOf(host.viewer)
+            index = host.splitter.indexOf(host.panel_in_slot())
             if index < 0:
                 index = host.splitter.count()
             else:
-                host.viewer.hide()
-            host.splitter.insertWidget(index, self.viewer)
+                host.panel_in_slot().hide()
+            host.splitter.insertWidget(index, panel)
         except RuntimeError:
             return False
         self._viewer_host = host
@@ -397,25 +455,26 @@ class SftpPaneViewerMixin:
         return True
 
     def restore_viewer(self) -> bool:
-        """Move the viewer back to its HOME pane; True — it really moved. Never raises.
+        """Move the OPEN panel back to its HOME pane; True — it really moved. Never raises.
 
         The home splitter shows the panel again (hidden) and the borrowing pane gets its listing
-        rows back; a pane that is being TORN DOWN never takes the viewer with it (the container
+        rows back; a pane that is being TORN DOWN never takes the panel with it (the container
         calls this before it destroys the pane).
         """
         host = self._viewer_host
         if host is None:
             return False
+        panel = self.panel_in_slot()
         self._viewer_host = None
         self._viewer_from = None
         try:
-            self.viewer.hide()
+            panel.hide()
         except RuntimeError:
             pass  # Qt teardown — the panel is already gone
         home = self._viewer_home
         if home is not None and home is not host:
             try:
-                home.splitter.addWidget(self.viewer)
+                home.splitter.addWidget(panel)
             except RuntimeError:
                 pass  # Qt teardown — the home pane is already gone
         try:
@@ -429,6 +488,278 @@ class SftpPaneViewerMixin:
                 home._sync_secondary_ui()
         except (RuntimeError, AttributeError):
             pass  # the home pane is gone / has no rows yet
+        return True
+
+    # ── v1.13: the archive view — the READ half of `ARCHIVES.md` ─────────────────
+
+    @property
+    def archive_open(self) -> bool:
+        """Is the ARCHIVE listing the panel this pane shows (the topical seam)?"""
+        return bool(getattr(self, "_archive_open", False))
+
+    @property
+    def archive_state(self):
+        """The open archive's facts — `path` / `local` / `kind` / `spool` / `entries` (None: none)."""
+        return getattr(self, "_archive", None)
+
+    def archive_key(self, event) -> bool:
+        """`Esc` leaves the view, `Enter` previews the current member; True — the key is consumed."""
+        try:
+            key = int(event.key())
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if key == int(Qt.Key.Key_Escape):
+            return bool(self._container.close_preview())
+        if key in (int(Qt.Key.Key_Return), int(Qt.Key.Key_Enter)):
+            self.preview_current_member()
+            return True
+        return False
+
+    def _op_view_archive(self, item):
+        """The `Open archive` row: claim the local copy of ONE archive and LIST it.
+
+        The ONE door of the READ half (`ARCHIVES.md` §3); the row itself is offered on a declared
+        archive of a FILE row, so the guards here stay defensive. A LOCAL source needs no copy — its
+        path IS a local path and the OS disk is read where it lies — while a remote or an elevated
+        one is DOWNLOADED into the SHIPPED spool, and the answer of that leg opens the view.
+        """
+        if self.provider is None:
+            self.message.emit(_t("sftp.waiting_connection"))
+            return
+        path = item.data(0, self.PATH_ROLE) if item is not None else ""
+        kind = archive.archive_kind(path)
+        if not path or item is None or item.data(0, self.ISDIR_ROLE) or not kind:
+            return   # the row is offered on a declared archive only — the door stays defensive
+        size = int(item.data(0, self.SIZE_ROLE) or 0)
+        limit = archive.resolve_archive_max_bytes()
+        format_bytes = host_attr(self, "format_size")
+        if not archive.size_allowed(size, limit):
+            self.message.emit(_t("sftp.archive.cap", size=format_bytes(size),
+                                 limit=format_bytes(limit)))
+            return
+        if not self._container.preview_allowed(self):
+            return   # ONE panel at a time — the shipped sentence names the busy pane
+        self._container.close_preview()
+        if self.source == host_attr(self, "SOURCE_LOCAL"):
+            self._show_archive(path, path, kind, "")
+            return
+        spool = archive.spool_archive(self.paths.basename(path))
+        if not spool:
+            self.message.emit(_t("sftp.op.error", error="spool"))
+            return
+        local_dir, local_name, part_mode = archive.spool_download_args(spool)
+        task = self.provider.queue_download(path, local_dir, total_size=size,
+                                            local_name=local_name, part_mode=part_mode)
+        if task is None:
+            archive.drop_archive(spool)
+            self.message.emit(_t("sftp.op.error", error="queue"))
+            return
+        self._archive_tasks[int(task)] = (path, spool, kind)
+        self._own_transfers.add(int(task))   # the shipped Cancel button covers the spool leg
+        self.message.emit(_t("sftp.viewer.reading", name=self.paths.basename(path)))
+
+    def _archive_answer(self, phase: str, task_id, payload) -> bool:
+        """Is this task ONE spool leg of THIS pane? — the ONE hook of the three worker handlers.
+
+        True means the answer was OURS and is answered here (the shipped handlers return at once).
+        A leg whose view was CLOSED while it was in flight lands here as well, so the temp copy it
+        published is dropped instead of reopening a panel nobody asked for.
+        """
+        task_id = int(task_id)
+        pending = self._archive_tasks.pop(task_id, None)
+        if pending is None:
+            return False
+        path, spool, kind = pending
+        abandoned = task_id in self._archive_dropped
+        self._archive_dropped.discard(task_id)
+        if phase == "done" and not abandoned:
+            self._show_archive(path, spool, kind, spool)
+        elif phase == "done":
+            archive.drop_archive(spool)
+        else:
+            archive.drop_archive(spool)
+            self.message.emit(_t("sftp.transfer_cancelled") if phase == "cancelled"
+                              else _t("sftp.op.error", error=str(payload or "")))
+        self._on_task_finished(task_id)
+        return True
+
+    def _show_archive(self, path, local, kind, spool):
+        """Read the LISTING of `local` and show the panel — the ONE place the view appears.
+
+        A parse that refuses answers ONE sentence and never dresses the other pane: the panel is
+        presented with the members already in it (the reader's rule), and the spool goes with it.
+        """
+        entries, encrypted, code = archive.archive_listing(local, kind)
+        if code:
+            archive.drop_archive(spool)
+            self.message.emit(_t("sftp.op.error", error=code))
+            return
+        panel = self._ensure_archive_panel()
+        self._archive = {"path": path, "local": local, "kind": kind, "spool": spool,
+                         "entries": {entry["raw"]: entry for entry in entries}}
+        self._archive_open = True
+        self._fill_archive_tree(entries)
+        head = _t("sftp.archive.header", name=self.paths.basename(path) or path,
+                  count=len(entries))
+        if encrypted:
+            head = f"{head} · {_t('sftp.archive.encrypted')}"
+        self.archive_label.setText(head)
+        self.archive_label.setToolTip(path)
+        # The SAME move the reader makes, with the content already in the widget: the panel takes the
+        # OTHER pane's slot (mc/far) and stays in this one while there is no second pane.
+        self._container.present_viewer(self)
+        panel.show()
+        self._layout_viewer_share()
+
+    def _ensure_archive_panel(self):
+        """Build the archive panel ONCE per pane — lazily, like every other cost of this view.
+
+        It mirrors the reader's shape (a header line with the ×, then the listing) because it takes
+        the SAME slot of the splitter; a pane that never opens an archive builds none of it.
+        """
+        panel = getattr(self, "archive_panel", None)
+        if panel is not None:
+            return panel
+        panel = QWidget()
+        panel.setMinimumWidth(self.viewer.minimumWidth())
+        box = QVBoxLayout(panel)
+        box.setContentsMargins(4, 0, 0, 0)
+        box.setSpacing(2)
+        head = QHBoxLayout()
+        head.setSpacing(6)
+        self.archive_label = QLabel("")
+        host_attr(self, "_apply_status_style")(self.archive_label, "status.sftp_row")
+        self.archive_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.archive_label.setWordWrap(False)
+        self.archive_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.btn_archive_close = QPushButton("\u00d7")   # × — the panel header's close cross
+        self.btn_archive_close.setFixedWidth(24)
+        self.btn_archive_close.setToolTip(_t("sftp.viewer.close_tooltip"))
+        self.btn_archive_close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        head.addWidget(self.archive_label, 1)
+        head.addWidget(self.btn_archive_close, 0)
+        box.addLayout(head)
+        self.archive_tree = _ArchiveTree(self)
+        self.archive_tree.setColumnCount(ARCHIVE_COLUMNS)
+        self.archive_tree.setHeaderLabels([_t("sftp.column_name"), _t("sftp.column_size"),
+                                           _t("sftp.column_modified")])
+        self.archive_tree.setRootIsDecorated(False)   # ONE level: a flat list of member names
+        self.archive_tree.setUniformRowHeights(True)
+        self.archive_tree.setColumnWidth(0, ARCHIVE_COLUMN_WIDTH)
+        self.archive_tree.itemDoubleClicked.connect(self._on_archive_item)
+        box.addWidget(self.archive_tree, 1)
+        panel.hide()
+        self.archive_panel = panel
+        self.btn_archive_close.clicked.connect(self._on_archive_close)
+        self.splitter.addWidget(panel)
+        try:
+            self.splitter.setCollapsible(self.splitter.indexOf(panel), True)
+        except (RuntimeError, TypeError):
+            pass   # Qt teardown — the splitter is already gone
+        return panel
+
+    def _fill_archive_tree(self, entries):
+        """Fill the flat listing (Name | Size | Modified) with the members the parse answered."""
+        format_bytes = host_attr(self, "format_size")
+        format_mtime = host_attr(self, "format_mtime")
+        self.archive_tree.clear()
+        for entry in entries:
+            item = QTreeWidgetItem([entry["name"], format_bytes(entry["size"]),
+                                    format_mtime(entry["mtime"])])
+            item.setData(0, self.PATH_ROLE, entry["raw"])
+            item.setToolTip(0, entry["name"])
+            self.archive_tree.addTopLevelItem(item)
+
+    def _on_archive_close(self):
+        """The archive panel's × — the SHIPPED close door (the container closes whichever is open)."""
+        try:
+            self._container.close_preview()
+        except (RuntimeError, AttributeError):
+            self.close_viewer()
+
+    def _reset_archive(self):
+        """Drop the spool, empty the listing and hide the panel — the state this view owns.
+
+        A leg still in flight is marked ABANDONED rather than forgotten: it keeps its entry in
+        `_archive_tasks`, so the answer that lands afterwards drops the temp copy it published
+        instead of showing a listing the user has closed. Never raises.
+        """
+        state = getattr(self, "_archive", None) or {}
+        self._archive_open = False
+        self._archive = None
+        self._archive_dropped |= {int(task_id) for task_id in self._archive_tasks}
+        archive.drop_archive(state.get("spool") or "")
+        panel = getattr(self, "archive_panel", None)
+        if panel is None:
+            return
+        try:
+            self.archive_tree.clear()
+            self.archive_label.clear()
+            self.archive_label.setToolTip("")
+            panel.hide()
+        except (RuntimeError, AttributeError):
+            pass   # Qt teardown — the panel is already gone
+
+    def _archive_forget_legs(self):
+        """Drop every spool leg of a provider this pane is LEAVING. Never raises.
+
+        A leg of the provider just left answers nobody (its slots are disconnected with it), so the
+        file it may still publish is dropped here and, above all, no map survives the transport.
+        """
+        for _task_id, (_path, spool, _kind) in list(self._archive_tasks.items()):
+            archive.drop_archive(spool)
+        self._archive_tasks.clear()
+        self._archive_dropped.clear()
+
+    def preview_current_member(self):
+        """`Enter` on the flat listing (the double click's twin)."""
+        try:
+            item = self.archive_tree.currentItem()
+        except (RuntimeError, AttributeError):
+            return
+        if item is None:
+            self.message.emit(_t("sftp.cmd.no_selection"))
+            return
+        self._preview_member(item)
+
+    def _on_archive_item(self, item, _column=0):
+        """A double click on a member row — the ONE gesture of the listing."""
+        self._preview_member(item)
+
+    def _preview_member(self, item):
+        """A member ROW was asked for: read it through the shipped policy."""
+        raw = item.data(0, self.PATH_ROLE) if item is not None else ""
+        if raw:
+            self._preview_member_by_name(str(raw))
+
+    def _preview_member_by_name(self, raw: str) -> bool:
+        """Read ONE member of the OPEN archive into this pane's reader panel; False — nothing read.
+
+        The bytes come from the local copy the panel already holds (the spool or the OS disk), so the
+        read is LOCAL and bounded by the reader's ceiling; the member's NAME travels as the reader's
+        path, which is what makes the syntax hint, the truncation notice and the encoding choice the
+        shipped ones. The reader stays in the pane that OPENED the archive — the other pane carries
+        the listing, and `ARCHIVES.md` §5 makes the two panels ONE preview session.
+        """
+        state = getattr(self, "_archive", None)
+        if not state:
+            return False
+        entry = state["entries"].get(raw)
+        if entry is None:
+            return False
+        cap = self.viewer_cap()
+        data, code = archive.read_member(state["local"], state["kind"], entry["raw"], cap,
+                                         entry["size"])
+        if code == archive.ARCHIVE_ERROR_ENCRYPTED:
+            self.message.emit(_t("sftp.archive.encrypted"))
+            return False
+        if code:
+            self.message.emit(self._read_error_text(code, entry["name"]))
+            return False
+        truncated = host_attr(self, "read_was_truncated")(len(data), cap, int(entry["size"] or 0))
+        text, encoding = host_attr(self, "decode_text")(bytes(data), truncated=truncated,
+                                                       encoding=self.viewer_encoding_choice)
+        self._show_viewer(entry["name"], len(data), text, encoding, total=int(entry["size"] or 0))
         return True
 
     # ── v1.4.7 (ROADMAP task 3/4): the lazy syntax highlighting ─────────────
@@ -685,7 +1016,14 @@ class SftpPaneViewerMixin:
         v1.7rc3: a BORROWED panel goes back to the pane it belongs to first (the other pane gets
         its listing and its address bar back), so closing the preview always restores the two-pane
         look the user had before it.
+
+        v1.13: an open ARCHIVE view is the panel this method closes — `ARCHIVES.md` §5 makes the
+        listing and a member's preview ONE session, so the archive panel goes home, the spool it
+        read is dropped and only then does the reader's own content leave.
         """
+        if getattr(self, "_archive_open", False):
+            self.restore_viewer()   # the ARCHIVE panel is the one the other pane carries
+            self._reset_archive()
         self._read_tasks.clear()
         self._last_read = None
         # v1.4.7: the panel is empty → the formatting pass has nothing to cover.

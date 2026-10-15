@@ -35,6 +35,11 @@ try:  # the cross-session relay of `Send to…` and its declared ceiling
 except ImportError:  # flat launch from the project root
     import sftp_send as send
 
+try:  # v1.13: the declared archive family behind the `Open archive` row
+    from . import archive_view as archive
+except ImportError:
+    import archive_view as archive  # type: ignore
+
 
 def _facade_attr(name, default=None):
     """An attribute of the SHIPPED facade module at call time — the `modules.sftp_tab` seam.
@@ -65,18 +70,21 @@ class SftpPaneDndMixin:
             menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _build_context_menu(self, item=None):
-        """New folder / Rename / Delete / Copy remote path (a test seam: the tests
+        """New folder / Rename / Delete / Copy remote path / Open archive (a test seam: the tests
         trigger the QActions directly — `menu.exec()` never runs offscreen).
 
         Rename/Delete/Copy are enabled only for a REAL row of the current listing
         (never for the ".." row, never for empty space) — a disabled item is the
-        hint, the actions themselves stay defensive.
+        hint, the actions themselves stay defensive. `Open archive` (v1.13) follows the same rule
+        and asks the SUFFIX as well (`modules/archive_view.py`), so it is live on a declared
+        archive of a file row and on nothing else (`ARCHIVES.md` §3).
         """
         menu = host_attr(self, "QMenu")(self)
         act_new = menu.addAction(_t("sftp.op.new_folder"))
         act_rename = menu.addAction(_t("sftp.op.rename"))
         act_delete = menu.addAction(_t("sftp.op.delete"))
         act_copy = menu.addAction(_t("sftp.op.copy_path"))
+        act_archive = menu.addAction(_t("sftp.archive.open"))
         # v1.7.3 (task 1): `Send to ▸ <session>` — the rows of the sessions open RIGHT NOW.
         sub = self._build_send_menu(item)
         if sub is not None:
@@ -86,8 +94,11 @@ class SftpPaneDndMixin:
 
         real = (item is not None and item is not self._up_item
                 and bool(item.data(0, self.PATH_ROLE)))
+        readable = bool(real and not item.data(0, self.ISDIR_ROLE))
+        is_archive = bool(readable and archive.archive_kind(item.data(0, self.PATH_ROLE)))
         for act in (act_rename, act_delete, act_copy):
             act.setEnabled(bool(real))
+        act_archive.setEnabled(is_archive)
 
         act_new.triggered.connect(lambda: self._op_new_folder())
         act_refresh.triggered.connect(lambda: self._relist(self._current_dir))
@@ -95,6 +106,8 @@ class SftpPaneDndMixin:
             act_rename.triggered.connect(lambda: self._op_rename(item))
             act_delete.triggered.connect(lambda: self._op_delete(item))
             act_copy.triggered.connect(lambda: self._op_copy_path(item))
+        if is_archive:
+            act_archive.triggered.connect(lambda: self._op_view_archive(item))
         return menu
 
     # ── v1.7.3 (task 1): `Send to ▸ <session>` — the cross-session relay ──

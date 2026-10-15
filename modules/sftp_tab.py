@@ -1006,6 +1006,13 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # that is not on screen yet (a dock tab that was never shown, the offscreen test
         # platform), so the preview state is never read off the widgets.
         self._viewer_open = False
+        # v1.13: the ARCHIVE view (`ARCHIVES.md`) — the listing the SAME panel carries, the local
+        # copy it reads (`local`, the spool for a remote source and the path itself for a local one),
+        # the spool leg in flight and the legs a close ABANDONED (their answer drops the copy).
+        self._archive = None
+        self._archive_open = False
+        self._archive_tasks = {}
+        self._archive_dropped = set()
         # v1.6.3 (ROADMAP task 4): the address bar's own bookkeeping — the normalize tasks
         # in flight (task_id → the text the user typed) and the completer's listings
         # (task_id → the directory they answer). `_completer_dir` is the directory the
@@ -1371,6 +1378,9 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._disconnect_worker(old)
         self._transfer_tasks.clear()
         self._own_transfers.clear()
+        # v1.13: an archive read rides ONE provider as well — the spool it was downloading has no
+        # answer on the new transport, so it goes with the provider it belonged to.
+        self._archive_forget_legs()
         # v1.3.3.2: the operation answers and the pre-flight listings belong to the
         # transport that was asked — a new worker starts with a clean bookkeeping.
         self._op_tasks.clear()
@@ -1626,6 +1636,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         """
         for widget in (getattr(self, "path_label", None),
                        getattr(self, "viewer_label", None),
+                       getattr(self, "archive_label", None),
                        getattr(self, "hints_label", None),
                        getattr(self, "header_label", None)):
             if widget is None:
@@ -1682,6 +1693,12 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
                                        _t("sftp.column_modified")])
             self.tree.setToolTip(_t("sftp.drag_hint"))
             self.btn_viewer_close.setToolTip(_t("sftp.viewer.close_tooltip"))
+            # v1.13: the archive panel's own chrome — it exists only after the first `Open archive`
+            # (the header LINE describes the open archive, so it is re-rendered by the next open).
+            if getattr(self, "archive_panel", None) is not None:
+                self.archive_tree.setHeaderLabels([_t("sftp.column_name"), _t("sftp.column_size"),
+                                                   _t("sftp.column_modified")])
+                self.btn_archive_close.setToolTip(_t("sftp.viewer.close_tooltip"))
             # v1.6.3: the address bar's placeholder.
             self.path_label.setPlaceholderText(_t("sftp.path_placeholder"))
             # v1.7.4rc1: the source switch of the pane (its label, its two buttons and the
@@ -1812,6 +1829,8 @@ class SftpTab(QWidget):
         "_sort_column", "_sort_desc", "_viewer_cap",
         # v1.9.3: the reader's ENCODING choice and the path its preview holds (the choice re-reads it).
         "_viewer_encoding_choice", "_viewer_path",
+        # v1.13: the ARCHIVE view — the open listing, its local copy and the spool legs in flight.
+        "_archive", "_archive_open", "_archive_tasks", "_archive_dropped",
     })
 
     # Local hints in the window's status bar (waiting for connection, no selection).
@@ -2428,11 +2447,17 @@ class SftpTab(QWidget):
         ONE-pane case (the shipped in-pane panel) and for a read whose answer lost the race against
         a preview the other pane opened meanwhile (there the panel shows in its OWN pane: honest,
         and it keeps the one-preview rule true).
+
+        v1.13: a pane that ALREADY carries a panel of this one (the archive listing) keeps it — the
+        reader then shows a member in the pane it was opened from, which is exactly the commander's
+        two-sided look (`ARCHIVES.md` §5).
         """
         if pane is None or pane not in self._panes:
             return False
         other = self.other_pane(pane)
         if other is None:
+            return False
+        if getattr(other, "_viewer_borrowed", False):
             return False
         if not self.preview_allowed(pane, report=False):
             return False

@@ -300,7 +300,7 @@ check("§4 the two placeholders survive in every language (a count and a budget)
       str({c: _LANGS[c]["plugins.command.note"] for c in _LANGS}))
 check("§4 the release moved, the SCHEMA did not and the pin counts the thirteen new keys "
       "(plus v1.9.6's three: the command guard, v1.9.7's twelve: the Add Server form, and v1.9.8's thirteen: the two `Clear` asks, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row)",
-      releases_at_least(EXPECTED_APP_VERSION, "1.9.3") and EXPECTED_I18N_KEYS == 1051 + 10 + 3 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1
+      releases_at_least(EXPECTED_APP_VERSION, "1.9.3") and EXPECTED_I18N_KEYS == 1051 + 10 + 3 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4
       and __import__("version").VERSION_FORMAT == "0.9", str(EXPECTED_I18N_KEYS))
 check_i18n_parity(_LANGS)
 check_i18n_format(_LANGS)

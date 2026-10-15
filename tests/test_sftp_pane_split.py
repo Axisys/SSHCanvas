@@ -63,7 +63,13 @@ WAVE = {
         "_viewer_block_range", "_highlight_visible", "_on_viewer_update_request",
         "viewer_highlighter", "viewer_language", "viewer_encoding", "close_viewer",
         # v1.9.3: the reader's encoding CHOICE — its menu row, its setter and its two readers.
-        "_on_encoding_chosen", "set_viewer_encoding", "viewer_encoding_choice"]),
+        "_on_encoding_chosen", "set_viewer_encoding", "viewer_encoding_choice",
+        # v1.13: the ARCHIVE view — the panel slot it shares with the reader, the ONE row's door,
+        # the spool leg, the flat listing and the member's preview (`ARCHIVES.md`).
+        "panel_in_slot", "archive_open", "archive_state", "archive_key", "_op_view_archive",
+        "_archive_answer", "_show_archive", "_ensure_archive_panel", "_fill_archive_tree",
+        "_on_archive_close", "_reset_archive", "_archive_forget_legs", "preview_current_member",
+        "_on_archive_item", "_preview_member", "_preview_member_by_name"]),
 }
 # The WAVE-2 plan: the transfers with the conflict question and the batch copy/move, the drag & drop
 # with the row context menu, and the pure helpers in their own module.
@@ -174,8 +180,8 @@ check("§2 the AST reader of the family still finds EVERY wave method (its pins 
       all(pane_func_owner(m, ROOT) for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items()
           for m in methods))
 check("§2 the method counts are the plan's (23 + 25 + 28 in wave 1 — v1.9.3 adds the reader's "
-      "encoding four, 29 + 15 in wave 2, 25 kept)",
-      [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 32]
+      "encoding four, v1.13 the archive's sixteen, 29 + 15 in wave 2, 25 kept)",
+      [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 48]
       and [len(m) for _rel, (_n, _c, m) in WAVE2.items()] == [29, 15]
       and len(_class_method_names("modules/sftp_tab.py", "_SftpPane")) == len(FACADE_METHODS),
       str({rel: len(m) for rel, (_n, _c, m) in WAVE2.items()}))
@@ -443,7 +449,7 @@ check("§7 the waves add NO i18n key and NO schema move (the release's OWN featu
       "`ELEVATED_PANE.md`; v1.8.1 adds its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair"
       " — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its"
       " export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 and VERSION_FORMAT == "0.9",
+      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 and VERSION_FORMAT == "0.9",
       f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
 check("§7 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)

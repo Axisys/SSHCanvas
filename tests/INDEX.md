@@ -100,6 +100,7 @@ of the file itself.
 | `test_actions_keyboard.py` | — | v1.3.3.3 — The action registry, completed: keyboard, on-demand operations, About. |
 | `test_activity_panel.py` | — | v1.5.2 — the activity panel: the history the interface never kept. |
 | `test_alt_screen.py` | — | v1.2.12 — Terminal: alternate screen (private modes 47/1047/1048/1049). |
+| `test_archives.py` | — | The archive view (v1.13) — the READ half of `ARCHIVES.md`. |
 | `test_audit_rc1_threads.py` | slow | v1.2.10rc1 — Audit: threads and teardown (the auto #2 and manual #1 findings plus a verification one). |
 | `test_audit_rc2_robustness.py` | — | v1.2.10rc2 — Audit: robustness and code hygiene (the manual #5/#6 and auto #7 findings). |
 | `test_audit_v1210.py` | — | v1.2.10 — Audit: confirmed bugs and data (AUDIT.md): the release's themed test. |

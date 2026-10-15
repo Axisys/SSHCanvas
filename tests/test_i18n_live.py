@@ -673,7 +673,10 @@ def _audit_roadmap():
     check("ROADMAP.md: no quoted figure is a stale outlier of the chain",
           # v1.4.5: the bound is RELATIVE to the pin (the absolute "600" of v1.3.3.1 went stale the
           # moment the shipped key count passed it — the pin is the only number that may live here).
-          all(EXPECTED_I18N_KEYS - 1 <= f <= EXPECTED_I18N_KEYS + 20 for f in figures),
+          # The 1.13 line carries FIVE planned slots (the archive's two halves, the terminal background,
+          # the Files/Servers row verbs, the Diff tab — ROADMAP.md, "The planned chain of this line"),
+          # so the headroom is the line's own projection (~34 keys), not the one-slot 20 of a one-version plan.
+          all(EXPECTED_I18N_KEYS - 1 <= f <= EXPECTED_I18N_KEYS + 40 for f in figures),
           f"quoted={figures} pin={EXPECTED_I18N_KEYS}")
     check("ROADMAP.md spells the baseline out in the header (a released section is removed from the "
           "plan)",
@@ -867,7 +870,7 @@ check("the pin counts the keys of the SHIPPED release (v1.5.2 added THIRTEEN —
       "title and the three column captions, its three buttons, the door of the Plugins menu, the "
       "checked-servers hint, the two empty sentences and the twelve column headers of its tables"
       " — 1003 + 23 = 1026, and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the four section titles of the Add Server dialog, its four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.9.8 adds THIRTEEN: the two `Clear` asks with their two hints and their one title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1,
+      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4,
       str(EXPECTED_I18N_KEYS))
 check_release_state(ROOT)
 for _code in i18n_lang_codes(ROOT):
