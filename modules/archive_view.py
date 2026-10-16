@@ -45,6 +45,14 @@ ARCHIVE_MAX_BYTES = 256 * 1024 * 1024
 ARCHIVE_ERROR_UNREADABLE = "unreadable"
 ARCHIVE_ERROR_ENCRYPTED = "encrypted"
 
+#: What ONE member of an archive IS (`archive_members()`): the listing keeps the FILE kind and the
+#: extract half asks the rest (`ARCHIVES.md` §3, §6). A directory is a prefix of its children's
+#: names, a link's body is its target path and a device holds no bytes at all.
+MEMBER_FILE = "file"
+MEMBER_DIR = "dir"
+MEMBER_LINK = "link"
+MEMBER_DEVICE = "device"
+
 #: The zip general-purpose bit 0 marks an encrypted member (APPNOTE 4.4.4) and bit 15 the file type
 #: of `external_attr >> 16` — the ONE way a zip spells "this is a symlink".
 ZIP_ENCRYPTED_FLAG = 0x1
@@ -113,10 +121,10 @@ def resolve_archive_max_bytes(cfg: dict = None) -> int:
 
 # ── The listing: the READABLE members of ONE level ───────────────────────────
 
-def _entry(raw, size, mtime) -> dict:
-    """ONE row of the listing — the display name, the RAW name the reader asks for, its facts."""
+def _entry(raw, size, mtime, kind: str = MEMBER_FILE) -> dict:
+    """ONE row of the walk — the display name, the RAW name the reader asks for, its facts, its kind."""
     return {"name": member_name(raw), "raw": str(raw or ""), "size": int(size or 0),
-            "mtime": int(mtime or 0)}
+            "mtime": int(mtime or 0), "kind": str(kind or MEMBER_FILE)}
 
 
 def _zip_mtime(info) -> int:
@@ -126,32 +134,63 @@ def _zip_mtime(info) -> int:
         return 0
 
 
-def _zip_is_link(info) -> bool:
+def zip_is_link(info) -> bool:
     """Is this member a SYMLINK? (`external_attr >> 16` carries the POSIX mode when it is set.)"""
     mode = int(getattr(info, "external_attr", 0) or 0) >> 16
     return (mode & ZIP_FILE_TYPE_BITS) == ZIP_SYMLINK_BITS
 
 
-def _zip_listing(path):
+def _zip_kind(info) -> str:
+    if info.is_dir():
+        return MEMBER_DIR
+    return MEMBER_LINK if zip_is_link(info) else MEMBER_FILE
+
+
+def _zip_members(path):
     entries, encrypted = [], False
     with zipfile.ZipFile(path) as archive:
         for info in archive.infolist():
             if int(info.flag_bits or 0) & ZIP_ENCRYPTED_FLAG:
                 encrypted = True
-            if info.is_dir() or _zip_is_link(info):
-                continue
-            entries.append(_entry(info.filename, info.file_size, _zip_mtime(info)))
+            entries.append(_entry(info.filename, info.file_size, _zip_mtime(info), _zip_kind(info)))
     return entries, encrypted, ""
 
 
-def _tar_listing(path):
+def _tar_kind(info) -> str:
+    if info.isdir():
+        return MEMBER_DIR
+    if info.isfile():
+        return MEMBER_FILE
+    if info.issym() or info.islnk():
+        return MEMBER_LINK
+    return MEMBER_DEVICE   # a character / block device or a fifo: no bytes a panel could open
+
+
+def _tar_members(path):
     entries = []
     with tarfile.open(path, "r:*") as archive:
         for info in archive:
-            if not info.isfile():
-                continue   # a directory, a symlink / hardlink, a device or a fifo holds no bytes
-            entries.append(_entry(info.name, info.size, info.mtime))
+            entries.append(_entry(info.name, info.size, info.mtime, _tar_kind(info)))
     return entries, False, ""
+
+
+def archive_members(path, kind: str = "") -> tuple:
+    """`(members, encrypted, code)` of ONE archive — EVERY entry of ONE level, in archive order.
+
+    The full walk behind `archive_listing()`: a directory member is a prefix of its children's
+    names (a zip may omit it entirely), the body of a symlink / hardlink member is its TARGET PATH
+    and a device or fifo member holds no bytes — the listing drops them and the extract half owns
+    what they mean (`ARCHIVES.md` §3, §6), so ONE parse serves both halves.
+    """
+    resolved = kind or archive_kind(path)
+    if not resolved:
+        return [], False, ARCHIVE_ERROR_UNREADABLE
+    try:
+        if resolved == ARCHIVE_KIND_ZIP:
+            return _zip_members(path)
+        return _tar_members(path)
+    except _READ_ERRORS:
+        return [], False, ARCHIVE_ERROR_UNREADABLE
 
 
 def archive_listing(path, kind: str = "") -> tuple:
@@ -163,15 +202,10 @@ def archive_listing(path, kind: str = "") -> tuple:
     the zip flag — a `tar` container declares none — and an encrypted archive still LISTS: its
     members are refused at the read, with ONE sentence and no password prompt.
     """
-    resolved = kind or archive_kind(path)
-    if not resolved:
-        return [], False, ARCHIVE_ERROR_UNREADABLE
-    try:
-        if resolved == ARCHIVE_KIND_ZIP:
-            return _zip_listing(path)
-        return _tar_listing(path)
-    except _READ_ERRORS:
-        return [], False, ARCHIVE_ERROR_UNREADABLE
+    members, encrypted, code = archive_members(path, kind)
+    if code:
+        return [], encrypted, code
+    return [entry for entry in members if entry["kind"] == MEMBER_FILE], encrypted, ""
 
 
 # ── The read of ONE member: the shipped policy, bounded twice ────────────────
@@ -233,7 +267,7 @@ def _bounded(stream, cap, size):
 def _read_zip(path, raw, cap, size):
     with zipfile.ZipFile(path) as archive:
         info = archive.getinfo(raw)
-        if info.is_dir() or _zip_is_link(info):
+        if info.is_dir() or zip_is_link(info):
             return b"", READ_ERROR_BINARY   # nothing a reader could show
         try:
             with archive.open(info) as stream:

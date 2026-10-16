@@ -84,10 +84,12 @@ try:  # v1.7.3 (ROADMAP v1.7.3, task 1): the parent-chain host hook of the Send-
 except ImportError:  # flat launch from the project root
     from terminal_split import find_host_hook
 
-try:  # v1.7.4rc1: the LOCAL provider of a pane and the machine codes of its refusals
+try:  # v1.7.4rc1: the LOCAL provider of a pane and its refusals; v1.13.1: the container's extractor
     from . import local_fs_worker as local_fs
+    from . import sftp_extract
 except ImportError:  # flat launch from the project root
     import local_fs_worker as local_fs
+    import sftp_extract  # type: ignore
 
 try:  # v1.8: the ELEVATED provider of a pane — the handshake the pane starts
     from .sftp_elevated import ElevatedHandshake
@@ -1381,6 +1383,8 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # v1.13: an archive read rides ONE provider as well — the spool it was downloading has no
         # answer on the new transport, so it goes with the provider it belonged to.
         self._archive_forget_legs()
+        # v1.13.1: a staged extraction the previous provider was delivering is dropped with it.
+        self._drop_staged_all()
         # v1.3.3.2: the operation answers and the pre-flight listings belong to the
         # transport that was asked — a new worker starts with a clean bookkeeping.
         self._op_tasks.clear()
@@ -1617,6 +1621,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._disconnect_worker(self._disconnect_current())
         self.shutdown_elevated()
         self.shutdown_provider()
+        self._drop_staged_all()
         self.close_viewer()
 
     # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
@@ -1797,7 +1802,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
             self._op_tasks[task_id] = kind
 
 
-class SftpTab(QWidget):
+class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
     """The "Files" tab: a container of 1–2 directory PANES over the queue (v1.7rc1).
 
     The shipped single-listing tab is the ONE-pane case of this container: the pane holds
@@ -1876,6 +1881,7 @@ class SftpTab(QWidget):
         # really moved, which are the ones its own write merges into the live config.
         self._dirs = load_remembered_dirs()
         self._dirs_touched = {}
+        self._extract_provider = None   # v1.13.1: built on the first `Extract` (`sftp_extract`)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
@@ -2736,6 +2742,7 @@ class SftpTab(QWidget):
         if self._released:
             return
         self._released = True
+        self._release_extracts()
         for pane in list(self._panes):
             try:
                 self._close_viewer_of(pane)

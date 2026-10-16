@@ -596,6 +596,7 @@ class SftpPaneViewerMixin:
             return
         panel = self._ensure_archive_panel()
         self._archive = {"path": path, "local": local, "kind": kind, "spool": spool,
+                         "encrypted": bool(encrypted),
                          "entries": {entry["raw"]: entry for entry in entries}}
         self._archive_open = True
         self._fill_archive_tree(entries)
@@ -646,6 +647,10 @@ class SftpPaneViewerMixin:
         self.archive_tree.setRootIsDecorated(False)   # ONE level: a flat list of member names
         self.archive_tree.setUniformRowHeights(True)
         self.archive_tree.setColumnWidth(0, ARCHIVE_COLUMN_WIDTH)
+        # v1.13.1: the listing's OWN verbs — the WRITE half's door. The tree takes no DROP (it is a
+        # reading surface); a context menu is not a drop, and it is where a row gesture belongs.
+        self.archive_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.archive_tree.customContextMenuRequested.connect(self._on_archive_menu)
         self.archive_tree.itemDoubleClicked.connect(self._on_archive_item)
         box.addWidget(self.archive_tree, 1)
         panel.hide()
@@ -682,13 +687,20 @@ class SftpPaneViewerMixin:
 
         A leg still in flight is marked ABANDONED rather than forgotten: it keeps its entry in
         `_archive_tasks`, so the answer that lands afterwards drops the temp copy it published
-        instead of showing a listing the user has closed. Never raises.
+        instead of showing a listing the user has closed. v1.13.1: a copy an EXTRACTION is reading
+        is handed to the container first (`take_archive_copy()`) — the spool goes with the answer of
+        that extraction instead of vanishing under it. Never raises.
         """
         state = getattr(self, "_archive", None) or {}
         self._archive_open = False
         self._archive = None
         self._archive_dropped |= {int(task_id) for task_id in self._archive_tasks}
-        archive.drop_archive(state.get("spool") or "")
+        local = str(state.get("local") or "")
+        spool = str(state.get("spool") or "")
+        kept = bool(local) and self._container is not None \
+            and bool(self._container.take_archive_copy(local))
+        if spool and not kept:
+            archive.drop_archive(spool)
         panel = getattr(self, "archive_panel", None)
         if panel is None:
             return
@@ -721,6 +733,45 @@ class SftpPaneViewerMixin:
             self.message.emit(_t("sftp.cmd.no_selection"))
             return
         self._preview_member(item)
+
+    # ── v1.13.1: the archive's OWN row menu — the door of the WRITE half (`ARCHIVES.md` §6) ──
+
+    def _on_archive_menu(self, pos):
+        """The listing's context menu (the seam is `_build_archive_menu()`)."""
+        self.activate()   # the row menu belongs to the pane it was opened in
+        menu = self._build_archive_menu()
+        if menu is not None:
+            menu.exec(self.archive_tree.viewport().mapToGlobal(pos))
+
+    def _build_archive_menu(self):
+        """`Extract` — the ONE verb of the open archive (a test seam: the tests trigger the QAction).
+
+        It is live on an OPEN listing only, and it names the OTHER pane as the destination because
+        that is where an extraction goes by construction: the pane that still shows a LISTING
+        receives the tree, the pane that carries this panel is the one it was opened from.
+        """
+        state = getattr(self, "_archive", None)
+        if not state:
+            return None
+        menu = host_attr(self, "QMenu")(self)
+        act = menu.addAction(_t("sftp.archive.extract"))
+        act.setEnabled(True)
+        act.triggered.connect(lambda: self._op_extract_archive())
+        return menu
+
+    def _op_extract_archive(self):
+        """The `Extract` row: hand the OPEN archive to the container's extraction (`ARCHIVES.md` §6).
+
+        The container owns the pipeline (the stage, the engine, the delivery to the destination
+        pane), so this door asks ONE question — is there an archive here at all — and refuses an
+        ENCRYPTED one BEFORE a byte is written, with the shipped §4 sentence and no password
+        prompt. The listing itself stays where it is: an extraction is not a preview.
+        """
+        if not getattr(self, "_archive", None):
+            return
+        if self._container is None:
+            return
+        self._container.begin_extract(self)
 
     def _on_archive_item(self, item, _column=0):
         """A double click on a member row — the ONE gesture of the listing."""

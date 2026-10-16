@@ -40,6 +40,11 @@ except ImportError:
                              READ_ERROR_TOO_LARGE, TREE_ERROR_TOO_BIG, classify_extension,
                              is_directory_link, provisional_name, task_payload)
 
+try:  # v1.13.1: the extract engine behind `Extract` — its task kind, its plan and its reader
+    from . import archive_extract as extract
+except ImportError:
+    import archive_extract as extract  # type: ignore
+
 log = get_logger(__name__)
 
 # The read chunk: the shipped 32 KB (one `progress` step per chunk, cancellation between them).
@@ -213,16 +218,25 @@ class _LocalTreeTooBig(_LocalPayload):
         super().__init__(self.payload)
 
 
+class _LocalExtractRefused(_LocalPayload):
+    """Internal: the extract's declared refusal — its machine payload IS the `task_error` message."""
+
+    def __init__(self, payload: str):
+        self.payload = str(payload or "")
+        super().__init__(self.payload)
+
+
 class _LocalTask:
     """A queue task. `path` is the subject, `path2` the second endpoint (a rename or a transfer
     destination), `is_dir` the kind a delete needs, `max_bytes` the ceiling of a READ task
     (v1.7.5 — `READ_CAP_NONE` keeps the shipped refusal, a positive cap TRUNCATES at it)."""
 
-    __slots__ = ("id", "kind", "label", "path", "path2", "is_dir", "total_size", "max_bytes")
+    __slots__ = ("id", "kind", "label", "path", "path2", "is_dir", "total_size", "max_bytes",
+                 "limits")
 
     def __init__(self, task_id: int, kind: str, label: str, path: str = "",
                  path2: str = "", is_dir: bool = False, total_size: int = 0,
-                 max_bytes: int = READ_CAP_NONE):
+                 max_bytes: int = READ_CAP_NONE, limits=None):
         self.id = task_id
         self.kind = kind
         self.label = label
@@ -231,6 +245,8 @@ class _LocalTask:
         self.is_dir = bool(is_dir)
         self.total_size = int(total_size or 0)
         self.max_bytes = int(max_bytes or READ_CAP_NONE)
+        #: v1.13.1: the caps of ONE extract task, resolved by the CALLER (`archive_extract`).
+        self.limits = limits if isinstance(limits, dict) else None
 
 
 # ── Orphan registry (the `_orphan_workers` pattern of the shipped worker, AGENTS.md §4.8) ──
@@ -271,6 +287,8 @@ class LocalFsWorker(QThread):
     task_cancelled = Signal(int, str)        # task_id, kind
     read_ready = Signal(int, str, bytes)     # task_id, path, content
     normalize_ready = Signal(int, str, str)  # task_id, requested, resolved path
+    #: v1.13.1: an extract finished — the tree it wrote, how many files, the members it left out.
+    extract_ready = Signal(int, str, int, list)
 
     def __init__(self, root: str = "", parent=None):
         super().__init__(parent)
@@ -382,6 +400,25 @@ class LocalFsWorker(QThread):
             self._next_id, KIND_MOVE, os.path.basename(str(source or "")),
             path=str(source or ""), path2=target))
 
+    def queue_extract(self, archive_path: str, dest_dir: str, folder: str = "",
+                      limits=None) -> Optional[int]:
+        """Unpack ONE archive into `dest_dir` — or into `dest_dir/folder` when a name is given.
+
+        The archive is read WHERE IT LIES (its local copy — the spool the `Open archive` row
+        claimed, or a file of the OS disk), the caps travel in `limits` (resolved by the caller,
+        `AGENTS.md` §4.8) and the answer is `extract_ready`: the tree written, the files it holds and
+        the members the plan left out. Every refusal is a machine PAYLOAD. A blank `folder` means
+        the destination IS `dest_dir` — the STAGE of an extraction is exactly that tree, so the temp
+        folder never keeps a second level nobody owns.
+        """
+        name = str(folder or "")
+        target = str(dest_dir or "") or self.root
+        if name:
+            target = os.path.join(target, name)
+        return self._queue_task(_LocalTask(
+            self._next_id, extract.KIND_EXTRACT, name, path=str(archive_path or ""),
+            path2=str(dest_dir or "") or self.root, limits=limits))
+
     def cancel(self):
         """Cancel the current operation and everything still queued (the shipped auto-reset)."""
         self._cancel_event.set()
@@ -460,6 +497,8 @@ class LocalFsWorker(QThread):
             self._do_copy(task)
         elif task.kind == KIND_MOVE:
             self._do_move(task)
+        elif task.kind == extract.KIND_EXTRACT:
+            self._do_extract(task)
         else:
             raise ValueError("unsupported local task kind: %s" % (task.kind,))
 
@@ -470,6 +509,8 @@ class LocalFsWorker(QThread):
             return task.path
         if task.kind in (KIND_RENAME, KIND_COPY, KIND_MOVE, KIND_UPLOAD, KIND_DOWNLOAD):
             return task.path2
+        if task.kind == extract.KIND_EXTRACT:
+            return os.path.join(task.path2, task.label) if task.label else task.path2
         return task.path
 
     def _check_cancel(self):
@@ -699,6 +740,103 @@ class LocalFsWorker(QThread):
         """A directory LINK is never followed (§3/§6) — a Windows junction included (N55)."""
         if is_directory_link(path) and os.path.isdir(path):
             raise _LocalRefusal(LOCAL_SYMLINK_DIR)
+
+    # ── v1.13.1: the extract of ONE archive (ARCHIVES.md §6) ─────────────
+
+    def _do_extract(self, task: _LocalTask):
+        """Unpack ONE archive into `task.path2` (or its `task.label` child) — the PLAN first.
+
+        The plan decides EVERYTHING a local disk must not receive (the Zip Slip and the containment
+        belt, a member name this platform refuses, the bomb caps) before the first byte, so a refusal
+        leaves the destination exactly as it was. What it allows is written with the SHIPPED
+        discipline of this module: `<target>.<pid>-<task>.part`, then `os.replace`, so an
+        interrupted extraction never leaves a half-written file and a partial tree is ONE folder to
+        delete. A member the plan left out (a link, a device, a refused name) is named in the
+        answer, never silently dropped.
+        """
+        path = task.path
+        dest_root = task.path2 or self.root
+        if task.label:
+            dest_root = os.path.join(dest_root, task.label)
+        kind = extract.archive.archive_kind(path)
+        plan, code = extract.plan_extract(path, kind, dest_root, task.limits)
+        if code:
+            raise _LocalExtractRefused(task_payload(code, name=task.label,
+                                                    count=int(plan["count"]),
+                                                    total=int(plan["total"]),
+                                                    limit=extract.extract_limits(task.limits)[0]))
+        self._check_cancel()
+        os.makedirs(dest_root, exist_ok=True)
+        for parts in plan["dirs"]:
+            self._check_cancel()
+            self._mkdir_quiet(os.path.join(dest_root, *parts))
+        task.total_size = int(plan["total"] or 0)
+        total = max(1, task.total_size)
+        written, done = 0, 0
+        with extract.MemberReader(path, kind) as reader:
+            for member in plan["files"]:
+                self._check_cancel()
+                dest = os.path.join(dest_root, *member["parts"])
+                self._mkdir_quiet(os.path.dirname(dest))
+                done += self._write_member(task, reader, member, dest, total, done)
+                written += 1
+        self._emit(self.extract_ready, task.id, dest_root, written, list(plan["skipped"]))
+
+    def _write_member(self, task: _LocalTask, reader, member: dict, dest: str,
+                      total: int, done_base: int) -> int:
+        """ONE member of an extraction: the shipped `.part` + `os.replace`, 32 KB at a time.
+
+        The member's OWN mtime is carried onto the committed file — a fact of the archive, not a
+        guess — while its mode is deliberately NOT: an archive's permission bits are a POSIX idea
+        and the platform's own default is the honest answer for a file this program created.
+        """
+        source = reader.stream(member["raw"])
+        if source is None:
+            return 0
+        temp = provisional_name(dest, task.id)
+        committed = False
+        done = 0
+        try:
+            with source, open(temp, "wb") as out:
+                while True:
+                    self._check_cancel()
+                    chunk = source.read(CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    done += len(chunk)
+                    self._emit(self.progress, task.id, done_base + done, total)
+            os.replace(temp, dest)
+            committed = True
+        finally:
+            if not committed:
+                self._remove_quiet(temp)
+        self._touch_quiet(dest, member.get("mtime"))
+        return done
+
+    @staticmethod
+    def _mkdir_quiet(path: str) -> bool:
+        """Best-effort creation of ONE directory of an extraction (an existing one is not an error)."""
+        try:
+            os.makedirs(path, exist_ok=True)
+            return True
+        except OSError:
+            return False
+
+    @staticmethod
+    def _touch_quiet(path: str, mtime) -> bool:
+        """Best-effort mtime of ONE extracted file; a platform that refuses keeps its own."""
+        try:
+            stamp = float(mtime or 0)
+        except (TypeError, ValueError):
+            return False
+        if stamp <= 0:
+            return False
+        try:
+            os.utime(path, (stamp, stamp))
+            return True
+        except (OSError, OverflowError, ValueError):
+            return False
 
     def _walk_tree(self, root: str) -> list:
         """The BOUNDED depth-first walk of one local tree (§6) → pre-order entries.

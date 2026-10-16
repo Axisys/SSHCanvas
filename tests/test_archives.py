@@ -548,8 +548,8 @@ check_i18n_format(LANGS)
 check_release_state(ROOT)
 check("§8 the pin names this release's line", releases_at_least(EXPECTED_APP_VERSION, "1.13"),
       EXPECTED_APP_VERSION)
-check("§8 the four archive keys are the whole of what this release adds to the pin",
-      EXPECTED_I18N_KEYS == 1118 + 4, str(EXPECTED_I18N_KEYS))
+check("§8 the READ half's four keys are part of the pin (the WRITE half's three follow it)",
+      EXPECTED_I18N_KEYS == 1118 + 4 + 3, str(EXPECTED_I18N_KEYS))
 check("§8 the project schema did NOT move (the archive view is not project state)",
       'VERSION_FORMAT = "0.9"' in open(os.path.join(ROOT, "version.py"), encoding="utf-8").read())
 

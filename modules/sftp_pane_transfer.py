@@ -25,6 +25,11 @@ try:  # AGENTS.md §4.1: the ONE seam for a facade global — a mixin never impo
 except ImportError:
     from ui.mixin_support import host_attr
 
+try:  # v1.13.1: the staged tree of ONE extraction — the dropped half of `ship_staged_tree()`
+    from . import archive_extract
+except ImportError:
+    import archive_extract  # type: ignore
+
 try:  # the operation kinds, the machine codes and the tree bounds of the worker
     from .sftp_worker import (KIND_COPY, KIND_MOVE, KIND_NORMALIZE, KIND_READ, MAX_TREE_ENTRIES,
                               MOVE_ERROR_REFUSED, OP_KINDS, PARTIAL_CODE, READ_ERROR_BINARY,
@@ -405,6 +410,78 @@ class SftpPaneTransferMixin:
         if task_id is not None:
             self._own_transfers.add(task_id)
 
+    # ── v1.13.1: the delivery of ONE staged tree (the archive extract, `ARCHIVES.md` §6) ──
+
+    @property
+    def _staged_deliveries(self) -> dict:
+        """The staged trees this pane is shipping — task_id → the local root of ONE extraction.
+
+        Created with the FIRST delivery (a pane that never extracts holds no record), and the tree is
+        dropped with the answer its task gives: the extractor's copy is a plaintext duplicate of a
+        server file, so it never outlives the delivery it was made for.
+        """
+        return self.__dict__.setdefault("_staged_records", {})
+
+    def ship_staged_tree(self, staged_root: str, target_dir: str, name: str,
+                         known: set) -> bool:
+        """Carry ONE staged tree into this pane's directory — the SHIPPED engine, ONE item.
+
+        The extract half writes the archive into a local staging folder and hands it HERE, so the
+        bytes are delivered by whatever provider this pane holds: the session's transport for a
+        remote destination, this pane's own local engine for a directory of the OS disk
+        (`LOCAL_PANE.md` §5). ONE item means the overwrite question of `_conflict_decision()` is
+        asked ONCE for the whole extraction — that question is the folder, and a partial extraction
+        is therefore ONE folder to delete. An ELEVATED destination refuses at the shipped door
+        (`ELEVATED_PANE.md` §5), and the staged tree is dropped with the answer the task gives.
+
+        False — nothing was queued (a refusal, a cancelled question, a provider that is gone): the
+        caller owns the staged tree and drops it.
+        """
+        if self._refuse_elevated_write():
+            return False
+        provider = self.provider
+        if provider is None:
+            self.message.emit(_t("sftp.waiting_connection"))
+            return False
+        folder = str(name or "")
+        if folder in (known or set()):
+            action, _to_all = self._conflict_decision(folder, target_dir, 0)
+            if action == "skip":
+                return False
+            if action == "rename":
+                folder = self._prompt_name(_t("sftp.op.rename"), folder)
+                if not folder:
+                    return False   # cancelled → the whole extraction is skipped
+        task_id = provider.queue_upload(str(staged_root or ""), str(target_dir or ""),
+                                        remote_name=folder)
+        if task_id is None:
+            self.message.emit(_t("sftp.waiting_connection"))
+            return False
+        self._remember_transfer(task_id)
+        self._staged_deliveries[int(task_id)] = str(staged_root or "")
+        return True
+
+    def _drop_staged(self, task_id) -> bool:
+        """Drop the staged tree of ONE answered delivery; True — this task carried one."""
+        staged = self._staged_deliveries.pop(int(task_id), None)
+        if staged is None:
+            return False
+        archive_extract.drop_stage(staged)
+        return True
+
+    def _drop_staged_all(self) -> int:
+        """Drop every staged tree of this pane — a provider change and the pane's teardown. Never raises.
+
+        A delivery the pane is LEAVING answers nobody (its slots go with the provider), so the
+        plaintext tree it was made from is dropped here instead of waiting for an answer.
+        """
+        removed = 0
+        for staged in list(self._staged_deliveries.values()):
+            if archive_extract.drop_stage(staged):
+                removed += 1
+        self._staged_deliveries.clear()
+        return removed
+
     # ── v1.7rc2: the remote copy / move of a batch (ROADMAP v1.7rc2) ─────
 
     def _rows_for_batch(self) -> list:
@@ -732,6 +809,9 @@ class SftpPaneTransferMixin:
         self._completer_lists.pop(task_id, None)
         # v1.7.4rc2: the destination of a batch task is forgotten with its answer.
         self._op_targets.pop(task_id, None)
+        # v1.13.1: the staged tree of an extraction goes with the delivery it was made for —
+        # on the ANSWER, whatever that answer was.
+        self._drop_staged(task_id)
         self._own_transfers.discard(task_id)
         if task_id in self._transfer_tasks:
             self._transfer_tasks.discard(task_id)

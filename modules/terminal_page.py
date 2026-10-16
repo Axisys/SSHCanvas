@@ -1542,8 +1542,13 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
 
     def eventFilter(self, obj, event):
         """v1.2: a canvas resize (inside the tab) → a grid recompute. Before —
-        SSHTerminalWindow.resizeEvent; the grid-change guard and the debounce are the same."""
-        if obj is self.widget and event.type() == QEvent.Type.Resize:
+        SSHTerminalWindow.resizeEvent; the grid-change guard and the debounce are the same.
+
+        The canvas is asked through `getattr()`: Qt delivers events to a filter from the moment it is
+        installed, and a filter that RAISES is worse than a filter that does nothing — a page built
+        inside another container's constructor has a live filter before its own `widget` exists.
+        """
+        if obj is getattr(self, "widget", None) and event.type() == QEvent.Type.Resize:
             QTimer.singleShot(0, self._sync_grid)
         return super().eventFilter(obj, event)
 

@@ -118,13 +118,16 @@ def main(argv=None):
         # v1.7.3 (ROADMAP v1.7.3, task 1): the cross-session relay spools ONE file under the OS
         # temp — a crash must not leave a copy of a remote file behind, so the stale spools of a
         # previous run are swept BEFORE the first window exists (a spool that outlives its run is
-        # swept here). Never fatal.
+        # swept here). v1.13.1: the same rule for the tree an archive extraction stages. Never fatal.
         try:
             try:
+                from modules.archive_extract import sweep_stages
                 from modules.sftp_send import sweep_spools
             except ImportError:
+                from .modules.archive_extract import sweep_stages
                 from .modules.sftp_send import sweep_spools
             sweep_spools()
+            sweep_stages()
         except Exception as e:
             if log is not None:
                 log.warning(f"The spool sweep did not run: {e}")
