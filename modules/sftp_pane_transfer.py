@@ -423,7 +423,7 @@ class SftpPaneTransferMixin:
         return self.__dict__.setdefault("_staged_records", {})
 
     def ship_staged_tree(self, staged_root: str, target_dir: str, name: str,
-                         known: set) -> bool:
+                         known: set) -> str:
         """Carry ONE staged tree into this pane's directory — the SHIPPED engine, ONE item.
 
         The extract half writes the archive into a local staging folder and hands it HERE, so the
@@ -434,32 +434,34 @@ class SftpPaneTransferMixin:
         is therefore ONE folder to delete. An ELEVATED destination refuses at the shipped door
         (`ELEVATED_PANE.md` §5), and the staged tree is dropped with the answer the task gives.
 
-        False — nothing was queued (a refusal, a cancelled question, a provider that is gone): the
-        caller owns the staged tree and drops it.
+        Answers the folder the tree was delivered AS — the SHIPPED name, or the one the `Rename`
+        answer chose, which is what lets the report name the path that really received it. `""` —
+        nothing was queued (a refusal, a cancelled question, a provider that is gone): the caller
+        owns the staged tree and drops it.
         """
         if self._refuse_elevated_write():
-            return False
+            return ""
         provider = self.provider
         if provider is None:
             self.message.emit(_t("sftp.waiting_connection"))
-            return False
+            return ""
         folder = str(name or "")
         if folder in (known or set()):
             action, _to_all = self._conflict_decision(folder, target_dir, 0)
             if action == "skip":
-                return False
+                return ""
             if action == "rename":
                 folder = self._prompt_name(_t("sftp.op.rename"), folder)
                 if not folder:
-                    return False   # cancelled → the whole extraction is skipped
+                    return ""   # cancelled → the whole extraction is skipped
         task_id = provider.queue_upload(str(staged_root or ""), str(target_dir or ""),
                                         remote_name=folder)
         if task_id is None:
             self.message.emit(_t("sftp.waiting_connection"))
-            return False
+            return ""
         self._remember_transfer(task_id)
         self._staged_deliveries[int(task_id)] = str(staged_root or "")
-        return True
+        return folder
 
     def _drop_staged(self, task_id) -> bool:
         """Drop the staged tree of ONE answered delivery; True — this task carried one."""

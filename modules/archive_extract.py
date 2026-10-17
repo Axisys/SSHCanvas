@@ -45,10 +45,6 @@ EXTRACT_FOLDER_FALLBACK = "archive"
 EXTRACT_STAGE_PREFIX = "sshmap-extract-"
 EXTRACT_STAGE_MAX_AGE_SEC = 6 * 60 * 60
 
-#: The codes of an unreadable archive or member (the readers' own exceptions, never a traceback).
-_READ_ERRORS = (OSError, ValueError, KeyError, EOFError, RuntimeError, NotImplementedError,
-                zipfile.BadZipFile, tarfile.TarError)
-
 
 def extract_folder(path) -> str:
     """The ONE folder an extraction of `path` lands in — the archive's own stem, platform-safe.
@@ -126,22 +122,38 @@ def empty_plan() -> dict:
     return {"dirs": [], "files": [], "skipped": [], "total": 0, "count": 0}
 
 
-def bomb_code(plan: dict, archive_path, limits=None) -> str:
-    """The code of ONE plan that is too much to write, or "" — the bomb and the walk bound.
+def bomb_verdict(plan: dict, archive_path, limits=None) -> tuple:
+    """`(code, limit)` of ONE plan that is too much to write — the ONE place the three caps are asked.
 
     Three caps, asked BEFORE the first byte: the member count (the shipped `TREE_ERROR_TOO_BIG`,
     whose sentence already exists), the declared TOTAL and the declared RATIO against the archive's
     own size — a 1 KiB `zip` that claims 4 GiB is refused whatever the total cap is.
+
+    `limit` is the ceiling the refusal NAMES, in the units of its own sentence: the walk bound answers
+    the entry cap, while a byte refusal answers the ceiling it really crossed — the declared total, or
+    the ratio threshold (`archive size × ratio`) when that is the smaller one. A caller that reports
+    the total cap for every refusal tells the user "more than 1 GiB" about a count of 5 000 members.
     """
     total_bytes, ratio, entries = extract_limits(limits)
     if int(plan.get("count") or 0) > entries:
-        return TREE_ERROR_TOO_BIG
+        return TREE_ERROR_TOO_BIG, entries
     total = int(plan.get("total") or 0)
     if total > total_bytes:
-        return EXTRACT_ERROR_BOMB
-    if total > max(1, local_size(archive_path)) * ratio:
-        return EXTRACT_ERROR_BOMB
-    return ""
+        return EXTRACT_ERROR_BOMB, total_bytes
+    threshold = max(1, local_size(archive_path)) * ratio
+    if total > threshold:
+        return EXTRACT_ERROR_BOMB, threshold
+    return "", 0
+
+
+def bomb_code(plan: dict, archive_path, limits=None) -> str:
+    """The code of ONE plan that is too much to write, or "" — the bomb and the walk bound."""
+    return bomb_verdict(plan, archive_path, limits)[0]
+
+
+def refusal_limit(plan: dict, archive_path, limits=None) -> int:
+    """The ceiling a refused plan crossed, in the units of its own code (`0` — it crossed none)."""
+    return bomb_verdict(plan, archive_path, limits)[1]
 
 
 def plan_extract(path, kind: str, dest_root, limits=None) -> tuple:
@@ -161,7 +173,7 @@ def plan_extract(path, kind: str, dest_root, limits=None) -> tuple:
         return empty_plan(), archive.ARCHIVE_ERROR_UNREADABLE
     try:
         members, encrypted, code = archive.archive_members(path, resolved)
-    except _READ_ERRORS:
+    except archive.READ_ERRORS:
         return empty_plan(), archive.ARCHIVE_ERROR_UNREADABLE
     if code:
         return empty_plan(), code
@@ -234,7 +246,7 @@ class MemberReader:
             if not info.isfile():
                 return None
             return self._archive.extractfile(info)
-        except _READ_ERRORS:
+        except archive.READ_ERRORS:
             return None
 
 

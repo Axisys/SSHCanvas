@@ -98,11 +98,16 @@ READ_ERROR_KEYS = {
 
 
 def local_error_code(exc) -> str:
-    """PURE: the MACHINE code of an `OSError` of the OS disk (LOCAL_PANE.md §3)."""
+    """PURE: the MACHINE code of an `OSError` of the OS disk (LOCAL_PANE.md §3).
+
+    The numeric Windows gates are asked FIRST: a file another process holds arrives as a
+    `PermissionError` too (the platform maps winerror 32/33 onto `EACCES`), so the
+    `isinstance()` chain below would answer `permission` for a lock nobody can fix by rights.
+    """
     winerror = getattr(exc, "winerror", None)
     if isinstance(winerror, int) and WINERROR_TOO_LONG == winerror:
         return LOCAL_TOO_LONG
-    if isinstance(winerror, int) and WINERROR_LOCKED == winerror:
+    if isinstance(winerror, int) and winerror in WINERROR_LOCKED:
         return LOCAL_LOCKED
     if isinstance(exc, PermissionError):
         return LOCAL_PERMISSION
@@ -412,9 +417,6 @@ class LocalFsWorker(QThread):
         folder never keeps a second level nobody owns.
         """
         name = str(folder or "")
-        target = str(dest_dir or "") or self.root
-        if name:
-            target = os.path.join(target, name)
         return self._queue_task(_LocalTask(
             self._next_id, extract.KIND_EXTRACT, name, path=str(archive_path or ""),
             path2=str(dest_dir or "") or self.root, limits=limits))
@@ -752,7 +754,7 @@ class LocalFsWorker(QThread):
         discipline of this module: `<target>.<pid>-<task>.part`, then `os.replace`, so an
         interrupted extraction never leaves a half-written file and a partial tree is ONE folder to
         delete. A member the plan left out (a link, a device, a refused name) is named in the
-        answer, never silently dropped.
+        answer, never silently dropped — and the count it reports is the members really WRITTEN.
         """
         path = task.path
         dest_root = task.path2 or self.root
@@ -761,10 +763,13 @@ class LocalFsWorker(QThread):
         kind = extract.archive.archive_kind(path)
         plan, code = extract.plan_extract(path, kind, dest_root, task.limits)
         if code:
+            # The sentence names the ceiling THIS refusal crossed (entries for the walk bound, bytes
+            # for the bomb) — `archive_extract.refusal_limit()` is the ONE reader of that rule.
             raise _LocalExtractRefused(task_payload(code, name=task.label,
                                                     count=int(plan["count"]),
                                                     total=int(plan["total"]),
-                                                    limit=extract.extract_limits(task.limits)[0]))
+                                                    limit=extract.refusal_limit(plan, path,
+                                                                                task.limits)))
         self._check_cancel()
         os.makedirs(dest_root, exist_ok=True)
         for parts in plan["dirs"]:
@@ -778,13 +783,18 @@ class LocalFsWorker(QThread):
                 self._check_cancel()
                 dest = os.path.join(dest_root, *member["parts"])
                 self._mkdir_quiet(os.path.dirname(dest))
-                done += self._write_member(task, reader, member, dest, total, done)
-                written += 1
+                wrote, size = self._write_member(task, reader, member, dest, total, done)
+                written += wrote
+                done += size
         self._emit(self.extract_ready, task.id, dest_root, written, list(plan["skipped"]))
 
     def _write_member(self, task: _LocalTask, reader, member: dict, dest: str,
-                      total: int, done_base: int) -> int:
+                      total: int, done_base: int) -> tuple:
         """ONE member of an extraction: the shipped `.part` + `os.replace`, 32 KB at a time.
+
+        Answers `(1, bytes)` for a member really written and `(0, 0)` for one the reader could not
+        open — the plan allows a REGULAR FILE member, so a `None` here means the archive changed
+        under the walk, and a counter that counted it would report a file that is not on the disk.
 
         The member's OWN mtime is carried onto the committed file — a fact of the archive, not a
         guess — while its mode is deliberately NOT: an archive's permission bits are a POSIX idea
@@ -792,7 +802,7 @@ class LocalFsWorker(QThread):
         """
         source = reader.stream(member["raw"])
         if source is None:
-            return 0
+            return 0, 0
         temp = provisional_name(dest, task.id)
         committed = False
         done = 0
@@ -812,7 +822,7 @@ class LocalFsWorker(QThread):
             if not committed:
                 self._remove_quiet(temp)
         self._touch_quiet(dest, member.get("mtime"))
-        return done
+        return 1, done
 
     @staticmethod
     def _mkdir_quiet(path: str) -> bool:

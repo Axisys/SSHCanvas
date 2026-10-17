@@ -212,9 +212,9 @@ class SftpPaneViewerMixin:
         panel already holds) — a member name exists inside the file on the screen and nowhere on the
         server, so asking a provider for it would read a stranger's path (`ARCHIVES.md` §4).
         """
-        state = getattr(self, "_archive", None)
-        if state and path in state["entries"]:
-            return self._preview_member_by_name(path)
+        raw = self._archive_member_raw(path)
+        if raw:
+            return self._preview_member_by_name(raw)
         provider = self.provider
         if provider is None:
             self.message.emit(_t("sftp.waiting_connection"))
@@ -226,6 +226,23 @@ class SftpPaneViewerMixin:
         self._last_read = tid
         self.viewer_label.setText(_t("sftp.viewer.reading", name=self.paths.basename(path)))
         return True
+
+    def _archive_member_raw(self, path: str) -> str:
+        """The RAW name of the open archive's member a viewer path names — `""` — it names none.
+
+        A member is keyed by its RAW name (what the reader asks the archive for), while the panel
+        SHOWS the display one (`member_name()` drops a leading `./`): the click hands the raw name and
+        the encoding re-read hands what the panel shows, so BOTH spellings resolve here. A member path
+        is never a path of the server — the re-read must ask the archive or nothing at all.
+        """
+        state = getattr(self, "_archive", None)
+        entries = (state or {}).get("entries") or {}
+        if path in entries:
+            return str(path)
+        for raw, entry in entries.items():
+            if entry.get("name") == path:
+                return str(raw)
+        return ""
 
     def _on_read_ready(self, task_id: int, remote_path: str, data: bytes):
         """The read answer (already on the GUI thread): render it in the panel.
@@ -309,7 +326,7 @@ class SftpPaneViewerMixin:
         # content already in the widget — so a read the worker refused leaves every pane alone.
         self._container.present_viewer(self)
         self.viewer.show()
-        self._layout_viewer_share()
+        self._layout_viewer_share(self.viewer)
         self._highlight_visible(force=True)
 
     # ── v1.7rc3: the preview moved to the other pane (the mc F3 of the two-pane view) ──
@@ -327,26 +344,32 @@ class SftpPaneViewerMixin:
                 return panel
         return self.viewer
 
-    def _viewer_splitter(self):
-        """The splitter that really carries the panel (its HOME pane's by default)."""
-        parent = self.panel_in_slot().parent()
+    def _viewer_splitter(self, panel=None):
+        """The splitter that really carries `panel` (the panel this pane SHOWS by default)."""
+        parent = (self.panel_in_slot() if panel is None else panel).parent()
         return parent if parent is not None else self.splitter
 
-    def _layout_viewer_share(self):
-        """Give the panel its declared share of the splitter that REALLY carries it. Never raises.
+    def _layout_viewer_share(self, panel=None):
+        """Give `panel` its declared share of the splitter that REALLY carries it. Never raises.
 
-        Qt gotcha #13: a splitter member's share is set via `setSizes()` only. The splitter can hold
-        a THIRD member — a pane carrying a borrowed panel keeps its OWN one in the layout (hidden,
-        so it lands nowhere) while the borrowed one takes the slot it left — which is why the share
-        is computed over the members BY NAME: the listing takes `VIEWER_TREE_SHARE`, the panel that
-        is really on screen takes the rest and a panel that stepped aside answers 0. A share handed
-        out by POSITION would give the column to the hidden member and leave the borrowed panel zero
-        pixels wide: the borrowing pane changed its look and showed nothing at all.
+        The panel is passed by the method that just filled it (`_show_viewer()` / `_show_archive()`):
+        the pane may be showing a BORROWED panel of the other one, and the panel it shows is not
+        always the panel that was just filled — sizing `panel_in_slot()` then lays out the archive
+        listing in the neighbour's splitter and leaves the reader at the default 50/50.
+
+        Qt gotcha #13: a splitter member's share is set via `setSizes()` only. The splitter can hold a
+        THIRD member — a pane carrying a borrowed panel keeps its OWN one in the layout (hidden, so it
+        lands nowhere) while the borrowed one takes the slot it left — which is why the share is
+        computed over the members BY NAME: the listing takes `VIEWER_TREE_SHARE`, the panel that is
+        really on screen takes the rest and a panel that stepped aside answers 0. A share handed out by
+        POSITION would give the column to the hidden member and leave the borrowed panel zero pixels
+        wide: the borrowing pane changed its look and showed nothing at all.
         """
-        splitter = self._viewer_splitter()
+        panel = self.panel_in_slot() if panel is None else panel
+        splitter = self._viewer_splitter(panel)
         try:
             count = splitter.count()
-            index = splitter.indexOf(self.panel_in_slot())
+            index = splitter.indexOf(panel)
         except RuntimeError:
             return   # Qt teardown — the splitter or the panel is already gone
         if count <= 0 or index < 0:
@@ -610,7 +633,7 @@ class SftpPaneViewerMixin:
         # OTHER pane's slot (mc/far) and stays in this one while there is no second pane.
         self._container.present_viewer(self)
         panel.show()
-        self._layout_viewer_share()
+        self._layout_viewer_share(panel)
 
     def _ensure_archive_panel(self):
         """Build the archive panel ONCE per pane — lazily, like every other cost of this view.

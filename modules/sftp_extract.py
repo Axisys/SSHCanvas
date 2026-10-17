@@ -88,6 +88,10 @@ class SftpExtractMixin:
         if not dest_dir:
             pane.message.emit(_t("sftp.waiting_connection"))
             return False
+        # The directory and the names the conflict question is asked over are ONE moment (the
+        # `_remote_batch()` rule): an extraction outlives the listing it was started from, so the
+        # names read at the ANSWER would belong to whatever directory the pane shows by then.
+        known = dest_pane._names_in_current_dir()
         stage = archive_extract.create_stage()
         if not stage:
             pane.message.emit(_t("sftp.op.error", error="stage"))
@@ -100,7 +104,7 @@ class SftpExtractMixin:
             pane.message.emit(_t("sftp.op.error", error="queue"))
             return False
         self._extracts[int(task_id)] = {"pane": pane, "dest_pane": dest_pane, "dest_dir": dest_dir,
-                                        "name": name, "stage": stage,
+                                        "known": known, "name": name, "stage": stage,
                                         "local": str(state["local"]),
                                         "spool": str(state.get("spool") or ""), "closed": False}
         pane.message.emit(_t("sftp.viewer.reading",
@@ -135,23 +139,27 @@ class SftpExtractMixin:
 
         `tree` IS the stage (`modules/local_fs_worker.py` writes the members straight into it), so the
         one temp folder is the one delivered tree — and `ship_staged_tree()` drops it with the answer
-        the delivery gives, whatever that answer is.
+        the delivery gives, whatever that answer is. The delivery answers the folder RECEIVED, and the
+        success sentence belongs to that answer: a `Skip`, a cancelled `Rename`, an elevated or a
+        provider refusal reports itself (or is the user's own answer) and nothing was written.
         """
         record = self._extracts.pop(int(task_id), None)
         if record is None:
             archive_extract.drop_stage(tree)
             return
         dest_pane = record["dest_pane"]
-        if not dest_pane.ship_staged_tree(tree, record["dest_dir"], record["name"],
-                                          dest_pane._names_in_current_dir()):
+        delivered = dest_pane.ship_staged_tree(tree, record["dest_dir"], record["name"],
+                                              record.get("known") or set())
+        if not delivered:
             archive_extract.drop_stage(tree)
-        record["pane"].message.emit(_t("sftp.archive.extract_done", count=int(written),
-                                       target=dest_pane.paths.join(record["dest_dir"],
-                                                                   record["name"])))
-        if skipped:
-            record["pane"].message.emit(_t(
-                local_fs.LOCAL_ERROR_KEYS[local_fs.KIND_LIST_PARTIAL], count=len(skipped),
-                names=", ".join(str(name) for name in skipped[:5])))
+        else:
+            record["pane"].message.emit(_t("sftp.archive.extract_done", count=int(written),
+                                           target=dest_pane.paths.join(record["dest_dir"],
+                                                                       delivered)))
+            if skipped:
+                record["pane"].message.emit(_t(
+                    local_fs.LOCAL_ERROR_KEYS[local_fs.KIND_LIST_PARTIAL], count=len(skipped),
+                    names=", ".join(str(name) for name in skipped[:5])))
         self._drop_extract_copy(record)
 
     def _on_extract_error(self, task_id: int, _kind: str, message: str):

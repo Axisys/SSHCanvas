@@ -59,9 +59,10 @@ ZIP_ENCRYPTED_FLAG = 0x1
 ZIP_FILE_TYPE_BITS = 0o170000
 ZIP_SYMLINK_BITS = 0o120000
 
-#: The codes of an unreadable path or member (the readers' own exceptions, never a traceback).
-_READ_ERRORS = (OSError, ValueError, KeyError, EOFError, RuntimeError, NotImplementedError,
-                zipfile.BadZipFile, tarfile.TarError)
+#: The codes of an unreadable path or member (the readers' own exceptions, never a traceback) — the
+#: ONE declaration of the family: both halves catch the parse's own refusals through it.
+READ_ERRORS = (OSError, ValueError, KeyError, EOFError, RuntimeError, NotImplementedError,
+               zipfile.BadZipFile, tarfile.TarError)
 
 
 def archive_kind(path) -> str:
@@ -189,7 +190,7 @@ def archive_members(path, kind: str = "") -> tuple:
         if resolved == ARCHIVE_KIND_ZIP:
             return _zip_members(path)
         return _tar_members(path)
-    except _READ_ERRORS:
+    except READ_ERRORS:
         return [], False, ARCHIVE_ERROR_UNREADABLE
 
 
@@ -228,7 +229,7 @@ def read_member(path, kind: str, raw: str, cap=0, size=0) -> tuple:
             return _read_zip(path, raw, cap, size)
         if resolved == ARCHIVE_KIND_TAR:
             return _read_tar(path, raw, cap, size)
-    except _READ_ERRORS:
+    except READ_ERRORS:
         return b"", ARCHIVE_ERROR_UNREADABLE
     return b"", ARCHIVE_ERROR_UNREADABLE
 

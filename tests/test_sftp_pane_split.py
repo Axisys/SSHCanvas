@@ -69,7 +69,9 @@ WAVE = {
         "panel_in_slot", "archive_open", "archive_state", "archive_key", "_op_view_archive",
         "_archive_answer", "_show_archive", "_ensure_archive_panel", "_fill_archive_tree",
         "_on_archive_close", "_reset_archive", "_archive_forget_legs", "preview_current_member",
-        "_on_archive_item", "_preview_member", "_preview_member_by_name"]),
+        "_on_archive_item", "_preview_member", "_preview_member_by_name",
+        # v1.13.1.1: the member a viewer path names — its RAW spelling beside the displayed one.
+        "_archive_member_raw"]),
 }
 # The WAVE-2 plan: the transfers with the conflict question and the batch copy/move, the drag & drop
 # with the row context menu, and the pure helpers in their own module.
@@ -180,8 +182,9 @@ check("§2 the AST reader of the family still finds EVERY wave method (its pins 
       all(pane_func_owner(m, ROOT) for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items()
           for m in methods))
 check("§2 the method counts are the plan's (23 + 25 + 28 in wave 1 — v1.9.3 adds the reader's "
-      "encoding four, v1.13 the archive's sixteen, 29 + 15 in wave 2, 25 kept)",
-      [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 48]
+      "encoding four, v1.13 the archive's sixteen, v1.13.1.1 the member path one, 29 + 15 in wave 2, "
+      "25 kept)",
+      [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 49]
       and [len(m) for _rel, (_n, _c, m) in WAVE2.items()] == [29, 15]
       and len(_class_method_names("modules/sftp_tab.py", "_SftpPane")) == len(FACADE_METHODS),
       str({rel: len(m) for rel, (_n, _c, m) in WAVE2.items()}))
