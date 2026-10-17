@@ -414,7 +414,11 @@ check("§4 the door starts ONE extraction and says which archive it is reading",
       and i18n.t("sftp.viewer.reading", name="data.car") in _SEEN, str(_SEEN))
 _DELIVERED_STAGE = _STAGES[-1]
 check("§4 ...and the tree reaches the destination pane's directory through the SHIPPED engine",
-      wait_for(lambda: "/srv/data/README.txt" in _REMOTE.files, timeout_ms=15000)
+      # The whole tree, not its first member: the report now belongs to the delivery's ANSWER, so the
+      # answer is the ONE moment every member of the tree is on the server.
+      wait_for(lambda: i18n.t("sftp.archive.extract_done", count=2, target="/srv/data") in _SEEN,
+               timeout_ms=15000)
+      and "/srv/data/README.txt" in _REMOTE.files
       and _REMOTE.files.get("/srv/data/etc/app.conf") == b"listen 80\n"
       and "/srv/data" in _REMOTE.dirs,
       str(sorted(_REMOTE.files)))
@@ -427,9 +431,12 @@ check("§4 the overwrite question was asked exactly ONCE, about the FOLDER it wr
       len(_ASKED) == 1 and _ASKED[0][0] == "data" and _ASKED[0][1] == "/srv"
       and _ASKED[0][2] == 0, str(_ASKED))
 check("§4 ONE closing report names how many files landed where",
-      i18n.t("sftp.archive.extract_done", count=2, target="/srv/data") in _SEEN, str(_SEEN))
+      wait_for(lambda: i18n.t("sftp.archive.extract_done", count=2, target="/srv/data") in _SEEN,
+               timeout_ms=15000), str(_SEEN))
 check("§4 the members the plan left out are NAMED in the SHIPPED skip sentence",
-      i18n.t("sftp.local.skipped", count=2, names="../escape.txt, /abs.txt") in _SEEN, str(_SEEN))
+      wait_for(lambda: i18n.t("sftp.local.skipped", count=2,
+                              names="../escape.txt, /abs.txt") in _SEEN, timeout_ms=15000),
+      str(_SEEN))
 check("§4 the staged tree is gone with the answer — a plaintext duplicate outlives nothing",
       wait_for(lambda: not os.path.exists(_DELIVERED_STAGE), timeout_ms=8000)
       and _PANE_A._staged_deliveries == {} and _TAB.extract_active() is False,

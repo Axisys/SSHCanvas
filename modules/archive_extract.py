@@ -63,14 +63,6 @@ def extract_folder(path) -> str:
     return EXTRACT_FOLDER_FALLBACK if local_name_problem(name) else name
 
 
-def local_size(path) -> int:
-    """How many bytes ONE local file holds — 0 for a path the OS will not size. Never raises."""
-    try:
-        return max(0, int(os.path.getsize(str(path or ""))))
-    except (OSError, TypeError, ValueError):
-        return 0
-
-
 def extract_limits(limits=None) -> tuple:
     """`(total_bytes, ratio, entries)` of ONE extraction — the declared caps, or the caller's own.
 
@@ -118,8 +110,13 @@ def member_parts(name, dest_root) -> tuple:
 
 
 def empty_plan() -> dict:
-    """The plan of an archive that writes nothing — the ONE shape `plan_extract()` answers."""
-    return {"dirs": [], "files": [], "skipped": [], "total": 0, "count": 0}
+    """The plan of an archive that writes nothing — the ONE shape `plan_extract()` answers.
+
+    `entries` is EVERY member the walk saw (the subject of the entry cap), `count` is the regular
+    FILES it accepted and `total` their bytes (the subject of the two byte caps) — the sentences of
+    the two refusals name different numbers, so the plan counts them apart.
+    """
+    return {"dirs": [], "files": [], "skipped": [], "total": 0, "count": 0, "entries": 0}
 
 
 def bomb_verdict(plan: dict, archive_path, limits=None) -> tuple:
@@ -127,7 +124,9 @@ def bomb_verdict(plan: dict, archive_path, limits=None) -> tuple:
 
     Three caps, asked BEFORE the first byte: the member count (the shipped `TREE_ERROR_TOO_BIG`,
     whose sentence already exists), the declared TOTAL and the declared RATIO against the archive's
-    own size — a 1 KiB `zip` that claims 4 GiB is refused whatever the total cap is.
+    own size — a 1 KiB `zip` that claims 4 GiB is refused whatever the total cap is. The entry cap
+    counts EVERY member (`plan["entries"]`) — a directory, a link and a device cost the disk nothing
+    but they are members an archive can hold millions of.
 
     `limit` is the ceiling the refusal NAMES, in the units of its own sentence: the walk bound answers
     the entry cap, while a byte refusal answers the ceiling it really crossed — the declared total, or
@@ -135,12 +134,12 @@ def bomb_verdict(plan: dict, archive_path, limits=None) -> tuple:
     the total cap for every refusal tells the user "more than 1 GiB" about a count of 5 000 members.
     """
     total_bytes, ratio, entries = extract_limits(limits)
-    if int(plan.get("count") or 0) > entries:
+    if int(plan.get("entries") or 0) > entries:
         return TREE_ERROR_TOO_BIG, entries
     total = int(plan.get("total") or 0)
     if total > total_bytes:
         return EXTRACT_ERROR_BOMB, total_bytes
-    threshold = max(1, local_size(archive_path)) * ratio
+    threshold = max(1, archive.local_size(archive_path)) * ratio
     if total > threshold:
         return EXTRACT_ERROR_BOMB, threshold
     return "", 0
@@ -161,18 +160,23 @@ def plan_extract(path, kind: str, dest_root, limits=None) -> tuple:
 
     A DIRECTORY member becomes a directory; a REGULAR FILE member is judged by `member_parts()`,
     carries its own mtime and counts against the caps; a LINK / DEVICE member is SKIPPED and named
-    (`ARCHIVES.md` §6 — its body is a target path, not content). An encrypted archive, a path that
-    is not an archive and an archive over a cap all answer ONE code.
+    (`ARCHIVES.md` §6 — its body is a target path, not content). A member ANY kind the gates refuse
+    (a `..` component, a reserved name, a directory that is one of those) is named in `skipped` —
+    the report at the end of the extraction must be able to say what it left out. An encrypted
+    archive, a path that is not an archive and an archive over a cap all answer ONE code.
 
-    A non-empty `code` is a REFUSAL: the plan answers the walk's own counters (`total`, `count` and
-    `skipped`, which is what the sentence needs) and NEVER a member to write, so a caller that
-    honours the code cannot write a byte by accident.
+    The cap is asked DURING the walk, not after it: `archive_members()` stops one member past the
+    declared entry bound, so a hostile container costs the bound and a refusal — never a full walk
+    of a million members. A non-empty `code` is a REFUSAL: the plan answers the walk's own counters
+    (`total`, `count`, `entries` and `skipped`, which is what the sentence needs) and NEVER a member
+    to write, so a caller that honours the code cannot write a byte by accident.
     """
     resolved = kind or archive.archive_kind(path)
     if not resolved:
         return empty_plan(), archive.ARCHIVE_ERROR_UNREADABLE
+    _total_cap, _ratio_cap, entries_cap = extract_limits(limits)
     try:
-        members, encrypted, code = archive.archive_members(path, resolved)
+        members, encrypted, code = archive.archive_members(path, resolved, entries_cap)
     except archive.READ_ERRORS:
         return empty_plan(), archive.ARCHIVE_ERROR_UNREADABLE
     if code:
@@ -181,22 +185,27 @@ def plan_extract(path, kind: str, dest_root, limits=None) -> tuple:
         return empty_plan(), archive.ARCHIVE_ERROR_ENCRYPTED
     plan = empty_plan()
     for entry in members:
+        plan["entries"] += 1
         member_kind = entry.get("kind")
+        name = str(entry.get("name") or "")
         if member_kind == archive.MEMBER_DIR:
-            parts, _reason = member_parts(entry.get("name"), dest_root)
+            parts, _reason = member_parts(name, dest_root)
             if parts:
                 plan["dirs"].append(tuple(parts))
+            else:
+                plan["skipped"].append(name)
             continue
         if member_kind != archive.MEMBER_FILE:
-            plan["skipped"].append(str(entry.get("name") or ""))
+            plan["skipped"].append(name)
             continue
-        parts, _reason = member_parts(entry.get("name"), dest_root)
+        parts, _reason = member_parts(name, dest_root)
         if not parts:
-            plan["skipped"].append(str(entry.get("name") or ""))
+            plan["skipped"].append(name)
             continue
         size = max(0, int(entry.get("size") or 0))
-        plan["files"].append({"raw": str(entry.get("raw") or ""), "parts": tuple(parts),
-                              "size": size, "mtime": int(entry.get("mtime") or 0)})
+        plan["files"].append({"name": name, "raw": str(entry.get("raw") or ""),
+                              "parts": tuple(parts), "size": size,
+                              "mtime": int(entry.get("mtime") or 0)})
         plan["total"] += size
         plan["count"] += 1
     refused = bomb_code(plan, path, limits)

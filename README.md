@@ -165,7 +165,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **2FA/Passphrases:** Answered in a secure application window; closing the window cancels the connection.
 *   **Guardrails:** "Production tags" and "Command guards" act as confirmation checkpoints for potentially dangerous actions (e.g., multi-line pastes or destructive commands).
 *   **Relayed Files:** Files sent between different servers are relayed through the local machine's temporary folder and are deleted immediately after transfer; a file over 100 MB is refused before anything moves.
-*   **Archive Viewer:** An archive opened for reading or for extraction is copied into that same temporary folder (a local file is read where it lies) and the copy is deleted when the view closes. The view opens archives up to 256 MB by default — a larger one is refused before anything is copied. An extraction is bounded before it writes a byte: a member name that escapes the destination folder, a member name this system cannot store, an archive that expands past 1 GB or past 100× its own size, and an archive of more than 5000 members are all refused, and a member that is a link or a device is skipped and reported instead of created.
+*   **Archive Viewer:** An archive opened for reading or for extraction is copied into that same temporary folder (a local file is read where it lies), the copy is deleted when the view closes, and the size limit is checked against the copy itself. The view opens archives up to 256 MB by default — a larger one is refused before anything is copied. An extraction is bounded before it writes a byte: a member name that escapes the destination folder, a member name this system cannot store, an archive that expands past 1 GB or past 100× its own size, and an archive of more than 5000 members (files, folders or links — every entry counts) are all refused, and a member that is a link or a device is skipped and reported instead of created. The report of a finished extraction is shown once the transfer has actually landed.
 
 ### Behavioral Constraints
 *   **Undo/Redo:** Covers map elements (nodes, connections, notes, groups, edits) but **not** node statuses.
@@ -228,7 +228,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 159 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 160 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

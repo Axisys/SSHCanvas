@@ -609,9 +609,21 @@ class SftpPaneViewerMixin:
     def _show_archive(self, path, local, kind, spool):
         """Read the LISTING of `local` and show the panel — the ONE place the view appears.
 
-        A parse that refuses answers ONE sentence and never dresses the other pane: the panel is
-        presented with the members already in it (the reader's rule), and the spool goes with it.
+        The CAP is asked AGAIN here, against the file on THIS disk: the row's size is the listing's
+        word, and the copy a download published (or a local file that grew while it sat on the
+        screen) can be larger than that word — a parse of a file the declared cap does not allow is
+        the one thing this door must not start. A refusal answers the shipped sentence and drops the
+        copy; a parse that refuses answers ONE sentence and never dresses the other pane: the panel
+        is presented with the members already in it (the reader's rule), and the spool goes with it.
         """
+        limit = archive.resolve_archive_max_bytes()
+        size = archive.local_size(local)
+        if not archive.size_allowed(size, limit):
+            archive.drop_archive(spool)
+            format_bytes = host_attr(self, "format_size")
+            self.message.emit(_t("sftp.archive.cap", size=format_bytes(size),
+                                 limit=format_bytes(limit)))
+            return
         entries, encrypted, code = archive.archive_listing(local, kind)
         if code:
             archive.drop_archive(spool)

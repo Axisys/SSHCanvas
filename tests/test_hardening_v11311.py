@@ -212,8 +212,10 @@ _STAGE_OK = make_stage()
 plant_extract(_TAB, 9002, _record("/srv", {"data"}, "data", _STAGE_OK))
 _TAB._on_extract_ready(9002, _STAGE_OK, 2, ["link.txt"])
 check("§2 a DELIVERED tree reports the files it wrote and the folder that received it",
-      i18n.t("sftp.archive.extract_done", count=2, target="/srv/data") in _SEEN
-      and i18n.t("sftp.local.skipped", count=1, names="link.txt") in _SEEN
+      wait_for(lambda: i18n.t("sftp.archive.extract_done", count=2, target="/srv/data") in _SEEN,
+               timeout_ms=15000)
+      and wait_for(lambda: i18n.t("sftp.local.skipped", count=1, names="link.txt") in _SEEN,
+                   timeout_ms=15000)
       and wait_for(lambda: "/srv/data/marker.txt" in _REMOTE.files, timeout_ms=15000),
       f"seen={_SEEN} files={sorted(_REMOTE.files)}")
 
@@ -223,7 +225,8 @@ _STAGE_RENAMED = make_stage()
 plant_extract(_TAB, 9003, _record("/srv", {"data"}, "data", _STAGE_RENAMED))
 _TAB._on_extract_ready(9003, _STAGE_RENAMED, 1, [])
 check("§2 ...and `Rename` reports the folder the tree LANDED in, never the name it was asked about",
-      i18n.t("sftp.archive.extract_done", count=1, target="/srv/data-2") in _SEEN
+      wait_for(lambda: i18n.t("sftp.archive.extract_done", count=1, target="/srv/data-2") in _SEEN,
+               timeout_ms=15000)
       and wait_for(lambda: "/srv/data-2/marker.txt" in _REMOTE.files, timeout_ms=15000)
       and i18n.t("sftp.archive.extract_done", count=1, target="/srv/data") not in _SEEN,
       f"seen={_SEEN} files={sorted(_REMOTE.files)}")
@@ -263,16 +266,17 @@ def _limit_of(plan, path, limits=None):
 
 check("§3 the ONE cap verdict answers the code AND the ceiling it crossed",
       callable(_VERDICT) and callable(_LIMIT)
-      and _VERDICT({"count": SW.MAX_TREE_ENTRIES + 1, "total": 0}, _ENTRIES_ZIP, None)
+      and _VERDICT({"count": SW.MAX_TREE_ENTRIES + 1, "entries": SW.MAX_TREE_ENTRIES + 1,
+                    "total": 0}, _ENTRIES_ZIP, None)
       == (TREE_ERROR_TOO_BIG, AX.EXTRACT_MAX_ENTRIES)
-      and _VERDICT({"count": 1, "total": 200000}, _BOMB_ZIP, {"total_bytes": 1024})
+      and _VERDICT({"count": 1, "entries": 1, "total": 200000}, _BOMB_ZIP, {"total_bytes": 1024})
       == (AX.EXTRACT_ERROR_BOMB, 1024)
       and AX.EXTRACT_MAX_ENTRIES == 5000 and AX.EXTRACT_MAX_TOTAL_BYTES == 1024 ** 3,
       f"entries={AX.EXTRACT_MAX_ENTRIES} total={AX.EXTRACT_MAX_TOTAL_BYTES}")
 check("§3 a COUNT refusal names the entry cap (a byte cap here read '1 073 741 824 entries')",
       callable(_LIMIT)
-      and _LIMIT({"count": SW.MAX_TREE_ENTRIES + 1, "total": 0}, _ENTRIES_ZIP, None) == 5000
-      and _LIMIT({"count": 5001, "total": 0}, _ENTRIES_ZIP, {"entries": 7}) == 7)
+      and _LIMIT({"entries": SW.MAX_TREE_ENTRIES + 1, "total": 0}, _ENTRIES_ZIP, None) == 5000
+      and _LIMIT({"entries": 5001, "total": 0}, _ENTRIES_ZIP, {"entries": 7}) == 7)
 check("§3 a BYTE refusal names the ceiling that was really crossed — total, or the ratio threshold",
       callable(_LIMIT)
       and _LIMIT({"count": 1, "total": 200000}, _BOMB_ZIP, {"total_bytes": 1024}) == 1024

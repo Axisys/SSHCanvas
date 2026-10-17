@@ -10,10 +10,12 @@ temp path the relay already uses. Every answer is a MACHINE CODE, never a senten
 
 Contract — `ARCHIVES.md` §2-§4; mechanism — `DOCUMENTATION.md` §76.
 """
+import lzma
 import os
 import posixpath
 import tarfile
 import zipfile
+import zlib
 from datetime import datetime
 
 try:  # the declared read policy and the extension screen of the SHIPPED reader
@@ -60,9 +62,11 @@ ZIP_FILE_TYPE_BITS = 0o170000
 ZIP_SYMLINK_BITS = 0o120000
 
 #: The codes of an unreadable path or member (the readers' own exceptions, never a traceback) — the
-#: ONE declaration of the family: both halves catch the parse's own refusals through it.
+#: ONE declaration of the family: both halves catch the parse's own refusals through it. The two
+#: DECOMPRESSORS answer exceptions of their own (`zlib.error` on a corrupt DEFLATE stream,
+#: `lzma.LZMAError` on a corrupt xz one), and they are refused members like any other parse failure.
 READ_ERRORS = (OSError, ValueError, KeyError, EOFError, RuntimeError, NotImplementedError,
-               zipfile.BadZipFile, tarfile.TarError)
+               zipfile.BadZipFile, tarfile.TarError, zlib.error, lzma.LZMAError)
 
 
 def archive_kind(path) -> str:
@@ -120,6 +124,18 @@ def resolve_archive_max_bytes(cfg: dict = None) -> int:
     return value if value > 0 else ARCHIVE_MAX_BYTES
 
 
+def local_size(path) -> int:
+    """How many bytes ONE local file holds — 0 for a path the OS will not size. Never raises.
+
+    The ONE reader of the size the cap is really asked about: the listing's row is a hint the server
+    wrote, while the copy on THIS disk is the file a parse would open (`ARCHIVES.md` §2).
+    """
+    try:
+        return max(0, int(os.path.getsize(str(path or ""))))
+    except (OSError, TypeError, ValueError):
+        return 0
+
+
 # ── The listing: the READABLE members of ONE level ───────────────────────────
 
 def _entry(raw, size, mtime, kind: str = MEMBER_FILE) -> dict:
@@ -147,10 +163,12 @@ def _zip_kind(info) -> str:
     return MEMBER_LINK if zip_is_link(info) else MEMBER_FILE
 
 
-def _zip_members(path):
+def _zip_members(path, limit: int = 0):
     entries, encrypted = [], False
     with zipfile.ZipFile(path) as archive:
         for info in archive.infolist():
+            if limit > 0 and len(entries) > limit:
+                break   # one member PAST the bound: the caller can tell the walk was cut
             if int(info.flag_bits or 0) & ZIP_ENCRYPTED_FLAG:
                 encrypted = True
             entries.append(_entry(info.filename, info.file_size, _zip_mtime(info), _zip_kind(info)))
@@ -167,29 +185,34 @@ def _tar_kind(info) -> str:
     return MEMBER_DEVICE   # a character / block device or a fifo: no bytes a panel could open
 
 
-def _tar_members(path):
+def _tar_members(path, limit: int = 0):
     entries = []
     with tarfile.open(path, "r:*") as archive:
         for info in archive:
+            if limit > 0 and len(entries) > limit:
+                break   # streaming: the rest of the container is never even decompressed
             entries.append(_entry(info.name, info.size, info.mtime, _tar_kind(info)))
     return entries, False, ""
 
 
-def archive_members(path, kind: str = "") -> tuple:
+def archive_members(path, kind: str = "", limit: int = 0) -> tuple:
     """`(members, encrypted, code)` of ONE archive — EVERY entry of ONE level, in archive order.
 
     The full walk behind `archive_listing()`: a directory member is a prefix of its children's
     names (a zip may omit it entirely), the body of a symlink / hardlink member is its TARGET PATH
     and a device or fifo member holds no bytes — the listing drops them and the extract half owns
     what they mean (`ARCHIVES.md` §3, §6), so ONE parse serves both halves.
+
+    A positive `limit` is the ENTRY BOUND of the walk: it answers at most `limit + 1` members, so a
+    5 000-member cap costs 5 001 entries of memory and time whatever the archive holds beyond it.
     """
     resolved = kind or archive_kind(path)
     if not resolved:
         return [], False, ARCHIVE_ERROR_UNREADABLE
     try:
         if resolved == ARCHIVE_KIND_ZIP:
-            return _zip_members(path)
-        return _tar_members(path)
+            return _zip_members(path, limit)
+        return _tar_members(path, limit)
     except READ_ERRORS:
         return [], False, ARCHIVE_ERROR_UNREADABLE
 

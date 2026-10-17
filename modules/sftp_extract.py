@@ -114,18 +114,18 @@ class SftpExtractMixin:
     def take_archive_copy(self, local: str) -> bool:
         """Hand the LOCAL copy of a running extraction to THIS container; True — it owns it now.
 
-        A preview closed while its archive is being unpacked must not delete the file the extractor
-        is reading, so `_reset_archive()` asks here first: True means the container keeps the copy
-        and drops it with the answer (a plaintext duplicate of a server file outlives no more than
-        the operation it was made for).
+        EVERY extraction of that copy is marked: two extractions can read ONE local file (a second
+        `Extract` before the first answers), and a view that closes then owes the copy to both of
+        them — marking only the first would let the first answer delete the file the second is still
+        reading. True means the container keeps the copy and drops it with the LAST answer (a
+        plaintext duplicate of a server file outlives no more than the operations it was made for).
         """
         if not local:
             return False
-        for record in self._extracts.values():
-            if record.get("local") == local:
-                record["closed"] = True
-                return True
-        return False
+        marked = [record for record in self._extracts.values() if record.get("local") == local]
+        for record in marked:
+            record["closed"] = True
+        return bool(marked)
 
     def extract_active(self) -> bool:
         """Is an extraction still running (the topical seam of the container's own engine)?"""
@@ -135,31 +135,34 @@ class SftpExtractMixin:
         return   # the shipped `task_started` shape: nothing of the container's depends on it
 
     def _on_extract_ready(self, task_id: int, tree: str, written: int, skipped: list):
-        """The extraction wrote its tree: hand it to the destination and say what it left out.
+        """The extraction wrote its tree: hand it to the destination — and SAY NOTHING.
 
-        `tree` IS the stage (`modules/local_fs_worker.py` writes the members straight into it), so the
-        one temp folder is the one delivered tree — and `ship_staged_tree()` drops it with the answer
-        the delivery gives, whatever that answer is. The delivery answers the folder RECEIVED, and the
-        success sentence belongs to that answer: a `Skip`, a cancelled `Rename`, an elevated or a
-        provider refusal reports itself (or is the user's own answer) and nothing was written.
+        `tree` IS the stage (`modules/local_fs_worker.py` writes the members straight into it) and the
+        delivery pane owns it from the hand-over: the success and the skip sentences belong to the
+        ANSWER of that task (`_report_staged()`), the only moment they are true — a `Skip`, a
+        cancelled `Rename`, an elevated or a provider refusal report themselves and nothing landed.
+        A destination pane that is GONE (the two-pane mode went off while the archive was unpacking)
+        costs the tree and no traceback: its widgets cannot be asked a conflict question any more.
         """
         record = self._extracts.pop(int(task_id), None)
         if record is None:
             archive_extract.drop_stage(tree)
             return
-        dest_pane = record["dest_pane"]
-        delivered = dest_pane.ship_staged_tree(tree, record["dest_dir"], record["name"],
-                                              record.get("known") or set())
+        dest_pane = record.get("dest_pane")
+        if dest_pane is None or dest_pane not in self._panes:
+            archive_extract.drop_stage(tree)
+            self._drop_extract_copy(record)
+            return
+        try:
+            delivered = dest_pane.ship_staged_tree(tree, record.get("dest_dir") or "",
+                                                   record.get("name") or "",
+                                                   record.get("known") or set(),
+                                                   written=int(written),
+                                                   skipped=list(skipped))
+        except RuntimeError:
+            delivered = ""   # the pane died between the liveness check and the delivery
         if not delivered:
             archive_extract.drop_stage(tree)
-        else:
-            record["pane"].message.emit(_t("sftp.archive.extract_done", count=int(written),
-                                           target=dest_pane.paths.join(record["dest_dir"],
-                                                                       delivered)))
-            if skipped:
-                record["pane"].message.emit(_t(
-                    local_fs.LOCAL_ERROR_KEYS[local_fs.KIND_LIST_PARTIAL], count=len(skipped),
-                    names=", ".join(str(name) for name in skipped[:5])))
         self._drop_extract_copy(record)
 
     def _on_extract_error(self, task_id: int, _kind: str, message: str):
@@ -168,7 +171,7 @@ class SftpExtractMixin:
         if record is None:
             return
         archive_extract.drop_stage(record.get("stage") or "")
-        record["pane"].message.emit(self._extract_error_text(message))
+        self._say(record, self._extract_error_text(message))
         self._drop_extract_copy(record)
 
     def _on_extract_cancelled(self, task_id: int, _kind: str):
@@ -176,8 +179,18 @@ class SftpExtractMixin:
         if record is None:
             return
         archive_extract.drop_stage(record.get("stage") or "")
-        record["pane"].message.emit(_t("sftp.transfer_cancelled"))
+        self._say(record, _t("sftp.transfer_cancelled"))
         self._drop_extract_copy(record)
+
+    def _say(self, record: dict, text: str):
+        """Emit ONE sentence on the pane that opened the archive — if it is still there. Never raises."""
+        pane = record.get("pane")
+        if pane is None or pane not in self._panes:
+            return
+        try:
+            pane.message.emit(text)
+        except RuntimeError:
+            pass   # the C++ object went away with the pane
 
     @staticmethod
     def _extract_error_text(message: str) -> str:
@@ -202,10 +215,18 @@ class SftpExtractMixin:
         return _facade("local_error_text", lambda text: _t("sftp.op.error", error=text))(message)
 
     def _drop_extract_copy(self, record: dict):
-        """Drop the spool of an extraction whose view was CLOSED while it ran. Never raises."""
+        """Drop the spool of an extraction whose view was CLOSED — by its LAST reader. Never raises.
+
+        The record has already left `_extracts` when this runs, so a spool another extraction still
+        names is kept: a plaintext copy goes with the last operation that reads it, never with the
+        first one that ends.
+        """
         spool = str(record.get("spool") or "")
-        if record.get("closed") and spool:
-            archive_view.drop_archive(spool)
+        if not record.get("closed") or not spool:
+            return
+        if any(str(other.get("spool") or "") == spool for other in self._extracts.values()):
+            return
+        archive_view.drop_archive(spool)
 
     def _release_extracts(self):
         """Stop the extract engine and drop everything it still holds — the container's teardown.

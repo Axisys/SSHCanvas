@@ -754,7 +754,9 @@ class LocalFsWorker(QThread):
         discipline of this module: `<target>.<pid>-<task>.part`, then `os.replace`, so an
         interrupted extraction never leaves a half-written file and a partial tree is ONE folder to
         delete. A member the plan left out (a link, a device, a refused name) is named in the
-        answer, never silently dropped — and the count it reports is the members really WRITTEN.
+        answer, never silently dropped — and so is a member the READER could not open (an archive
+        that changed under the walk): the count it reports is the members really WRITTEN, and the
+        skip list carries every member that is not on the disk.
         """
         path = task.path
         dest_root = task.path2 or self.root
@@ -778,15 +780,19 @@ class LocalFsWorker(QThread):
         task.total_size = int(plan["total"] or 0)
         total = max(1, task.total_size)
         written, done = 0, 0
+        missed = []
         with extract.MemberReader(path, kind) as reader:
             for member in plan["files"]:
                 self._check_cancel()
                 dest = os.path.join(dest_root, *member["parts"])
                 self._mkdir_quiet(os.path.dirname(dest))
                 wrote, size = self._write_member(task, reader, member, dest, total, done)
+                if not wrote:
+                    missed.append(str(member.get("name") or member.get("raw") or ""))
                 written += wrote
                 done += size
-        self._emit(self.extract_ready, task.id, dest_root, written, list(plan["skipped"]))
+        self._emit(self.extract_ready, task.id, dest_root, written,
+                   list(plan["skipped"]) + missed)
 
     def _write_member(self, task: _LocalTask, reader, member: dict, dest: str,
                       total: int, done_base: int) -> tuple:
@@ -794,7 +800,8 @@ class LocalFsWorker(QThread):
 
         Answers `(1, bytes)` for a member really written and `(0, 0)` for one the reader could not
         open — the plan allows a REGULAR FILE member, so a `None` here means the archive changed
-        under the walk, and a counter that counted it would report a file that is not on the disk.
+        under the walk, and a counter that counted it would report a file that is not on the disk
+        (the caller names the member in the answer's skip list instead).
 
         The member's OWN mtime is carried onto the committed file — a fact of the archive, not a
         guess — while its mode is deliberately NOT: an archive's permission bits are a POSIX idea

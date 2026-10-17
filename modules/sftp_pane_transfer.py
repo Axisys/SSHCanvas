@@ -414,16 +414,23 @@ class SftpPaneTransferMixin:
 
     @property
     def _staged_deliveries(self) -> dict:
-        """The staged trees this pane is shipping — task_id → the local root of ONE extraction.
+        """The staged trees this pane is shipping — task_id → ONE delivery record.
 
-        Created with the FIRST delivery (a pane that never extracts holds no record), and the tree is
-        dropped with the answer its task gives: the extractor's copy is a plaintext duplicate of a
-        server file, so it never outlives the delivery it was made for.
+        The record carries the stage, the folder the tree is delivered AS, the directory it goes
+        into and the extraction's own counters (`written` / `skipped`), so the report the task's
+        ANSWER earns can name what really landed. Created with the FIRST delivery (a pane that never
+        extracts holds no record), and the tree is dropped with the same answer: the extractor's copy
+        is a plaintext duplicate of a server file, so it never outlives the delivery it was made for.
         """
         return self.__dict__.setdefault("_staged_records", {})
 
+    @staticmethod
+    def _staged_record(entry) -> dict:
+        """ONE delivery record — the shipped dict, or a bare stage path a caller planted."""
+        return entry if isinstance(entry, dict) else {"stage": str(entry or "")}
+
     def ship_staged_tree(self, staged_root: str, target_dir: str, name: str,
-                         known: set) -> str:
+                         known: set, written: int = 0, skipped=None) -> str:
         """Carry ONE staged tree into this pane's directory — the SHIPPED engine, ONE item.
 
         The extract half writes the archive into a local staging folder and hands it HERE, so the
@@ -433,6 +440,10 @@ class SftpPaneTransferMixin:
         asked ONCE for the whole extraction — that question is the folder, and a partial extraction
         is therefore ONE folder to delete. An ELEVATED destination refuses at the shipped door
         (`ELEVATED_PANE.md` §5), and the staged tree is dropped with the answer the task gives.
+
+        `written` / `skipped` are the EXTRACTION's counters: they travel into the delivery record so
+        the success sentence and the skip sentence belong to the answer that proves them, never to
+        the moment the upload was queued (`_report_staged()`).
 
         Answers the folder the tree was delivered AS — the SHIPPED name, or the one the `Rename`
         answer chose, which is what lets the report name the path that really received it. `""` —
@@ -460,15 +471,43 @@ class SftpPaneTransferMixin:
             self.message.emit(_t("sftp.waiting_connection"))
             return ""
         self._remember_transfer(task_id)
-        self._staged_deliveries[int(task_id)] = str(staged_root or "")
+        self._staged_deliveries[int(task_id)] = {
+            "stage": str(staged_root or ""), "folder": folder, "dir": str(target_dir or ""),
+            "written": int(written or 0), "skipped": [str(item) for item in (skipped or [])]}
         return folder
+
+    def _report_staged(self, task_id) -> bool:
+        """Report ONE staged delivery that LANDED; True — this task carried one.
+
+        The extraction's own sentences belong to the ANSWER of the delivery task, not to the moment
+        it was queued: a `Skip`, a cancelled `Rename`, a refusal or a failure have their own
+        sentences (or none), and a success written before the bytes are there is the one lie the
+        report cannot afford. The skip sentence is the SHIPPED local one — the members it names are
+        archive members, not files of the destination's dialect.
+        """
+        record = self._staged_deliveries.get(int(task_id))
+        if not record:
+            return False
+        data = self._staged_record(record)
+        if not data.get("folder") or data.get("reported"):
+            return bool(data.get("folder"))
+        data["reported"] = True
+        target = self.paths.join(str(data.get("dir") or ""), str(data.get("folder") or ""))
+        self.message.emit(_t("sftp.archive.extract_done", count=int(data.get("written") or 0),
+                             target=target))
+        skipped = list(data.get("skipped") or [])
+        if skipped:
+            self.message.emit(_t(local_fs.LOCAL_ERROR_KEYS[local_fs.KIND_LIST_PARTIAL],
+                                 count=len(skipped),
+                                 names=", ".join(str(name) for name in skipped[:5])))
+        return True
 
     def _drop_staged(self, task_id) -> bool:
         """Drop the staged tree of ONE answered delivery; True — this task carried one."""
-        staged = self._staged_deliveries.pop(int(task_id), None)
-        if staged is None:
+        record = self._staged_deliveries.pop(int(task_id), None)
+        if record is None:
             return False
-        archive_extract.drop_stage(staged)
+        archive_extract.drop_stage(self._staged_record(record).get("stage") or "")
         return True
 
     def _drop_staged_all(self) -> int:
@@ -478,8 +517,8 @@ class SftpPaneTransferMixin:
         plaintext tree it was made from is dropped here instead of waiting for an answer.
         """
         removed = 0
-        for staged in list(self._staged_deliveries.values()):
-            if archive_extract.drop_stage(staged):
+        for record in list(self._staged_deliveries.values()):
+            if archive_extract.drop_stage(self._staged_record(record).get("stage") or ""):
                 removed += 1
         self._staged_deliveries.clear()
         return removed
@@ -757,9 +796,13 @@ class SftpPaneTransferMixin:
 
         v1.13: the ARCHIVE view's spool leg is asked FIRST (`_archive_answer()`) — it opens the
         listing (or drops an abandoned spool) and owns its own report.
+
+        v1.13.1.2: an EXTRACTION's delivery reports HERE — the shipped engine answered, so the
+        success and the skip sentences are true; the queue moment said nothing.
         """
         if self._archive_answer("done", task_id, detail):
             return
+        self._report_staged(task_id)
         kind = self._op_tasks.pop(task_id, None)
         if kind in (KIND_COPY, KIND_MOVE):
             pane, dest_dir = self._op_targets.get(task_id) or (None, "")

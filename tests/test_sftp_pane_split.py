@@ -83,7 +83,9 @@ WAVE2 = {
         "_remember_transfer", "_rows_for_batch", "_remote_batch", "_pane_source",
         "_batch_provider", "_queue_transfer_batch", "_queue_batch_item", "_open_batch",
         "_count_batch", "_finish_batch", "_answer_batch_task", "_remote_error_text",
-        "_on_task_started", "_on_task_done", "_on_task_cancelled", "_on_task_finished"]),
+        "_on_task_started", "_on_task_done", "_on_task_cancelled", "_on_task_finished",
+        # v1.13.1.2: the delivery's report — the answer that PROVES the tree landed.
+        "_report_staged"]),
     "modules/sftp_pane_dnd.py": ("SftpPaneDndMixin", PDND.SftpPaneDndMixin, [
         "_on_context_menu", "_build_context_menu", "_build_send_menu", "_op_send_to",
         "eventFilter", "_popup_open", "local_files", "dragEnterEvent", "dragMoveEvent",
@@ -182,10 +184,10 @@ check("§2 the AST reader of the family still finds EVERY wave method (its pins 
       all(pane_func_owner(m, ROOT) for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items()
           for m in methods))
 check("§2 the method counts are the plan's (23 + 25 + 28 in wave 1 — v1.9.3 adds the reader's "
-      "encoding four, v1.13 the archive's sixteen, v1.13.1.1 the member path one, 29 + 15 in wave 2, "
-      "25 kept)",
+      "encoding four, v1.13 the archive's sixteen, v1.13.1.1 the member path one, v1.13.1.2 the "
+      "delivery's report one, 30 + 15 in wave 2, 25 kept)",
       [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 49]
-      and [len(m) for _rel, (_n, _c, m) in WAVE2.items()] == [29, 15]
+      and [len(m) for _rel, (_n, _c, m) in WAVE2.items()] == [30, 15]
       and len(_class_method_names("modules/sftp_tab.py", "_SftpPane")) == len(FACADE_METHODS),
       str({rel: len(m) for rel, (_n, _c, m) in WAVE2.items()}))
 check("§2 the facade keeps the wave's OWNER list and nothing of it moved (the shared machinery)",
