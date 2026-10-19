@@ -75,6 +75,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Cross-Session Transfer:** Send files between two sessions of different servers; the file is relayed through the local machine temporarily.
     *   **Per-Server Memory:** Both panes remember each server's last directory; a row dragged between panes is copied, moved with `Shift`, and a drop from another session is refused and points at *Send to*.
 *   **Files Display Mode:** Keep the session's Files tree in its `Files` tab (the default) or as a right-hand panel beside the shell (standalone windows). The panel folds to a 24 px strip and is mutually exclusive with the Commander.
+*   **Diff:** Right-click a session tab (or the terminal window) and pick **Diff** to open a comparison beside the shell — two sides, each a local file or a file sent from the Files pane of **any** open session (**Send to ▾ Diff**). The comparison is **line-based** with the changed characters marked inside a modified line, and the two aligned columns scroll together. The preview's size limit applies per side (a bigger file is truncated and says so), both sides use the one encoding named in the header, and a binary file is refused with a sentence. It is a read-only view: nothing is edited, merged or saved, and it closes with its session.
 
 ### Reports & Exports
 *   **Table View:** Collapsing the map converts the sidebar into a 13-column sortable table (Alias, IP, Port, User, Status and its age, OS, CPU, RAM, Disk and the facts' age, Comment, Tags).
@@ -168,6 +169,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **Guardrails:** "Production tags" and "Command guards" act as confirmation checkpoints for potentially dangerous actions (e.g., multi-line pastes or destructive commands).
 *   **Relayed Files:** Files sent between different servers are relayed through the local machine's temporary folder and are deleted immediately after transfer; a file over 100 MB is refused before anything moves.
 *   **Archive Viewer:** An archive opened for reading or for extraction is copied into that same temporary folder (a local file is read where it lies), the copy is deleted when the view closes, and the size limit is checked against the copy itself. The view opens archives up to 256 MB by default — a larger one is refused before anything is copied. A listing shows at most 5 000 entries and says so when the archive holds more. An extraction is bounded before it writes a byte: a member name that escapes the destination folder, a member name this system cannot store, an archive that expands past 1 GB or past 100× its own size, and an archive of more than 5000 members (files, folders or links — every entry counts) are all refused, and a member that is a link or a device is skipped and reported instead of created. The report of a finished extraction is shown once the transfer has actually landed.
+*   **Diff Copies:** A file compared from a session other than the one holding the Diff tab is copied into that same temporary folder, read once, and deleted as soon as its text is decoded; a file on this machine is read where it lies. A binary file is refused with a sentence and never rendered.
 
 ### Behavioral Constraints
 *   **Undo/Redo:** Covers map elements (nodes, connections, notes, groups, edits) but **not** node statuses.
@@ -230,7 +232,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 163 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 164 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

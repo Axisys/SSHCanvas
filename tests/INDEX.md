@@ -120,6 +120,7 @@ of the file itself.
 | `test_context_menus.py` | — | Node and arrow context menus v0.7.3 (a former smoke-test part). |
 | `test_core.py` | — | Suite core (former smoke_test.py §1–5): compile, i18n, models, ANSI, profiles/keyring. |
 | `test_diagnostics.py` | network | `services/diagnostics.py`: `PingThread` + `ReverseDnsThread` (v0.9.9.3). |
+| `test_diff.py` | — | The Diff tab of a session (v1.13.4): the pure engine, the readers, the spool, the view and its doors. |
 | `test_docs.py` | docs | The documentation regime — run it with `--docs`, never by accident (see `_common.docs_mode`). |
 | `test_drawio_export.py` | — | Map export to drawio (.drawio) v0.9.5 (a former smoke test). |
 | `test_duplicate_multiselect.py` | — | Regression v0.9.3: node duplication + multi-select + group drag. |

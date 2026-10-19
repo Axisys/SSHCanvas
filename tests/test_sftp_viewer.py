@@ -388,11 +388,11 @@ check("v1.3.3.2: building it queued no read task",
       len([e for e in log4.events if e[0] == "started" and e[2] == KIND_READ]) == reads_before
       and not tab._read_tasks, f"read_tasks={tab._read_tasks}")
 check("v1.3.3.2: the menu carries the four file operations + the two row verbs (v1.13.3) + the "
-      "archive row + the Send-to submenu + Refresh",
+      "archive row + the Send-to / Send-to-Diff submenus + Refresh",
       [a.text() for a in menu.actions() if not a.isSeparator()]
       == [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"), i18n.t("sftp.op.delete"),
           i18n.t("sftp.op.download"), i18n.t("sftp.op.upload"), i18n.t("sftp.op.copy_path"),
-          i18n.t("sftp.archive.open"), i18n.t("sftp.send.menu"),
+          i18n.t("sftp.archive.open"), i18n.t("sftp.send.menu"), i18n.t("diff.send.menu"),
           i18n.t("sftp.refresh")],
       f"got={[a.text() for a in menu.actions() if not a.isSeparator()]}")
 tab._on_item_double_clicked(item_by_name(tab, "a.txt"), 0)

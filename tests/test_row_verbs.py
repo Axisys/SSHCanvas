@@ -159,15 +159,15 @@ wait_until(lambda: _item(tab1, "data") is not None, timeout_ms=5000)
 
 _menu = tab1._build_context_menu(_item(tab1, "plain.txt"))
 check("§1 the row menu is New Folder / Rename / Delete / Download / Upload / Copy Path / Open archive "
-      "/ Send to / Refresh",
+      "/ Send to / Send to Diff / Refresh",
       _labels(_menu) == [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"),
                          i18n.t("sftp.op.delete"), i18n.t("sftp.op.download"),
                          i18n.t("sftp.op.upload"), i18n.t("sftp.op.copy_path"),
                          i18n.t("sftp.archive.open"), i18n.t("sftp.send.menu"),
-                         i18n.t("sftp.refresh")],
+                         i18n.t("diff.send.menu"), i18n.t("sftp.refresh")],
       str(_labels(_menu)))
 check("§1 on a REAL file row both verbs are live beside Rename/Delete/Copy",
-      _enabled(_menu) == [True, True, True, True, True, True, False, True, True],
+      _enabled(_menu) == [True, True, True, True, True, True, False, True, True, True],
       str(_enabled(_menu)))
 check("§1 the two verbs live in the pane's OWN menu builder (no second menu, no map import)",
       "_build_context_menu" in _read("modules", "sftp_pane_dnd.py")
@@ -560,8 +560,9 @@ _check_keys = ["sftp.op.download", "sftp.op.upload", "terminal.cmdlib.connect",
 check("§7 the NINE keys of the release are non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _check_keys),
       str({c: [k for k in _check_keys if not LANGS[c].get(k)] for c in sorted(LANGS)}))
-check("§7 ...and the pin carries them (1144 = 1135 + 9)", len(_check_keys) == 9
-      and EXPECTED_I18N_KEYS == 1144 and EXPECTED_I18N_KEYS == 1135 + len(_check_keys),
+check("§7 ...and the pin carries them (1162 = 1135 + 9 + the Diff tab's 18)", len(_check_keys) == 9
+      and EXPECTED_I18N_KEYS == 1162
+      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18,
       str(EXPECTED_I18N_KEYS))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
@@ -569,7 +570,7 @@ check_i18n_format(LANGS)
 from version import APP_VERSION, VERSION_FORMAT  # noqa: E402
 
 check("§7 the shipped version is the one the pin names",
-      APP_VERSION == EXPECTED_APP_VERSION == "1.13.3"
+      APP_VERSION == EXPECTED_APP_VERSION == "1.13.4"
       and releases_at_least(APP_VERSION, "1.13.3"), APP_VERSION)
 check("§7 the release adds no config key and moves no project schema",
       VERSION_FORMAT == "0.9" and bool(VERSION_FORMAT_RE.match(APP_VERSION)), VERSION_FORMAT)

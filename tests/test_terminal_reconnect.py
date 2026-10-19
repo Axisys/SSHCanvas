@@ -229,10 +229,12 @@ class _FakeMenu:
 _dead = _page()
 _dead._on_closed()
 _menu = _FakeMenu()
-_rows = TP.add_session_actions(_menu, _dead, lambda page: None, lambda page: None)
-check("§1 the builder appends exactly TWO rows: Reconnect and the tmux door",
+_rows = TP.add_session_actions(_menu, _dead, lambda page: None, lambda page: None,
+                               lambda page: None)
+check("§1 the builder appends exactly THREE rows: Reconnect, the tmux door and the Diff door",
       [a.text() for a in _menu.actions] == [i18n.t("terminal.reconnect"),
-                                           i18n.t("terminal.attach_tmux")],
+                                           i18n.t("terminal.attach_tmux"),
+                                           i18n.t("terminal.diff.open")],
       [a.text() for a in _menu.actions])
 check("§1 every row carries its own tooltip (the key exists)",
       all(a.tooltip for a in _menu.actions))
@@ -240,16 +242,20 @@ check("§1 an ENDED session enables Reconnect (`can_reconnect()` read at build t
       _menu.actions[0].isEnabled() is True)
 check("§1 the tmux door stays enabled for any live page",
       _menu.actions[1].isEnabled() is True and _rows[0] is _menu.actions[0])
+check("§1 the Diff door is live on a session with the Files tab and hands it its OWN page",
+      _menu.actions[2].isEnabled() is True and callable(_rows[2].triggered.emit))
 
 _live_menu = _FakeMenu()
-TP.add_session_actions(_live_menu, _page(), lambda page: None, lambda page: None)
+TP.add_session_actions(_live_menu, _page(), lambda page: None, lambda page: None,
+                       lambda page: None)
 check("§1 a LIVE session leaves Reconnect DISABLED (the state is never cached)",
       _live_menu.actions[0].isEnabled() is False and _live_menu.actions[1].isEnabled() is True)
 
 _none_menu = _FakeMenu()
-TP.add_session_actions(_none_menu, None, lambda page: None, lambda page: None)
-check("§1 a page-less menu disables both rows instead of raising",
-      [a.isEnabled() for a in _none_menu.actions] == [False, False])
+TP.add_session_actions(_none_menu, None, lambda page: None, lambda page: None,
+                       lambda page: None)
+check("§1 a page-less menu disables every row instead of raising",
+      [a.isEnabled() for a in _none_menu.actions] == [False, False, False])
 
 _clicked = []
 _t_menu = _FakeMenu()
@@ -451,14 +457,23 @@ _live_thread = _win_page.terminal_thread
 check("§5 the window's tab bar really takes the custom context menu (the real path)",
       _win.session_tabs.tabBar().contextMenuPolicy().name == "CustomContextMenu")
 _tab_menu = _win._build_tab_context_menu(0)
-check("§5 the TAB's menu carries the two session rows",
+check("§5 the TAB's menu carries the three session rows",
       [a.text() for a in _tab_menu.actions()] == [i18n.t("terminal.reconnect"),
-                                                  i18n.t("terminal.attach_tmux")],
+                                                  i18n.t("terminal.attach_tmux"),
+                                                  i18n.t("terminal.diff.open")],
       [a.text() for a in _tab_menu.actions()])
 check("§5 ...and Reconnect is DISABLED while the session is live",
       _tab_menu.actions()[0].isEnabled() is False)
 check("§5 the window's own menu carries them for the session on screen",
       i18n.t("terminal.reconnect") in [a.text() for a in _win._build_context_menu().actions()])
+check("§5 the window's own menu carries the Diff door too (v1.13.4)",
+      i18n.t("terminal.diff.open") in [a.text() for a in _win._build_context_menu().actions()])
+_diff_act = next(a for a in _win._build_context_menu().actions()
+                 if a.text() == i18n.t("terminal.diff.open"))
+_diff_act.trigger()
+check("§5 ...and the row opens the session's own Diff tab",
+      _win_page.diff_tab is not None
+      and _win_page.tabs.currentWidget() is _win_page.diff_tab)
 check("§5 a stale tab index answers None instead of a menu",
       _win._build_tab_context_menu(99) is None)
 
@@ -523,9 +538,10 @@ _dock = TD.TerminalDockContent()
 _dock_page = _dock.add_session(_data(alias="db"), password="pw")
 check("§5 the dock's tab bar takes the same custom context menu",
       _dock.session_tabs.tabBar().contextMenuPolicy().name == "CustomContextMenu")
-check("§5 the dock's tab menu carries the pair and reads the LIVE state",
+check("§5 the dock's tab menu carries the trio and reads the LIVE state",
       [a.text() for a in _dock._build_tab_context_menu(0).actions()]
-      == [i18n.t("terminal.reconnect"), i18n.t("terminal.attach_tmux")]
+      == [i18n.t("terminal.reconnect"), i18n.t("terminal.attach_tmux"),
+          i18n.t("terminal.diff.open")]
       and _dock._build_tab_context_menu(0).actions()[0].isEnabled() is False)
 check("§5 the dock's own menu carries them for the session in front",
       i18n.t("terminal.reconnect") in [a.text() for a in _dock._build_context_menu().actions()])
@@ -555,8 +571,8 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check("§6 the pin counts the shipped keys (the v1.9 line's 1040 + ELEVEN of v1.9.1 "
       "+ THIRTEEN of v1.9.3: the command dialog and the reader's encoding + THREE of "
-      "v1.9.6: the command guard + TWELVE of v1.9.7: the Add Server form + THIRTEEN of v1.9.8: the two `Clear` asks, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row)",
-      EXPECTED_I18N_KEYS == 1040 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9, f"{EXPECTED_I18N_KEYS}")
+      "v1.9.6: the command guard + TWELVE of v1.9.7: the Add Server form + THIRTEEN of v1.9.8: the two `Clear` asks, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; and the later releases' own keys follow — v1.13.4 adds EIGHTEEN: the Diff tab's chrome, its two sides, its two doors and its four sentences)",
+      EXPECTED_I18N_KEYS == 1040 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18, f"{EXPECTED_I18N_KEYS}")
 check("§6 the pin names this release or a LATER one (the file describes v1.9.1)",
       releases_at_least("1.9.1"), EXPECTED_APP_VERSION)
 _NEW_KEYS = ("terminal.reconnect", "terminal.reconnect_tooltip", "terminal.reconnecting",

@@ -550,7 +550,7 @@ check("§8 the pin names this release's line", releases_at_least(EXPECTED_APP_VE
       EXPECTED_APP_VERSION)
 check("§8 the archive surface's NINE keys are part of the pin (the READ half's four, the WRITE "
       "half's three, the slot's two)",
-      EXPECTED_I18N_KEYS == 1118 + 9 + 8 + 9, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1118 + 9 + 8 + 9 + 18, str(EXPECTED_I18N_KEYS))
 check("§8 the project schema did NOT move (the archive view is not project state)",
       'VERSION_FORMAT = "0.9"' in open(os.path.join(ROOT, "version.py"), encoding="utf-8").read())
 

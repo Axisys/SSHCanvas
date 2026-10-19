@@ -131,6 +131,21 @@ class SshMixin:
                 continue
         return targets
 
+    def _diff_targets(self):
+        """The sessions a file may be SENT to the Diff tab — the `Send to ▾ Diff` provider.
+
+        The registry owns the sessions, so the walk lives here and the Files container finds it
+        through the parent chain (`find_host_hook`, the `_send_session_targets()` precedent). The
+        SOURCE session is included: two files of one server are a normal comparison. The records
+        are built by the ONE PURE reader (`modules/terminal_diff.py`), so the map window and the
+        standalone surface describe a target the same way. Never raises.
+        """
+        try:
+            from modules.terminal_diff import diff_targets_from_pages
+        except ImportError:  # flat launch from the project root
+            from ..modules.terminal_diff import diff_targets_from_pages
+        return diff_targets_from_pages(getattr(self, "_terminal_windows", []))
+
     def _save_remembered_dirs(self):
         """v1.7.3 (ROADMAP v1.7.3, task 2): write the per-server directory memory of every session.
 

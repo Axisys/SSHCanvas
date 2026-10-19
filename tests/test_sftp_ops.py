@@ -486,9 +486,9 @@ expected = [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"),
             i18n.t("sftp.op.delete"), i18n.t("sftp.op.download"), i18n.t("sftp.op.upload"),
             i18n.t("sftp.op.copy_path"),
             i18n.t("sftp.archive.open"),
-            i18n.t("sftp.send.menu"), i18n.t("sftp.refresh")]
+            i18n.t("sftp.send.menu"), i18n.t("diff.send.menu"), i18n.t("sftp.refresh")]
 check("the context menu carries the four operations + the two row verbs (v1.13.3) + the archive "
-      "row + the Send-to submenu + Refresh", labels == expected, f"labels={labels}")
+      "row + the Send-to / Send-to-Diff submenus + Refresh", labels == expected, f"labels={labels}")
 check("on a real row Rename/Delete/Copy are enabled",
       all(a.isEnabled() for a in actions[:6]), f"got={[a.isEnabled() for a in actions]}")
 check("New folder is always available (the current directory is the target)",

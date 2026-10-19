@@ -45,6 +45,11 @@ except ImportError:
     from modules.command_history import (CommandHistoryPanel, CommandHistoryStore,
                                          history_key)
 
+try:  # v1.13.4: the Diff tab — a WIDGET of the session, never a session (`DIFF.md`)
+    from .terminal_diff import DiffTab
+except ImportError:
+    from terminal_diff import DiffTab  # type: ignore
+
 try:  # v1.9: the production-tag guard of a multi-line paste (the page owns the node's tags)
     from .production_guard import VERB_PASTE, confirm as guard_confirm, needs_confirmation, node_tags
 except ImportError:
@@ -452,15 +457,17 @@ def ask_tmux_name(parent=None) -> str:
     return str(text or "").strip() if ok else ""
 
 
-def add_session_actions(menu, page, on_reconnect, on_tmux) -> tuple:
-    """Append the Reconnect / Attach tmux rows of `page` to `menu` — the ONE builder (v1.9.1).
+def add_session_actions(menu, page, on_reconnect, on_tmux, on_diff=None) -> tuple:
+    """Append the Reconnect / Attach tmux / Diff rows of `page` to `menu` — the ONE builder (v1.9.1).
 
     Both containers build their menus per right click (the `_build_context_menu` test seam), which
     is what makes the enabled state a READ of the session at that moment instead of something an
     action has to keep in step: a LIVE session disables Reconnect, an ended one enables it. The
     actions belong to the menu (`menu.addAction()`, so Qt keeps them alive) and the handlers
     receive the page they act on — the tab a user right-clicked is not always the active one.
-    Never raises. Answers `(act_reconnect, act_tmux)`.
+    v1.13.4: the third row is the Diff door — live only on a session that carries the Files tab
+    (a split pane is a command line) and only when the caller passed the door.
+    Never raises. Answers `(act_reconnect, act_tmux, act_diff)`.
     """
     t = get_translator()
     can = getattr(page, "can_reconnect", None)
@@ -476,7 +483,12 @@ def add_session_actions(menu, page, on_reconnect, on_tmux) -> tuple:
     act_tmux.setToolTip(t("terminal.attach_tmux_tooltip"))
     act_tmux.setEnabled(page is not None)
     act_tmux.triggered.connect(lambda _checked=False: on_tmux(page))
-    return act_reconnect, act_tmux
+    act_diff = menu.addAction(t("terminal.diff.open"))
+    act_diff.setToolTip(t("terminal.diff.tooltip"))
+    act_diff.setEnabled(bool(page is not None and callable(on_diff)
+                             and getattr(page, "sftp_tab", None) is not None))
+    act_diff.triggered.connect(lambda _checked=False: on_diff(page))
+    return act_reconnect, act_tmux, act_diff
 
 
 def format_duration(seconds) -> str:
@@ -749,6 +761,8 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # channel to read through on a compact pane (§4.3). The panel is duck-typed against this page.
         self.command_history = CommandHistoryStore(getattr(server_data, "id", ""))
         self.history_tab = None
+        # v1.13.4: the Diff tab is LAZY — created by the first door (`open_diff()`), never here.
+        self.diff_tab = None
         if self._with_sftp:
             self.history_tab = CommandHistoryPanel(store=self.command_history, session=self)
             self.tabs.addTab(self.history_tab, t("terminal.tab_history"))
@@ -1026,6 +1040,39 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             self._set_status_text(get_translator()("terminal.attach_tmux_sent", name=str(name).strip()))
         return sent
 
+    # ── v1.13.4: the Diff tab — a WIDGET of this session (`DIFF.md` §1-§3) ──
+
+    def open_diff(self, side=None, entry=None):
+        """Open THIS session's Diff tab (creating it on the first door) and make it current.
+
+        The tab is a widget of the session, never a session: no thread, no `terminal_max_open`
+        question and no registry entry — it dies with the page (`shutdown()`). A split pane (no
+        Files tab) answers None: its layout is a command line. `side` + `entry` fill one side on
+        the way in (the `Send to ▾ Diff` door); a bare call only opens the tab.
+        """
+        if getattr(self, "sftp_tab", None) is None:
+            return None
+        tab = getattr(self, "diff_tab", None)
+        if tab is None:
+            tab = DiffTab(page=self)
+            tab.message.connect(self._on_sftp_tab_message)
+            self.diff_tab = tab
+            self.tabs.addTab(tab, get_translator()("terminal.tab_diff"))
+        try:
+            self.tabs.setCurrentWidget(tab)
+        except RuntimeError:
+            return None   # Qt teardown — the tab strip is already gone
+        if side is not None and entry is not None:
+            tab.load_side(side, entry)
+        return tab
+
+    def load_into_diff(self, side, entry) -> bool:
+        """Fill ONE side of this session's Diff tab (the `Send to ▾ Diff` door)."""
+        tab = self.open_diff()
+        if tab is None:
+            return False
+        return bool(tab.load_side(side, entry))
+
     # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
 
     def retranslate(self):
@@ -1052,6 +1099,8 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                     tabs.setTabText(i, t("sftp.tab_files"))
                 elif widget is self.history_tab and self.history_tab is not None:
                     tabs.setTabText(i, t("terminal.tab_history"))
+                elif widget is getattr(self, "diff_tab", None) and self.diff_tab is not None:
+                    tabs.setTabText(i, t("terminal.tab_diff"))
         except RuntimeError:
             pass  # the C++ object was already destroyed (a close race)
         # v1.3.3.5: the inner `Terminal` title carries the multi-input badge of a SPLIT
@@ -1069,6 +1118,12 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         if history_tab is not None:
             try:
                 history_tab.retranslate()
+            except RuntimeError:
+                pass  # Qt teardown — the tab is already destroyed
+        diff_tab = getattr(self, "diff_tab", None)
+        if diff_tab is not None:
+            try:
+                diff_tab.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the tab is already destroyed
         # v1.3.3.4: the canvas's own strings (the find panel — if it is open)
@@ -1100,7 +1155,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                     hook()
                 except RuntimeError:
                     pass
-        for tab_name in ("sftp_tab", "history_tab"):   # v1.5.7: the panel joins the walk
+        for tab_name in ("sftp_tab", "history_tab", "diff_tab"):   # v1.5.7: the panel joins the walk
             tab = getattr(self, tab_name, None)
             if tab is None:
                 continue
@@ -1459,6 +1514,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             handshake.shutdown()
 
         # v1.1.3: the SFTP worker FIRST (it depends on the terminal thread's transport).
+        # v1.13.4: the Diff tab lets go of the worker BEFORE it stops — its spools are dropped and
+        # its read slots unbound on the page's ONE teardown path (`DIFF.md` §3).
+        diff_tab = getattr(self, "diff_tab", None)
+        if diff_tab is not None:
+            try:
+                diff_tab.shutdown()
+            except RuntimeError:
+                pass  # the C++ object is already gone
         sftp_worker = getattr(self, "_sftp_worker", None)
         if sftp_worker is not None:
             _dissig(sftp_worker.task_started, self._on_sftp_task_started)

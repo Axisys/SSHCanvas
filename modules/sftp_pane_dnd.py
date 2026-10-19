@@ -41,6 +41,11 @@ try:  # v1.13: the declared archive family behind the `Open archive` row
 except ImportError:
     import archive_view as archive  # type: ignore
 
+try:  # v1.13.4: the two sides of the Diff tab (`Send to ▾ Diff`)
+    from .terminal_diff import DIFF_LEFT, DIFF_RIGHT, diff_targets_for
+except ImportError:
+    from terminal_diff import DIFF_LEFT, DIFF_RIGHT, diff_targets_for  # type: ignore
+
 
 def _facade_attr(name, default=None):
     """An attribute of the SHIPPED facade module at call time — the `modules.sftp_tab` seam.
@@ -95,6 +100,10 @@ class SftpPaneDndMixin:
         sub = self._build_send_menu(item)
         if sub is not None:
             menu.addMenu(sub)
+        # v1.13.4: `Send to ▾ Diff` — the same row, into a session's Diff tab (`DIFF.md` §2).
+        diff_sub = self._build_diff_menu(item)
+        if diff_sub is not None:
+            menu.addMenu(diff_sub)
         menu.addSeparator()
         act_refresh = menu.addAction(_t("sftp.refresh"))
 
@@ -263,6 +272,61 @@ class SftpPaneDndMixin:
         if self._container is None:
             return
         self._container.start_send(self, target, entry)
+
+    # ── v1.13.4: `Send to ▾ Diff` — ONE row into a session's Diff tab ───────
+
+    def _build_diff_menu(self, item):
+        """The `Send to ▾ Diff` submenu of one FILE row — a `side` pair per open session.
+
+        The sessions come from the CONTAINER's provider (`_diff_targets()` over the parent chain),
+        so the pane never learns where a window keeps its registry. A directory row answers the
+        shipped `sftp.send.no_file` sentence (a folder has no single text), and a provider that
+        answers nothing offers ONE disabled row instead of a dead menu.
+        """
+        if item is None or item is self._up_item or not item.data(0, self.PATH_ROLE):
+            return None
+        menu = host_attr(self, "QMenu")(_t("diff.send.menu"), self)
+        if item.data(0, self.ISDIR_ROLE):
+            menu.addAction(_t("sftp.send.no_file")).setEnabled(False)
+            return menu
+        targets = diff_targets_for(self._container) if self._container is not None else []
+        if not targets:
+            menu.addAction(_t("diff.send.no_targets")).setEnabled(False)
+            return menu
+        for target in targets:
+            label = str(getattr(target, "label", "") or "?")
+            for side, key in ((DIFF_LEFT, "diff.side.left"), (DIFF_RIGHT, "diff.side.right")):
+                act = menu.addAction(_t("diff.send.row", target=label, side=_t(key)))
+                act.triggered.connect(
+                    lambda _checked=False, t=target, s=side, i=item: self._op_send_to_diff(i, t, s))
+        return menu
+
+    def _op_send_to_diff(self, item, target, side):
+        """Hand ONE file row to a session's Diff tab (`DIFF.md` §3).
+
+        A LOCAL row is read where it lies; a remote one travels through the TARGET tab's own
+        reader when the target is THIS session (`SftpWorker.queue_read()`) and through the shipped
+        spool family when it belongs to another one. The tab owns every sentence of a refusal.
+        """
+        path = self._row_path(item)
+        if not path:
+            self.message.emit(_t("sftp.no_selection"))
+            return
+        loader = getattr(target, "load", None)
+        if not callable(loader):
+            return
+        name = self.paths.basename(path)
+        size = int(item.data(0, self.SIZE_ROLE) or 0)
+        if self.source == host_attr(self, "SOURCE_LOCAL"):
+            entry = {"kind": "local", "path": path, "name": name, "size": size}
+        else:
+            provider = self.provider
+            if provider is None:
+                self.message.emit(_t("sftp.waiting_connection"))
+                return
+            kind = "remote" if str(getattr(target, "key", "")) == self.session_key() else "spool"
+            entry = {"kind": kind, "worker": provider, "path": path, "name": name, "size": size}
+        loader(side, entry)
 
     # ── D&D: files from Explorer (v1.2.8) ────────────────────────────────
 

@@ -1109,6 +1109,22 @@ class SSHTerminalWindow(QMainWindow):
         except RuntimeError:
             return False  # Qt teardown — the session is already gone
 
+    def open_diff(self, page=None):
+        """Open ONE session's Diff tab — the DELEGATE the `Diff` row fires (`DIFF.md` §2).
+
+        The tab belongs to the session (`TerminalSessionPage.open_diff()`), so the container only
+        resolves the page the row was built for — the clicked tab is not always the active one.
+        A page without a Diff tab (a split pane) answers False; never raises.
+        """
+        page = page if page is not None else self.page
+        hook = getattr(page, "open_diff", None)
+        if not callable(hook):
+            return False
+        try:
+            return bool(hook())
+        except RuntimeError:
+            return False  # Qt teardown — the session is already gone
+
     def _build_tab_context_menu(self, index):
         """The context menu of ONE session TAB (v1.9.1) — the test seam.
 
@@ -1122,7 +1138,8 @@ class SSHTerminalWindow(QMainWindow):
         if page is None:
             return None
         menu = QMenu(self)
-        add_session_actions(menu, page, self.reconnect_session, self.attach_tmux_session)
+        add_session_actions(menu, page, self.reconnect_session, self.attach_tmux_session,
+                            self.open_diff)
         return menu
 
     def _on_tab_context_menu(self, pos):
@@ -1977,7 +1994,8 @@ class SSHTerminalWindow(QMainWindow):
         page = self.page
         if page is not None:
             menu.addSeparator()
-            add_session_actions(menu, page, self.reconnect_session, self.attach_tmux_session)
+            add_session_actions(menu, page, self.reconnect_session, self.attach_tmux_session,
+                                self.open_diff)
         return menu
 
     def contextMenuEvent(self, event):

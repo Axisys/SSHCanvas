@@ -202,6 +202,30 @@ class StandaloneSurface(QWidget):
         """The loaded nodes (`ServerData`), a COPY — the surface keeps its own list."""
         return list(self._servers)
 
+    def _diff_targets(self):
+        """The `Send to ▾ Diff` targets of THIS surface's live sessions (`DIFF.md` §2).
+
+        The surface owns no map registry: the sessions are its window's `session_tabs`. The records
+        are built by the ONE PURE reader the map window uses, so a standalone target and a
+        map-backed one are described the same way. Never raises.
+        """
+        try:
+            from .terminal_diff import diff_targets_from_pages
+        except ImportError:  # flat launch from the project root
+            from terminal_diff import diff_targets_from_pages
+        window = self.window
+        if window is None:
+            return []
+        pages = []
+        try:
+            for index in range(window.session_tabs.count()):
+                page = window.session_tabs.widget(index)
+                if page is not None:
+                    pages.append(page)
+        except RuntimeError:
+            return []   # Qt teardown — the tab strip is already gone
+        return diff_targets_from_pages(pages)
+
     # ── the doors ────────────────────────────────────────────────────────────
 
     def open_project(self, path: str = "") -> bool:
