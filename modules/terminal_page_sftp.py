@@ -92,26 +92,50 @@ class TerminalPageSftpMixin:
         handshake.finished.connect(self._on_sftp_open_finished)
         handshake.start()
 
-    def _on_sftp_open_ready(self):
+    def _emitting_handshake(self):
+        """The handshake that EMITTED the answer being handled — None outside a slot.
+
+        A slot that reads `self._sftp_handshake` answers "which handshake does the page hold NOW",
+        which is a different question from "who answered": a later ask may already hold the
+        attribute while the earlier answer is still in the queue. `sender()` is Qt's ONE answer to
+        WHO emitted; it is None when the slot is called directly (a teardown, a probe).
+        """
+        try:
+            return self.sender()
+        except (AttributeError, RuntimeError):
+            return None
+
+    def _on_sftp_open_ready(self, handshake=None):
         """The server answered: the SHIPPED worker wiring runs over the channel that opened.
 
-        The client is TAKEN from the handshake (the ownership moves in one step), so an answer
-        that arrives after the session is gone is closed here instead of leaking a channel.
+        The client is TAKEN from the handshake that EMITTED it (the ownership moves in one step), so
+        an answer that arrives after the session is gone is closed here instead of leaking a channel.
+        An answer from a handshake that is no longer the page's own is closed as well: the page has
+        since asked for something else, and only the CURRENT open may bind a worker — a stale one
+        that bound its client would leave the live open with no receiver at all.
         """
-        handshake = getattr(self, "_sftp_handshake", None)
-        sftp = handshake.take_client() if handshake is not None else None
+        sender = handshake if handshake is not None else self._emitting_handshake()
+        source = sender if sender is not None else getattr(self, "_sftp_handshake", None)
+        sftp = source.take_client() if source is not None else None
         if sftp is None:
             return   # already dropped by the teardown
-        if getattr(self, "_shut_down", False):
+        if source is not getattr(self, "_sftp_handshake", None) or getattr(self, "_shut_down", False):
             close_quiet(sftp)
             return
         try:
-            self._bind_sftp_worker(sftp, handshake.transport)
+            self._bind_sftp_worker(sftp, source.transport)
         except RuntimeError:
             close_quiet(sftp)   # the C++ object is already gone (a close race)
 
-    def _on_sftp_open_failed(self, detail: str):
-        """The open was REFUSED — the status bridge carries ONE sentence (`sftp.open_failed`)."""
+    def _on_sftp_open_failed(self, detail: str, handshake=None):
+        """The open was REFUSED — the status bridge carries ONE sentence (`sftp.open_failed`).
+
+        A refusal from a handshake the page no longer holds is not this session's answer: the
+        session has asked again, and the sentence would name a failure nobody is waiting for.
+        """
+        sender = handshake if handshake is not None else self._emitting_handshake()
+        if sender is not None and sender is not getattr(self, "_sftp_handshake", None):
+            return
         if getattr(self, "_shut_down", False):
             return
         t = host_attr(self, "get_translator")()
@@ -120,10 +144,18 @@ class TerminalPageSftpMixin:
             msg if not msg.startswith("[") else f"Failed to open SFTP channel: {detail}", 8000)
 
     def _on_sftp_open_finished(self):
-        """The thread is really done — the ONE place the reference is dropped (`AGENTS.md` §4.8)."""
+        """The thread is really done — the ONE place the reference is dropped (`AGENTS.md` §4.8).
+
+        Only the page's OWN handshake may clear the reference: a stale thread that finishes later
+        would otherwise leave the live open looking like "nothing is opening" (`sftp_channel_pending()`
+        answers False), which is the state the next ask reads.
+        """
         handshake = getattr(self, "_sftp_handshake", None)
         if handshake is None:
             return
+        sender = self._emitting_handshake()
+        if sender is not None and sender is not handshake:
+            return   # a stale handshake finished; the page's own is still opening
         try:
             if not handshake.isFinished():
                 return   # still inside its wait budget — the orphan registry answers for it

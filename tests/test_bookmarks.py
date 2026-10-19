@@ -351,8 +351,8 @@ check("§3 the panel switch has its OWN glyph (the ribbon renders)",
 check("§3 the toolbar's right-click menu lists the switch (the declaration, not N buttons)",
       win.act_show_bookmarks in win._panel_switch_actions())
 _hub = SettingsDialog(None)
-check("§3 the settings hub collects the SAME 27 config keys (UI state is owner-written)",
-      len(_hub.collect()) == 27
+check("§3 the settings hub collects the SAME 30 config keys (UI state is owner-written)",
+      len(_hub.collect()) == 30
       and not any("bookmark" in key for key in _hub.collect()),
       str(sorted(_hub.collect()))[:120])
 _hub.close()
@@ -602,7 +602,7 @@ check("§6 the reused keys the editor reports with are the quick-launch ones (no
 check_i18n_parity(langs)
 check_i18n_format(langs)
 check("§6 the pin counts the SHIPPED release (811 + the 17 keys of v1.6.7 + the 13 of v1.6.8 + the 5 of v1.7rc1 + the 8 of v1.7rc2 + the 9 of v1.7rc3 + the 4 of v1.7.1 + the 3 of v1.7.1.1 + the 4 of the v1.7.1.2 device choice + the 4 of v1.7.2: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab + the 19 of v1.7.3: the Send-to row and its dialog, the busy/progress/done/failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and Word wrap + the 17 of v1.7.4rc1: the local source switch, its two refusals, the permanent-delete warning and the local file-surface sentences + the 1 of v1.7.4rc2: the refusal of a move that would cross the two sources + the 6 of v1.7.5.1: the three external-terminal refusals, the unpinned host-key warning, the send-queue notice and the refused download name, and v1.8 adds TWENTY: the elevated pane, v1.8.1 its 41: the trust surface, and v1.8.1.1 adds ONE: the identity sentence of a send) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3,
+      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8,
       str(EXPECTED_I18N_KEYS))
 check("§6 EXPECTED_APP_VERSION is the release this file describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7"), EXPECTED_APP_VERSION)

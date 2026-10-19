@@ -641,9 +641,10 @@ check("§7 the TEN keys of the release are present and non-empty in every langua
       all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS)
       # the 1104 the standalone left, plus the later follow-ups' own keys (the THREE of v1.12.3:
       # the jump host's label, its hint and the import picker's column — the ONE of v1.12.4.1, the
-      # FOUR of v1.13: the archive's row, its header, its cap and the encrypted sentence, and the
-      # THREE of v1.13.1: the extract's row, its report and the bomb sentence).
-      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3,
+      # FOUR of v1.13: the archive's row, its header, its cap and the encrypted sentence, the
+      # THREE of v1.13.1: the extract's row, its report and the bomb sentence, the TWO of the fifth
+      # read: the listing's bound and the merge line, the EIGHT of v1.13.2: the wallpaper row).
+      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8,
       str({c: [k for k in _NEW_KEYS if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 `{patterns}` is the ONE placeholder of the filter and every language carries it",
       all(set(_placeholders(LANGS[c]["terminal.standalone.project_filter"])) == {"patterns"}

@@ -540,7 +540,7 @@ check("§6 no new colour field (60 in both themes — the tone is an existing ta
       and theme.THEME.tag_colors["staging"] == theme.THEME.status_warn)
 _hub = SettingsDialog(make_main())
 check("§6 no new config key from this section (the settings hub collects 26)",
-      len(_hub.collect()) == 27
+      len(_hub.collect()) == 30
       and not any("export" in k or "empty_state" in k for k in _hub.collect()),
       str(sorted(_hub.collect()))[:120])
 _hub.close()

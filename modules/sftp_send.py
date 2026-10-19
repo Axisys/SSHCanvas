@@ -26,9 +26,9 @@ except Exception:  # noqa: BLE001 — import outside the project tree (flat run)
         return key
 
 try:
-    from .sftp_worker import PART_SUFFIX
+    from .sftp_worker import PART_SUFFIX, WINDOWS_ILLEGAL_CHARS
 except ImportError:  # flat launch from the project root
-    from sftp_worker import PART_SUFFIX
+    from sftp_worker import PART_SUFFIX, WINDOWS_ILLEGAL_CHARS
 
 #: The ceiling of ONE send between sessions — the ask's own number, checked against the row's
 #: size BEFORE leg 1 (a config key can wait; `terminal_max_open` is the precedent).
@@ -39,6 +39,12 @@ MAX_SEND_BYTES = 100 * 1024 * 1024
 #: sweep can take the leftovers of a CRASHED run (a plaintext copy must not outlive the app).
 SPOOL_PREFIX = "sshmap-send-"
 SPOOL_FILE_MODE = 0o600
+
+#: How much of the FOREIGN name ONE spool keeps, and how much of its extension survives the cut:
+#: the temp folder's own length is not ours, so the stem is bounded far inside the platform's 255
+#: (`mkstemp` refuses a name it cannot create, and a refusal is a send that never starts).
+SPOOL_BASE_MAX = 64
+SPOOL_EXT_MAX = 12
 
 #: The age a spool may reach before the startup sweep takes it. An AGE rule is the portable one:
 #: `os.kill(pid, 0)` is not portable on Windows and a pid is recycled, while a LIVE sibling
@@ -182,9 +188,33 @@ def spool_dir() -> str:
     return tempfile.gettempdir()
 
 
-def _spool_base(name: str) -> str:
-    """The file name of ONE send, platform-safe and recognizable (`payload.bin`)."""
-    return posixpath.basename(str(name or "").replace("\\", "/")) or "file"
+def _spool_base(name: str, windows=None) -> str:
+    """The file name of ONE send — THIS platform's spelling, recognizable, inside the name limit.
+
+    The stem is a FOREIGN name: a POSIX server sends `report:2024.csv` (a `:` is an NTFS STREAM), a
+    name may carry `?` / `*` (which `mkstemp` refuses outright) or run past the platform's limit, and
+    one trailing dot is enough for the OS to store a name nobody asked for. The spool is a LOCAL
+    file, so it takes the LOCAL spelling: the characters `local_name_problem()` refuses become `_`,
+    the trailing dots and spaces go, and the stem is cut to `SPOOL_BASE_MAX` with its extension kept
+    when it fits. `spool_path()` and `create_spool()` both read this ONE answer, so the logical name
+    and the claimed one never disagree; a folder that still refuses the name stays the shipped
+    `spool` refusal — this function is not a second error path.
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    base = posixpath.basename(str(name or "").replace("\\", "/"))
+    if windows:
+        base = "".join("_" if ch in WINDOWS_ILLEGAL_CHARS or ord(ch) < 32 else ch for ch in base)
+        base = base.rstrip(" .")
+    else:
+        base = "".join("_" if ch == "/" or ord(ch) < 32 else ch for ch in base)
+    if len(base) > SPOOL_BASE_MAX:
+        stem, dot, ext = base.rpartition(".")
+        if dot and stem and 0 < len(ext) <= SPOOL_EXT_MAX:
+            base = stem[: SPOOL_BASE_MAX - len(ext) - 1] + "." + ext
+        else:
+            base = base[:SPOOL_BASE_MAX]
+    return base or "file"
 
 
 def spool_path(name: str = "", token=None) -> str:

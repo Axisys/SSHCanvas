@@ -186,7 +186,7 @@ ZIP_DATA = build_zip(ZIP_PATH, [("etc/app.conf", b"listen 80\n"), ("etc/", b""),
                                 ("README.txt", b"hello archive\n"), ("bin/tool", b"\x7fELF\x02\x01"),
                                 ("nested.jar", b"PK\x03\x04not really"),
                                 ("logo.png", b"\x89PNG\r\n\x1a\n")])
-_entries, _encrypted, _code = AV.archive_listing(ZIP_PATH)
+_entries, _encrypted, _code, _cut = AV.archive_listing(ZIP_PATH)
 check("§2 a zip lists its FILE members in the archive's own order (a directory entry is not a row)",
       _code == "" and _encrypted is False
       and [e["name"] for e in _entries]
@@ -199,7 +199,7 @@ check("§2 ...with the size and the mtime of every member",
       str([(e["size"], e["mtime"]) for e in _entries]))
 
 TAR_PATH = build_tar(os.path.join(WORK, "sample.tar.gz"))
-_tar_entries, _tar_encrypted, _tar_code = AV.archive_listing(TAR_PATH)
+_tar_entries, _tar_encrypted, _tar_code, _tar_cut = AV.archive_listing(TAR_PATH)
 check("§2 a `tar.gz` lists its regular files and nothing a reader could not open (a directory, a "
       "symlink, a hardlink and a fifo carry no bytes of their own)",
       _tar_code == "" and _tar_encrypted is False
@@ -215,7 +215,7 @@ check("§2 a plain `.tar` is read by the same reader (the suffix decides, `r:*` 
 EMPTY_PATH = os.path.join(WORK, "empty.zip")
 build_zip(EMPTY_PATH, [])
 check("§2 an archive with nothing readable answers an EMPTY listing, never a refusal",
-      AV.archive_listing(EMPTY_PATH) == ([], False, ""))
+      AV.archive_listing(EMPTY_PATH) == ([], False, "", False))
 
 TEXT_PATH = os.path.join(WORK, "not-really.zip")
 with open(TEXT_PATH, "w", encoding="utf-8") as fh:
@@ -224,10 +224,10 @@ BAD_GZ = os.path.join(WORK, "broken.tar.gz")
 with open(BAD_GZ, "wb") as fh:
     fh.write(b"\x1f\x8b\x08\x00truncated")
 check("§2 a file whose content disagrees with its suffix is UNREADABLE (the parse is the verdict)",
-      AV.archive_listing(TEXT_PATH) == ([], False, AV.ARCHIVE_ERROR_UNREADABLE)
+      AV.archive_listing(TEXT_PATH) == ([], False, AV.ARCHIVE_ERROR_UNREADABLE, False)
       and AV.archive_listing(os.path.join(WORK, "gone.zip"))
-      == ([], False, AV.ARCHIVE_ERROR_UNREADABLE)
-      and AV.archive_listing(BAD_GZ) == ([], False, AV.ARCHIVE_ERROR_UNREADABLE))
+      == ([], False, AV.ARCHIVE_ERROR_UNREADABLE, False)
+      and AV.archive_listing(BAD_GZ) == ([], False, AV.ARCHIVE_ERROR_UNREADABLE, False))
 check("§2 ...and a path with no declared suffix is never opened at all",
       AV.archive_listing(TEXT_PATH, "")[2] == AV.ARCHIVE_ERROR_UNREADABLE
       and AV.archive_listing(os.path.join(WORK, "notes.txt"))[2] == AV.ARCHIVE_ERROR_UNREADABLE
@@ -241,7 +241,7 @@ print("== §3 the encrypted archive lists and refuses, and asks for no password 
 ENCRYPTED_PATH = os.path.join(WORK, "secret.zip")
 build_zip(ENCRYPTED_PATH, [("secret.txt", b"top secret\n")])
 encrypt_zip(ENCRYPTED_PATH)
-_sec_entries, _sec_encrypted, _sec_code = AV.archive_listing(ENCRYPTED_PATH)
+_sec_entries, _sec_encrypted, _sec_code, _sec_cut = AV.archive_listing(ENCRYPTED_PATH)
 check("§3 an encrypted zip LISTS its members and reports the fact",
       _sec_code == "" and _sec_encrypted is True
       and [e["name"] for e in _sec_entries] == ["secret.txt"],
@@ -548,8 +548,9 @@ check_i18n_format(LANGS)
 check_release_state(ROOT)
 check("§8 the pin names this release's line", releases_at_least(EXPECTED_APP_VERSION, "1.13"),
       EXPECTED_APP_VERSION)
-check("§8 the READ half's four keys are part of the pin (the WRITE half's three follow it)",
-      EXPECTED_I18N_KEYS == 1118 + 4 + 3, str(EXPECTED_I18N_KEYS))
+check("§8 the archive surface's NINE keys are part of the pin (the READ half's four, the WRITE "
+      "half's three, the slot's two)",
+      EXPECTED_I18N_KEYS == 1118 + 9 + 8, str(EXPECTED_I18N_KEYS))
 check("§8 the project schema did NOT move (the archive view is not project state)",
       'VERSION_FORMAT = "0.9"' in open(os.path.join(ROOT, "version.py"), encoding="utf-8").read())
 

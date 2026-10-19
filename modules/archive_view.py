@@ -19,11 +19,11 @@ import zlib
 from datetime import datetime
 
 try:  # the declared read policy and the extension screen of the SHIPPED reader
-    from .sftp_worker import (CHUNK_SIZE, MAX_READ_BYTES, READ_ERROR_BINARY, READ_ERROR_TOO_LARGE,
-                              classify_extension)
+    from .sftp_worker import (CHUNK_SIZE, MAX_READ_BYTES, MAX_TREE_ENTRIES, READ_ERROR_BINARY,
+                              READ_ERROR_TOO_LARGE, classify_extension)
 except ImportError:  # flat launch from the project root
-    from sftp_worker import (CHUNK_SIZE, MAX_READ_BYTES, READ_ERROR_BINARY,  # type: ignore
-                             READ_ERROR_TOO_LARGE, classify_extension)
+    from sftp_worker import (CHUNK_SIZE, MAX_READ_BYTES, MAX_TREE_ENTRIES,  # type: ignore
+                             READ_ERROR_BINARY, READ_ERROR_TOO_LARGE, classify_extension)
 
 ARCHIVE_KIND_ZIP = "zip"
 ARCHIVE_KIND_TAR = "tar"
@@ -41,6 +41,12 @@ ARCHIVE_SUFFIXES = {**{suffix: ARCHIVE_KIND_ZIP for suffix in ZIP_SUFFIXES},
 #: O(size)), while the reader's ceiling bounds ONE member's preview.
 ARCHIVE_MAX_BYTES_CONFIG = "ui_archive_max_bytes"
 ARCHIVE_MAX_BYTES = 256 * 1024 * 1024
+
+#: The ROW bound of ONE listing — the SHIPPED walk bound, because it answers the same question on
+#: the same subject ("how many members does this application carry at once"). The cap above bounds
+#: BYTES and says nothing about a zip of a million empty files: 100 000 members cost ~18 s and
+#: ~76 MB on the GUI thread (the release's measurement), which is a frozen window, not a listing.
+ARCHIVE_LIST_MAX = MAX_TREE_ENTRIES
 
 #: The machine codes of this module: the listing's two, and the read's own (the shipped
 #: `sftp_worker.READ_ERROR_*` answer the rest, so the pane renders every one of them with ONE table).
@@ -163,15 +169,18 @@ def _zip_kind(info) -> str:
     return MEMBER_LINK if zip_is_link(info) else MEMBER_FILE
 
 
-def _zip_members(path, limit: int = 0):
+def _zip_members(path, limit: int = 0, wanted=None):
     entries, encrypted = [], False
     with zipfile.ZipFile(path) as archive:
         for info in archive.infolist():
             if limit > 0 and len(entries) > limit:
-                break   # one member PAST the bound: the caller can tell the walk was cut
+                break   # one WANTED member PAST the bound: the caller can tell the walk was cut
             if int(info.flag_bits or 0) & ZIP_ENCRYPTED_FLAG:
                 encrypted = True
-            entries.append(_entry(info.filename, info.file_size, _zip_mtime(info), _zip_kind(info)))
+            kind = _zip_kind(info)
+            if wanted is not None and not wanted(kind):
+                continue
+            entries.append(_entry(info.filename, info.file_size, _zip_mtime(info), kind))
     return entries, encrypted, ""
 
 
@@ -185,18 +194,21 @@ def _tar_kind(info) -> str:
     return MEMBER_DEVICE   # a character / block device or a fifo: no bytes a panel could open
 
 
-def _tar_members(path, limit: int = 0):
+def _tar_members(path, limit: int = 0, wanted=None):
     entries = []
     with tarfile.open(path, "r:*") as archive:
         for info in archive:
             if limit > 0 and len(entries) > limit:
                 break   # streaming: the rest of the container is never even decompressed
-            entries.append(_entry(info.name, info.size, info.mtime, _tar_kind(info)))
+            kind = _tar_kind(info)
+            if wanted is not None and not wanted(kind):
+                continue
+            entries.append(_entry(info.name, info.size, info.mtime, kind))
     return entries, False, ""
 
 
-def archive_members(path, kind: str = "", limit: int = 0) -> tuple:
-    """`(members, encrypted, code)` of ONE archive — EVERY entry of ONE level, in archive order.
+def archive_members(path, kind: str = "", limit: int = 0, wanted=None) -> tuple:
+    """`(members, encrypted, code)` of ONE archive — the entries of ONE level, in archive order.
 
     The full walk behind `archive_listing()`: a directory member is a prefix of its children's
     names (a zip may omit it entirely), the body of a symlink / hardlink member is its TARGET PATH
@@ -205,31 +217,45 @@ def archive_members(path, kind: str = "", limit: int = 0) -> tuple:
 
     A positive `limit` is the ENTRY BOUND of the walk: it answers at most `limit + 1` members, so a
     5 000-member cap costs 5 001 entries of memory and time whatever the archive holds beyond it.
+    `wanted` is the KIND filter of the READ half (a row is a regular FILE member): the bound counts
+    what the filter KEEPS, so 100 000 directory entries ahead of the first readable file cost the
+    walk and never the rows.
     """
     resolved = kind or archive_kind(path)
     if not resolved:
         return [], False, ARCHIVE_ERROR_UNREADABLE
     try:
         if resolved == ARCHIVE_KIND_ZIP:
-            return _zip_members(path, limit)
-        return _tar_members(path, limit)
+            return _zip_members(path, limit, wanted)
+        return _tar_members(path, limit, wanted)
     except READ_ERRORS:
         return [], False, ARCHIVE_ERROR_UNREADABLE
 
 
-def archive_listing(path, kind: str = "") -> tuple:
-    """`(entries, encrypted, code)` of ONE archive — the members a READER can open, in archive order.
+def _is_row(kind) -> bool:
+    """Is this member a ROW of the listing? (the ONE predicate the READ half filters with)"""
+    return kind == MEMBER_FILE
+
+
+def archive_listing(path, kind: str = "", limit: int = 0) -> tuple:
+    """`(entries, encrypted, code, cut)` of ONE archive — the members a READER can open, in order.
 
     A row is a REGULAR FILE member: a directory entry is a prefix of its children's names, and the
     body of a link member is its TARGET PATH rather than content, so neither is something the panel
     could preview (the extract half owns what those members mean, `ARCHIVES.md` §6). `encrypted` is
     the zip flag — a `tar` container declares none — and an encrypted archive still LISTS: its
     members are refused at the read, with ONE sentence and no password prompt.
+
+    A positive `limit` is the ROW bound: the answer holds at most `limit` rows and `cut` says the
+    walk met more, so a panel never builds more rows than the bound and never claims a total it did
+    not count (`ARCHIVE_LIST_MAX` is the caller's number).
     """
-    members, encrypted, code = archive_members(path, kind)
+    members, encrypted, code = archive_members(path, kind, limit, wanted=_is_row)
     if code:
-        return [], encrypted, code
-    return [entry for entry in members if entry["kind"] == MEMBER_FILE], encrypted, ""
+        return [], encrypted, code, False
+    if limit > 0 and len(members) > limit:
+        return members[:limit], encrypted, "", True
+    return members, encrypted, "", False
 
 
 # ── The read of ONE member: the shipped policy, bounded twice ────────────────

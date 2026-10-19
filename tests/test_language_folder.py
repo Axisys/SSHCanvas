@@ -415,8 +415,8 @@ _dlg_w2 = SD.SettingsDialog(_mw)
 check("it prefills from the config (\"off\")",
       _dlg_w2.wheel_combo.currentData() == "off", str(_dlg_w2.wheel_combo.currentData()))
 _hub_keys = _dlg_w2.collect()
-check("collect() carries terminal_wheel (27 keys since v1.10rc2 added the TERM row)",
-      _hub_keys.get("terminal_wheel") == "off" and len(_hub_keys) == 27,
+check("collect() carries terminal_wheel (30 keys - the hub's whole inventory)",
+      _hub_keys.get("terminal_wheel") == "off" and len(_hub_keys) == 30,
       f"{len(_hub_keys)} keys: {sorted(_hub_keys)}")
 _dlg_w2._on_accept()
 check("OK writes terminal_wheel into config.json",

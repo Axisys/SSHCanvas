@@ -259,16 +259,18 @@ class SftpPaneTransferMixin:
         """The overwrite question — a method so a test can replace the whole policy."""
         return host_attr(self, "ask_conflict")(self, name, target, remaining, facts)
 
-    def _conflict_decision(self, name: str, target: str, remaining: int):
+    def _conflict_decision(self, name: str, target: str, remaining: int, facts: str = ""):
         """The decision of ONE conflict → `(action, apply_all)`.
 
         action ∈ `"overwrite" | "skip" | "rename"`; a cancelled dialog — and any
         broken answer of a replaced seam — is a SKIP: the destination is left alone
         and the batch goes on. `apply_all` asks to reuse the decision for the REST
         of this batch (never for "rename": a batch rename needs a name per file).
+        `facts` is the ONE optional line the question carries (`ask_conflict()` renders it as the
+        informative text): the archive's folder says there what its `Overwrite` really does.
         """
         try:
-            action, apply_all = self._ask_conflict(name, target, remaining)
+            action, apply_all = self._ask_conflict(name, target, remaining, facts)
         except Exception:   # noqa: BLE001 — a dialog must never break a transfer
             return "skip", False
         if action not in ("overwrite", "skip", "rename"):
@@ -438,8 +440,11 @@ class SftpPaneTransferMixin:
         remote destination, this pane's own local engine for a directory of the OS disk
         (`LOCAL_PANE.md` §5). ONE item means the overwrite question of `_conflict_decision()` is
         asked ONCE for the whole extraction — that question is the folder, and a partial extraction
-        is therefore ONE folder to delete. An ELEVATED destination refuses at the shipped door
-        (`ELEVATED_PANE.md` §5), and the staged tree is dropped with the answer the task gives.
+        is therefore ONE folder to delete. `Overwrite` on a folder is a MERGE (both engines are
+        additive, `ARCHIVES.md` §6), so the question carries that fact in its own line — a button
+        named after a replacement must not describe a merge. An ELEVATED destination refuses at the
+        shipped door (`ELEVATED_PANE.md` §5), and the staged tree is dropped with the answer the
+        task gives.
 
         `written` / `skipped` are the EXTRACTION's counters: they travel into the delivery record so
         the success sentence and the skip sentence belong to the answer that proves them, never to
@@ -458,7 +463,8 @@ class SftpPaneTransferMixin:
             return ""
         folder = str(name or "")
         if folder in (known or set()):
-            action, _to_all = self._conflict_decision(folder, target_dir, 0)
+            action, _to_all = self._conflict_decision(folder, target_dir, 0,
+                                                      _t("sftp.archive.merge_facts"))
             if action == "skip":
                 return ""
             if action == "rename":

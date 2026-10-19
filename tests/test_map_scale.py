@@ -228,10 +228,10 @@ check("density: switching back restores the expanded card (same size as before)"
       str((_rich._current_width, _rich._current_height)))
 
 _static = SettingsDialog(None)
-check("density: the 'Appearance' tab offers the choice and collect() carries the hub's 27 keys",
+check("density: the 'Appearance' tab offers the choice and collect() carries the hub's 30 keys",
       _static.density_combo.count() == 2
       and _static.density_combo.currentData() == "normal"
-      and len(_static.collect()) == 27
+      and len(_static.collect()) == 30
       and _static.collect()["theme"]["density"] == "normal")
 _static.deleteLater()
 close_window(_win2)

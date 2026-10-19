@@ -507,8 +507,8 @@ check("§7 the extract engine still answers `(written, bytes)` per member — th
 
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
-check("§7 the patch adds NO key (the pin of the released line never moves)",
-      EXPECTED_I18N_KEYS == 1118 + 4 + 3, str(EXPECTED_I18N_KEYS))
+check("§7 the pin is the released 1 118 plus the archive's seven and the fifth read's two",
+      EXPECTED_I18N_KEYS == 1118 + 4 + 3 + 2 + 8, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this release's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.1"),
       EXPECTED_APP_VERSION)
 

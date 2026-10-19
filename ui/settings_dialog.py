@@ -1066,6 +1066,51 @@ class SettingsDialog(QDialog):
         self._lbl_cursor = QLabel(_t("settings.terminal.cursor"))
         form.addRow(self._lbl_cursor, self.cursor_combo)
 
+        # v1.13.2 (ROADMAP v1.13.2): the terminal WALLPAPER — a PATH, a placement and an opacity. The
+        # canvas paints the image UNDER the grid, between its base fill and its cell fills, so a cell
+        # with the palette's DEFAULT background stays transparent to it. The three keys are read when a
+        # session is CREATED (like the palette, the font and the cursor) and the window re-applies them
+        # to the OPEN sessions on OK; `""` (the empty field) is the OFF state of a shipped default.
+        self.background_edit = QLineEdit(cfg["background"])
+        self.background_browse_btn = QPushButton(_t("settings.terminal.background.browse"))
+        self.background_clear_btn = QPushButton(_t("settings.terminal.background.clear"))
+        self.background_browse_btn.clicked.connect(self._on_browse_background)
+        self.background_clear_btn.clicked.connect(self._on_clear_background)
+        _bg_row = QHBoxLayout()
+        _bg_row.addWidget(self.background_edit, 1)
+        _bg_row.addWidget(self.background_browse_btn, 0)
+        _bg_row.addWidget(self.background_clear_btn, 0)
+        self._lbl_background = QLabel(_t("settings.terminal.background"))
+        form.addRow(self._lbl_background, _bg_row)
+
+        # The placement — the three values of `terminal_background_mode` (`modules/terminal_background.py`
+        # declares them; the combo gives fixed ids, so the key is valid by construction).
+        self.background_mode_combo = QComboBox()
+        self.background_mode_combo.addItem(_t("settings.terminal.background.mode.cover"), "cover")
+        self.background_mode_combo.addItem(_t("settings.terminal.background.mode.contain"), "contain")
+        self.background_mode_combo.addItem(_t("settings.terminal.background.mode.tile"), "tile")
+        idx = next((i for i in range(self.background_mode_combo.count())
+                    if self.background_mode_combo.itemData(i) == cfg["background_mode"]), 0)
+        self.background_mode_combo.setCurrentIndex(idx)
+        self._lbl_background_mode = QLabel(_t("settings.terminal.background.mode"))
+        form.addRow(self._lbl_background_mode, self.background_mode_combo)
+
+        # The opacity — ONE number in two views (the slider and the box), the reader's range
+        # (`BACKGROUND_OPACITY_MIN..MAX` = 0..100) and the mirror written through ONE slot.
+        self.background_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.background_opacity_slider.setRange(0, 100)
+        self.background_opacity_spin = QSpinBox()
+        self.background_opacity_spin.setRange(0, 100)
+        self.background_opacity_slider.setValue(cfg["background_opacity"])
+        self.background_opacity_spin.setValue(cfg["background_opacity"])
+        self.background_opacity_slider.valueChanged.connect(self._on_background_opacity_changed)
+        self.background_opacity_spin.valueChanged.connect(self._on_background_opacity_changed)
+        _bg_opacity_row = QHBoxLayout()
+        _bg_opacity_row.addWidget(self.background_opacity_slider, 1)
+        _bg_opacity_row.addWidget(self.background_opacity_spin, 0)
+        self._lbl_background_opacity = QLabel(_t("settings.terminal.background.opacity"))
+        form.addRow(self._lbl_background_opacity, _bg_opacity_row)
+
         # v1.10rc2: the PTY's `TERM` (`terminal_term`) — the value a REMOTE program reads to decide
         # its capabilities. The presets are the common spellings and the field stays EDITABLE,
         # because a terminfo entry is a remote-side fact; the validator IS the reader's allowlist
@@ -1093,6 +1138,54 @@ class SettingsDialog(QDialog):
 
         self._register_form_rows(tab, form)   # v1.5rc4: the searchable rows of this tab
         self.tabs.addTab(tab, _t("settings.tab.terminal"))
+
+    def _on_browse_background(self):
+        """v1.13.2: the wallpaper's path field — ONE open dialog; a cancelled field changes nothing.
+
+        The dialog only edits the FIELD: the key is written by `collect()` on OK, exactly like every
+        other row, so a Cancel keeps the file the session already has.
+        """
+        try:
+            path, _selected = QFileDialog.getOpenFileName(
+                self, _t("settings.terminal.background"),
+                self.background_edit.text().strip(),
+                "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp *.svg);;All files (*)")
+        except Exception as e:  # noqa: BLE001 — a broken dialog must not break the tab
+            _log_dialog(f"wallpaper: file dialog failed: {e!r}")
+            return
+        if path:
+            self.background_edit.setText(path)
+
+    def _on_clear_background(self):
+        """v1.13.2: the OFF state — `terminal_background = ""` is what an empty field stores."""
+        try:
+            self.background_edit.clear()
+        except RuntimeError:
+            pass  # Qt teardown — the field is already destroyed
+
+    def _on_background_opacity_changed(self, value):
+        """v1.13.2: the slider OR the box moved — mirror the number into the other view.
+
+        The mirror is written with BLOCKED signals, so the two controls can never chase each other
+        (the `_sync_viewer_max_widgets()` rule of the Files page).
+        """
+        try:
+            target = int(value)
+        except (TypeError, ValueError):
+            return
+        for widget in (getattr(self, "background_opacity_slider", None),
+                       getattr(self, "background_opacity_spin", None)):
+            if widget is None:
+                continue
+            try:
+                if int(widget.value()) != target:
+                    widget.blockSignals(True)
+                    try:
+                        widget.setValue(target)
+                    finally:
+                        widget.blockSignals(False)
+            except (RuntimeError, AttributeError, TypeError):
+                continue   # Qt teardown / a dialog built without the row
 
     # ── "Files" tab (v1.7.5: the reader's ceiling) ────────────────────────────
 
@@ -2046,6 +2139,10 @@ class SettingsDialog(QDialog):
         v1.10rc2: +1 key — terminal_term (the PTY's `TERM` of the "Terminal" tab; the field is
         editable and the reader's OWN allowlist (`resolve_term()`) judges what it carries, so a
         value the field cannot express is impossible by construction). 26 → 27 UI-facing keys.
+        v1.13.2 (ROADMAP v1.13.2): +3 keys — the terminal WALLPAPER of the "Terminal" tab:
+        terminal_background (the path field), terminal_background_mode (the combo's fixed ids) and
+        terminal_background_opacity (the slider + the box, inline 0..100 by construction).
+        27 → 30 UI-facing keys.
         """
         try:  # the field's OWN allowlist — the SAME reader the key is validated by at load time
             from ..modules.ssh_terminal import resolve_term
@@ -2073,6 +2170,12 @@ class SettingsDialog(QDialog):
             # v1.10rc2: the PTY's `TERM` — the 27th UI-facing key. The reader's OWN allowlist
             # judges the field, so a hand-typed name and the config key cannot disagree.
             "terminal_term": resolve_term(self.term_combo.currentText()),
+            # v1.13.2 (ROADMAP v1.13.2): the terminal wallpaper — the three keys of the "Terminal"
+            # tab's wallpaper row. The path is stored AS TYPED (the resolver expands `~` when the
+            # canvas opens it), the mode and the opacity are the controls' own values.
+            "terminal_background": self.background_edit.text().strip(),
+            "terminal_background_mode": self.background_mode_combo.currentData() or "cover",
+            "terminal_background_opacity": int(self.background_opacity_spin.value()),
             # v1.4.3 (ROADMAP task 6): the appearance — the mode + the accent hue,
             # stored as the colour the user actually picked (the hue is derived
             # back). v1.5rc1: +`motion` — the "Reduce motion" switch of the same
@@ -2273,6 +2376,22 @@ class SettingsDialog(QDialog):
         # v1.10rc2: the PTY's `TERM` — the LABEL is the dialog's; the entries are terminfo names a
         # remote host reads, so they are never translated.
         self._lbl_term.setText(_t("settings.terminal.term"))
+
+        # v1.13.2: the wallpaper row — its label, its two buttons, its placement and its opacity
+        self._lbl_background.setText(_t("settings.terminal.background"))
+        self.background_browse_btn.setText(_t("settings.terminal.background.browse"))
+        self.background_clear_btn.setText(_t("settings.terminal.background.clear"))
+        self._lbl_background_mode.setText(_t("settings.terminal.background.mode"))
+        for i in range(self.background_mode_combo.count()):
+            bid = self.background_mode_combo.itemData(i)
+            key = {
+                "cover": "settings.terminal.background.mode.cover",
+                "contain": "settings.terminal.background.mode.contain",
+                "tile": "settings.terminal.background.mode.tile",
+            }.get(bid)
+            if key:
+                self.background_mode_combo.setItemText(i, _t(key))
+        self._lbl_background_opacity.setText(_t("settings.terminal.background.opacity"))
 
         self._lbl_status_interval.setText(_t("settings.statuses.interval"))
         self._lbl_probe_timeout.setText(_t("settings.statuses.timeout"))

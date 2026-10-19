@@ -696,8 +696,8 @@ check("§8 the registry grew by the panel/map toggles, the v1.5.3 freshness pair
       and len(HR.empty_default_action_ids()) == 39)
 
 _hub = SettingsDialog(None)
-check("§8 the hub's collect() carries 27 config.json keys (this section adds none)",
-      len(_hub.collect()) == 27)
+check("§8 the hub's collect() carries 30 config.json keys (this section adds none)",
+      len(_hub.collect()) == 30)
 _hub.close()
 
 finish()

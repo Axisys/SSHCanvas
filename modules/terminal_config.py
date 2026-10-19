@@ -24,6 +24,13 @@ except ImportError:
     from modules.terminal_widget import (CURSOR_STYLE_DEFAULT, CURSOR_STYLES,
                                          FONT_SIZE_MAX, FONT_SIZE_MIN)
 
+# v1.13.2 (ROADMAP v1.13.2): the wallpaper's three keys and their ONE validator. The module is Qt-free
+# and answers the declared defaults for anything unusable (`AGENTS.md` §4.3, `DOCUMENTATION.md` §78).
+try:
+    from .terminal_background import load_background_settings
+except ImportError:
+    from modules.terminal_background import load_background_settings
+
 #: The accepted values of `terminal_mode`, the DEFAULT first. `"single"` makes every new session
 #: join the LAST live terminal window as its next tab — one window that collects them all.
 TERMINAL_MODES = ("windows", "tabs", "single")
@@ -84,6 +91,9 @@ def load_terminal_settings():
                                   #            live line, or holds it still
        "follow_cwd": bool,        # follow the shell's directory (OSC 7)
        "term": str,               # the PTY's TERM — a declared name, TERM_DEFAULT for anything else
+       "background": str,         # the wallpaper path ("" — off; a missing file is the same OFF)
+       "background_mode": str,    # "cover" (default) | "contain" | "tile"
+       "background_opacity": int, # 0..100 — the image's share of the blend (default 35)
        "mode": str}               # "windows" (default) | "tabs" | "single" — display mode
     Invalid values (a foreign type, out of range) → default. Never raises.
     """
@@ -162,6 +172,14 @@ def load_terminal_settings():
     v = cfg.get("terminal_mode")
     if isinstance(v, str) and v.strip().lower() in TERMINAL_MODES:
         defaults["mode"] = v.strip().lower()   # corrupt/foreign → "windows" (default)
+
+    # v1.13.2: the WALLPAPER — a path, a placement and an opacity. The three keys keep ONE validator
+    # (`modules/terminal_background.py`), so the reader below, the canvas and the settings hub cannot
+    # disagree about what a value means: a foreign type is the declared default there.
+    wallpaper = load_background_settings(cfg)
+    defaults["background"] = wallpaper["path"]
+    defaults["background_mode"] = wallpaper["mode"]
+    defaults["background_opacity"] = wallpaper["opacity"]
 
     return defaults
 

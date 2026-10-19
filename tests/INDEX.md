@@ -136,6 +136,7 @@ of the file itself.
 | `test_first_run.py` | — | v1.5rc3 — First run & confidence: the demo map, the undo affordance and the age of a status. |
 | `test_followups_v1123.py` | — | The panel and the terminal: the small follow-ups (v1.12.3). |
 | `test_followups_v1124.py` | — | The repository map and the code text: the polish that closes the line (v1.12.4). |
+| `test_followups_v11313.py` | — | The five decisions the `v1.13.1.2` round carried out of the ledger, each answered (v1.13.1.3). |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |
@@ -222,6 +223,7 @@ of the file itself.
 | `test_system_info.py` | — | Auto-fill of server data v0.9: `services/system_info_collector.py` (a former smoke-test part). |
 | `test_tags.py` | — | Regression v0.9.4: server tags/color labels. |
 | `test_terminal_acceptance.py` | — | v1.0 — Terminal v1, final: full acceptance of all RCs + terminal_* config (ROADMAP tasks 9–10). |
+| `test_terminal_background.py` | — | The terminal wallpaper — `terminal_background*` under the grid (v1.13.2). |
 | `test_terminal_colors.py` | — | v1.0RC1 — the color engine + per-cell canvas (ROADMAP v1.0RC1). |
 | `test_terminal_containers.py` | — | v1.7.2 — Terminal containers: the split in the dock, the single window, the merge and the titles. |
 | `test_terminal_dock.py` | — | Terminals docked in the map window (`terminal_mode`: windows/tabs). |

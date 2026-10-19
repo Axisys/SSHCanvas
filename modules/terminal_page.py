@@ -695,7 +695,13 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # the wheel mode from the config (terminal_wheel).
         self.widget = TerminalWidget(self.tscreen, self.terminal_thread,
                                      wheel_mode=term_cfg["wheel"],
-                                     cursor_style=term_cfg["cursor"])
+                                     cursor_style=term_cfg["cursor"],
+                                     # v1.13.2 (ROADMAP v1.13.2): the wallpaper is read HERE, when the
+                                     # session is created, exactly like the palette, the font and the
+                                     # cursor — the hub re-applies it to the open sessions on OK.
+                                     background_path=term_cfg["background"],
+                                     background_mode=term_cfg["background_mode"],
+                                     background_opacity=term_cfg["background_opacity"])
         # v1.3.3.4 (ROADMAP task 3): the transcript's suggested file name carries the
         # host — the page owns the server data, the canvas owns the menu that asks.
         self.widget.set_transcript_host(getattr(server_data, "host", "") or "")

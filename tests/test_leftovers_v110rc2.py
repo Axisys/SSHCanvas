@@ -252,8 +252,8 @@ check("§2 the `Terminal` tab carries the row: EDITABLE, prefilled, with the dec
       == TC.TERM_PRESETS,
       _hub.term_combo.currentText())
 _hub.term_combo.setEditText("vt100")
-check("§2 `collect()` writes what the field carries and the hub is at 27 keys",
-      _hub.collect()["terminal_term"] == "vt100" and len(_hub.collect()) == 27,
+check("§2 `collect()` writes what the field carries and the hub is at 30 keys",
+      _hub.collect()["terminal_term"] == "vt100" and len(_hub.collect()) == 30,
       str(len(_hub.collect())))
 _validator = _hub.term_combo.lineEdit().validator()
 check("§2 the field carries the SAME allowlist, anchored (a byte the rule forbids never enters)",
@@ -377,8 +377,8 @@ check("§4 the schema did NOT move and no new dependency arrived (three code tas
       __import__("version").VERSION_FORMAT == "0.9"
       and all(f"{d}>=" in _read("requirements.txt")
               for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
-check("§4 the ONE new key is on the pin (1093 + the TERM row) and the hub collects 27",
-      EXPECTED_I18N_KEYS == 1093 + 1 + 10 + 10 + 3 + 1 + 4 + 3)
+check("§4 the ONE new key is on the pin (1093 + the TERM row) and the hub collects 30",
+      EXPECTED_I18N_KEYS == 1093 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8)
 check_i18n_parity(_langs)
 check_i18n_format(_langs)
 check("§4 the topical file is listed by the suite map (tests/INDEX.md regenerated)",

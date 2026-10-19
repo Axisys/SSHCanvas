@@ -59,8 +59,8 @@ WAVE = {
         "_cell_at", "has_selection", "_selected_cells", "clear_selection", "selected_text",
         "copy_selection", "_select_word", "_select_line"]),
 }
-#: the names the FACADE keeps — the assembly, the metrics, the painting, the cursor, the scrollback,
-#: the focus ring, the theme/re-text walks and the window events
+#: the names the FACADE keeps — the assembly, the metrics, the painting, the cursor, the WALLPAPER,
+#: the scrollback, the focus ring, the theme/re-text walks and the window events
 FACADE_METHODS = [
     "__init__", "_update_metrics", "grid_metrics", "cell_size", "set_palette", "set_font",
     "font_size", "zoom_font", "cursor_style", "set_cursor_style", "sizeHint", "_format_for",
@@ -68,6 +68,10 @@ FACADE_METHODS = [
     "focusOutEvent", "visible_text", "scroll_page_up", "scroll_page_down", "_release_pin",
     "pinned", "clear_scrollback", "reset_screen", "refresh_theme", "retranslate", "resizeEvent",
     "showEvent", "hideEvent", "_toggle_cursor_blink",
+    # v1.13.2: the wallpaper — the state, the three setters, the OFF switch and the composite
+    "background_state", "set_background_image", "set_background_mode", "set_background_opacity",
+    "clear_background", "_reset_background", "_background_source", "_background_layer",
+    "_build_background_layer", "_paint_background",
 ]
 #: the module-level facts §4.3 keeps HERE: the cursor SHAPE and the glyph-grid gate's family.
 KEPT_FACTS = ("CURSOR_STYLE_BLOCK", "CURSOR_STYLE_BAR", "CURSOR_STYLE_UNDERLINE", "CURSOR_STYLES",
@@ -147,7 +151,7 @@ check(f"§2 every one of the {sum(len(m) for _r, (_n, _c, m) in WAVE.items())} m
       f"ONE owner", not _owner_problems, "; ".join(_owner_problems[:6]))
 check("§2 the AST reader of the family finds EVERY wave method (its pins travel with the code)",
       all(canvas_func_owner(m, ROOT) for _rel, (_n, _c, methods) in WAVE.items() for m in methods))
-check("§2 the method counts are the plan's (13 + 14 + 15 + 8 + 8 moved, 31 kept by the facade)",
+check("§2 the method counts are the plan's (13 + 14 + 15 + 8 + 8 moved, 41 kept by the facade)",
       [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [13, 14, 15, 8, 8]
       and len(_class_method_names("modules/terminal_widget.py", "TerminalWidget"))
       == len(FACADE_METHODS),
@@ -296,8 +300,8 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check("§5 the wave adds NO i18n key and NO schema move (pure structure; the release's own feature "
-      "adds the elevated pane's TWENTY, v1.8.1 its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 and VERSION_FORMAT == "0.9",
+      "adds the elevated pane's TWENTY, v1.8.1 its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; v1.13.2 adds EIGHT: the wallpaper row of the Settings dialog — its label, its two buttons, its placement with its three values and its opacity row",
+      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 and VERSION_FORMAT == "0.9",
       f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
 check("§5 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)

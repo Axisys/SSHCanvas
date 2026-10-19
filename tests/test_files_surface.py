@@ -154,12 +154,17 @@ def started_kinds(log):
 
 
 def spool_files():
-    """The live spools under the OS temp (the relay's ONE local trace)."""
+    """The live spools of THIS process under the OS temp (the relay's ONE local trace).
+
+    The name carries the creator's pid, so a sibling test process of the parallel runner is never
+    read as this one's leftover — the same temp folder is shared by the whole suite.
+    """
+    own = f"{SEND.SPOOL_PREFIX}{os.getpid()}-"
     try:
         names = os.listdir(SEND.spool_dir())
     except OSError:
         return []
-    return sorted(n for n in names if n.startswith(SEND.SPOOL_PREFIX))
+    return sorted(n for n in names if n.startswith(own))
 
 
 def age_file(path, seconds):

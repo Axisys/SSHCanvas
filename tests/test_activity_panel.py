@@ -655,7 +655,7 @@ from ui.settings_dialog import SettingsDialog  # noqa: E402
 
 _hub = SettingsDialog(None)
 check("§5 the new config key is UI STATE, not a preference (the hub collects 26)",
-      len(_hub.collect()) == 27 and "ui_activity_panel" not in _hub.collect(),
+      len(_hub.collect()) == 30 and "ui_activity_panel" not in _hub.collect(),
       str(sorted(_hub.collect()))[:120])
 _hub.close()
 import dataclasses  # noqa: E402

@@ -240,9 +240,20 @@ class SettingsMixin:
             except (RuntimeError, AttributeError):
                 pass  # Qt teardown / a session without a widget — skip it
 
-        # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's CEILING of the ALREADY OPEN sessions — the
-        # third live terminal-side setting (the font and the cursor above are its twins). Every open
-        # Files container is told, so its panes read with the new cap at once and the "no preview"
+        # v1.13.2 (ROADMAP v1.13.2): the WALLPAPER of the ALREADY OPEN sessions — the third live
+        # terminal setting, the same walk. ONE call applies all three keys (an empty path is the OFF
+        # state, so a cleared field takes the picture away without a second branch).
+        for s in list(getattr(self, "_terminal_windows", [])):
+            try:
+                s.widget.set_background_image(term_cfg["background"],
+                                              mode=term_cfg["background_mode"],
+                                              opacity=term_cfg["background_opacity"])
+            except (RuntimeError, AttributeError):
+                pass  # Qt teardown / a session without a widget — skip it
+
+        # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's CEILING of the ALREADY OPEN sessions — the fourth
+        # live terminal-side setting (the font, the cursor and the wallpaper above are its twins). Every
+        # open Files container is told, so its panes read with the new cap at once and the "no preview"
         # facts of the old cap are dropped.
         try:
             try:

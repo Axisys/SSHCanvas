@@ -349,7 +349,8 @@ check("no config → the defaults (the palette default, pt 10, the history 1000 
             "history_lines": TS.DEFAULT_HISTORY_LINES, "close_behavior": "close",
             "max_open": 4, "wheel": "scrollback", "mode": "windows",
             "cursor": "bar", "scroll": "live", "follow_cwd": False,
-            "term": ST.TERMINAL_TYPE}, str(s))
+            "term": ST.TERMINAL_TYPE, "background": "",
+            "background_mode": "cover", "background_opacity": 35}, str(s))
 
 write_cfg({"terminal_palette": " nord ", "terminal_font": " Consolas ",
               "terminal_font_size": 12, "terminal_history_lines": 50})
@@ -358,7 +359,8 @@ check("the valid values are read (the trimming of the spaces)",
       s == {"palette": "nord", "font_family": "Consolas", "font_size": 12,
             "history_lines": 50, "close_behavior": "close", "max_open": 4,
             "wheel": "scrollback", "mode": "windows", "cursor": "bar", "scroll": "live",
-            "follow_cwd": False, "term": ST.TERMINAL_TYPE}, str(s))
+            "follow_cwd": False, "term": ST.TERMINAL_TYPE, "background": "",
+            "background_mode": "cover", "background_opacity": 35}, str(s))
 
 write_cfg({"terminal_palette": 42, "terminal_font": 7,
               "terminal_font_size": "big", "terminal_history_lines": -5})
@@ -368,7 +370,8 @@ check("the broken values (the foreign types / out of the range) → the defaults
             "history_lines": TS.DEFAULT_HISTORY_LINES, "close_behavior": "close",
             "max_open": 4, "wheel": "scrollback", "mode": "windows",
             "cursor": "bar", "scroll": "live", "follow_cwd": False,
-            "term": ST.TERMINAL_TYPE}, str(s))
+            "term": ST.TERMINAL_TYPE, "background": "",
+            "background_mode": "cover", "background_opacity": 35}, str(s))
 
 # v1.1.1: terminal_max_open — the limit of own terminals (default 4, the range 1..32)
 write_cfg({"terminal_max_open": 8})

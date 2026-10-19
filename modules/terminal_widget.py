@@ -3,14 +3,14 @@
 
 EVERY GLYPH IS PAINTED AT ITS OWN CELL: the glyph-to-cell mapping is the PURE `run_glyphs()`, the pen is
 never left to the font's own widths and `font_grid_problems()` is the gate over `grid_metrics()`. The
-cursor GEOMETRY is the PURE `cursor_shape_rect()` over the DECLARED `CURSOR_STYLES`
-(`resolve_cursor_style()` reads the config); `FORMAT_CACHE_LIMIT` caps the format cache. The canvas is a
-FACADE over its clusters — the key map and the ONE input point (`terminal_widget_input.py`), the mouse
-family (`..._mouse.py` — the xterm reports, the local gestures and the `OSC 8` link), the find bar
-(`..._find.py`), the transcript (`..._transcript.py`) and the local
+cursor GEOMETRY is the PURE `cursor_shape_rect()` over the DECLARED `CURSOR_STYLES`; the WALLPAPER's
+geometry and keys are `modules/terminal_background.py` (this canvas only decodes, blends and caches the
+composite it paints under the grid); `FORMAT_CACHE_LIMIT` caps the format cache. The canvas is a FACADE
+over its clusters — the key map and the ONE input point (`terminal_widget_input.py`), the mouse family
+(`..._mouse.py`), the find bar (`..._find.py`), the transcript (`..._transcript.py`) and the local
 selection (`..._selection.py`) — each resolving a facade global through `MODULE_FACADE_SEAMS` below.
 `feed()` runs under the screen's lock, painting on the GUI thread; mechanism — `DOCUMENTATION.md` §14a,
-§64."""
+§64, §78."""
 
 import math
 
@@ -40,6 +40,13 @@ try:
 except ImportError:
     from modules.terminal_screen import (SCROLL_MODE_DEFAULT as _SCROLL_MODE_DEFAULT,
                                          SCROLL_MODE_PIN as _SCROLL_MODE_PIN)
+
+# v1.13.2 (ROADMAP v1.13.2): the wallpaper — the three keys, their validation and the PURE geometry.
+# The module is Qt-free, so the canvas owns the decode, the blend and the cache (DOCUMENTATION.md §78).
+try:
+    from . import terminal_background as TB
+except ImportError:   # a flat launch from the project root
+    from modules import terminal_background as TB
 
 # v1.2.3 (ROADMAP v1.2.3): multi-input — the broadcast hub of the input to all open sessions.
 # There is no import cycle: multi_input knows nothing about terminal_widget.
@@ -145,10 +152,10 @@ def strip_paste_markers(text) -> str:
     return out
 
 
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import QRect, Qt, QTimer, QUrl
 from PySide6.QtGui import (
-    QBrush, QColor, QDesktopServices, QFont, QFontDatabase, QFontMetricsF, QPainter, QPen,
-)
+    QBrush, QColor, QDesktopServices, QFont, QFontDatabase, QFontMetricsF, QImage, QPainter, QPen,
+    QPixmap)
 from PySide6.QtWidgets import QFileDialog, QMenu, QSizePolicy, QWidget
 
 # v1.9: the OSC 8 link opener asks the SHIPPED allowlist (`AGENTS.md` §4.4) — the same predicate the
@@ -545,7 +552,9 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
     def __init__(self, tscreen, terminal_thread=None, parent=None,
                  palette_name="default", format_cache_limit=FORMAT_CACHE_LIMIT,
                  wheel_mode="scrollback", multi_hub=None,
-                 cursor_style=CURSOR_STYLE_DEFAULT):
+                 cursor_style=CURSOR_STYLE_DEFAULT,
+                 background_path="", background_mode=TB.BACKGROUND_MODE_DEFAULT,
+                 background_opacity=TB.BACKGROUND_OPACITY_DEFAULT):
         super().__init__(parent)
         self.tscreen = tscreen
         self.terminal_thread = terminal_thread
@@ -562,6 +571,15 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         # "block" (the historical slab) | "bar" (the default: the thin blinking line) |
         # "underline". An unknown value → the declared default (resolve_cursor_style()).
         self._cursor_style = resolve_cursor_style(cursor_style)
+        # v1.13.2 (ROADMAP v1.13.2): the WALLPAPER — a path, a mode and an opacity beside the palette,
+        # the font and the cursor (the same "read at session creation" rule). The DECODE is cached per
+        # path and the COMPOSITE per `(path, size, mode, opacity, base)`, so a resize, a scroll or a
+        # palette switch never re-reads the file (§4.3, `DOCUMENTATION.md` §78).
+        self._bg_path = TB.normalize_background_path(background_path)
+        self._bg_mode = TB.resolve_background_mode(background_mode)
+        self._bg_opacity = TB.resolve_background_opacity(background_opacity)
+        self._bg_source = None    # (path, QImage | None) — the decoded image of ONE path
+        self._bg_layer = None     # (key, (kind, payload) | None) — the composite of ONE frame
         self._palette_name = palette_name if palette_name in PALETTES else "default"
         self._palette = dict(PALETTES[self._palette_name])
         self._format_cache_limit = int(format_cache_limit)
@@ -698,6 +716,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self._palette = dict(PALETTES[name])
         self._bg_color = QColor(self._palette["default_bg"])
         self._format_cache.clear()
+        self._bg_layer = None      # v1.13.2: the wallpaper is blended ONTO the default background
         self.update()
         return True
 
@@ -763,6 +782,128 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self.update()
         return self._cursor_style
 
+    # ── v1.13.2 (ROADMAP v1.13.2): the WALLPAPER ─────────────────────────────
+    # The image sits BETWEEN the base fill and the cell fills: a DEFAULT-background cell shows through
+    # it, an EXPLICIT one stays opaque. It is PRE-BLENDED onto that colour, so `WA_OpaquePaintEvent` holds.
+
+    def background_state(self) -> dict:
+        """The wallpaper in force — `{"path", "mode", "opacity"}` (the test seam, like `pinned()`)."""
+        return {"path": self._bg_path, "mode": self._bg_mode, "opacity": self._bg_opacity}
+
+    def set_background_image(self, path, mode=None, opacity=None) -> str:
+        """Apply a wallpaper (`terminal_background` + its two companions); answers the path in force.
+
+        `""` is the OFF state; a missing, unreadable or non-image file is the EMPTY background plus ONE
+        log line, and an unknown mode / an unusable opacity answer their declared defaults.
+        """
+        new_path = TB.normalize_background_path(path)
+        changed = new_path != self._bg_path
+        self._bg_path = new_path
+        if mode is not None:
+            self._bg_mode = TB.resolve_background_mode(mode)
+        if opacity is not None:
+            self._bg_opacity = TB.resolve_background_opacity(opacity)
+        self._reset_background(drop_source=changed)
+        return self._bg_path
+
+    def set_background_mode(self, mode) -> str:
+        """The placement (`cover` | `contain` | `tile`); an unknown value → the declared default."""
+        self._bg_mode = TB.resolve_background_mode(mode)
+        self._reset_background()
+        return self._bg_mode
+
+    def set_background_opacity(self, value) -> int:
+        """The image's strength in percent (0..100, clamped); a foreign value → the default."""
+        self._bg_opacity = TB.resolve_background_opacity(value)
+        self._reset_background()
+        return self._bg_opacity
+
+    def clear_background(self):
+        """Drop the wallpaper — the OFF state (`terminal_background = ""`), a repaint and nothing else."""
+        self._bg_path = ""
+        self._reset_background(drop_source=True)
+
+    def _reset_background(self, drop_source=False):
+        """Forget the composite (and, when the PATH changed, the decode of the old one) + a repaint."""
+        self._bg_layer = None
+        if drop_source:
+            self._bg_source = None
+        self.update()
+
+    def _background_source(self):
+        """The DECODED image of the current path — `None` when nothing can be painted (ONE log line)."""
+        cached = self._bg_source
+        if cached is not None and cached[0] == self._bg_path:
+            return cached[1]
+        image = None
+        if self._bg_path:
+            ok, code, resolved = TB.inspect_background(self._bg_path)
+            if ok:
+                candidate = QImage(resolved)
+                if candidate.isNull() or candidate.width() <= 0 or candidate.height() <= 0:
+                    code = TB.BACKGROUND_ERROR_NOT_IMAGE
+                else:
+                    image = candidate
+            if image is None:
+                log = _get_app_log()
+                if log is not None:
+                    log.warning(f"Terminal wallpaper: {code} — {resolved}")
+        self._bg_source = (self._bg_path, image)
+        return image
+
+    def _background_layer(self):
+        """The composite of THIS frame — `(kind, payload, origin)` or `None` (the per-frame cache)."""
+        key = (self._bg_path, self.width(), self.height(), self._bg_mode, self._bg_opacity,
+               self._palette["default_bg"])
+        cached = self._bg_layer
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        layer = self._build_background_layer(key)
+        self._bg_layer = (key, layer)
+        return layer
+
+    def _build_background_layer(self, key):
+        """Blend ONE copy of the image onto the base colour — `(kind, payload, origin)` | `None`."""
+        path, width, height, mode, opacity, base_hex = key
+        if not path or opacity <= 0:
+            return None
+        image = self._background_source()
+        if image is None:
+            return None
+        rect = TB.background_rect(mode, image.width(), image.height(), width, height)
+        if rect is None:
+            return None
+        x, y, draw_w, draw_h = rect
+        tiled = TB.background_is_tiled(mode)
+        blended = QPixmap(draw_w, draw_h)
+        if blended.isNull():   # a surface this machine will not allocate — no wallpaper, no crash
+            return None
+        blended.fill(QColor(base_hex))
+        # a TILE is one crop of the image at its own pixels; cover/contain scale the WHOLE image
+        source = QRect(0, 0, draw_w, draw_h) if tiled else QRect(0, 0, image.width(), image.height())
+        painter = QPainter(blended)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+            painter.setOpacity(opacity / 100.0)
+            painter.drawImage(QRect(0, 0, draw_w, draw_h), image, source)
+        finally:
+            painter.end()
+        if tiled:
+            return ("texture", QBrush(blended), (0, 0))
+        return ("pixmap", blended, (x, y))   # a NEGATIVE origin is the crop a cover asks for
+
+    def _paint_background(self, painter) -> bool:
+        """Paint the composite over the base fill — True when a wallpaper is on the canvas."""
+        layer = self._background_layer()
+        if layer is None:
+            return False
+        kind, payload, origin = layer
+        if kind == "texture":
+            painter.fillRect(self.rect(), payload)   # a texture brush repeats the blended tile
+        else:
+            painter.drawPixmap(origin[0], origin[1], payload)
+        return True
+
     def sizeHint(self):
         from PySide6.QtCore import QSize
         return QSize(self._cell_w * 80, self._cell_h * 24)
@@ -817,9 +958,12 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
     def _paint(self, painter):
         rows, cx, cy, hidden = self.tscreen.snapshot()
         stats = {"rows": 0, "runs": 0, "draw_text_calls": 0, "selection_cells": 0}
+        default_bg = self._palette["default_bg"]
 
         # WA_OpaquePaintEvent: the full background (the canvas paints every pixel itself)
         painter.fillRect(self.rect(), QBrush(self._bg_color))
+        # v1.13.2: the wallpaper goes BETWEEN the base fill and the cell fills (already pre-blended)
+        has_wallpaper = self._paint_background(painter)
 
         for y, row in enumerate(rows):
             runs = split_row_runs(row)
@@ -833,7 +977,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
                 # area — in a real xterm it is uniformly gray; in the pyte grid such cells carry
                 # bg=<color>). The assumption "the background is already filled" holds only for the spaces
                 # with the default background.
-                if not has_ink and bg == self._palette["default_bg"]:
+                if not has_ink and bg == default_bg:
                     continue  # spaces with the default background — the base fill already covers them
                 pen, brush, font = self._format_for(
                     fg, bg, bool(ch0.bold), bool(ch0.italics),
@@ -847,8 +991,11 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
                 # from len(text) — one cell may hold a grapheme cluster (patch 0005).
                 glyphs = [text] if is_wide else run_glyphs(row, x, text)
                 run_cells = 2 if is_wide else len(glyphs)
-                painter.fillRect(cell_x, cell_y, run_cells * self._cell_w,
-                                 self._cell_h, brush)
+                # v1.13.2: the DEFAULT background is never repainted while a wallpaper is up — that
+                # cell is the hole the image shows through (an EXPLICIT background stays opaque).
+                if bg != default_bg or not has_wallpaper:
+                    painter.fillRect(cell_x, cell_y, run_cells * self._cell_w,
+                                     self._cell_h, brush)
                 if has_ink:
                     # GLYPH BY GLYPH at its own cell. ONE `drawText` per run would advance the pen with
                     # the FONT's widths while the grid reserves `ceil(advance("M"))` per cell, so a font
@@ -1108,8 +1255,12 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         grid, the map_search_bar pattern), so Qt never repositions it — every real
         canvas resize (a window resize, a tab switch, a page without the command
         library panel) places it again.
+
+        v1.13.2: the wallpaper's composite is rebuilt too — a cover/contain sheet is the SIZE of the
+        canvas, so the old one is dropped here and the next paint builds the new geometry.
         """
         super().resizeEvent(event)
+        self._bg_layer = None
         bar = self._find_bar
         if bar is None:
             return

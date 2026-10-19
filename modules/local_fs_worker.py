@@ -791,6 +791,10 @@ class LocalFsWorker(QThread):
                     missed.append(str(member.get("name") or member.get("raw") or ""))
                 written += wrote
                 done += size
+        # ONE line per extraction: the counters the answer carries, so a support log can tell a
+        # complete run from a partial one without the member names (the answer already names them).
+        log.info("Extract: %d file(s) into %s (%d skipped by the plan, %d unreadable)",
+                 written, dest_root, len(plan["skipped"]), len(missed))
         self._emit(self.extract_ready, task.id, dest_root, written,
                    list(plan["skipped"]) + missed)
 

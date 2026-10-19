@@ -615,6 +615,10 @@ class SftpPaneViewerMixin:
         the one thing this door must not start. A refusal answers the shipped sentence and drops the
         copy; a parse that refuses answers ONE sentence and never dresses the other pane: the panel
         is presented with the members already in it (the reader's rule), and the spool goes with it.
+
+        The ROW bound (`ARCHIVE_LIST_MAX`) is the second ceiling: the bytes of a zip say nothing
+        about how many members it names, so a listing that meets more answers ONE sentence beside the
+        rows it could carry — a panel, never a frozen window.
         """
         limit = archive.resolve_archive_max_bytes()
         size = archive.local_size(local)
@@ -624,11 +628,14 @@ class SftpPaneViewerMixin:
             self.message.emit(_t("sftp.archive.cap", size=format_bytes(size),
                                  limit=format_bytes(limit)))
             return
-        entries, encrypted, code = archive.archive_listing(local, kind)
+        entries, encrypted, code, cut = archive.archive_listing(local, kind,
+                                                                archive.ARCHIVE_LIST_MAX)
         if code:
             archive.drop_archive(spool)
             self.message.emit(_t("sftp.op.error", error=code))
             return
+        if cut:
+            self.message.emit(_t("sftp.archive.list_cut", limit=archive.ARCHIVE_LIST_MAX))
         panel = self._ensure_archive_panel()
         self._archive = {"path": path, "local": local, "kind": kind, "spool": spool,
                          "encrypted": bool(encrypted),

@@ -548,7 +548,7 @@ check("the combo opens on the STORED shape", _dlg.cursor_combo.currentData() == 
       str(_dlg.cursor_combo.currentData()))
 check("collect() carries terminal_cursor_style (the 27th UI-facing key is v1.10rc2's TERM row)",
       _dlg.collect().get("terminal_cursor_style") == "underline"
-      and len(_dlg.collect()) == 27, str(len(_dlg.collect())))
+      and len(_dlg.collect()) == 30, str(len(_dlg.collect())))
 check("the tab's label and its three values are translated (not the raw key)",
       _dlg._lbl_cursor.text() not in ("", "settings.terminal.cursor"),
       _dlg._lbl_cursor.text())
