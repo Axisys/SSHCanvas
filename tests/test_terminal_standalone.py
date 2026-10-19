@@ -249,9 +249,10 @@ check("§2 the status line names the file and the number of servers",
       surface.window.statusBar().currentMessage())
 
 rows = [panel.server_tree.topLevelItem(i) for i in range(panel.server_tree.topLevelItemCount())]
-check("§2 the rows keep the FILE's order and carry the alias + the identity tooltip",
-      [r.text(0) for r in rows] == ["web-1", "web-2", "neighbour"]
-      and rows[1].toolTip(0) == "admin@10.20.0.12:2222",
+check("§2 the rows are ONE per file entry, ordered A→Z by alias (v1.13.3's name sort) and carry "
+      "the alias + the identity tooltip",
+      [r.text(0) for r in rows] == ["neighbour", "web-1", "web-2"]
+      and rows[2].toolTip(0) == "admin@10.20.0.12:2222",
       [r.text(0) for r in rows])
 
 surface.connect_server(surface.servers()[0])
@@ -639,12 +640,10 @@ _NEW_KEYS = ("terminal.standalone.title", "terminal.standalone.empty_hint",
              "terminal.cmdlib.no_project", "terminal.cmdlib.project_empty")
 check("§7 the TEN keys of the release are present and non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS)
-      # the 1104 the standalone left, plus the later follow-ups' own keys (the THREE of v1.12.3:
-      # the jump host's label, its hint and the import picker's column — the ONE of v1.12.4.1, the
-      # FOUR of v1.13: the archive's row, its header, its cap and the encrypted sentence, the
-      # THREE of v1.13.1: the extract's row, its report and the bomb sentence, the TWO of the fifth
-      # read: the listing's bound and the merge line, the EIGHT of v1.13.2: the wallpaper row).
-      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8,
+      # the 1104 the standalone left, plus the later follow-ups' keys (v1.12.3's THREE, v1.12.4.1's
+      # ONE, v1.13's FOUR, v1.13.1's THREE, the fifth read's TWO, v1.13.2's EIGHT: the wallpaper row,
+      # v1.13.3's NINE: the row verbs and the Servers menu).
+      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8 - 9,
       str({c: [k for k in _NEW_KEYS if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 `{patterns}` is the ONE placeholder of the filter and every language carries it",
       all(set(_placeholders(LANGS[c]["terminal.standalone.project_filter"])) == {"patterns"}

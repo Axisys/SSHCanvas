@@ -571,12 +571,12 @@ print("== §7 the release ==")
 from version import APP_VERSION, VERSION_FORMAT  # noqa: E402
 
 check("§7 the shipped version is the one the pin names",
-      APP_VERSION == EXPECTED_APP_VERSION == "1.13.2" and releases_at_least(APP_VERSION, "1.13.2"),
+      APP_VERSION == EXPECTED_APP_VERSION == "1.13.3" and releases_at_least(APP_VERSION, "1.13.2"),
       APP_VERSION)
 check("§7 the wallpaper moves no JSON schema (the keys live in config.json, not in the project)",
       VERSION_FORMAT == "0.9", VERSION_FORMAT)
 check_release_state(ROOT)
-check(f"§7 the i18n pin carries the eight wallpaper keys ({EXPECTED_I18N_KEYS} = 1127 + 8)",
-      EXPECTED_I18N_KEYS == 1135, str(EXPECTED_I18N_KEYS))
+check(f"§7 the i18n pin carries the eight wallpaper keys ({EXPECTED_I18N_KEYS} = 1127 + 8 + the later nine)",
+      EXPECTED_I18N_KEYS == 1144, str(EXPECTED_I18N_KEYS))
 
 finish()

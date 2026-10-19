@@ -483,29 +483,30 @@ menu = tab5._build_context_menu(item_by_name(tab5, "a.txt"))
 actions = [a for a in menu.actions() if not a.isSeparator()]
 labels = [a.text() for a in actions]
 expected = [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"),
-            i18n.t("sftp.op.delete"), i18n.t("sftp.op.copy_path"),
+            i18n.t("sftp.op.delete"), i18n.t("sftp.op.download"), i18n.t("sftp.op.upload"),
+            i18n.t("sftp.op.copy_path"),
             i18n.t("sftp.archive.open"),
             i18n.t("sftp.send.menu"), i18n.t("sftp.refresh")]
-check("the context menu carries the four operations + the archive row + the Send-to submenu "
-      "+ Refresh", labels == expected, f"labels={labels}")
+check("the context menu carries the four operations + the two row verbs (v1.13.3) + the archive "
+      "row + the Send-to submenu + Refresh", labels == expected, f"labels={labels}")
 check("on a real row Rename/Delete/Copy are enabled",
-      all(a.isEnabled() for a in actions[:4]), f"got={[a.isEnabled() for a in actions]}")
+      all(a.isEnabled() for a in actions[:6]), f"got={[a.isEnabled() for a in actions]}")
 check("New folder is always available (the current directory is the target)",
       actions[0].isEnabled())
 check("the archive row is offered on a row its suffix declares (v1.13) and nowhere else",
-      actions[4].isEnabled() is False,
-      f"a.txt={actions[4].isEnabled()}")
+      actions[6].isEnabled() is False,
+      f"a.txt={actions[6].isEnabled()}")
 
 menu_up = tab5._build_context_menu(tab5._up_item)
 up_actions = [a for a in menu_up.actions() if not a.isSeparator()]
-check("on the '..' row Rename/Delete/Copy are DISABLED",
-      [a.isEnabled() for a in up_actions] == [True, False, False, False, False, True],
+check("on the '..' row Rename/Delete/Download are DISABLED (Upload keeps the directory under it)",
+      [a.isEnabled() for a in up_actions] == [True, False, False, False, True, False, False, True],
       f"got={[a.isEnabled() for a in up_actions]}")
 
 menu_empty = tab5._build_context_menu(None)
 empty_actions = [a for a in menu_empty.actions() if not a.isSeparator()]
-check("on empty space only New folder / Refresh are enabled",
-      [a.isEnabled() for a in empty_actions] == [True, False, False, False, False, True],
+check("on empty space only New folder / Upload / Refresh are enabled",
+      [a.isEnabled() for a in empty_actions] == [True, False, False, False, True, False, False, True],
       f"got={[a.isEnabled() for a in empty_actions]}")
 
 check("the tree is drag-enabled and drag-only",

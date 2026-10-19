@@ -3,8 +3,9 @@
 
 `StandaloneTerminalWindow` is the SHIPPED container (`modules/ssh_terminal.py`) with its two map hooks
 answered by the surface instead of a map, and `StandaloneSurface` is that surface: it owns the project
-file the `Servers` head lists (read by the PURE `storage/project.py` reader), the ONE connect door and
-the bottom row's `Open project`. `start_standalone()` is the entry point `main.py` calls.
+file the `Servers` head lists (read by the PURE `storage/project.py` reader), the ONE connect door, the
+bottom row's `Open project` and the row menu's `Quick Launch` ENTRY doors. `start_standalone()` is the
+entry point `main.py` calls.
 
 Nothing of the map is built here — no scene, no plugins, no probes, no autosave, no undo and no info
 collection (the contract's OUT list is the specification). Mechanism — `DOCUMENTATION.md` §75;
@@ -16,11 +17,11 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QWidget
 
 try:
     from ..dialogs.ssh_connect_dialog import SSHConnectDialog
-    from ..models.server import is_unmanaged
+    from ..models.server import is_launchable_url, is_unmanaged
     from ..storage.project import PROJECT_SUFFIXES, read_project_servers
 except ImportError:  # flat launch from the project root
     from dialogs.ssh_connect_dialog import SSHConnectDialog
-    from models.server import is_unmanaged
+    from models.server import is_launchable_url, is_unmanaged
     from storage.project import PROJECT_SUFFIXES, read_project_servers
 
 try:
@@ -94,6 +95,11 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
         super().__init__(None, parent=parent)
         # The bottom row's FIRST control is `Open project` on this surface — the ONE door of §7.
         self.cmdlib_panel.set_project_door(self._panel_open_project)
+        # v1.13.3: the row menu's `Quick Launch`. The ENTRY doors are answered from this surface —
+        # a stored credential opens the session with no dialog, the map's own order — while the
+        # CONFIGURE door is NOT installed: the list is read-only here and the editor stays in the
+        # map's own menus, because this surface writes no project file (§3 of the contract).
+        self.cmdlib_panel.set_quick_launch_doors(self._panel_quick_launch_entry, None)
         # …and this surface OPENS on the head that control belongs to: a container with no map lists
         # its project's servers (`TERMINAL_STANDALONE.md` §7). The door above comes FIRST — an
         # unavailable head is refused, and the refusal is a status-line sentence.
@@ -144,6 +150,19 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
             log = _log()
             if log is not None:
                 log.warning(f"The Open project door failed: {e}")
+            return False
+
+    def _panel_quick_launch_entry(self, node, entry) -> bool:
+        """One card's `Quick Launch` entry — the SURFACE's own door (`TERMINAL_STANDALONE.md` §8)."""
+        hook = self._surface_hook("quick_launch_entry")
+        if hook is None:
+            return False
+        try:
+            return bool(hook(node, entry))
+        except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The standalone quick launch door failed: {e}")
             return False
 
 
@@ -211,13 +230,15 @@ class StandaloneSurface(QWidget):
             log.info("Standalone project loaded", extra={"file": chosen, "servers": len(servers)})
         return True
 
-    def connect_server(self, data) -> bool:
+    def connect_server(self, data, initial_command: str = "") -> bool:
         """The ONE connect door of the surface — the unmanaged gate, the dialog, then the session.
 
         The order is the contract's (§8): an UNMANAGED node is refused BEFORE a dialog is built, the
         SHIPPED `SSHConnectDialog` collects the login, and the session joins this surface's window.
         The dialog's user / key / port are written to the in-memory node DIRECTLY — this surface has
         no undo stack — and the password falls back to the endpoint-bound keyring record.
+        v1.13.3: `initial_command` is what a `Quick Launch` COMMAND entry sends first (the map's own
+        `_quick_launch_command()` path, which hands the command to the dialog's session).
         """
         if data is None:
             return False
@@ -237,9 +258,77 @@ class StandaloneSurface(QWidget):
             return False
         self._apply_dialog_fields(data, dlg)
         password = str(dlg.password_edit.text()) or self._stored_password(data)
-        self.window.add_session(data, password=password, initial_command="")
+        self.window.add_session(data, password=password, initial_command=initial_command)
         self._notify(get_translator()("terminal.session_new_tab", alias=getattr(data, "alias", "")))
         return True
+
+    def quick_launch_entry(self, data, entry) -> bool:
+        """ONE `Quick Launch` entry of a project server — the ENTRY doors of §8 (v1.13.3).
+
+        A `url` entry opens the browser behind the scheme gate; a `command` entry opens a SESSION
+        with that command as its first line through `quick_launch_command()`. `False` — a foreign or
+        empty entry, a refused target or a cancelled dialog; nothing here raises.
+        """
+        if data is None or not isinstance(entry, dict):
+            return False
+        etype = str(entry.get("type", "url")).strip().lower()
+        value = str(entry.get("value", "")).strip()
+        if not value:
+            return False
+        name = str(entry.get("name") or value).strip()
+        if etype == "command":
+            return self.quick_launch_command(data, value, name)
+        return self.quick_launch_url(value, name)
+
+    def quick_launch_url(self, url: str, name: str = "") -> bool:
+        """A `url` entry — the default browser, behind the ONE scheme allowlist (`§4.4.3`).
+
+        The scheme is judged BEFORE the OS sees the string (the map's `_quick_launch_url()` rule:
+        on Windows the default backend IS `ShellExecute` on the raw value), and a refusal is a
+        status-line sentence here — this surface owns no modal error box of its own.
+        """
+        if not is_launchable_url(url):
+            self._notify(get_translator()("validation.ql_url_scheme"))
+            return False
+        try:
+            import webbrowser
+            opened = bool(webbrowser.open(url))
+        except Exception as e:  # noqa: BLE001 — a browser that cannot start is ONE sentence
+            log = _log()
+            if log is not None:
+                log.warning(f"The quick launch URL failed: {e}")
+            opened = False
+        if not opened:
+            self._notify(get_translator()("msg.ql_no_browser"))
+            return False
+        self._notify(get_translator()("status.ql_opened", name=name or url))
+        return True
+
+    def quick_launch_command(self, data, command: str, name: str = "") -> bool:
+        """A `command` entry — a session whose FIRST line is that command (the map's own order).
+
+        DECIDED (`ROADMAP` v1.13.3): the ENTRY doors are answered here with the `_stored_password()`
+        pre-check — a stored credential or a key opens the session with NO dialog, and only a node
+        with neither falls back to the SHIPPED connect dialog, which then carries the command. The
+        unmanaged gate is the shipped one: a `command` entry is an SSH verb, a URL entry is not.
+        """
+        if data is None:
+            return False
+        command = str(command or "").strip()
+        if not command:
+            return False
+        if is_unmanaged(data):
+            self._notify(get_translator()("status.unmanaged_blocked"))
+            return False
+        if self.window is None:
+            return False
+        password = self._stored_password(data)
+        if password or (getattr(data, "key_path", "") or "").strip():
+            self.window.add_session(data, password=password, initial_command=command)
+            self._notify(get_translator()("status.ql_command",
+                                          name=name or command, alias=getattr(data, "alias", "")))
+            return True
+        return self.connect_server(data, initial_command=command)
 
     def _open_profile_manager(self):
         """`Profiles` — the SHIPPED application-level door, under the SHIPPED hook name.

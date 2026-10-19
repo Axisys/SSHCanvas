@@ -8,9 +8,9 @@ shipped backup dialog and the import/export pair carries the WHOLE library. `Com
 left of the session tabs in BOTH containers and holds TWO lists: the `Commands` head (the search, the
 "category → command" tree, the Add/Edit/Delete buttons, a double click / Enter sending a macro to the
 ACTIVE session through `page.widget.send_macro` → `terminal_thread.send_data()`, never the multi-input
-broadcast) and the `Servers` head (the map's aliases, whose click goes through the HOST's connect door).
-The collapse into a thin strip is the ONE key `ui_cmdlib_collapsed`. Test seams: explicit `path=`/`store=`,
-the module attributes `QMessageBox` / `QMenu` / `BackupsDialog`; `CommandLibraryDialog` is the form."""
+broadcast) and the `Servers` head (the map's aliases with their OWN row menu, a tag filter and a name
+sort). The collapse is the ONE key `ui_cmdlib_collapsed`. Test seams: explicit `path=`/`store=`, the
+module attributes `QMessageBox` / `QMenu` / `BackupsDialog`; `CommandLibraryDialog` is the form."""
 
 import hashlib
 import json
@@ -156,11 +156,13 @@ def container_kind_of(widget) -> str:
 
 
 def server_row_facts(node) -> tuple:
-    """`(id, alias, identity)` of ONE entry of the servers provider — PURE and duck-typed.
+    """`(id, alias, identity, tags)` of ONE entry of the servers provider — PURE and duck-typed.
 
     The panel never imports `graphics/` (§4.1): a card is read through `node.data` (the `ServerNode`
     shape) or directly (a plain `ServerData`), and a foreign object answers empty cells instead of an
-    exception. `identity` is the `user@host:port` half a row shows in its tooltip.
+    exception. `identity` is the `user@host:port` half a row shows in its tooltip; `tags` is the
+    FOURTH element — a TUPLE of the card's non-empty tag strings in the node's own order, so the
+    tag filter reads the answer a row was built from instead of growing a second reader.
     """
     data = getattr(node, "data", node)
     sid = str(getattr(data, "id", "") or "")
@@ -172,7 +174,12 @@ def server_row_facts(node) -> tuple:
     except (TypeError, ValueError):
         port = 22
     identity = f"{user}@{host}:{port}" if user else f"{host}:{port}"
-    return sid, alias, identity
+    try:
+        tags = tuple(dict.fromkeys(str(tag).strip() for tag in (getattr(data, "tags", None) or ())
+                                   if str(tag).strip()))
+    except TypeError:
+        tags = ()   # a foreign value that is not iterable — a card with no tags
+    return sid, alias, identity, tags
 
 
 def server_row_keys(ids) -> list:
@@ -842,6 +849,16 @@ class CommandLibraryPanel(QWidget):
         self._server_nodes = []            # the answer as handed over (POSITION → the live node)
         self._servers_ready = False        # the provider answered something (`None` = nothing to list YET)
         self._row_position = {}            # the row KEY (`server_row_keys()`) → its position
+        # v1.13.3: the row menu's `Quick Launch` pair (installed by the CONTAINER beside the provider
+        # pair) and the head's TWO view controls — `_tag_filter` / `_sort_desc` are VIEW STATE of this
+        # panel, never a config key (`_head`'s rule), and `_row_entries` is the row → node pairing the
+        # filter reads, because the rows are SORTED and no longer mirror the provider's order.
+        self._quick_launch_entry = None    # (node, entry) → run one configured entry
+        self._quick_launch_configure = None  # (node) → the card's editor (`None` — read-only)
+        self._tag_filter = ""              # the tag the list is narrowed to ("" — every row)
+        self._sort_desc = False            # A→Z (False) / Z→A (True) over the ALIAS
+        self._row_entries = []             # [(QTreeWidgetItem, node)] in the order shown
+        self._servers_facts = []           # the facts the rows were BUILT from (provider order)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -918,6 +935,28 @@ class CommandLibraryPanel(QWidget):
         self.search.textChanged.connect(self._apply_filter)
         bl.addWidget(self.search)
 
+        # ── v1.13.3: the `Servers` head's TWO view controls — the tag filter and the name sort.
+        # Both are VIEW STATE (no config key, nothing in `SettingsDialog.collect()`), and both sit in
+        # ONE wrapper that travels with the head (`_apply_head()`), because the `Commands` head is a
+        # library tree with its own search and no aliases to sort.
+        self.filters_row = QWidget()
+        filters = QHBoxLayout(self.filters_row)
+        filters.setContentsMargins(0, 0, 0, 0)
+        filters.setSpacing(4)
+        self.tag_combo = QComboBox()
+        self.tag_combo.addItem(t("terminal.cmdlib.all_tags"), "")
+        self.tag_combo.currentIndexChanged.connect(self._on_tag_changed)
+        self.sort_btn = QToolButton()
+        self.sort_btn.setAutoRaise(True)
+        self.sort_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)   # the fields keep the keyboard
+        self.sort_btn.setToolTip(t("terminal.cmdlib.sort_tooltip"))
+        self.sort_btn.clicked.connect(lambda _checked=False: self._toggle_sort())
+        self._apply_sort_text()
+        filters.addWidget(self.tag_combo, 1)
+        filters.addWidget(self.sort_btn)
+        bl.addWidget(self.filters_row)
+        self.filters_row.hide()
+
         self.tree = _CommandTree()
         self.tree.setColumnCount(2)
         self.tree.setHeaderLabels([t("terminal.cmdlib.name"), t("terminal.cmdlib.command")])
@@ -945,6 +984,11 @@ class CommandLibraryPanel(QWidget):
         self.server_tree.setRootIsDecorated(False)
         self.server_tree.itemDoubleClicked.connect(self._activate_server_item)
         self.server_tree.entry_entered.connect(self._activate_server_item)
+        # v1.13.3: the row menu of a server. The POLICY is what makes the signal exist — with the
+        # default one the right click travels UP to the container and answers ITS menu (the commands
+        # tree's own lesson above), so the row's verbs were unreachable.
+        self.server_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.server_tree.customContextMenuRequested.connect(self._on_server_context_menu)
         bl.addWidget(self.server_tree, 1)
         self.server_tree.hide()
 
@@ -1078,6 +1122,8 @@ class CommandLibraryPanel(QWidget):
             self.act_restore_backup.setText(t("terminal.cmdlib.restore_backup"))
             self.act_import_library.setText(t("terminal.cmdlib.import"))
             self.act_export_library.setText(t("terminal.cmdlib.export"))
+            self.sort_btn.setToolTip(t("terminal.cmdlib.sort_tooltip"))
+            self._apply_sort_text()
         except RuntimeError:
             return  # the C++ object is already deleted (a close race)
         # The collapse state also owns the two tooltips (set_collapsed re-applies the
@@ -1090,6 +1136,7 @@ class CommandLibraryPanel(QWidget):
         # hint sentences — rebuild both in the new language (the same path showEvent uses).
         try:
             self.reload()
+            self._rebuild_tag_filter()   # `reload()` skips an unchanged answer — the combo's own text
             self._apply_head()
         except RuntimeError:
             pass  # the C++ object is already deleted (a close race)
@@ -1160,6 +1207,20 @@ class CommandLibraryPanel(QWidget):
         self._servers_provider = nodes_provider if callable(nodes_provider) else None
         self._connect_sink = connect_sink if callable(connect_sink) else None
         self.refresh_servers()
+
+    def set_quick_launch_doors(self, entry_sink, configure_sink):
+        """The card's `Quick Launch` pair of the `Servers` row menu — installed by the CONTAINER.
+
+        `entry_sink(node, entry)` runs ONE configured entry (a URL in the browser, a command in the
+        session) and `configure_sink(node)` opens the card's editor. They live BESIDE
+        `set_server_sources()` because they are the same kind of seam: the map answers both from
+        `SshMixin` (`_run_quick_launch_entry()` / `_open_quick_launch_dialog()`), while the
+        standalone answers the ENTRY doors from its own surface and installs NO editor — its list is
+        read-only and writes no project file (`TERMINAL_STANDALONE.md` §3). `None` = a door is
+        absent, and the panel answers with its own sentence instead of a dead control.
+        """
+        self._quick_launch_entry = entry_sink if callable(entry_sink) else None
+        self._quick_launch_configure = configure_sink if callable(configure_sink) else None
 
     def set_map_doors(self, open_map, profiles):
         """The bottom row's two doors — `open_map()` raises the map window, `profiles()` opens the
@@ -1293,7 +1354,13 @@ class CommandLibraryPanel(QWidget):
         self._rebuild_servers()
 
     def _servers_changed(self) -> bool:
-        """Does the provider answer something other than the entries the rows were built from?"""
+        """Does the provider answer something other than the entries the rows were built from?
+
+        The comparison covers the ROW's whole content (`server_row_facts()`), not the id alone: this
+        head SORTS and FILTERS on the alias and the tags, so a renamed card or a changed tag set has
+        to rebuild the list and the tag options — the entries the rows were built with are kept in
+        `_servers_facts` (provider order) for exactly that comparison.
+        """
         provider = self._servers_provider
         if provider is None:
             return bool(self._server_nodes) or self._servers_ready
@@ -1308,21 +1375,26 @@ class CommandLibraryPanel(QWidget):
         nodes = list(answer)
         if len(nodes) != len(self._server_nodes):
             return True
-        for live, shown in zip(nodes, self._server_nodes):
-            if live is not shown or server_row_facts(live)[0] != server_row_facts(shown)[0]:
+        for index, live in enumerate(nodes):
+            if live is not self._server_nodes[index]:
+                return True
+            if index >= len(self._servers_facts) \
+                    or server_row_facts(live) != self._servers_facts[index]:
                 return True
         return False
 
     def _apply_head(self):
-        """Show the widgets of ONE head: the tree or the server list, the Add/Edit/Delete row, the
-        library-file button and the search placeholder. v1.12.2: the BOTTOM ROW and its inline hint
-        belong to the `Servers` head too (`_apply_panel_doors()`), so the `Commands` head is exactly its
-        own tree, its Add/Edit/Delete row and the library-file menu. Never raises."""
+        """Show the widgets of ONE head: the tree or the server list, its filters row, the
+        Add/Edit/Delete row, the library-file button and the search placeholder. v1.12.2: the BOTTOM
+        ROW and its inline hint belong to the `Servers` head too (`_apply_panel_doors()`), so the
+        `Commands` head is exactly its own tree, its Add/Edit/Delete row and the library-file menu;
+        v1.13.3: the tag filter and the name sort are the `Servers` head's as well. Never raises."""
         t = get_translator()
         commands = self._head == HEAD_COMMANDS
         try:
             self.tree.setVisible(commands)
             self.server_tree.setVisible(not commands)
+            self.filters_row.setVisible(not commands)
             self.cmd_buttons.setVisible(commands)
             self._file_btn.setVisible(commands)
             self.head_commands_btn.setChecked(commands)
@@ -1502,16 +1574,18 @@ class CommandLibraryPanel(QWidget):
     def _rebuild_servers(self):
         """Rebuild the flat `Servers` list from the provider pair. Never raises.
 
-        The rows are the map's cards in the map's own order (the standalone's project file order).
-        A row carries ONLY its KEY in `Qt.UserRole` (Qt gotcha #12: `setData` stores a copy of an
-        object) and the live node is read back from `self._server_nodes` through
-        `self._row_position`; the key is POSITIONAL (`server_row_keys()`), so two entries sharing one
-        id stay two rows that resolve to their own server. The identity (`user@host:port`) travels as
-        the tooltip — the alias is what the row shows.
+        The rows are the map's cards (the standalone's project file order), ordered by the head's
+        OWN name sort — A→Z by `alias` (`_sort_desc` flips it, the tie-break is the provider's order,
+        because Python's sort is stable). A row carries ONLY its KEY in `Qt.UserRole` (Qt gotcha #12:
+        `setData` stores a copy of an object) and the live node is read back from `self._server_nodes`
+        through `self._row_position`; the key is POSITIONAL (`server_row_keys()`), so two entries
+        sharing one id stay two rows that resolve to their own server. The identity
+        (`user@host:port`) travels as the tooltip — the alias is what the row shows.
         """
         t = get_translator()
         self.server_tree.clear()
         self._row_position = {}
+        self._row_entries = []
         nodes = []
         self._servers_ready = False
         provider = self._servers_provider
@@ -1524,15 +1598,23 @@ class CommandLibraryPanel(QWidget):
                 self._servers_ready = True
                 nodes = list(answer)
         self._server_nodes = nodes
+        self._servers_facts = [server_row_facts(node) for node in nodes]
         keys = server_row_keys([server_row_facts(node)[0] for node in nodes])
-        for row_key, node in zip(keys, nodes):
-            sid, alias, identity = server_row_facts(node)
-            self._row_position[row_key] = len(self._row_position)
+        # The KEY stays the provider's POSITION (`server_row_keys()`); the ROW order is the head's
+        # own sort, so the pairing is built before the sort and the key never follows the row.
+        self._row_position = {key: index for index, key in enumerate(keys)}
+        pairs = list(zip(keys, nodes))
+        pairs.sort(key=lambda pair: server_row_facts(pair[1])[1].casefold(),
+                   reverse=self._sort_desc)
+        for row_key, node in pairs:
+            sid, alias, identity, _tags = server_row_facts(node)
             row = QTreeWidgetItem([alias or sid or row_key])
             row.setData(0, Qt.ItemDataRole.UserRole, row_key)
             row.setToolTip(0, identity or alias)
             self.server_tree.addTopLevelItem(row)
+            self._row_entries.append((row, node))
         self.server_tree.setHeaderLabels([t("terminal.cmdlib.head_servers")])
+        self._rebuild_tag_filter()
         self._apply_filter()
 
     def _server_for_item(self, item):
@@ -1589,12 +1671,158 @@ class CommandLibraryPanel(QWidget):
             if log is not None:
                 log.warning(f"The server row's connect door failed: {e}")
 
+    # ── v1.13.3: the `Servers` row menu, its tag filter and its name sort ────
+
+    def _on_server_context_menu(self, pos):
+        """The `Servers` list's right click — the row menu of ONE server (a test seam bypasses it)."""
+        try:
+            item = self.server_tree.itemAt(pos)
+        except RuntimeError:
+            return   # the C++ object is already deleted (a close race)
+        if item is None:
+            return   # empty space carries no verbs of its own
+        menu = self._build_server_menu(item)
+        if menu is not None:
+            menu.exec(self.server_tree.viewport().mapToGlobal(pos))
+
+    def _build_server_menu(self, item):
+        """`Connect to SSH` and the `Quick Launch ▸` submenu of ONE `Servers` row (no `exec()` here).
+
+        `Connect to SSH` is the double click's OWN door (`_activate_server_item()` → the HOST's
+        `_run_ssh_connect()`), so the unmanaged gate, the `terminal_max_open` limit and the SAME
+        `SSHConnectDialog` are asked exactly as a click asks them; a row whose record left the
+        answer is DISABLED instead of opening a session for a card nobody is looking at.
+        """
+        t = get_translator()
+        node = self._server_for_item(item)
+        menu = QMenu(self)
+        act_connect = menu.addAction(t("terminal.cmdlib.connect"))
+        act_connect.setEnabled(node is not None)
+        if node is not None:
+            act_connect.triggered.connect(lambda: self._activate_server_item(item))
+            menu.addMenu(self._build_quick_launch_menu(item, node))
+        return menu
+
+    def _build_quick_launch_menu(self, item, node):
+        """The card's OWN `Quick Launch` submenu — its entries, then the editor door.
+
+        The submenu is the map's (`ui/server_menu.py`): the entries are the card's `quick_launch`
+        list and the last row is `Configure…`. The panel owns NEITHER the opener NOR the editor —
+        the CONTAINER installs both (`set_quick_launch_doors()`), so this module imports no
+        `graphics/` and no `dialogs/`. A missing ENTRY door leaves the entries DISABLED (a dead
+        control is the hint); a missing CONFIGURE door stays live and answers ONE sentence.
+        """
+        t = get_translator()
+        menu = QMenu(t("ctx.quick_launch"), self)
+        data = getattr(node, "data", node)
+        entries = [e for e in (getattr(data, "quick_launch", None) or []) if isinstance(e, dict)]
+        if not entries:
+            menu.addAction(t("terminal.cmdlib.ql_empty")).setEnabled(False)
+        for entry in entries:
+            label = str(entry.get("name") or entry.get("value") or "").strip() or "?"
+            act = menu.addAction(label)
+            act.setEnabled(self._quick_launch_entry is not None)
+            if self._quick_launch_entry is not None:
+                act.triggered.connect(
+                    lambda _checked=False, e=dict(entry): self._run_quick_launch(item, e))
+        menu.addSeparator()
+        act_configure = menu.addAction(t("ql.configure"))
+        act_configure.triggered.connect(lambda _checked=False: self._configure_quick_launch(item))
+        return menu
+
+    def _run_quick_launch(self, item, entry):
+        """Run ONE `Quick Launch` entry through the door the CONTAINER installed. Never raises."""
+        node = self._server_for_item(item)
+        if node is None or self._quick_launch_entry is None:
+            return
+        try:
+            self._quick_launch_entry(node, entry)
+        except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The quick launch door failed: {e}")
+
+    def _configure_quick_launch(self, item):
+        """`Configure…` — the card's editor where the container installed one; ONE sentence where not.
+
+        The standalone (`--only-terminal`) lists a project FILE and writes nothing
+        (`TERMINAL_STANDALONE.md` §3), so its window installs no editor and this row answers
+        `terminal.cmdlib.ql_readonly` rather than opening a dialog with nowhere to save.
+        """
+        node = self._server_for_item(item)
+        if node is None:
+            return
+        if self._quick_launch_configure is None:
+            self._notify(get_translator()("terminal.cmdlib.ql_readonly"))
+            return
+        try:
+            self._quick_launch_configure(node)
+        except Exception as e:  # noqa: BLE001 — a door must never break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The quick launch editor door failed: {e}")
+
+    def _on_tag_changed(self, _index: int = -1):
+        """The user picked a tag (or `All tags`): the ONE writer of `_tag_filter` for a CLICK.
+
+        `_rebuild_tag_filter()` is the other one — it re-reads the combo after the provider answered
+        and drops a tag that no card carries any more, so the state and the control never disagree.
+        """
+        try:
+            self._tag_filter = str(self.tag_combo.currentData() or "")
+        except RuntimeError:
+            return   # Qt teardown — the combo is already gone
+        self._apply_filter()
+
+    def _apply_sort_text(self):
+        """Name the direction the NEXT click sorts by — the button is a toggle, not a checkbox."""
+        try:
+            self.sort_btn.setText(get_translator()(
+                "terminal.cmdlib.sort_za" if self._sort_desc else "terminal.cmdlib.sort_az"))
+        except RuntimeError:
+            pass   # Qt teardown — the button is already gone
+
+    def _toggle_sort(self):
+        """Flip A→Z / Z→A over the ALIAS and rebuild the list (a VIEW STATE — nothing is persisted)."""
+        self._sort_desc = not self._sort_desc
+        self._apply_sort_text()
+        self._rebuild_servers()
+
+    def _rebuild_tag_filter(self):
+        """Re-read the tags of the CURRENT answer into the combo, keeping the chosen one while it stays.
+
+        The options are the union of the tags the provider answers (not a stored list): a tag that
+        left the last card disappears, and a chosen tag that is no longer offered falls back to
+        `All tags` instead of hiding every row behind a filter nobody can see.
+        """
+        t = get_translator()
+        tags = sorted({tag for node in self._server_nodes for tag in server_row_facts(node)[3]},
+                      key=str.casefold)
+        try:
+            self.tag_combo.blockSignals(True)
+            self.tag_combo.clear()
+            self.tag_combo.addItem(t("terminal.cmdlib.all_tags"), "")
+            for tag in tags:
+                self.tag_combo.addItem(tag, tag)
+            index = self.tag_combo.findData(self._tag_filter) if self._tag_filter else 0
+            self.tag_combo.setCurrentIndex(index if index >= 0 else 0)
+            self._tag_filter = str(self.tag_combo.currentData() or "")
+        except RuntimeError:
+            return   # Qt teardown — the combo is already destroyed
+        finally:
+            try:
+                self.tag_combo.blockSignals(False)
+            except RuntimeError:
+                pass
+
     def _apply_filter(self):
         """A search by name OR command text for the `Commands` tree and by alias/identity for the
-        `Servers` list (case-insensitive); the non-matching rows and the empty categories are hidden.
-        The info label carries the ACTIVE head's own empty/no-matches sentence."""
+        `Servers` list (case-insensitive), narrowed further by the tag filter; the non-matching rows
+        and the empty categories are hidden. The info label carries the ACTIVE head's own
+        empty/no-matches sentence."""
         t = get_translator()
         q = self.search.text().strip().lower()
+        tag = self._tag_filter
         total_shown = 0
         for i in range(self.tree.topLevelItemCount()):
             top = self.tree.topLevelItem(i)
@@ -1611,12 +1839,11 @@ class CommandLibraryPanel(QWidget):
             total_shown += shown
         servers_shown = 0
         # A row is filtered by the provider's own answer, never by a resolution that may refuse
-        # (`N105`): filtering by a refused row would hide a server the map still carries.
-        for i in range(self.server_tree.topLevelItemCount()):
-            row = self.server_tree.topLevelItem(i)
-            node = self._server_nodes[i] if 0 <= i < len(self._server_nodes) else None
-            _, alias, identity = server_row_facts(node) if node is not None else ("", "", "")
-            match = not q or q in f"{alias} {identity}".lower()
+        # (`N105`): filtering by a refused row would hide a server the map still carries. The rows
+        # are SORTED, so the node comes from the pairing built with them and not by row index.
+        for row, node in list(self._row_entries):
+            _, alias, identity, tags = server_row_facts(node)
+            match = (not q or q in f"{alias} {identity}".lower()) and (not tag or tag in tags)
             row.setHidden(not match)
             if match:
                 servers_shown += 1

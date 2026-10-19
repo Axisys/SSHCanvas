@@ -2,10 +2,11 @@
 
 `SftpPaneDndMixin` owns the two gestures of a listing that are not a plain click: the drag & drop of
 a row INTO a pane (`eventFilter` / `dragEnterEvent` / `dropEvent` / `_on_pane_drop`, told apart by
-`PANE_DRAG_MIME`) and the right-click row menu (`_build_context_menu` with its
-`Send to ▸ <session>` submenu, its labels REBUILT at every open). A drop resolves the directory
-under the cursor and hands the batch to the shipped copy/move machinery; the menu only TRIGGERS the
-shipped operations and the relay.
+`PANE_DRAG_MIME`) and the right-click row menu (`_build_context_menu` with its `Download` / `Upload`
+verbs, its `Send to ▸ <session>` submenu and its labels REBUILT at every open). A drop resolves the
+directory under the cursor and hands the batch to the shipped copy/move machinery; the menu only
+TRIGGERS the shipped operations and the relay — the two row verbs are `_queue_downloads()` /
+`_queue_uploads()` of one row, so the worker's tree walk and the ONE conflict question are reused.
 
 Contract — `SFTP_PANES.md` §4, §4a; mechanism — `DOCUMENTATION.md` §59-§63.
 """
@@ -70,19 +71,24 @@ class SftpPaneDndMixin:
             menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _build_context_menu(self, item=None):
-        """New folder / Rename / Delete / Copy remote path / Open archive (a test seam: the tests
-        trigger the QActions directly — `menu.exec()` never runs offscreen).
+        """New folder / Rename / Delete / Download / Upload / Copy remote path / Open archive (a test
+        seam: the tests trigger the QActions directly — `menu.exec()` never runs offscreen).
 
-        Rename/Delete/Copy are enabled only for a REAL row of the current listing
+        Rename/Delete/Copy/Download are enabled only for a REAL row of the current listing
         (never for the ".." row, never for empty space) — a disabled item is the
         hint, the actions themselves stay defensive. `Open archive` (v1.13) follows the same rule
         and asks the SUFFIX as well (`modules/archive_view.py`), so it is live on a declared
-        archive of a file row and on nothing else (`ARCHIVES.md` §3).
+        archive of a file row and on nothing else (`ARCHIVES.md` §3). The two ROW VERBS are
+        offered on the REMOTE and the ELEVATED source alone and `Upload` needs no row (the
+        directory under the pointer, `_current_dir` on empty space) — a LOCAL pane shows both
+        DISABLED and keeps its shipped sentence (`_row_verb_refused()`).
         """
         menu = host_attr(self, "QMenu")(self)
         act_new = menu.addAction(_t("sftp.op.new_folder"))
         act_rename = menu.addAction(_t("sftp.op.rename"))
         act_delete = menu.addAction(_t("sftp.op.delete"))
+        act_download = menu.addAction(_t("sftp.op.download"))
+        act_upload = menu.addAction(_t("sftp.op.upload"))
         act_copy = menu.addAction(_t("sftp.op.copy_path"))
         act_archive = menu.addAction(_t("sftp.archive.open"))
         # v1.7.3 (task 1): `Send to ▸ <session>` — the rows of the sessions open RIGHT NOW.
@@ -96,12 +102,17 @@ class SftpPaneDndMixin:
                 and bool(item.data(0, self.PATH_ROLE)))
         readable = bool(real and not item.data(0, self.ISDIR_ROLE))
         is_archive = bool(readable and archive.archive_kind(item.data(0, self.PATH_ROLE)))
+        verbs = self._row_verbs_offered()
         for act in (act_rename, act_delete, act_copy):
             act.setEnabled(bool(real))
+        act_download.setEnabled(bool(real and verbs))
+        act_upload.setEnabled(verbs)
         act_archive.setEnabled(is_archive)
 
         act_new.triggered.connect(lambda: self._op_new_folder())
         act_refresh.triggered.connect(lambda: self._relist(self._current_dir))
+        act_download.triggered.connect(lambda: self._op_download_row(item))
+        act_upload.triggered.connect(lambda: self._op_upload_row(item))
         if real:
             act_rename.triggered.connect(lambda: self._op_rename(item))
             act_delete.triggered.connect(lambda: self._op_delete(item))
@@ -109,6 +120,92 @@ class SftpPaneDndMixin:
         if is_archive:
             act_archive.triggered.connect(lambda: self._op_view_archive(item))
         return menu
+
+    # ── v1.13.3: the two ROW VERBS — Download and Upload ────────────────────
+
+    def _row_verbs_offered(self) -> bool:
+        """Are the two row verbs OFFERED here — on the REMOTE and the ELEVATED source only?
+
+        A LOCAL pane owns the OS disk, where the shipped toolbar pair and `F5` already copy (a
+        `Download` from this computer onto this computer is the copy onto itself the plan
+        refuses), so both rows are DISABLED there and the action answers the shipped sentence.
+        """
+        try:
+            return self.source != host_attr(self, "SOURCE_LOCAL")
+        except RuntimeError:
+            return False   # Qt teardown — a dying pane offers nothing
+
+    def _row_verb_refused(self) -> bool:
+        """True — this pane's source has no row verbs, and the ONE shipped sentence is spoken."""
+        if self._row_verbs_offered():
+            return False
+        self.message.emit(_t("sftp.local.transfer_unavailable"))
+        return True
+
+    def _row_path(self, item) -> str:
+        """The PATH a listing row carries ("" — empty space, the ".." row or a dead C++ item)."""
+        try:
+            if item is None or item is self._up_item:
+                return ""
+            return str(item.data(0, self.PATH_ROLE) or "")
+        except RuntimeError:
+            return ""   # the C++ item is already deleted (a close race)
+
+    def _dir_for_item(self, item) -> str:
+        """The directory a row verb targets: a directory row's own path, `_current_dir` otherwise.
+
+        The `_drop_target_dir()` rule read from a ROW instead of a drag event: a directory row
+        (the ".." row included) is the folder under the pointer, while a file row and empty space
+        are the directory on the screen.
+        """
+        try:
+            if item is not None and item.data(0, self.ISDIR_ROLE):
+                return str(item.data(0, self.PATH_ROLE) or self._current_dir) or self._current_dir
+        except RuntimeError:
+            return self._current_dir
+        return self._current_dir
+
+    def _op_download_row(self, item):
+        """`Download` — ONE row, a file OR a whole folder, into a directory the user picks.
+
+        A folder needs no new machinery (the ROADMAP decision): `queue_download()` carries a remote
+        DIRECTORY as a bounded tree on the worker thread, so the row is the shipped
+        `_queue_downloads()` batch of ONE — its local-name gate and its ONE conflict question.
+        """
+        if self._row_verb_refused() or self._refuse_without_provider():
+            return
+        if not self._row_path(item):
+            self.message.emit(_t("sftp.no_selection"))
+            return
+        local_dir = host_attr(self, "QFileDialog").getExistingDirectory(
+            self, _t("sftp.download_dir_title"))
+        if not local_dir:
+            return   # the dialog was cancelled — quietly do nothing
+        self._queue_downloads([item], local_dir)
+
+    def _op_upload_row(self, item):
+        """`Upload` — local files INTO the folder under the pointer (`_current_dir` on empty space).
+
+        The CONFLICT rule of this row is the DECIDED half of the release: the list of names already
+        present is known only for the directory ON THE SCREEN, so the current directory passes it
+        (the shipped question, asked once per batch by `ask_conflict()`) while any OTHER folder
+        passes an EMPTY set — the pane asks nothing and the worker's own shallow check of the
+        destination decides what an existing name becomes.
+        """
+        if self._row_verb_refused() or self._refuse_elevated_write():
+            return   # a write — an ELEVATED pane answers the ONE read-only sentence
+        if self._refuse_without_provider():
+            return
+        files, _selected = host_attr(self, "QFileDialog").getOpenFileNames(
+            self, _t("sftp.upload_dialog_title"))
+        if not files:
+            return   # the dialog was cancelled — quietly do nothing
+        target = self._dir_for_item(item)
+        if self.paths.same(target, self._current_dir):
+            self._queue_uploads(files, target, self._names_in_current_dir())
+            return
+        self._queue_uploads(files, target, set())
+        self.message.emit(_t("sftp.drop_queued", count=len(files), dir=target))
 
     # ── v1.7.3 (task 1): `Send to ▸ <session>` — the cross-session relay ──
 

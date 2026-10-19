@@ -648,6 +648,10 @@ class SSHTerminalWindow(QMainWindow):
         # instead of an import, and a click NEVER reaches `add_session()` directly (§4.1, §4.3).
         self.cmdlib_panel.set_server_sources(self._panel_server_nodes, self._panel_connect_server)
         self.cmdlib_panel.set_map_doors(self._panel_open_map, self._panel_open_profiles)
+        # v1.13.3: the `Servers` row menu's `Quick Launch` pair — the SAME call-time walk, so a dock
+        # or a test window that has no map behind it leaves the entries inactive instead of raising.
+        self.cmdlib_panel.set_quick_launch_doors(self._panel_quick_launch_entry,
+                                                 self._panel_quick_launch_configure)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.cmdlib_panel)
         splitter.addWidget(self._v_splitter)
@@ -1413,6 +1417,39 @@ class SSHTerminalWindow(QMainWindow):
             hook()
             return True
         except Exception:  # noqa: BLE001 — a dialog must not break the panel
+            return False
+
+    def _panel_quick_launch_entry(self, node, entry) -> bool:
+        """One card's `Quick Launch` entry — the MAP's own opener, asked at CALL time.
+
+        The door is `SshMixin._run_quick_launch_entry()`: it applies the URL scheme gate and the
+        unmanaged gate for a `command` entry and opens the session with the shipped order, so the
+        menu row and the card's own submenu do exactly the same thing (`AGENTS.md` §4.3.8).
+        """
+        hook = find_host_hook(self, "_run_quick_launch_entry")
+        if hook is None:
+            return False
+        try:
+            hook(node, entry)
+            return True
+        except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The terminal panel could not run a quick launch entry: {e}")
+            return False
+
+    def _panel_quick_launch_configure(self, node) -> bool:
+        """The card's `Quick Launch` editor — the MAP's dialog, asked at CALL time (writes the map)."""
+        hook = find_host_hook(self, "_open_quick_launch_dialog")
+        if hook is None:
+            return False
+        try:
+            hook(node)
+            return True
+        except Exception as e:  # noqa: BLE001 — a dialog must not break the panel
+            log = _log()
+            if log is not None:
+                log.warning(f"The terminal panel could not open the quick launch editor: {e}")
             return False
 
     def _attach_split_pane(self, pane) -> bool:

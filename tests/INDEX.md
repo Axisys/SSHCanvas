@@ -196,6 +196,7 @@ of the file itself.
 | `test_rc3_terminal_window.py` | — | Terminal windows: the DECCKM arrows, the split pane and the window-level bridges. |
 | `test_rebrand.py` | docs | v1.12.1 — the name the project answers to: `SSHCanvas`, and the identifiers the rename FREEZES. |
 | `test_release_v15.py` | — | v1.5 — the release that closes the 1.5 line: the environment badge, the panel snap, |
+| `test_row_verbs.py` | — | The row verbs of the Files pane and of the Servers head (v1.13.3). |
 | `test_rubber_band_perf.py` | — | v1.2.10rc3 — rubber-band selection performance on large maps (the audit's auto #9). |
 | `test_save_load.py` | — | Headless project save/load + keyring passwords (former smoke_test.py §6 "main window"). |
 | `test_scrollback_batching.py` | — | v1.2.14 — Scrollback: batching of the auto-return to the live line (PYTE82_AUDIT.md batch D2). |

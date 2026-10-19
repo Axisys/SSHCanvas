@@ -59,11 +59,12 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf`, `reboot`, or `mkfs`.
-*   **Command Library:** Convert any historical command into a macro. Supports version history (ring of 10) and JSON import/export. The panel beside the sessions holds **two lists**, each with its own controls — `Commands` (Add / Edit / Delete and the library-file menu) and `Servers` (the aliases of the map's cards, with **Open map** / **Profiles** beside them), so a session can start another one without going back to the map (a session inside the map's own dock says so instead of offering the same window twice).
+*   **Command Library:** Convert any historical command into a macro. Supports version history (ring of 10) and JSON import/export. The panel beside the sessions holds **two lists**, each with its own controls — `Commands` (Add / Edit / Delete and the library-file menu) and `Servers` (the aliases of the map's cards, with **Open map** / **Profiles** beside them), so a session can start another one without going back to the map (a session inside the map's own dock says so instead of offering the same window twice). A right-click on a server row offers **Connect to SSH** and the card's own **Quick Launch** entries (with **Configure…**), and the list sorts by alias and filters by tag.
 *   **Command History:** A `History` tab per server, kept between sessions — import from disk or the server's `~/.bash_history`, filter and sort, copy a row back to the terminal, merge duplicates, clear the list. A command that looks like a secret is kept **and** marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position while a build talks (the default `"live"` pulls the view back), and an external system terminal (`ssh`) works as an alternative to the built-in one, with an optional **jump host** (`ssh -J`) per server — an imported `~/.ssh/config` fills it from `ProxyJump`.
 *   **SFTP & Files Commander:**
     *   **SFTP:** Integrated over the live SSH transport (no second auth). Supports drag & drop, atomic transfers, and a read-only preview with syntax highlighting.
+    *   **Row Verbs:** Right-click a listing row for **Download** — a file or a whole folder, into a directory you pick — and **Upload** into the folder under the pointer (the current one on empty space).
     *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete; `Enter` opens, `Insert` marks and steps down, `Backspace` goes up). The preview opens in the other pane, and an `F3`–`F8` typed into a shell still reaches the shell.
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort, click again to reverse — folders stay grouped above the files and `..` stays on top, in both panes.
     *   **Preview Limits:** The preview reads 1 MB by default (up to 250 MB in Settings → Files) and wraps long lines on request; a bigger file opens with its first megabyte named in the header instead of being refused.
@@ -229,7 +230,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 162 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 163 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

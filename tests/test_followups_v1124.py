@@ -212,7 +212,7 @@ print("== §5 the i18n and the release state ==")
 
 check_i18n_parity(LANGS)
 check("§5 the polish adds no key to ANY language (the pin stays where v1.12.3 left it)",
-      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8
+      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9
       and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS),
       f"{EXPECTED_I18N_KEYS} / " + str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
 

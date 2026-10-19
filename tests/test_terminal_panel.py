@@ -158,11 +158,14 @@ print("== §2 the `Servers` rows and the ONE provider pair ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§2 the row facts are a PURE duck-typed reader (the panel imports no `graphics/`)",
-      CL.server_row_facts(alpha) == ("tp-alpha", "alpha", "root@10.94.0.11:22")
-      and CL.server_row_facts(beta) == ("tp-beta", "beta", "admin@10.94.0.12:2222")
+      CL.server_row_facts(alpha) == ("tp-alpha", "alpha", "root@10.94.0.11:22", ())
+      and CL.server_row_facts(beta) == ("tp-beta", "beta", "admin@10.94.0.12:2222", ())
       and CL.server_row_facts(ServerData(id="plain", alias="p", host="h", user="")) ==
-      ("plain", "p", "h:22")
-      and CL.server_row_facts(object()) == ("", "", ":22")
+      ("plain", "p", "h:22", ())
+      and CL.server_row_facts(object()) == ("", "", ":22", ())
+      and CL.server_row_facts(ServerData(id="t", alias="t", host="h", user="u",
+                                         tags=["prod", "web", "prod"])) ==
+      ("t", "t", "u@h:22", ("prod", "web"))
       and not any("graphics" in n for n in _imports("modules", "command_library.py")),
       f"{CL.server_row_facts(alpha)} | {CL.server_row_facts(object())} "
       f"| {sorted(n for n in _imports('modules', 'command_library.py') if 'graphics' in n)}")
@@ -482,8 +485,9 @@ check("§6 the TEN keys of the release are non-empty in every language",
       # this release's TEN, read off the LIVE pin: the 1094 baseline + v1.11's ten + the later
       # releases' own additions (v1.12 adds TEN — the pin chain of every topical file follows it —
       # v1.12.3 adds THREE, v1.12.4.1 adds ONE: `sftp.opening`; v1.13 adds FOUR; v1.13.1 adds THREE;
-      # the fifth read adds TWO; v1.13.2 adds EIGHT: the wallpaper row of the terminal settings).
-      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1 - 4 - 3 - 2 - 8,
+      # the fifth read adds TWO; v1.13.2 adds EIGHT: the wallpaper row of the terminal settings;
+      # v1.13.3 adds NINE: the two Files row verbs and the Servers menu's seven).
+      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1 - 4 - 3 - 2 - 8 - 9,
       str({c: len(_langs[c]) for c in sorted(_langs)}))
 
 
