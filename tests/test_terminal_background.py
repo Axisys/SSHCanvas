@@ -571,7 +571,7 @@ print("== §7 the release ==")
 from version import APP_VERSION, VERSION_FORMAT  # noqa: E402
 
 check("§7 the shipped version is the one the pin names",
-      APP_VERSION == EXPECTED_APP_VERSION == "1.13.4" and releases_at_least(APP_VERSION, "1.13.2"),
+      APP_VERSION == EXPECTED_APP_VERSION and releases_at_least(APP_VERSION, "1.13.2"),
       APP_VERSION)
 check("§7 the wallpaper moves no JSON schema (the keys live in config.json, not in the project)",
       VERSION_FORMAT == "0.9", VERSION_FORMAT)

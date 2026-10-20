@@ -208,7 +208,10 @@ class CredentialManager:
                 read treats as a legacy entry and adopts.
 
         Returns:
-            True if saved successfully, False if keyring unavailable
+            True if saved successfully, False if keyring unavailable OR an ENDPOINT-SCOPED save could
+            not publish its scope. A secret that cannot be bound to the endpoint it was typed for is
+            NOT a saved credential: the entry is rolled back, because a bare secret would be adopted
+            by the FIRST endpoint that asks for it (`N119`).
 
         The write goes ONLY through the accepted verified backend (self._keyring_backend), not through
         the global keyring API — otherwise a rejected plaintext backend could still receive the
@@ -221,7 +224,11 @@ class CredentialManager:
             return False
         wanted = (scope or "").strip()
         if wanted:
-            self._write(service, self._get_scope_username(server_id), wanted)
+            if not self._write(service, self._get_scope_username(server_id), wanted):
+                # The rollback: an unbound secret is worse than no secret (the next scoped read would
+                # ADOPT it for whatever endpoint asks first), and the caller reports the False.
+                self._drop(service, server_id)
+                return False
         else:
             self._drop(service, self._get_scope_username(server_id))
         return True

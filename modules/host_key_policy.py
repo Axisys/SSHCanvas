@@ -256,6 +256,33 @@ class KnownHostsStore:
                     log.error("Failed to save known_hosts (%s): %s", self.path, e)
                 return False
 
+    def replace(self, name: str, keytype: str, key) -> bool:
+        """Record ONE host key as the ONLY trusted key of `name` — every other keytype leaves (N120).
+
+        The ONE writer of a REPLACEMENT: the changed-key flow (`resolve_changed_key()`) and the
+        manager's "replace with the server key" both come through here, so the retired algorithm is
+        removed in the SAME read-merge-publish as the new key. Without that, a store holding an
+        `ecdsa` entry keeps the old key trusted after the user replaces it with an `ssh-rsa` one and
+        the host may offer the retired key again on the next connect.
+
+        `pin()` stays the ADDITIVE writer of a FIRST connection, where the other algorithms a server
+        offers are legitimate entries. False — nothing was written.
+        """
+        with self._lock:
+            store = self.read()
+            if self.load_failed:
+                return self._refuse_overwrite()
+            try:
+                if name in dict(store):
+                    del store[name]   # `HostKeys` deletes a host LINE at a time — the whole entry goes
+                store.add(name, keytype, key)
+                return self._write(store)
+            except Exception as e:  # noqa: BLE001 — a failed replacement is a reported False
+                log = _log()
+                if log:
+                    log.error("Failed to replace the host key in known_hosts (%s): %s", self.path, e)
+                return False
+
     def remove(self, name: str, keytype=None) -> bool:
         """Drop ONE keytype of an entry, or the whole entry when `keytype` is None. False — nothing.
 
@@ -400,7 +427,9 @@ def resolve_changed_key(exc, hostname: str, port) -> bool:
     if not answer:
         return False
     name = entry_name_for(hostname, port)
-    pinned = bool(get_store().pin(name, keytype, got))
+    # The REPLACEMENT writer, never `pin()`: a key of another algorithm must leave the store in the
+    # same publish, or the retired key stays trusted (N120).
+    pinned = bool(get_store().replace(name, keytype, got))
     log = _log()
     if log:
         if pinned:

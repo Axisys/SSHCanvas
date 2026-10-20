@@ -570,7 +570,7 @@ check_i18n_format(LANGS)
 from version import APP_VERSION, VERSION_FORMAT  # noqa: E402
 
 check("§7 the shipped version is the one the pin names",
-      APP_VERSION == EXPECTED_APP_VERSION == "1.13.4"
+      APP_VERSION == EXPECTED_APP_VERSION
       and releases_at_least(APP_VERSION, "1.13.3"), APP_VERSION)
 check("§7 the release adds no config key and moves no project schema",
       VERSION_FORMAT == "0.9" and bool(VERSION_FORMAT_RE.match(APP_VERSION)), VERSION_FORMAT)

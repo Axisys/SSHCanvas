@@ -462,6 +462,10 @@ class SSHConnectDialog(QDialog):
             # Save password to keyring if it was provided via UI (not profile)
             password_from_ui = self.password_edit.text()
             if password_from_ui and self.server_data.id:
+                # The endpoint is the DIALOG'S OWN fields, never the node id alone: a secret saved
+                # without its scope is adopted later by the first endpoint that asks for it (N119,
+                # AGENTS.md §4.4). The fields are read HERE and not after `accept()`, because the
+                # connect is what the user is saving the password FOR.
                 try:
                     # Dual import (relative + flat): launched as "python main.py" the dialogs package is
                     # top-level and "from ..services" raises ImportError, which the outer
@@ -469,14 +473,18 @@ class SSHConnectDialog(QDialog):
                     # (the connection still went through). The fallback matches every other import in this
                     # file.
                     try:
-                        from ..services.credential_manager import get_credential_manager
+                        from ..services.credential_manager import endpoint_scope, get_credential_manager
                     except ImportError:
-                        from services.credential_manager import get_credential_manager
+                        from services.credential_manager import endpoint_scope, get_credential_manager
+                    scope = endpoint_scope(self.user_edit.text().strip(),
+                                           self.server_data.host.strip(), self.port_edit.value())
                     cm = get_credential_manager()
                     # the result is checked — aligned with _do_save, where
                     # silent password loss is warned about. save_password returns
-                    # False when the keyring is unavailable (NoKeyringError etc. are caught there).
-                    saved_ok = bool(cm.save_password(self.server_data.id, password_from_ui))
+                    # False when the keyring is unavailable (NoKeyringError etc. are caught there)
+                    # or when the endpoint SCOPE could not be published (the entry is rolled back).
+                    saved_ok = bool(cm.save_password(self.server_data.id, password_from_ui,
+                                                     scope=scope))
                 except Exception as e:
                     saved_ok = False  # credential manager failure is non-critical
                     try:

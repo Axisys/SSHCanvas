@@ -161,10 +161,12 @@ The project is stored in a single `.json` or `.sshmap` file:
 
 ### Credential Security
 *   **Keyring Integration:** Passwords are only stored in secure OS backends (Windows Credential Manager, Linux secret-service/netrc, macOS keychain). Plaintext fallbacks are rejected.
+*   **Endpoint Binding:** A password is bound to the endpoint (`user@host:port`) it was typed for. A server whose address or login changed asks for the password again instead of silently reusing the old secret.
 *   **External Terminal:** The external `ssh` process handles its own password entry; credentials are never passed via command-line arguments.
 
 ### Connectivity & Guardrails
 *   **Host Keys:** Missing or changed host keys trigger an explicit verification window. Fingerprints are stored atomically and re-read before every addition.
+*   **Replaced Host Keys:** Accepting a server's new key retires every other algorithm stored for that host in the same write, so a retired key cannot be trusted again without a new confirmation.
 *   **2FA/Passphrases:** Answered in a secure application window; closing the window cancels the connection.
 *   **Guardrails:** "Production tags" and "Command guards" act as confirmation checkpoints for potentially dangerous actions (e.g., multi-line pastes or destructive commands).
 *   **Relayed Files:** Files sent between different servers are relayed through the local machine's temporary folder and are deleted immediately after transfer; a file over 100 MB is refused before anything moves.
@@ -232,7 +234,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 164 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
+| `tests/` | 165 test files, the parallel runner and the harness — map in `tests/INDEX.md` |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches, provenance in `third_party/pyte-patches/MANIFEST.md` |
 | `docs/` | Documentation assets (e.g., rendered map images) |

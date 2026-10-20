@@ -145,6 +145,7 @@ of the file itself.
 | `test_hardening_v11241.py` | — | The defects the closed 1.12 line still owed, and the code text they arrived with (v1.12.4.1). |
 | `test_hardening_v11311.py` | — | The defects a third-party read of the shipped `v1.13.1` confirmed, each one REPRODUCED (v1.13.1.1). |
 | `test_hardening_v11312.py` | — | The defects a fourth read of the shipped `v1.13.1.1` confirmed, each one REPRODUCED (v1.13.1.2). |
+| `test_hardening_v11341.py` | — | The six defects a review of the shipped `v1.13.4` confirmed, each one REPRODUCED and fixed (v1.13.4.1). |
 | `test_hardening_v1751.py` | — | The v1.7.5.1 hardening patch: the nine LOCAL security defects of the shipped ledger. |
 | `test_hardening_v1811.py` | — | The hardening patch of the 1.8.1 line (v1.8.1.1): the ONE atomic writer, the send identity, the spool and the two document guards. |
 | `test_hotkeys_config.py` | — | v1.3.2 — Configurable hotkeys (QKeySequenceEdit, action registry): the release's test. |

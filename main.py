@@ -80,6 +80,21 @@ def main(argv=None):
         app = QApplication(sys.argv)
         app.setStyle('Fusion')
 
+        # N122: the ONE exit gate. Every background thread the application registered as an ORPHAN
+        # (a connect, an SFTP open, an elevation, a ping/DNS lookup, a collector that outlived its
+        # wait) is held by a module-level registry; without the gate the interpreter drops the wrapper
+        # at exit and Qt destroys the still-running QThread (`qFatal`, exit 0xC0000409). The gate
+        # stops each thread through its own door and joins them against ONE declared budget.
+        try:
+            try:
+                from services.exit_gate import install_exit_gate as _install_exit_gate
+            except ImportError:
+                from .services.exit_gate import install_exit_gate as _install_exit_gate
+            _install_exit_gate(app)
+        except Exception as e:
+            if log is not None:
+                log.warning(f"The exit gate did not install: {e}")
+
         # v1.10rc1: the SAVED UI font goes on BEFORE the first widget exists — the theme's own rule
         # extended to the font. A widget is polished with the application font it finds at that
         # moment and Qt does not re-resolve it for a later `setFont()`, so a window built first keeps

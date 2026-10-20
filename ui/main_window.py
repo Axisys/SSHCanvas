@@ -624,12 +624,8 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             except Exception as e:  # noqa: BLE001 — the probes must run without plugins too
                 if self.log:
                     self.log.warning(f"Plugin status provider not installed: {e}")
-            # On window destruction — stop the timer and wait for the current round
-            # so a probe thread is not killed in flight with its parent. The slot is a
-            # METHOD (v1.5rc3): the checker may be absent (the constructor above has a
-            # "StatusChecker unavailable" path, and a test/embedder may drop it), and the
-            # previous inline lambda dereferenced it unconditionally.
-            self.destroyed.connect(self._shutdown_status_checker)
+            # The close path stops the checker EXPLICITLY (`_shutdown_background_threads()`): a
+            # `destroyed` slot bound to the dying object is never invoked by PySide6 6.11 (N123).
             # Targets are synced immediately; starting the periodic checks happens once,
             # from main.py after window.show() (see start_status_checks()). In headless
             # tests without an event loop this guarantees no background threads.
@@ -1029,11 +1025,19 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             pass
 
     def _shutdown_background_threads(self):
-        """Stop collectors, ping/DNS threads, and terminal sessions.
+        """Stop the probe round, collectors, ping/DNS threads, and terminal sessions.
 
         The pattern is borrowed from StatusChecker: stop() + a bounded wait() — the GUI
         thread is never blocked more than a couple of seconds per thread.
         """
+        # The status checker FIRST: its timer and its probe round end WITH the window (N123 — the
+        # `destroyed` slot never ran under PySide6 6.11), and the round's own wait is charged to the
+        # budget before the heavier session teardown.
+        try:
+            self._shutdown_status_checker()
+        except Exception:  # noqa: BLE001 — the close path must not be broken by a probe round
+            pass
+
         # v1.2.3 (ROADMAP v1.2.3): multi-input — the mode is turned off and the provider
         # unhooked BEFORE the sessions' teardown (highlight/plaque reset while
         # the containers are alive; a dangling callable does not hold a dead window).

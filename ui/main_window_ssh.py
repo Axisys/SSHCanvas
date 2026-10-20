@@ -40,6 +40,11 @@ except ImportError:
 if TYPE_CHECKING:  # the `node` parameter annotations below (the mixin never imports it at runtime)
     from graphics.server_node import ServerNode
 
+#: The bound the WINDOW's close path gives the info batch, in milliseconds (`N124`). Declared here,
+#: at the caller, because it is the close path's promise to the user — the batch itself only shares
+#: whatever budget it is handed between its running collectors.
+INFO_BATCH_SHUTDOWN_WAIT_MS = 3000
+
 
 class SshMixin:
     """SSH methods: dialog, terminal windows, automatic info collection, quick launch."""
@@ -824,15 +829,25 @@ class SshMixin:
                           f"{len(failures)} failed, {cancelled} cancelled")
 
     def _shutdown_info_batch(self):
-        """Cancel the queue and wait for the running collectors (window teardown)."""
+        """Cancel the queue and join the running collectors against the DECLARED bound (window teardown).
+
+        The budget is this close path's own declaration (`INFO_BATCH_SHUTDOWN_WAIT_MS`) and covers
+        EVERY collector together — `N124`'s defect was one 12 s `stop()` plus another 3 s wait per
+        collector, on the GUI thread.
+        """
         batch = getattr(self, "_info_batch", None)
         if batch is None:
-            return
+            return []
         try:
-            batch.shutdown()
+            survivors = batch.shutdown(wait_ms=INFO_BATCH_SHUTDOWN_WAIT_MS)
         except Exception as e:  # noqa: BLE001 — a teardown path never raises
             if self.log:
                 self.log.warning(f"Info batch shutdown failed: {e}")
+            return []
+        if survivors and self.log:
+            self.log.warning("Info batch shutdown: %d collector(s) outlived the %d ms budget",
+                             len(survivors), INFO_BATCH_SHUTDOWN_WAIT_MS)
+        return survivors
 
     def _apply_info_result(self, server_id: str, info: dict) -> bool:
         """Write a collection result into the node's data + DATE it. Returns True on a write.

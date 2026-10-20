@@ -12,6 +12,7 @@ because a collector IS a QThread — plus the per-node guard the single-node pat
 (`MainWindow._info_collectors`). This is the summary line, the keyed report and `batch_log_line()`.
  Guarantees: at most `max_parallel` collectors run at once and the rest WAIT; a node already being collected is SKIPPED, never collected twice in parallel; one node's failure never stops the others (`node_failed` is a report, not an abort); `cancel()` stops everything that has not started yet (a running collector is one SSH session with a bounded wait, so it is allowed to run out and still report); and the outcome is ONE summary plus per-node signals, so the caller can show a live progress line and a final sentence naming the failures. Qt-light (QObject + signals, no widgets) and free of i18n: the log line is English and the user-facing sentences are composed by the window from the reported counts."""
 from typing import Dict, List, Tuple
+import time
 
 from PySide6.QtCore import QObject, Signal
 
@@ -38,6 +39,11 @@ CONFIG_KEY = "info_max_parallel"
 #: How many failing aliases a summary NAMES before it says "+N more" (a status-bar line
 #: must stay readable; the full list is in the log record).
 FAILED_NAMES_LIMIT = 3
+
+#: The TOTAL budget of ONE `shutdown()`, in milliseconds — ONE deadline shared by every running
+#: collector (`N124`). The close path declares its bound by passing this value (or its own), and a
+#: collector that outlives it is REPORTED, never waited on collector after collector.
+SHUTDOWN_WAIT_MS = 3000
 
 
 def get_batch_settings() -> dict:
@@ -365,29 +371,49 @@ class InfoBatch(QObject):
         self._maybe_finish()
         return dropped
 
-    def shutdown(self, wait_ms: int = 3000) -> None:
-        """Cancel the queue and wait (bounded) for the RUNNING collectors (window close).
+    def shutdown(self, wait_ms: int = SHUTDOWN_WAIT_MS) -> list:
+        """Cancel the queue and join the RUNNING collectors against ONE deadline (window close).
 
-        The collectors are also reachable through the window's `_info_collectors` registry,
-        which `_shutdown_background_threads()` waits for; this is the batch's own half, so
-        the object is never destroyed under a live QThread.
+        `stop()` only SIGNALS now and the batch owns the WAIT: the collectors share `wait_ms`
+        between them instead of paying a wait each — the defect this replaces blocked the calling
+        (GUI) thread for ~12 s per collector inside its `stop()` and ~3 s again here, ≈60 s at the
+        default cap of four (`N124`). A collector that outlives the deadline is answered in the
+        returned list, so the close path can report what it could not join — it never waits again.
+
+        The collectors are also reachable through the window's `_info_collectors` registry, which
+        `_shutdown_background_threads()` waits for; this is the batch's own half, so the object is
+        never destroyed under a live QThread.
         """
         self.cancel()
-        for collector in list(self._running.values()):
+        deadline = time.monotonic() + max(0, int(wait_ms)) / 1000.0
+        collectors = [c for c in list(self._running.values()) if c is not None]
+        for collector in collectors:
             stop = getattr(collector, "stop", None)
             if callable(stop):
                 try:
-                    stop()
+                    stop()   # a SIGNAL — the collector's own wait is never the caller's budget
                 except Exception:  # noqa: BLE001 — a teardown path never raises
                     pass
+        survivors = []
+        for collector in collectors:
+            remaining_ms = int(max(deadline - time.monotonic(), 0.0) * 1000)
             wait = getattr(collector, "wait", None)
-            if callable(wait):
+            if callable(wait) and remaining_ms > 0:
                 try:
-                    wait(int(wait_ms))
+                    if wait(remaining_ms):
+                        continue
                 except Exception:  # noqa: BLE001 — see above
                     pass
+            survivors.append(collector)
         self._running.clear()
         self._running_flag = False
+        if survivors:
+            try:
+                log.warning("Info batch shutdown: %d collector(s) outlived the %d ms budget",
+                            len(survivors), int(wait_ms))
+            except Exception:  # noqa: BLE001 — the log is a side channel
+                pass
+        return survivors
 
 
 def _default_collector_factory(data):

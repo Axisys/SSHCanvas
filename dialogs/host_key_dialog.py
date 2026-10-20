@@ -312,7 +312,7 @@ class KnownHostsManagerDialog(QDialog):
         if reply != QMessageBox.StandardButton.Yes:
             self.status.setText("")
             return
-        if self.store.pin(row["host"], key.get_name(), key):
+        if self.store.replace(row["host"], key.get_name(), key):
             self.status.setText(self.t("hostkey.manager_replaced", host=row["host"]))
         else:
             self.status.setText(self.t("hostkey.manager_delete_failed", path=self.store.path))

@@ -19,12 +19,14 @@ class StatusMixin:
     """The statuses, the probe targets and the two freshness marks (node statuses off the GUI thread)."""
 
     def _shutdown_status_checker(self, *_args):
-        """v1.5rc3: the `destroyed` slot — stop the probe timer and the current round.
+        """Stop the probe timer and the current round — called EXPLICITLY by the close path.
 
-        Written as a method rather than an inline lambda because the checker can be
-        ABSENT: `__init__` leaves `_status_checker = None` when the module is
-        unavailable, and an embedder (or a test) may replace it. The old lambda assumed
-        a live checker and raised on teardown — exactly the moment nothing may raise.
+        `_shutdown_background_threads()` is the ONE caller: a `destroyed` slot is not delivered for a
+        bound method of the object being destroyed in PySide6 6.11, so the timer and a live probe
+        thread outlived the window (N123). Written as a method rather than an inline lambda because
+        the checker can be ABSENT: `__init__` leaves `_status_checker = None` when the module is
+        unavailable, and an embedder (or a test) may replace it — teardown is exactly the moment
+        nothing may raise.
         """
         checker = getattr(self, "_status_checker", None)
         if checker is None:

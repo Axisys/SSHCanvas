@@ -669,11 +669,18 @@ class SystemInfoCollector(QThread):
         self.data = data
         self.password = password or ""
 
-    # v0.9.3 fix: the collector is one-shot (no cancel flag inside run), so
-    # "stopping" is just a bounded wait for its natural completion
-    # (_TIMEOUT_S on the channel + parsing; see _shutdown_background_threads in MainWindow).
     def stop(self):
-        self.wait(int((_TIMEOUT_S + 2) * 1000))
+        """SIGNAL the stop and return at once — the OWNER owns the WAIT (N124).
+
+        The collector is one-shot: `_TIMEOUT_S` bounds its channel, so it can only be asked to end
+        early, not cut short. The old body waited `(_TIMEOUT_S + 2) s` HERE, which on the GUI
+        thread of the close path blocked once per collector; `InfoBatch.shutdown()` and
+        `MainWindow._shutdown_background_threads()` now join every collector against ONE deadline.
+        """
+        try:
+            self.requestInterruption()
+        except RuntimeError:
+            pass   # the C++ object is already gone — nothing left to signal
 
     def run(self):  # noqa: C901 — a flat chain of steps with early exits
         sid = self.data.id

@@ -272,7 +272,13 @@ class SftpPaneElevatedMixin:
             handshake.shutdown()
         except Exception:  # noqa: BLE001 — teardown robustness
             pass
+        # A RUNNING QThread destroyed by the event loop is `qFatal`, so `deleteLater()` is asked only
+        # for a thread that already ended (N121). A survivor outlives the pane in the orphan registry,
+        # whose `finished()` hook drops it — the pane never deletes a live thread.
         try:
-            handshake.deleteLater()
+            if handshake.isRunning():
+                elevation.register_orphan_handshake(handshake)
+            else:
+                handshake.deleteLater()
         except RuntimeError:
             pass   # the C++ object is already gone

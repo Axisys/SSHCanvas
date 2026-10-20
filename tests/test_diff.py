@@ -16,7 +16,7 @@ import tempfile
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap,
                      check, check_i18n_format, check_i18n_parity, check_release_state, clear_cfg,
-                     finish, load_i18n_langs, translation_keys, wait_until)
+                     finish, load_i18n_langs, releases_at_least, translation_keys, wait_until)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation + offscreen inside)
 
@@ -527,8 +527,9 @@ check("§7 the reconnect-era keys are still translated (no drift in the shared f
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
-check("§7 the release is the one this file describes",
-      EXPECTED_APP_VERSION == "1.13.4" and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
+check("§7 the release is the one this file describes (a PATCH on `X.Y.Z` adds a component)",
+      releases_at_least(EXPECTED_APP_VERSION, "1.13.4")
+      and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
       EXPECTED_APP_VERSION)
 check("§7 the schema did NOT move and no dependency arrived (difflib is the standard library)",
       'VERSION_FORMAT = "0.9"' in _read("version.py")

@@ -30,11 +30,18 @@ _orphan_threads: List["QThread"] = []
 
 
 def register_orphan_thread(thread: "QThread"):
-    """Hold a still-running ping/DNS thread until finished() (v1.2.10rc1).
+    """Hold a still-running ping/DNS/reachability/info thread until finished() (v1.2.10rc1).
 
-    Idempotent; self-cleans on the finished() signal.
+    The thread is DETACHED from its QObject parent FIRST: a reverse-DNS lookup or a collector is
+    created under the window, the window dies, and a parented `QThread` is destroyed with it however
+    firmly this registry holds the Python wrapper (N122 — the same reason
+    `register_orphan_sftp_worker()` detaches). Idempotent; self-cleans on the finished() signal.
     """
     if thread not in _orphan_threads:
+        try:
+            thread.setParent(None)
+        except RuntimeError:
+            pass  # the C++ object is already gone
         _orphan_threads.append(thread)
 
         def _drop(_=None, t=thread):
