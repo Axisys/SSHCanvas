@@ -377,10 +377,11 @@ def ask_overwrite(parent, name: str, target: str, facts: str = "") -> bool:
 class SendRelay(QObject):
     """The bytes of ONE send: `queue_download` + `queue_upload`, or the server-side `queue_copy`.
 
-    Every answer is matched by its TASK ID, so a transfer the user started in a pane is never
-    counted into the send; the two legs are composed into ONE progress signal (`done`/`total` over
-    BOTH). The spool is dropped on success, failure and cancel alike, and the WORKER keeps its own
-    atomicity (`<target>.part` + one commit).
+    Every answer is matched by its `(worker, task_id)` PAIR (`N126`): each worker numbers its own
+    tasks from 1, so a bare number would let a transfer the user started in the target pane pass
+    for the send's own download. The two legs are composed into ONE progress signal (`done`/`total`
+    over BOTH). The spool is dropped on success, failure and cancel alike, and the WORKER keeps its
+    own atomicity (`<target>.part` + one commit).
     """
 
     progress = Signal(int, int)   # done_bytes, total_bytes — the TWO legs composed
@@ -391,7 +392,7 @@ class SendRelay(QObject):
         self.source = source
         self.target = target
         self.entry = dict(entry or {})
-        self._tasks = {}     # task_id → the leg it belongs to
+        self._tasks = {}     # (worker, task_id) -> the leg it belongs to
         self._bound = []     # the (worker, slot) pairs this relay connected
         self._spool = ""
         self._name = str(self.entry.get("name") or "")
@@ -422,7 +423,7 @@ class SendRelay(QObject):
             # ONE leg: the server copies the file to itself (the `copy-data` fast path included).
             self._strategy = SEND_STRATEGY_SERVER
             self._bind(worker)
-            return self._register(worker.queue_copy(source_path, self._dir, self._name),
+            return self._register(worker, worker.queue_copy(source_path, self._dir, self._name),
                                   SEND_LEG_COPY)
         # TWO legs through this machine: the spool is the only path between the two transports.
         self._strategy = SEND_STRATEGY_RELAY
@@ -438,7 +439,7 @@ class SendRelay(QObject):
                                      total_size=int(self.entry.get("size") or 0),
                                      local_name=os.path.basename(self._spool),
                                      part_mode=SPOOL_FILE_MODE)
-        return self._register(task, SEND_LEG_DOWNLOAD)
+        return self._register(worker, task, SEND_LEG_DOWNLOAD)
 
     def cancel(self):
         """Cancel the send through the SHIPPED queue (the worker's ONE cancel flag).
@@ -486,19 +487,40 @@ class SendRelay(QObject):
                 continue   # never connected / the worker is already gone
         self._bound = []
 
-    def _register(self, task_id, leg: str) -> bool:
-        """Remember a queued leg; a refused queue (None) is a failed send, never a silent one."""
-        if task_id is None:
+    def _register(self, worker, task_id, leg: str) -> bool:
+        """Remember a queued leg by `(worker, task_id)`; a refused queue is a failed send."""
+        if task_id is None or worker is None:
             self._finish(False, error="queue")
             return False
-        self._tasks[int(task_id)] = leg
+        self._tasks[(worker, int(task_id))] = leg
         return True
+
+    def _emitting_worker(self):
+        """The worker that EMITTED the answer being handled — None outside a slot (`N126`)."""
+        try:
+            return self.sender()
+        except (AttributeError, RuntimeError):
+            return None
+
+    def _answer_key(self, task_id):
+        """The `(worker, task_id)` key of the leg that answered — None when it is not ours.
+
+        A direct call (a test, a teardown) has no sender: the answer is then taken only when
+        EXACTLY ONE pending leg carries that number, so an ambiguous id is never guessed.
+        """
+        sender = self._emitting_worker()
+        if sender is not None:
+            key = (sender, int(task_id))
+            return key if key in self._tasks else None
+        matches = [key for key in self._tasks if key[1] == int(task_id)]
+        return matches[0] if len(matches) == 1 else None
 
     def _finish(self, ok: bool, error: str = "", cancelled: bool = False):
         """Emit the ONE result and drop the spool — idempotent (the legs are asynchronous)."""
         if self._done:
             return
         self._done = True
+        self._tasks.clear()
         drop_spool(self._spool)
         self._unbind()
         self.finished.emit({"ok": bool(ok), "cancelled": bool(cancelled), "error": str(error or ""),
@@ -509,9 +531,10 @@ class SendRelay(QObject):
 
     def _on_progress(self, task_id: int, done: int, total: int):
         """Compose the two legs onto ONE line: the download is the first half, the upload the rest."""
-        leg = self._tasks.get(int(task_id))
-        if leg is None:
+        key = self._answer_key(task_id)
+        if key is None:
             return
+        leg = self._tasks.get(key)
         span = int(total or 0) or int(self.entry.get("size") or 0)
         if leg == SEND_LEG_DOWNLOAD and self._strategy == SEND_STRATEGY_RELAY:
             self.progress.emit(int(done), max(2 * span, int(done)))
@@ -521,33 +544,45 @@ class SendRelay(QObject):
             self.progress.emit(int(done), max(span, int(done)))
 
     def _on_task_done(self, task_id: int, detail: str):
-        leg = self._tasks.pop(int(task_id), None)
+        key = self._answer_key(task_id)
+        if key is None:
+            return
+        leg = self._tasks.pop(key, None)
         if leg is None:
             return
         if leg == SEND_LEG_DOWNLOAD:
-            task = self.target.worker.queue_upload(self._spool, self._dir,
-                                                   remote_name=self._name) \
-                if self.target.worker is not None else None
-            if not self._register(task, SEND_LEG_UPLOAD):
+            target_worker = self.target.worker
+            task = target_worker.queue_upload(self._spool, self._dir,
+                                              remote_name=self._name) \
+                if target_worker is not None else None
+            if not self._register(target_worker, task, SEND_LEG_UPLOAD):
                 return   # the second leg could not be queued — `_register` reported it
             return
         self._finish(True)
 
     def _on_task_error(self, task_id: int, kind: str, message: str):
-        if self._tasks.pop(int(task_id), None) is None:
+        key = self._answer_key(task_id)
+        if key is None:
             return
+        self._tasks.pop(key, None)
         self._finish(False, error=str(message or ""))
 
     def _on_task_cancelled(self, task_id: int, kind: str):
-        if self._tasks.pop(int(task_id), None) is None:
+        key = self._answer_key(task_id)
+        if key is None:
             return
+        self._tasks.pop(key, None)
         self._finish(False, cancelled=True)
 
     def _on_worker_finished(self):
-        """The transport died mid-send: the send cannot continue (the spool is still dropped)."""
-        if self._tasks:
-            self._tasks.clear()
-            self._finish(False, error="transport")
+        """ONE transport died mid-send: its legs cannot continue (the spool is still dropped)."""
+        sender = self._emitting_worker()
+        keys = [key for key in self._tasks if sender is None or key[0] is sender]
+        if not keys:
+            return
+        for key in keys:
+            self._tasks.pop(key, None)
+        self._finish(False, error="transport")
 
 
 # ── The dialog: the file, the target and the folder ─────────────────────────

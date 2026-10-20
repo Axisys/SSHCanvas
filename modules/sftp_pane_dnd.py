@@ -326,6 +326,8 @@ class SftpPaneDndMixin:
                 return
             kind = "remote" if str(getattr(target, "key", "")) == self.session_key() else "spool"
             entry = {"kind": kind, "worker": provider, "path": path, "name": name, "size": size}
+            if kind == "spool":
+                entry["track"] = self   # the copy is ONE of this pane's cancellable transfers
         loader(side, entry)
 
     # ── D&D: files from Explorer (v1.2.8) ────────────────────────────────

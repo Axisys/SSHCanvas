@@ -780,6 +780,26 @@ class SftpPaneTransferMixin:
 
     # ── Transfer state (the "Cancel" button) ─────────────────────────────
 
+    def track_transfer(self, task_id: int) -> bool:
+        """Register a leg queued BY ANOTHER OWNER (the Diff tab's spool copy) — `N129`.
+
+        The shipped Cancel button has ONE meaning: it is enabled while `_transfer_tasks` holds a
+        leg and it asks `provider.cancel()`, the worker's own flag. A cross-session Diff copy runs
+        on THIS pane's worker, so it joins the SAME bookkeeping instead of a second cancel
+        mechanism; `_on_task_finished()` drops it with the answer. Answers False for a number that
+        cannot be a task id (a defensive door — the caller ignores it).
+        """
+        try:
+            task_id = int(task_id)
+        except (TypeError, ValueError):
+            return False
+        if task_id <= 0:
+            return False
+        self._own_transfers.add(task_id)
+        self._transfer_tasks.add(task_id)
+        self.btn_cancel.setEnabled(True)
+        return True
+
     def _on_task_started(self, task_id: int, kind: str, _label: str):
         if kind in ("upload", "download", "copy") and task_id in self._own_transfers:
             self._transfer_tasks.add(task_id)

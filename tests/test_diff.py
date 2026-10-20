@@ -111,6 +111,16 @@ check("§1 the intra-line spans are character runs of each side",
       (_left_spans, _right_spans))
 check("§1 a line over the declared bound keeps the LINE mark alone",
       D.intra_spans("x" * (D.INLINE_MAX_CHARS + 1), "y" * (D.INLINE_MAX_CHARS + 1)) == ((), ()))
+try:
+    D.diff_rows("\n".join("x" for _ in range(D.DIFF_MAX_LINES + 1)), "")
+    _budget_raised = False
+except D.DiffBudgetExceeded as _exc:
+    _budget_raised = _exc.lines == D.DIFF_MAX_LINES + 1
+check("§1 a pair over the declared line budget is REFUSED before the matcher (the engine's bound)",
+      _budget_raised and D.DIFF_INLINE_MAX_LINES < D.DIFF_MAX_LINES)
+check("§1 the intra-line offsets are converted to the UTF-16 units `QTextCursor` counts",
+      D.utf16_spans("😀abcDEF", [(4, 7)]) == ((5, 8),)
+      and D.utf16_spans("plain", [(1, 3)]) == ((1, 3),))
 check("§1 the two blocks are ALIGNED: one block per row on either side",
       len(D.side_blocks(_paired, D.DIFF_LEFT)) == len(D.side_blocks(_paired, D.DIFF_RIGHT))
       == len(_paired))
