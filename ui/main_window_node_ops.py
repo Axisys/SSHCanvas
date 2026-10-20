@@ -736,26 +736,9 @@ class NodeOpsMixin:
             if node.scene() is None:
                 continue  # already deleted with its arrow earlier in the loop
             if not self._ensure_worker_done(node.data.id):
-                continue
-            alias = node.data.alias
-            # v1.2.4 (D7): this node's detach commands — BEFORE its removal (LIFO:
-            # undo will first restore the node, then re-attach the notes)
-            from modules.undo_commands import CmdAttachNote
-            for n in list(self.scene.notes_attached_to(node.data.id)):
-                self._push_command(CmdAttachNote(self, n, node.data.id, "detach"))
-            arrows = [
-                # v1.2.6: the 5th element — the bidirectional mode (undo restores the connection as it was)
-                (a.source.data.id, a.target.data.id, a.label_text, a.connection_type,
-                 bool(getattr(a, "bidirectional", False)))
-                for a in self.scene.arrows()
-                if a.source is node or a.target is node
-            ]
-            from modules.undo_commands import CmdAddRemoveNode
-            self._push_command(CmdAddRemoveNode(self, self.scene, node.data, "remove", arrows))
+                continue   # deferred to that worker's `finished()` (`N137`)
+            self._delete_node_now(node)
             deleted += 1
-            if self.log:
-                self.log.info("Server deleted (multi)",
-                              extra={"alias": alias, "host": node.data.host})
         if deleted:
             self.refresh_sidebar()
             self._sync_status_targets()
@@ -1381,47 +1364,69 @@ class NodeOpsMixin:
         return True
 
     def _ensure_worker_done(self, server_id: str) -> bool:
-        """The v0.6.x patch: wait for the SSHWorker to finish before deleting the node.
+        """True — no SSHWorker is running for the server: the caller removes the node NOW.
 
-        If the thread is still running and does not finish in time — show a
-        warning and cancel the deletion (otherwise success/error could land
-        in a destroyed dialog / the data of a deleted node).
+        False — a worker is still running. It is asked to stop (`request_stop()`) and the removal
+        is DEFERRED to its `finished()` (`_flush_deferred_deletes`): the GUI thread never waits on
+        a QThread, so deleting a node costs no frozen window (`N137`). The worker cannot be
+        interrupted inside a network wait, so the deferral is what keeps its late answer away from
+        the node it belonged to. A worker that was never STARTED has no `finished()` to wait for
+        and never defers the removal.
         """
         try:
-            from modules.ssh_worker import wait_for_worker as _wait_worker
-            if not _wait_worker(server_id, 5000):
-                QMessageBox.warning(self, self.t("msg.error_title"), self.t("msg.worker_busy"))
-                return False
-        except Exception:
-            pass  # the registry is unavailable — do not block the deletion over this
-        return True
+            from modules.ssh_worker import get_active_worker as _active
+            worker = _active(server_id)
+        except Exception:  # noqa: BLE001
+            return True  # the registry is unavailable — do not block the deletion over this
+        if worker is None or not (worker.isRunning()
+                                  or getattr(worker, "_start_requested", False)):
+            return True
+        pending = getattr(self, "_deferred_deletes", None)
+        if pending is None:
+            pending = self._deferred_deletes = {}
+        pending[str(server_id)] = True
+        try:
+            worker.request_stop()
+            try:
+                worker.finished.disconnect(self._flush_deferred_deletes)
+            except (TypeError, RuntimeError):
+                pass   # never connected / the C++ object is already gone
+            worker.finished.connect(self._flush_deferred_deletes)
+        except (RuntimeError, AttributeError):
+            # A worker without the shipped door: nothing will flush the deferral, so the removal
+            # must not be lost — the caller deletes at once instead.
+            pending.pop(str(server_id), None)
+            return True
+        return False
 
-    def _remove_node_guarded(self, node: "ServerNode") -> bool:
-        """The single node-deletion path: confirmation → SSHWorker guard → remove.
+    def _flush_deferred_deletes(self, *_args):
+        """A worker a deletion waited on finished: remove the node it was bound to (`N137`).
 
-        Used by the sidebar button, the Delete key (MapView) and the node
-        context menu (v0.7.3). Returns True if the deletion happened.
+        The slot is connected to the worker's `finished` ONCE per deferred id and runs in the GUI
+        thread (a bound method of the window — Qt's receiver affinity, §7 #20). A node that left
+        the map meanwhile (an undo, a project load) is not removed twice.
         """
-        # v1.2.4 (D7): attached notes — extend the CONFIRMATION TEXT (not two dialogs)
+        pending = getattr(self, "_deferred_deletes", None)
+        if not pending:
+            return
+        ids = list(pending)
+        pending.clear()
+        for server_id in ids:
+            try:
+                node = self.scene.get_node(server_id)
+            except (AttributeError, RuntimeError, TypeError):
+                node = None
+            if node is None:
+                continue
+            self._delete_node_now(node)
+
+    def _delete_node_now(self, node: "ServerNode") -> bool:
+        """Remove ONE node (its notes detached first, its arrows captured) — the removal itself.
+
+        The body of the shipped deletion path, shared by the immediate and the DEFERRED one, so a
+        removal is one implementation whichever door asked for it. Returns True.
+        """
         attached = self.scene.notes_attached_to(node.data.id)
-        if self._i18n_available:
-            confirm_text = self.t("msg.confirm_delete").format(alias=node.data.alias)
-            if attached:
-                confirm_text += "\n" + self.t("msg.delete_server_with_notes").format(
-                    count=len(attached))
-        else:
-            confirm_text = f"Delete server '{node.data.alias}'?"
-        reply = QMessageBox.question(
-            self,
-            self.t("dialog.confirm_delete") if self._i18n_available else "Confirm Deletion",
-            confirm_text,
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        if reply != QMessageBox.Yes:
-            return False
-        if not self._ensure_worker_done(node.data.id):
-            return False
         alias = node.data.alias
         host = node.data.host
         # v1.2.4 (D7): the detach BEFORE the removal — LIFO: undo will first
@@ -1446,3 +1451,32 @@ class NodeOpsMixin:
         self.statusBar().showMessage(self.t("status.server_deleted", alias=alias))
         self._mark_dirty()  # ← unsaved changes
         return True
+
+    def _remove_node_guarded(self, node: "ServerNode") -> bool:
+        """The single node-deletion path: confirmation → SSHWorker guard → remove.
+
+        Used by the sidebar button, the Delete key (MapView) and the node
+        context menu (v0.7.3). Returns True when the deletion was ACCEPTED — performed now, or
+        deferred to the running worker's `finished()` (`N137`).
+        """
+        # v1.2.4 (D7): attached notes — extend the CONFIRMATION TEXT (not two dialogs)
+        attached = self.scene.notes_attached_to(node.data.id)
+        if self._i18n_available:
+            confirm_text = self.t("msg.confirm_delete").format(alias=node.data.alias)
+            if attached:
+                confirm_text += "\n" + self.t("msg.delete_server_with_notes").format(
+                    count=len(attached))
+        else:
+            confirm_text = f"Delete server '{node.data.alias}'?"
+        reply = QMessageBox.question(
+            self,
+            self.t("dialog.confirm_delete") if self._i18n_available else "Confirm Deletion",
+            confirm_text,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply != QMessageBox.Yes:
+            return False
+        if not self._ensure_worker_done(node.data.id):
+            return True   # accepted and DEFERRED — the removal follows the worker's answer
+        return self._delete_node_now(node)

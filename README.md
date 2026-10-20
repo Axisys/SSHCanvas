@@ -6,7 +6,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 
 ![The example map in SSH Canvas](docs/map-example.png)
 
-***Note:** To view the example map, navigate to `Help → Open the example map`. It features six cards, six connection types, groups, notes, and tags using emulated statuses. The image above was generated using `python tests/_gen_docs_image.py`.*
+***Note:** To view the example map, navigate to `Help → Open the example map`. It features six cards, six connection types, groups, notes, and tags using emulated statuses; every address it carries is part of the RFC 5737 documentation range `192.0.2.0/24`. The image above was generated using `python tests/_gen_docs_image.py`.*
 
 ---
 
@@ -233,7 +233,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 166 test files and the parallel runner |
+| `tests/` | 167 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

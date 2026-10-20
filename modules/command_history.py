@@ -517,15 +517,21 @@ def history_key(server_id) -> str:
     A KEY, never the id itself: an id may carry a slash, a colon, a Windows-reserved name or a
     character no file system accepts, and the history of such a node must still have a home. The
     identity is stable for the life of the node — a renamed alias or a changed host keeps its
-    history.
+    history. NO id answers "" (never the digest of the empty string): a session or a target without
+    an identity is not a server, and a shared key would file it under a stranger's name.
     """
-    return hashlib.sha1(str(server_id or "").encode("utf-8")).hexdigest()[:16]
+    text = str(server_id or "").strip()
+    if not text:
+        return ""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
 
 
 def history_path_for(server_id, directory: str = None) -> str:
-    """The path of one server's history file (an explicit directory — a test seam)."""
-    return os.path.join(directory or default_history_dir(),
-                        history_key(server_id) + ".json")
+    """The path of one server's history file (an explicit directory — a test seam); "" — no id."""
+    key = history_key(server_id)
+    if not key:
+        return ""
+    return os.path.join(directory or default_history_dir(), key + ".json")
 
 
 def _atomic_write_json(path: str, doc) -> bool:
@@ -555,7 +561,11 @@ class CommandHistoryStore:
 
     @property
     def path(self) -> str:
-        """The file of this server (`path=` of the constructor wins — the test seam)."""
+        """The file of this server (`path=` of the constructor wins — the test seam).
+
+        "" when the server carries no id: there is no key to file a history under, and every read
+        answers an empty list while every write refuses (`write_json_atomic("")` is False).
+        """
         return self._explicit_path or history_path_for(self.server_id, self._directory)
 
     # ── reading ─────────────────────────────────────────────────────────────

@@ -401,7 +401,9 @@ check("§7 the i18n pin is UNCHANGED — this patch adds no translation key",
 check("§7 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.4"),
       EXPECTED_APP_VERSION)
 check("§7 the release is a FOUR-component patch and the format accepts it",
-      EXPECTED_APP_VERSION == "1.13.4.2" and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
+      releases_at_least(EXPECTED_APP_VERSION, "1.13.4.2")
+      and len(EXPECTED_APP_VERSION.split(".")) == 4
+      and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
       EXPECTED_APP_VERSION)
 import version as VERSION_MODULE  # noqa: E402
 check("§7 the JSON schema did NOT move (VERSION_FORMAT stays 0.9)",

@@ -7,10 +7,10 @@ sees the whole document or the previous one, and a failed write removes the prov
 `write_json_atomic()` adds the READ-MODIFY-WRITE half under `atomic_lock(path)` — an `RLock`
 covering the read, the merge and the publish, which is what a MERGE-writer needs — and `dump_json()`
 is the JSON `write_temp`. `read_json_state()` is the family's THREE-state reader; a merge over a
-file that EXISTS and cannot be parsed COPIES it to `<file>.bad-<ts>` before the publish. The
-cross-process writers are deliberately OUT of scope and DECLARED, the ONE answer the known_hosts
-store gives as well: the atomic replace is what keeps a second instance from reading a truncated
-file. Mechanism — `DOCUMENTATION.md` §71."""
+file that EXISTS and cannot be parsed COPIES it to `<file>.bad-<ts>` before the publish, and a copy
+that cannot be made REFUSES that publish. The cross-process writers are deliberately OUT of scope
+and DECLARED, the ONE answer the known_hosts store gives as well: the atomic replace is what keeps
+a second instance from reading a truncated file. Mechanism — `DOCUMENTATION.md` §71."""
 import json
 import os
 import shutil
@@ -107,6 +107,8 @@ def keep_unreadable(path, reason: str = "") -> str:
     The DECIDED policy of the merge-writers (`AGENTS.md` §4.4): a file the reader could not read is
     never silently replaced — its bytes are kept BESIDE it before the publish, and ONE log line
     names the copy. The stamp carries the second, so two merges in one second stay two copies.
+    "" answers "no copy" and the CALLER owns the consequence: `write_json_atomic()` refuses the
+    publish, because the copy is what makes the write safe.
     """
     logger = _log()
     stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -119,8 +121,9 @@ def keep_unreadable(path, reason: str = "") -> str:
         shutil.copy2(path, target)
     except OSError as e:
         if logger is not None:
-            logger.error("The file %s cannot be read (%s) and could not be copied aside (%s) — it "
-                         "is about to be replaced", path, reason or "unreadable", e)
+            logger.error("The file %s cannot be read (%s) and could not be copied aside (%s) — the "
+                         "write is refused and the file is left as it is", path,
+                         reason or "unreadable", e)
         return ""
     if logger is not None:
         logger.warning("The file %s cannot be read (%s) — its bytes were kept in %s before the "
@@ -200,7 +203,8 @@ def write_json_atomic(path, data, merge: bool = False, reader=None, indent: int 
     the default `read_json_state(path)` read) and updates it with `data`: the read, the merge and the
     publish are ONE critical section, so two writers cannot publish each other's stale snapshot. A
     file that EXISTS and cannot be parsed is COPIED aside first (`keep_unreadable`) and the merge
-    runs over an empty base: nothing is lost and the application never stops saving.
+    runs over an empty base. A copy that could NOT be made REFUSES the publish — False, the file
+    untouched: the policy is copy-then-write, never a silent loss.
     """
     try:
         with atomic_lock(path):
@@ -208,7 +212,8 @@ def write_json_atomic(path, data, merge: bool = False, reader=None, indent: int 
             if merge:
                 state, current, reason = read_json_state(path)
                 if state == STORE_UNREADABLE:
-                    keep_unreadable(path, reason)
+                    if not keep_unreadable(path, reason):
+                        return False
                     current = None
                 if reader is not None:
                     current = reader()

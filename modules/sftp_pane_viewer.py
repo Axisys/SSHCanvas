@@ -754,16 +754,98 @@ class SftpPaneViewerMixin:
         except (RuntimeError, AttributeError):
             pass   # Qt teardown — the panel is already gone
 
-    def _archive_forget_legs(self):
-        """Drop every spool leg of a provider this pane is LEAVING. Never raises.
+    def _archive_forget_legs(self, provider=None):
+        """Drop every spool leg of a provider this pane is LEAVING (`N131`). Never raises.
 
-        A leg of the provider just left answers nobody (its slots are disconnected with it), so the
-        file it may still publish is dropped here and, above all, no map survives the transport.
+        A leg whose download is still writing cannot be dropped here: its own commit would publish
+        the spool a moment later, with nobody left to remove it. With a `provider`, the legs stay
+        OWNED — they move out of `_archive_tasks` into `_archive_legs` and the pane listens to that
+        provider's three answer signals through its own `_on_leg_*` slots, which drop the copy the
+        answer published. A leg that is never answered (a transport that died) is the startup
+        sweep's, the declared sibling of a crashed run's leftover. Without a `provider` — a
+        teardown — the spools go at once.
         """
-        for _task_id, (_path, spool, _kind) in list(self._archive_tasks.items()):
-            archive.drop_archive(spool)
+        pending = dict(self._archive_tasks)
         self._archive_tasks.clear()
         self._archive_dropped.clear()
+        if provider is not None and pending:
+            self._own_legs(provider, pending)
+            return
+        for _task_id, (_path, spool, _kind) in pending.items():
+            archive.drop_archive(spool)
+        for owner, owned in list((getattr(self, "_archive_legs", None) or {}).items()):
+            for spool in list(owned.values()):
+                if spool:
+                    archive.drop_archive(spool)
+            owned.clear()
+            self._release_leg_owner(owner)
+
+    def _own_legs(self, provider, pending):
+        """Keep `pending` legs owned by the provider this pane just left (the `N131` handover)."""
+        legs = getattr(self, "_archive_legs", None)
+        if legs is None:
+            legs = self._archive_legs = {}
+        fresh = provider not in legs
+        owned = legs.setdefault(provider, {})
+        for task_id, (_path, spool, _kind) in pending.items():
+            owned[int(task_id)] = str(spool or "")
+        if not fresh:
+            return   # the slots of this provider are connected already (ONE connection per owner)
+        for name, slot in (("task_done", self._on_leg_done),
+                           ("task_error", self._on_leg_error),
+                           ("task_cancelled", self._on_leg_cancelled)):
+            signal = getattr(provider, name, None)
+            if signal is None:
+                continue
+            try:
+                signal.connect(slot)
+            except (RuntimeError, TypeError):
+                pass   # a dead provider / a stub without the shipped signals
+
+    def _release_leg_owner(self, provider):
+        """Disconnect the three leg slots of ONE owner and forget it. Never raises."""
+        legs = getattr(self, "_archive_legs", None) or {}
+        legs.pop(provider, None)
+        for name, slot in (("task_done", self._on_leg_done),
+                           ("task_error", self._on_leg_error),
+                           ("task_cancelled", self._on_leg_cancelled)):
+            signal = getattr(provider, name, None)
+            if signal is None:
+                continue
+            try:
+                signal.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass   # never connected / the C++ object is already gone
+
+    def _on_leg_done(self, task_id, _detail=""):
+        """An OWNED leg of a provider this pane left finished: drop the spool it published."""
+        self._answer_owned_leg(task_id)
+
+    def _on_leg_error(self, task_id, _kind="", _message=""):
+        """An OWNED leg failed: the provisional copy never became a spool — nothing to drop."""
+        self._answer_owned_leg(task_id)
+
+    def _on_leg_cancelled(self, task_id, _kind=""):
+        """An OWNED leg was cancelled: its provisional file went with the task."""
+        self._answer_owned_leg(task_id)
+
+    def _answer_owned_leg(self, task_id) -> bool:
+        """Retire ONE owned leg; True — the id belonged to a provider this pane left."""
+        try:
+            task_id = int(task_id)
+        except (TypeError, ValueError):
+            return False
+        legs = getattr(self, "_archive_legs", None) or {}
+        for provider, owned in list(legs.items()):
+            if task_id not in owned:
+                continue
+            spool = owned.pop(task_id)
+            if spool:
+                archive.drop_archive(spool)
+            if not owned:
+                self._release_leg_owner(provider)
+            return True
+        return False
 
     def preview_current_member(self):
         """`Enter` on the flat listing (the double click's twin)."""

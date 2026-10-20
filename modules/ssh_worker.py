@@ -39,12 +39,12 @@ def get_active_worker(server_id: str) -> Optional["SSHWorker"]:
 
 
 def wait_for_worker(server_id: str, timeout_ms: int = 5000) -> bool:
-    """Wait for the server's SSHWorker to finish.
+    """BLOCKING wait for the server's SSHWorker — never call it from the GUI thread.
 
-    Returns True if there is no active thread (or it finished within
-    timeout_ms). False — the thread is still running; the node should not
-    be removed. Every operation inside the worker has internal network
-    timeouts (socket 5 s / paramiko 15 s), so wait() cannot hang forever.
+    The deletion path does NOT ask this question any more: it asks `get_active_worker()`, calls
+    `request_stop()` and defers the removal to `finished()` (`N137`). This function stays for a
+    caller that really owns a blocking context (a test, a shutdown path) and returns True when
+    there is no active thread (or it finished within `timeout_ms`).
     """
     worker = get_active_worker(server_id)
     if worker is None:
@@ -80,6 +80,11 @@ class SSHWorker(QThread):
         # v1.8.1 (N63): a secret the caller already collected — never logged, never serialized.
         self.passphrase = passphrase
         self.verification_code = verification_code
+        # `N137`: a stop asked by the node-deletion path — the thread still finishes by itself (a
+        # network wait cannot be interrupted), but it answers NOTHING once the stop was asked, so a
+        # removed node's dialog never receives a result.
+        self._stop_requested = False
+        self._start_requested = False
 
         # Register in the active worker registry (patch v0.6.x): the guard for
         # node removal. Auto-cleanup — on the thread's finished().
@@ -90,30 +95,59 @@ class SSHWorker(QThread):
                     del _active_workers[sid]
             self.finished.connect(_unregister)
 
+    def start(self, *args, **kwargs):
+        """Mark the start: a deletion must not mistake a just-started thread for an idle one."""
+        self._start_requested = True
+        return super().start(*args, **kwargs)
+
+    def request_stop(self) -> None:
+        """Ask a running worker to abandon its answer (the N137 door; never blocks, never raises).
+
+        The thread cannot be interrupted inside paramiko, so the stop is honoured where the answer
+        is DELIVERED: `_emit_success` / `_emit_error` stay silent once the stop was asked.
+        """
+        self._stop_requested = True
+
+    def is_stop_requested(self) -> bool:
+        """Was a stop asked of this worker (the read seam of the N137 deferral)?"""
+        return bool(self._stop_requested)
+
+    def _emit_success(self, message: str) -> None:
+        """Deliver the answer unless a stop was asked — the ONE delivery of `success`."""
+        if not self._stop_requested:
+            self.success.emit(message)
+
+    def _emit_error(self, message: str) -> None:
+        """Deliver the refusal unless a stop was asked — the ONE delivery of `error`."""
+        if not self._stop_requested:
+            self.error.emit(message)
+
     def run(self):
         try:
+            if self._stop_requested:
+                return
             if self.test_only:
                 self._run_socket_test()
             else:
                 self._run_ssh_connect()
         except Exception as e:
-            self.error.emit(str(e))
+            self._emit_error(str(e))
 
     def _run_socket_test(self):
         t = _get_translator()
         try:
             with socket.create_connection((self.host, self.port), timeout=5):
                 pass
-            self.success.emit(t("ssh.socket_test_ok", host=self.host, port=self.port))
+            self._emit_success(t("ssh.socket_test_ok", host=self.host, port=self.port))
         except socket.timeout:
             # v0.9.3 fix: before this a hardcoded English string went here, bypassing i18n.
-            self.error.emit(t("ssh.socket_timeout", host=self.host, port=self.port))
+            self._emit_error(t("ssh.socket_timeout", host=self.host, port=self.port))
         except OSError as e:
             msg = t("ssh.connection_failed", host=self.host, port=self.port)
             # Fallback if translation unavailable (returns [key])
-            self.error.emit(msg if not msg.startswith("[") else f"Connection failed for {self.host}:{self.port}: {e}")
+            self._emit_error(msg if not msg.startswith("[") else f"Connection failed for {self.host}:{self.port}: {e}")
         except Exception as e:
-            self.error.emit(str(e))
+            self._emit_error(str(e))
 
     def _run_ssh_connect(self):
         import paramiko
@@ -164,7 +198,7 @@ class SSHWorker(QThread):
                     warn = t("ssh.host_key_unpinned", path=policy.store.path)
                     msg += "\n" + (warn if not warn.startswith("[")
                                    else "WARNING: host key NOT saved")
-            self.success.emit(msg if not msg.startswith("[") else f"✓ Connected to {self.host}")
+            self._emit_success(msg if not msg.startswith("[") else f"✓ Connected to {self.host}")
         except paramiko.BadHostKeyException as e:
             # AUDIT v0.7.2 (high #4): the stored host key changed — a likely MITM
             try:
@@ -173,25 +207,25 @@ class SSHWorker(QThread):
             except Exception:
                 pass
             msg = t("ssh.host_key_changed", host=self.host) + "\n" + str(e)
-            self.error.emit(msg if not msg.startswith("[") else f"Host key changed for {self.host}: {e}")
+            self._emit_error(msg if not msg.startswith("[") else f"Host key changed for {self.host}: {e}")
         except paramiko.AuthenticationException:
             msg = t("ssh.auth_failed")
-            self.error.emit(msg if not msg.startswith("[") else "Authentication failed")
+            self._emit_error(msg if not msg.startswith("[") else "Authentication failed")
         except paramiko.SSHException as e:
             # v1.8.1 (N63): the user's own refusal carries a FINISHED sentence — never re-wrapped
             # into the generic "SSH error:" line, which would bury the reason in a prefix.
             if isinstance(e, (HostKeyRejected, ConnectionCancelled)):
-                self.error.emit(str(e))
+                self._emit_error(str(e))
                 return
             msg = t("ssh.ssh_error", message=str(e))
-            self.error.emit(msg if not msg.startswith("[") else f"SSH error: {e}")
+            self._emit_error(msg if not msg.startswith("[") else f"SSH error: {e}")
         except OSError as e:
             # `socket.gaierror`, `socket.timeout` and `paramiko.ssh_exception.NoValidConnectionsError` are
             # OSError, NOT SSHException — they would otherwise fall through to the generic handler of `run()`
             # and be displayed VERBATIM in English while the sibling "Test connection" button answered in the
             # user's language. The branch is deliberately LAST so it cannot shadow the paramiko ones above.
             msg = t("ssh.connection_failed", host=self.host, port=self.port)
-            self.error.emit(msg if not msg.startswith("[")
-                            else f"Connection failed for {self.host}:{self.port}: {e}")
+            self._emit_error(msg if not msg.startswith("[")
+                             else f"Connection failed for {self.host}:{self.port}: {e}")
         finally:
             client.close()

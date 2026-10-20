@@ -586,6 +586,14 @@ class SftpWorker(QThread):
         self._queue: "queue.Queue[_SftpTask]" = queue.Queue()
         self._stop_event = threading.Event()
         self._cancel_event = threading.Event()
+        # `N136`: the cancel TOKEN — the ids ONE click covers (`_cancel_ids`), the ids queued or in
+        # flight right now (`_pending_ids`), the one-task arming of an IDLE click and the id of the
+        # task being served. All four under ONE lock: they are written from BOTH threads.
+        self._cancel_lock = threading.Lock()
+        self._cancel_ids = set()
+        self._pending_ids = set()
+        self._cancel_armed = False
+        self._current_id = None
         self._next_id = 1
         # v1.7rc2: the verdict of the OPTIONAL copy-data@openssh.com feature detection —
         # None = not tried yet, True = the server copied a file this way, False = refused.
@@ -751,13 +759,23 @@ class SftpWorker(QThread):
             self._next_id, KIND_NORMALIZE, path, remote_path=path, detail=path))
 
     def cancel(self):
-        """Cancel the current transfer and everything still queued.
+        """Cancel the transfers VISIBLE at this click — never the queue's future.
 
-        The flag is checked between operations (chunk/task); after the queue
-        is emptied it auto-resets — new operations work without a repeated
-        "unlock".
+        The click SNAPSHOTS the ids it covers (the one in flight plus everything queued at that
+        moment) and every loop and chunk asks its OWN id, so a transfer queued while the
+        interrupted one unwinds is not reported cancelled without ever starting (`N136`). An IDLE
+        click has nothing to snapshot: it arms the NEXT task (the shipped "Cancel" against a
+        service with nothing in flight), and that arming lives until the next idle poll.
         """
-        self._cancel_event.set()
+        with self._cancel_lock:
+            live = set(self._pending_ids)
+            if self._current_id is not None:
+                live.add(int(self._current_id))
+            if live:
+                self._cancel_ids |= live
+            else:
+                self._cancel_armed = True
+            self._cancel_event.set()
 
     def shutdown(self, wait_ms: int = 2500):
         """Correct stop: cancel the current one + stop, wait ≤ wait_ms.
@@ -785,6 +803,8 @@ class SftpWorker(QThread):
         if self.isFinished():
             return None  # the thread finished — silently ignore
         self._next_id += 1
+        with self._cancel_lock:
+            self._pending_ids.add(task.id)   # `N136`: a later click must be able to cover it
         self._queue.put(task)
         return task.id
 
@@ -812,22 +832,21 @@ class SftpWorker(QThread):
                 try:
                     task = self._queue.get(timeout=0.1)
                 except queue.Empty:
-                    # The queue is empty and cancellation was requested (cancel
-                    # while idle) — reset the flag: there was nothing to cancel,
-                    # new operations work.
-                    if self._cancel_event.is_set():
-                        self._cancel_event.clear()
+                    # Nothing arrived inside the poll window: an IDLE click's arming and the flag
+                    # both go, so the next task is served (`N136` — the queue's future is free).
+                    with self._cancel_lock:
+                        self._cancel_armed = False
+                        if self._cancel_event.is_set() and not self._cancel_ids:
+                            self._cancel_event.clear()
                     continue
 
-                if self._cancel_event.is_set():
-                    # The task had not started yet — skip it (the GUI learns from
-                    # task_cancelled and never waits for it). Cancellation applies
-                    # to everything that was in the queue AT THE CLICK MOMENT: the
-                    # flag is reset immediately and the rest of the queue contents
-                    # is reported.
+                if self._begin_task(task):
+                    # The task is COVERED by the click's own snapshot (or by the arming of an idle
+                    # click) — it is reported cancelled and never started. The covered ids are
+                    # consumed one by one, so the order of the queue survives the cancellation.
                     self._emit(self.task_cancelled, task.id, task.kind)
                     self._log_task(task, outcome=OUTCOME_CANCELLED)
-                    self._apply_cancel()
+                    self._end_task(task.id)
                     continue
 
                 try:
@@ -857,12 +876,13 @@ class SftpWorker(QThread):
                 except _SftpCancelled:
                     self._emit(self.task_cancelled, task.id, task.kind)
                     self._log_task(task, outcome=OUTCOME_CANCELLED)
-                    self._apply_cancel()
                 except Exception as e:  # noqa: BLE001 — path/permission/network error
                     # THE QUEUE DOES NOT DIE: the task reported an error, the
                     # loop continues (ROADMAP task 5 requirement).
                     self._emit(self.task_error, task.id, task.kind, str(e))
                     self._log_task(task, outcome=OUTCOME_FAILED, error=str(e))
+                finally:
+                    self._end_task(task.id)
         finally:
             try:
                 self._sftp.close()
@@ -885,26 +905,39 @@ class SftpWorker(QThread):
         except Exception:  # noqa: BLE001 — the record is a side channel
             pass
 
-    def _check_cancel(self):
-        if self._cancel_event.is_set() or self._stop_event.is_set():
-            raise _SftpCancelled()
+    def _begin_task(self, task: _SftpTask) -> bool:
+        """Make `task` the CURRENT one; True — this click's token covers it (`N136`).
 
-    def _apply_cancel(self):
-        """Reset the cancel flag and report the rest of the queue contents.
-
-        Semantics: cancel applies to everything that was in flight/queued AT THE
-        CLICK MOMENT; tasks added AFTER (once the queue was already empty) run
-        normally — otherwise "Cancel" of one transfer would also cancel the next
-        one queued right after. Called from the worker thread after an
-        interrupted/skipped task.
+        The id leaves `_pending_ids` here (it is no longer waiting) and the arming of an IDLE
+        click is consumed by the ONE task it was meant for.
         """
-        self._cancel_event.clear()
-        while True:
-            try:
-                skipped = self._queue.get_nowait()
-            except queue.Empty:
-                break
-            self._emit(self.task_cancelled, skipped.id, skipped.kind)
+        with self._cancel_lock:
+            self._pending_ids.discard(task.id)
+            self._current_id = int(task.id)
+            if task.id in self._cancel_ids:
+                return True
+            if self._cancel_armed:
+                self._cancel_armed = False
+                self._cancel_ids.add(int(task.id))
+                return True
+            return False
+
+    def _end_task(self, task_id) -> None:
+        """The task is over: its id leaves the token, and the ONE flag resets with the last id."""
+        with self._cancel_lock:
+            self._current_id = None
+            self._cancel_ids.discard(int(task_id))
+            if not self._cancel_ids:
+                self._cancel_event.clear()
+
+    def _check_cancel(self):
+        """Raise when the task being served is covered — a stop always covers it."""
+        if self._stop_event.is_set():
+            raise _SftpCancelled()
+        with self._cancel_lock:
+            covered = self._current_id is not None and self._current_id in self._cancel_ids
+        if covered:
+            raise _SftpCancelled()
 
     # ── N52: the DEPTH of a transfer — a prefetched read, a pipelined write ──────────────
 

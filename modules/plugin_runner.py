@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """The managed SSH worker of `ctx.run_command` (PLUGINS.md §5).
-
 `PluginContext.run_command()` is a service the CORE performs: the plugin hands over node records and a
 shell command, and the core resolves the credentials, opens the connection, runs the command and reports
-one result per node. This module is that worker.
+one result per node. This module is that worker: a one-shot QThread.
+`node_result(node_id, dict)` arrives the moment a node's answer is known (output / exit code / error),
+then `all_finished(list)` once. A failure on one node is a RESULT for that node, so one unreachable
+server never hides the answer from its neighbours.
+Credentials are the core's business: the default resolver reads the password from the OS keyring by node
+id and the key path from the node FACTS; a secret is never logged, serialized or handed to a plugin. The
+resolver and the transport are injectable seams (the suite tests without a socket). A bounded life:
+`timeout` is the capture's WALL CLOCK, `stop()` aborts the channel it blocks on; the manager owns the
+registry. No UI, no i18n, never raises."""
 
-One-shot QThread, per-node results: `PluginCommandRunner` walks the node list in ORDER and emits
-`node_result(node_id, dict)` the moment a node's answer is known (output / exit code / error), then
-`all_finished(list)` once. A failure on one node is a RESULT for that node — the loop continues, so one
-unreachable server can never hide the answer from its neighbours.
-
-Credentials are the core's business: the default resolver reads the password from the OS keyring by node id (`services/credential_manager.py`, the same allowlist singleton as the rest of the app) and the key path from the internal node FACTS; the password goes to paramiko and is never logged, never serialized and never handed to a plugin. Both the resolver and the transport are injectable seams — that is how the suite tests the worker without a socket (`tests/test_plugin_runtime.py`). A bounded life: `stop(wait_ms)` sets the cancel flag (a node not yet started is skipped) and waits with a budget, while one timeout covers connect/auth/banner and another the channel, so a black-holed host cannot hang the worker. The manager owns the registry it is registered in. No UI, no i18n, never raises."""
-
+import inspect
+import socket
 import threading
+import time
 from typing import Callable, Dict, List, Optional
 
 from PySide6.QtCore import QThread, Signal
@@ -24,6 +27,7 @@ STOP_WAIT_MS = 1500           # the wait budget of `stop()` (the v1.2 orphan-reg
 OUTPUT_MAX = 1_000_000        # a cap on the captured stdout/stderr (bytes of text)
 OUTPUT_CHUNK = 32_768         # the bounded read of ONE channel (the cap is applied WHILE reading)
 ERROR_MAX = 300               # an error text is a tooltip line, not a log dump
+DEADLINE_MIN_WAIT = 0.05      # the shortest `recv()` bound — a floor, so a zero never blocks
 
 
 def _short(text, limit: int = ERROR_MAX) -> str:
@@ -32,8 +36,72 @@ def _short(text, limit: int = ERROR_MAX) -> str:
     return flat[:limit] + "…" if len(flat) > limit else flat
 
 
-def _read_capped(stream, limit: int = OUTPUT_MAX):
-    """Drain ONE stream in bounded chunks, stopping AT `limit` → `(text, complete)`.
+def _budget_seconds(timeout) -> float:
+    """The declared per-command budget in seconds (`timeout` or its declared default)."""
+    try:
+        return max(0.2, float(timeout))
+    except (TypeError, ValueError):
+        return COMMAND_TIMEOUT_S
+
+
+def _capped_text(buf, limit: int) -> str:
+    """The capped text of a bounded read — ONE decode over the bytes really read."""
+    return bytes(buf).decode("utf-8", errors="replace")[:limit]
+
+
+class CommandControl:
+    """The ONE abort handle of a command in flight (`N135`).
+
+    The read loop asks `aborted()`; `abort()` also CLOSES the channel the transport attached,
+    which is the ONE way a `recv()` blocked on a silent or dribbling producer ends from another
+    thread. `stop()` of the runner is the caller; every method is safe from any thread, idempotent
+    and never raises.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._channel = None
+        self._aborted = False
+
+    def attach(self, channel) -> None:
+        """Register the channel the command is reading; an abort already asked closes it at once."""
+        with self._lock:
+            self._channel = channel
+            aborted = self._aborted
+        if aborted:
+            _close_quiet(channel)
+
+    def detach(self) -> None:
+        """Forget the channel — the command is over and no abort may touch it any more."""
+        with self._lock:
+            self._channel = None
+
+    def abort(self) -> None:
+        """Ask the command to stop and close the channel it is blocked on (idempotent)."""
+        with self._lock:
+            self._aborted = True
+            channel = self._channel
+        _close_quiet(channel)
+
+    def aborted(self) -> bool:
+        """Was an abort asked (the read loop's own check)?"""
+        with self._lock:
+            return self._aborted
+
+
+def _close_quiet(channel) -> None:
+    """Close a channel without letting a transport's teardown raise."""
+    closer = getattr(channel, "close", None)
+    if not callable(closer):
+        return
+    try:
+        closer()
+    except Exception:  # noqa: BLE001 — a dead channel is the state this call wanted
+        pass
+
+
+def _read_capped(stream, limit: int = OUTPUT_MAX, deadline=None, control=None):
+    """Drain ONE stream in bounded chunks, stopping AT `limit` or the DEADLINE → `(text, complete)`.
 
     `read()` without a size asks for everything and lets the producer decide how much memory
     the application spends: paramiko replenishes the channel window on every read, so an
@@ -43,17 +111,41 @@ def _read_capped(stream, limit: int = OUTPUT_MAX):
     buffered. Decoding happens ONCE over the capped bytes, so a multi-byte character split
     across two reads stays whole. `complete` is False when the cap — not EOF — ended the read,
     i.e. the producer may still be running (which is what `_exit_code()` has to know).
+
+    `deadline` (a `time.monotonic()` value) is the command's WALL CLOCK: a producer that dribbles
+    a byte before every channel timeout never lets a read fail, so the loop asks the clock itself
+    and bounds each `recv()` by the time that is left. `control` (`CommandControl`) is the abort
+    of `stop()` — both end the read with what was really captured.
     """
     buf = bytearray()
     channel = getattr(stream, "channel", None)
     recv = getattr(channel, "recv", None)
+    settimeout = getattr(channel, "settimeout", None)
     while len(buf) < limit:
+        if control is not None and control.aborted():
+            return _capped_text(buf, limit), False
+        if deadline is not None:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return _capped_text(buf, limit), False
+            if callable(settimeout):
+                try:
+                    settimeout(max(DEADLINE_MIN_WAIT, left))
+                except Exception:  # noqa: BLE001 — a channel that cannot bound its own recv
+                    pass
         want = min(OUTPUT_CHUNK, limit - len(buf))
-        chunk = recv(want) if callable(recv) else stream.read(want)
+        try:
+            chunk = recv(want) if callable(recv) else stream.read(want)
+        except (socket.timeout, TimeoutError):
+            return _capped_text(buf, limit), False   # the deadline, not EOF, ended this read
+        except (OSError, EOFError):
+            if control is not None and control.aborted():
+                return _capped_text(buf, limit), False   # the abort closed the channel
+            raise
         if not chunk:
-            return bytes(buf).decode("utf-8", errors="replace")[:limit], True
+            return _capped_text(buf, limit), True
         buf.extend(chunk)
-    return bytes(buf).decode("utf-8", errors="replace")[:limit], False
+    return _capped_text(buf, limit), False
 
 
 def _exit_code(channel, timeout: float = COMMAND_TIMEOUT_S) -> int:
@@ -98,7 +190,8 @@ def default_credentials(node: PluginNode, node_facts: Optional[Dict[str, dict]] 
 
 
 def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAND_TIMEOUT_S,
-                         credentials: Optional[dict] = None) -> PluginRunResult:
+                         credentials: Optional[dict] = None,
+                         control: Optional[CommandControl] = None) -> PluginRunResult:
     """The default transport: one paramiko connection + `exec_command` on ONE node.
 
     Returns a `PluginRunResult` for every outcome — a connection error, an
@@ -107,6 +200,10 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
     The known_hosts policy is the application's (`modules/host_key_policy.py`, TOFU with
     the MITM guard on a changed key), so a plugin command is exactly as safe as a
     connection made by the app itself.
+
+    `timeout` is the command's declared WALL CLOCK, not a per-read delay: the capture stops at
+    that deadline even when the producer keeps dribbling bytes (`N135`). `control` is the
+    runner's abort handle — the channel being read is attached to it, so `stop()` ends the read.
     """
     credentials = credentials or {}
     password = str(credentials.get("password") or "")
@@ -130,12 +227,25 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
             stdin.close()
         except Exception:  # noqa: BLE001 — a closed stdin is not an error
             pass
-        output, complete = _read_capped(stdout)
-        # A stream the cap stopped is a producer that may still be running (its channel window
-        # is full), so the error stream is not waited for — only its already-buffered text is
-        # read; an EOF on stdout is the process's own word that both streams are done.
-        error_out = _read_capped(stderr)[0] if complete else ""
-        exit_code = _exit_code(stdout.channel, timeout)
+        # The budget of the OUTPUT phase, taken once here: connect has its own bounds above.
+        deadline = time.monotonic() + _budget_seconds(timeout)
+        try:
+            if control is not None:
+                control.attach(getattr(stdout, "channel", None))
+            output, complete = _read_capped(stdout, deadline=deadline, control=control)
+            # A stream the cap stopped is a producer that may still be running (its channel window
+            # is full), so the error stream is not waited for — only its already-buffered text is
+            # read; an EOF on stdout is the process's own word that both streams are done.
+            error_out = ""
+            if complete:
+                if control is not None:
+                    control.attach(getattr(stderr, "channel", None))
+                error_out = _read_capped(stderr, deadline=deadline, control=control)[0]
+            exit_code = _exit_code(stdout.channel,
+                                   max(DEADLINE_MIN_WAIT, deadline - time.monotonic()))
+        finally:
+            if control is not None:
+                control.detach()
         if error_out.strip() and not output.strip():
             # A command that wrote only to stderr still ran: the text goes into `error`
             # (the plugin's only place for it) but the exit code is the truth.
@@ -192,6 +302,10 @@ class PluginCommandRunner(QThread):
         except (TypeError, ValueError):
             self._timeout = COMMAND_TIMEOUT_S
         self._transport = transport or run_command_over_ssh
+        # The `control=` seam is OPTIONAL on a transport (a fake keeps the shipped four-argument
+        # signature): declared support is read ONCE here, never guessed from a raised TypeError.
+        self._transport_control = _accepts_control(self._transport)
+        self._control = CommandControl()
         self._node_facts = dict(node_facts or {})
         self._credential_resolver = credential_resolver
         self._cancel = threading.Event()
@@ -219,8 +333,17 @@ class PluginCommandRunner(QThread):
     # ── cancellation (the wait-budget contract) ───────────────────────────────
 
     def cancel(self) -> None:
-        """Ask the loop to stop: a node that has NOT started is skipped (never raises)."""
+        """Ask the loop to stop: a node not started is skipped and the one in flight is ABORTED.
+
+        The abort closes the channel the transport attached, so a `recv()` blocked on a silent or
+        dribbling producer cannot outlive the click (`N135`); a node already answered is unaffected.
+        """
         self._cancel.set()
+        self._control.abort()
+
+    def control(self) -> CommandControl:
+        """The abort handle of this call (the transport's `control=` seam; a read seam)."""
+        return self._control
 
     def stop(self, wait_ms: int = STOP_WAIT_MS) -> bool:
         """Cancel + wait for the thread with a budget (True = it finished in time).
@@ -254,7 +377,12 @@ class PluginCommandRunner(QThread):
         if self._cancel.is_set():
             return PluginRunResult(node=node, error="cancelled")
         try:
-            result = self._transport(node, self._command, self._timeout, self._credentials(node))
+            if self._transport_control:
+                result = self._transport(node, self._command, self._timeout,
+                                         self._credentials(node), control=self._control)
+            else:
+                result = self._transport(node, self._command, self._timeout,
+                                         self._credentials(node))
         except BaseException as exc:  # noqa: BLE001 — one node's error must not stop the rest
             return PluginRunResult(node=node, error=_short(f"{type(exc).__name__}: {exc}"))
         if not isinstance(result, PluginRunResult):
@@ -282,6 +410,22 @@ class PluginCommandRunner(QThread):
                 pass  # Qt teardown
 
 
+def _accepts_control(fn) -> bool:
+    """Does this transport DECLARE the `control=` seam? PURE, read once at construction.
+
+    A fake transport keeps the shipped four-argument signature and is called exactly that way;
+    the shipped one declares the keyword. `**kwargs` counts as a declaration — the call is a
+    keyword call either way, and a raised `TypeError` is never used as a capability probe.
+    """
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+    if "control" in params:
+        return True
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+
+
 def _log_line(level: str, message: str) -> None:
     """Log without ever raising (the logger may be uninitialized)."""
     try:
@@ -291,5 +435,5 @@ def _log_line(level: str, message: str) -> None:
         pass
 
 
-__all__ = ["PluginCommandRunner", "run_command_over_ssh", "default_credentials",
+__all__ = ["PluginCommandRunner", "CommandControl", "run_command_over_ssh", "default_credentials",
            "COMMAND_TIMEOUT_S", "STOP_WAIT_MS"]

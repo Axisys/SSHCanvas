@@ -1008,13 +1008,13 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # that is not on screen yet (a dock tab that was never shown, the offscreen test
         # platform), so the preview state is never read off the widgets.
         self._viewer_open = False
-        # v1.13: the ARCHIVE view (`ARCHIVES.md`) — the listing the SAME panel carries, the local
-        # copy it reads (`local`, the spool for a remote source and the path itself for a local one),
-        # the spool leg in flight and the legs a close ABANDONED (their answer drops the copy).
+        # v1.13: the ARCHIVE view (`ARCHIVES.md`) — the listing the SAME panel carries, the copy it
+        # reads, the leg in flight, the legs a close ABANDONED and the legs a SWITCH left owned.
         self._archive = None
         self._archive_open = False
         self._archive_tasks = {}
         self._archive_dropped = set()
+        self._archive_legs = {}
         # v1.6.3 (ROADMAP task 4): the address bar's own bookkeeping — the normalize tasks
         # in flight (task_id → the text the user typed) and the completer's listings
         # (task_id → the directory they answer). `_completer_dir` is the directory the
@@ -1380,9 +1380,9 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._disconnect_worker(old)
         self._transfer_tasks.clear()
         self._own_transfers.clear()
-        # v1.13: an archive read rides ONE provider as well — the spool it was downloading has no
-        # answer on the new transport, so it goes with the provider it belonged to.
-        self._archive_forget_legs()
+        # v1.13: an archive read rides ONE provider as well — the spool it was downloading is
+        # dropped by the ANSWER of that provider (`N131`), never under a download still writing.
+        self._archive_forget_legs(old)
         # v1.13.1: a staged extraction the previous provider was delivering is dropped with it.
         self._drop_staged_all()
         # v1.3.3.2: the operation answers and the pre-flight listings belong to the
@@ -1462,9 +1462,8 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         if worker is None or worker is not self._bound_provider:
             return
         self._bound_provider = None
-        # A QUEUED emission of the provider just left is delivered even after the disconnect (Qt
-        # does not cancel a posted call), and task ids are per provider: the late answer would pop
-        # the fresh entry of the new one. The pane's pending calls go with the provider.
+        # A QUEUED emission of the provider just left survives the disconnect (Qt cancels no posted
+        # call) and task ids are per provider: the late answer would pop the new provider's entry.
         try:
             QCoreApplication.removePostedEvents(self, QEvent.Type.MetaCall)
         except (RuntimeError, TypeError):
@@ -1618,6 +1617,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
 
     def release(self):
         """Detach the pane: unbind the provider, stop a local or an ELEVATED one, drop the preview."""
+        self._archive_forget_legs()   # `N131`: the slots go with the pane — no answer can drop it
         self._disconnect_worker(self._disconnect_current())
         self.shutdown_elevated()
         self.shutdown_provider()
@@ -1834,8 +1834,8 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
         "_sort_column", "_sort_desc", "_viewer_cap",
         # v1.9.3: the reader's ENCODING choice and the path its preview holds (the choice re-reads it).
         "_viewer_encoding_choice", "_viewer_path",
-        # v1.13: the ARCHIVE view — the open listing, its local copy and the spool legs in flight.
-        "_archive", "_archive_open", "_archive_tasks", "_archive_dropped",
+        # v1.13.4.3: the ARCHIVE view — the open listing, its copy and the spool legs in flight.
+        "_archive", "_archive_open", "_archive_tasks", "_archive_dropped", "_archive_legs",
     })
 
     # Local hints in the window's status bar (waiting for connection, no selection).

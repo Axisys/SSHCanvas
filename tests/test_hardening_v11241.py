@@ -235,7 +235,7 @@ check("§1 ...the channel is a declared PENDING state, not a `no channel`",
 app.processEvents()
 check("§1 ...and the GUI thread is really free (a queued 0-timer ran while the server is silent)",
       _tick_ran == [True] and _page._sftp_worker is None)
-wait_until(lambda: not _page.sftp_channel_pending(), timeout_ms=6000)
+wait_until(lambda: _page._sftp_handshake is None, timeout_ms=6000)
 check("§1 the silent server cost ONE bounded wait and the refusal is the shipped sentence",
       any(str(m).startswith("Failed to open SFTP channel") for m in _msgs), f"msgs={_msgs}")
 check("§1 ...and a refused page is not left `pending` (a retry is the next ask)",

@@ -82,6 +82,11 @@ HEAD_SERVERS = "servers"
 
 CONTAINER_HOPS_MAX = 32   # how far `container_kind_of()` walks the parent chain (the find_host_hook bound)
 
+#: The ONE encoding of the library family — the store, the import reader and the ring's restore
+#: (`AGENTS.md` §4.5's language-file rule). A BOM is a marker, never corruption: a `commands.json`
+#: written by a Windows tool that emits one reads exactly like the file this module writes itself.
+LIBRARY_ENCODING = "utf-8-sig"
+
 
 # ── i18n / config (cached helpers per the ssh_terminal.py pattern) ──────────
 
@@ -260,13 +265,14 @@ class CommandLibraryStore:
     # ── reading ─────────────────────────────────────────────────────────────
 
     def load(self) -> list:
-        """The library as a list of normalized entries.
+        """The library as a list of normalized entries, read with `LIBRARY_ENCODING`.
 
         * no file → FIRST RUN: a seed of 5 examples, the document is written (seeded: true),
           the seed is returned (if the write fails — the seed is returned in memory);
         * corrupt JSON / a foreign top-level type → a log line + [] (the file exists —
           it must NOT be re-seeded: this is user data, even if damaged);
-        * invalid entries (not a dict, an empty name/command) are dropped one by one."""
+        * invalid entries (not a dict, an empty name/command) are dropped one by one;
+        * duplicate ids are REGENERATED (`entries_from_document()`) — one row, one record."""
         if not os.path.isfile(self.path):
             seeded = _seed_entries()
             if not _atomic_write_json(self.path, {"seeded": True, "commands": seeded}):
@@ -275,7 +281,7 @@ class CommandLibraryStore:
                     lg.warning(f"command library: seed write failed for {self.path}")
             return [dict(e) for e in seeded]
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.path, "r", encoding=LIBRARY_ENCODING) as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             lg = _log()
@@ -324,14 +330,25 @@ def entries_from_document(data) -> list:
     it, so a foreign file can never reach the library through a second, laxer path: a non-dict
     root, a missing / non-list `commands` and an unusable record answer the records that really
     are entries, in document order ([] for a document that carries none).
+
+    An id is UNIQUE in the answer: a second record carrying an id already taken is REGENERATED
+    (`models.server.unique_id()` is the rule), so the row of the first record keeps resolving to
+    it and the tree's `id → entry` map never silently adopts the last duplicate.
     """
     if not isinstance(data, dict) or not isinstance(data.get("commands"), list):
         return []
     out = []
+    taken = set()
     for e in data["commands"]:
         norm = CommandLibraryStore._normalize(e)
-        if norm is not None:
-            out.append(norm)
+        if norm is None:
+            continue
+        cid = norm["id"]
+        while cid in taken:
+            cid = uuid.uuid4().hex[:12]
+        norm["id"] = cid
+        taken.add(cid)
+        out.append(norm)
     return out
 
 
@@ -500,7 +517,7 @@ def read_library_file(source_path) -> dict:
     if not source or not os.path.isfile(source):
         return result
     try:
-        with open(source, "r", encoding="utf-8-sig") as f:
+        with open(source, "r", encoding=LIBRARY_ENCODING) as f:
             data = json.load(f)
     except ValueError:   # json.JSONDecodeError / UnicodeDecodeError are ValueErrors
         result["error"] = LIB_ERR_JSON

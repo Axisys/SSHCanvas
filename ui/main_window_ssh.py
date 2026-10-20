@@ -106,14 +106,10 @@ class SshMixin:
         `history_key()`). A SPLIT PANE is not a Files session at all. Never raises: one broken
         session must not hide the others.
         """
-        try:
-            from modules.sftp_send import endpoint_from_tab
-        except ImportError:  # flat launch from the project root
-            from ..modules.sftp_send import endpoint_from_tab
-        try:
-            from modules.command_history import history_key
-        except ImportError:  # flat launch from the project root
-            from ..modules.command_history import history_key
+        # `modules` is the ONE spelling: `ui` is a top-level package as well, so `..modules` would
+        # name the SAME module — a fallback could only hide a real ImportError (`N138`).
+        from modules.command_history import history_key
+        from modules.sftp_send import endpoint_from_tab
         targets = []
         for session in list(getattr(self, "_terminal_windows", [])):
             try:
@@ -145,10 +141,7 @@ class SshMixin:
         are built by the ONE PURE reader (`modules/terminal_diff.py`), so the map window and the
         standalone surface describe a target the same way. Never raises.
         """
-        try:
-            from modules.terminal_diff import diff_targets_from_pages
-        except ImportError:  # flat launch from the project root
-            from ..modules.terminal_diff import diff_targets_from_pages
+        from modules.terminal_diff import diff_targets_from_pages
         return diff_targets_from_pages(getattr(self, "_terminal_windows", []))
 
     def _save_remembered_dirs(self):

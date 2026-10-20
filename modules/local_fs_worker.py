@@ -304,6 +304,13 @@ class LocalFsWorker(QThread):
         self._queue: "queue.Queue[_LocalTask]" = queue.Queue()
         self._stop_event = threading.Event()
         self._cancel_event = threading.Event()
+        # `N136`: the cancel TOKEN — the ids ONE click covers, the ids queued or in flight right
+        # now, the one-task arming of an IDLE click and the id of the task being served.
+        self._cancel_lock = threading.Lock()
+        self._cancel_ids = set()
+        self._pending_ids = set()
+        self._cancel_armed = False
+        self._current_id = None
         self._next_id = 1
 
     # ── Public API (GUI thread) ──────────────────────────────────────────
@@ -422,8 +429,22 @@ class LocalFsWorker(QThread):
             path2=str(dest_dir or "") or self.root, limits=limits))
 
     def cancel(self):
-        """Cancel the current operation and everything still queued (the shipped auto-reset)."""
-        self._cancel_event.set()
+        """Cancel the operations VISIBLE at this click — never the queue's future (`N136`).
+
+        The click SNAPSHOTS the ids it covers (the one in flight plus everything queued) and every
+        loop and chunk asks its OWN id, so an operation queued while the interrupted one unwinds
+        runs as it should. An IDLE click arms the NEXT operation, and that arming lives until the
+        next idle poll.
+        """
+        with self._cancel_lock:
+            live = set(self._pending_ids)
+            if self._current_id is not None:
+                live.add(int(self._current_id))
+            if live:
+                self._cancel_ids |= live
+            else:
+                self._cancel_armed = True
+            self._cancel_event.set()
 
     def shutdown(self, wait_ms: int = 2500):
         """Correct stop: cancel + stop + wait ≤ wait_ms; a stuck thread is an ORPHAN."""
@@ -443,6 +464,8 @@ class LocalFsWorker(QThread):
         if self.isFinished():
             return None
         self._next_id += 1
+        with self._cancel_lock:
+            self._pending_ids.add(task.id)   # `N136`: a later click must be able to cover it
         self._queue.put(task)
         return task.id
 
@@ -458,12 +481,16 @@ class LocalFsWorker(QThread):
             try:
                 task = self._queue.get(timeout=0.1)
             except queue.Empty:
-                if self._cancel_event.is_set():
-                    self._cancel_event.clear()   # nothing was pending — the next task is served
+                # Nothing arrived inside the poll window: an IDLE click's arming and the flag both
+                # go, so the next operation is served (`N136` — the queue's future is free).
+                with self._cancel_lock:
+                    self._cancel_armed = False
+                    if self._cancel_event.is_set() and not self._cancel_ids:
+                        self._cancel_event.clear()
                 continue
-            if self._cancel_event.is_set():
+            if self._begin_task(task):
                 self._emit(self.task_cancelled, task.id, task.kind)
-                self._apply_cancel()
+                self._end_task(task.id)
                 continue
             try:
                 self._emit(self.task_started, task.id, task.kind, task.label)
@@ -471,7 +498,6 @@ class LocalFsWorker(QThread):
                 self._emit(self.task_done, task.id, self._detail_of(task))
             except _LocalCancelled:
                 self._emit(self.task_cancelled, task.id, task.kind)
-                self._apply_cancel()
             except _LocalRead as e:
                 # The SHIPPED read contract: a bare machine code, never a payload.
                 self._emit(self.task_error, task.id, task.kind, e.code)
@@ -481,6 +507,8 @@ class LocalFsWorker(QThread):
                 self._emit(self.task_error, task.id, task.kind, task_payload(e.code, error=e.error))
             except Exception as e:  # noqa: BLE001 — a refusal never kills the queue
                 self._emit(self.task_error, task.id, task.kind, local_error_payload(e))
+            finally:
+                self._end_task(task.id)
 
     def _run_task(self, task: _LocalTask):
         if task.kind == KIND_LIST:
@@ -515,19 +543,35 @@ class LocalFsWorker(QThread):
             return os.path.join(task.path2, task.label) if task.label else task.path2
         return task.path
 
-    def _check_cancel(self):
-        if self._cancel_event.is_set():
-            raise _LocalCancelled()
+    def _begin_task(self, task: _LocalTask) -> bool:
+        """Make `task` the CURRENT one; True — this click's token covers it (`N136`)."""
+        with self._cancel_lock:
+            self._pending_ids.discard(task.id)
+            self._current_id = int(task.id)
+            if task.id in self._cancel_ids:
+                return True
+            if self._cancel_armed:
+                self._cancel_armed = False
+                self._cancel_ids.add(int(task.id))
+                return True
+            return False
 
-    def _apply_cancel(self):
-        """Report the queued remainder as cancelled (the flag resets at once — the shipped rule)."""
-        self._cancel_event.clear()
-        while True:
-            try:
-                skipped = self._queue.get_nowait()
-            except queue.Empty:
-                break
-            self._emit(self.task_cancelled, skipped.id, skipped.kind)
+    def _end_task(self, task_id) -> None:
+        """The operation is over: its id leaves the token, and the ONE flag resets with the last."""
+        with self._cancel_lock:
+            self._current_id = None
+            self._cancel_ids.discard(int(task_id))
+            if not self._cancel_ids:
+                self._cancel_event.clear()
+
+    def _check_cancel(self):
+        """Raise when the operation being served is covered — a stop always covers it."""
+        if self._stop_event.is_set():
+            raise _LocalCancelled()
+        with self._cancel_lock:
+            covered = self._current_id is not None and self._current_id in self._cancel_ids
+        if covered:
+            raise _LocalCancelled()
 
     def _do_list(self, task: _LocalTask):
         directory = task.path
