@@ -46,6 +46,13 @@ try:  # v1.13.4: the two sides of the Diff tab (`Send to ▾ Diff`)
 except ImportError:
     from terminal_diff import DIFF_LEFT, DIFF_RIGHT, diff_targets_for  # type: ignore
 
+try:  # v1.13.6: the OS trash backend of the reversible delete and the ONE question key
+    from . import local_fs_worker as local_fs
+    from .sftp_pane_helpers import delete_confirm_key
+except ImportError:
+    import local_fs_worker as local_fs  # type: ignore
+    from sftp_pane_helpers import delete_confirm_key  # type: ignore
+
 
 def _facade_attr(name, default=None):
     """An attribute of the SHIPPED facade module at call time — the `modules.sftp_tab` seam.
@@ -76,8 +83,8 @@ class SftpPaneDndMixin:
             menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _build_context_menu(self, item=None):
-        """New folder / Rename / Delete / Download / Upload / Copy remote path / Open archive (a test
-        seam: the tests trigger the QActions directly — `menu.exec()` never runs offscreen).
+        """New folder / Rename / Delete / Find text / Download / Upload / Copy remote path / Open archive
+        (a test seam: the tests trigger the QActions directly — `menu.exec()` never runs offscreen).
 
         Rename/Delete/Copy/Download are enabled only for a REAL row of the current listing
         (never for the ".." row, never for empty space) — a disabled item is the
@@ -86,12 +93,14 @@ class SftpPaneDndMixin:
         archive of a file row and on nothing else (`ARCHIVES.md` §3). The two ROW VERBS are
         offered on the REMOTE and the ELEVATED source alone and `Upload` needs no row (the
         directory under the pointer, `_current_dir` on empty space) — a LOCAL pane shows both
-        DISABLED and keeps its shipped sentence (`_row_verb_refused()`).
+        DISABLED and keeps its shipped sentence (`_row_verb_refused()`). `Find text…` (v1.13.6)
+        needs no row either: the walk always starts at the directory on the screen.
         """
         menu = host_attr(self, "QMenu")(self)
         act_new = menu.addAction(_t("sftp.op.new_folder"))
         act_rename = menu.addAction(_t("sftp.op.rename"))
         act_delete = menu.addAction(_t("sftp.op.delete"))
+        act_find = menu.addAction(_t("sftp.search.row"))
         act_download = menu.addAction(_t("sftp.op.download"))
         act_upload = menu.addAction(_t("sftp.op.upload"))
         act_copy = menu.addAction(_t("sftp.op.copy_path"))
@@ -120,6 +129,7 @@ class SftpPaneDndMixin:
 
         act_new.triggered.connect(lambda: self._op_new_folder())
         act_refresh.triggered.connect(lambda: self._relist(self._current_dir))
+        act_find.triggered.connect(lambda: self._op_find_text(item))
         act_download.triggered.connect(lambda: self._op_download_row(item))
         act_upload.triggered.connect(lambda: self._op_upload_row(item))
         if real:
@@ -150,6 +160,26 @@ class SftpPaneDndMixin:
             return False
         self.message.emit(_t("sftp.local.transfer_unavailable"))
         return True
+
+    # ── v1.13.6: the delete's PLAN — what the question will really do ────────────
+
+    def _delete_plan(self) -> tuple:
+        """`(the question's i18n key, the trash backend)` — the ONE reading of a delete's outcome.
+
+        A LOCAL pane asks `trash_backend()` BEFORE the question and files the answer here, so the
+        sentence the user reads (and the task `_op_delete` queues afterwards) can never describe two
+        different operations: a host with a backend trashes, one without it deletes for good.
+        """
+        if self.source != host_attr(self, "SOURCE_LOCAL"):
+            return delete_confirm_key(False), ""
+        backend = local_fs.trash_backend()
+        return delete_confirm_key(True, backend), backend
+
+    def _delete_queue(self, path: str, is_dir: bool, backend: str):
+        """Queue the delete the PLAN chose: the OS trash when `backend`, the shipped permanent one else."""
+        if backend:
+            return self.provider.queue_trash(path, backend)
+        return self.provider.queue_delete(path, is_dir)
 
     def _row_path(self, item) -> str:
         """The PATH a listing row carries ("" — empty space, the ".." row or a dead C++ item)."""

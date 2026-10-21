@@ -483,11 +483,10 @@ _new_keys = ["terminal.cmdlib.head_servers", "terminal.cmdlib.servers_search",
 check("§6 the TEN keys of the release are non-empty in every language",
       all(_langs[c].get(k) for c in _langs for k in _new_keys)
       # this release's TEN, read off the LIVE pin: the 1094 baseline + v1.11's ten + the later
-      # releases' own additions (v1.12 adds TEN — the pin chain of every topical file follows it —
-      # v1.12.3's THREE, v1.12.4.1's ONE, v1.13's FOUR, v1.13.1's THREE, the fifth read's TWO,
-      # v1.13.2's EIGHT, v1.13.3's NINE, v1.13.4's EIGHTEEN: the Diff tab's chrome, and v1.13.5's
-      # FOUR: the confirmation box and its question).
-      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4,
+      # releases' own additions (v1.12's TEN, v1.12.3's THREE, v1.12.4.1's ONE, v1.13's FOUR,
+      # v1.13.1's THREE, the fifth read's TWO, v1.13.2's EIGHT, v1.13.3's NINE, v1.13.4's
+      # EIGHTEEN, v1.13.5's FOUR, and v1.13.6's THIRTEEN: the search's eleven, the trash's two).
+      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13,
       str({c: len(_langs[c]) for c in sorted(_langs)}))
 
 

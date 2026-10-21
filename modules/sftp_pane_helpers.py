@@ -2,13 +2,13 @@
 
 `format_size` / `format_mtime` / `decode_text` / `preview_block_reason` turn a size, a timestamp or
 a byte buffer into the text a row or the reader shows — no widget, no provider, no network — and the
-reader's encoding CHOICE (its declared list, its resolver and its writer) lives here beside the
-decode it feeds (`ui_viewer_encoding`, the word-wrap rule of one global value).
+reader's encoding CHOICE (its list, its resolver and its writer) lives here beside the decode with
+the per-SESSION memory of a pane's codec (`ui_sftp_encodings`) and the ONE delete-question key.
 `ask_conflict()` is the overwrite question of ONE item of a batch: the module's only Qt surface and
 the ONE seam a caller substitutes (`modules.sftp_tab.QMessageBox`). Every name here is re-exported
 by the pane family and by the shipped `modules.sftp_tab`, so a caller imports them from the facade.
 
-Contract — `SFTP_PANES.md` §5-§6; mechanism — `DOCUMENTATION.md` §59, §64.
+Contract — `SFTP_PANES.md` §5-§6; mechanism — `DOCUMENTATION.md` §59, §64, §66.
 """
 
 import codecs
@@ -193,6 +193,113 @@ def save_viewer_encoding(value) -> bool:
         return bool(save_config({VIEWER_ENCODING_CONFIG: normalize_viewer_encoding(value)}))
     except Exception:  # noqa: BLE001 — a write failure must not break the reader
         return False
+
+
+#: v1.13.6: the per-SESSION encoding memory — the codec THIS pane's user chose, filed by the session's
+#: `history_key()` and the pane's index (`{session key: [codec of pane 1, codec of pane 2]}`) beside the
+#: shipped `ui_sftp_dirs` map. An EMPTY slot means "this pane never chose", so it keeps following the
+#: global `ui_viewer_encoding` default — which is what keeps a CP1251 pane and a Latin-1 one apart.
+ENCODINGS_CONFIG = "ui_sftp_encodings"
+MAX_REMEMBERED_ENCODINGS = 32
+ENCODING_SLOTS = 2       # a container holds at most two panes (SFTP_PANES.md §1)
+
+
+def _stored_codec(value) -> str:
+    """ONE slot of the memory: a declared codec, or `""` — the pane never chose / the value is foreign."""
+    text = str(value if value is not None else "").strip().lower()
+    return text if text in VIEWER_ENCODINGS else ""
+
+
+def sanitize_encodings(raw) -> dict:
+    """The usable entries of a stored map: a session key and TWO declared slots, or the entry drops."""
+    out = {}
+    if not isinstance(raw, dict):
+        return out
+    for key, value in raw.items():
+        name = str(key or "")
+        if not name or not isinstance(value, (list, tuple)):
+            continue
+        slots = [_stored_codec(item) for item in list(value)[:ENCODING_SLOTS]]
+        while len(slots) < ENCODING_SLOTS:
+            slots.append("")
+        if any(slots):
+            out[name] = slots
+    return out
+
+
+def remember_encoding(mapping, key, index, codec, limit: int = MAX_REMEMBERED_ENCODINGS) -> dict:
+    """File ONE pane's choice into the map, moving the session to the END (PURE, the dirs rule).
+
+    Insertion order IS the age, so the eviction needs no timestamp; a blank key, a pane index outside
+    `ENCODING_SLOTS` or a foreign codec changes NOTHING (the caller normalises what the menu hands).
+    """
+    out = dict(mapping or {})
+    name = str(key or "")
+    try:
+        slot = int(index)
+    except (TypeError, ValueError):
+        return out
+    code = _stored_codec(codec)
+    if not name or not 0 <= slot < ENCODING_SLOTS or not code:
+        return out
+    slots = list(sanitize_encodings(out).get(name) or [""] * ENCODING_SLOTS)
+    slots[slot] = code
+    out.pop(name, None)
+    out[name] = slots
+    while len(out) > max(1, int(limit)):
+        out.pop(next(iter(out)))
+    return out
+
+
+def remembered_encoding_for(mapping, key, index) -> str:
+    """The codec remembered for ONE pane of a session (`""` — that pane never chose)."""
+    try:
+        slots = (mapping or {}).get(str(key or "")) or []
+        return _stored_codec(slots[int(index)])
+    except (TypeError, ValueError, IndexError, AttributeError, KeyError):
+        return ""
+
+
+def load_remembered_encodings(cfg: dict = None) -> dict:
+    """The per-session encoding map from `~/.sshmap/config.json` ({} — nothing to restore).
+
+    FOREIGN content answers `{}` rather than a guess: a broken config must never decode a pane with
+    a codec nobody chose. Never raises.
+    """
+    if not isinstance(cfg, dict):
+        try:
+            from i18n import load_config
+        except Exception:  # noqa: BLE001 — a build without i18n keeps no memory
+            return {}
+        try:
+            cfg = load_config() or {}
+        except Exception:  # noqa: BLE001 — a broken config store must not break a pane
+            cfg = {}
+    return sanitize_encodings(cfg.get(ENCODINGS_CONFIG) if isinstance(cfg, dict) else None)
+
+
+def save_remembered_encodings(mapping) -> bool:
+    """Write the per-session encoding map, SANITIZED (merge-write; False — the wallet is unwritable)."""
+    try:
+        from i18n import save_config
+    except Exception:  # noqa: BLE001 — a build without i18n cannot remember it
+        return False
+    try:
+        return bool(save_config({ENCODINGS_CONFIG: sanitize_encodings(mapping)}))
+    except Exception:  # noqa: BLE001 — a write failure must not break the reader
+        return False
+
+
+def delete_confirm_key(local: bool, backend: str = "") -> str:
+    """The ONE i18n key of a delete's confirmation — what the click will really do (PURE).
+
+    A REMOTE row keeps the shipped question; a LOCAL row with a trash backend says that it can be
+    restored, and a host WITHOUT one keeps the shipped permanent warning (the delete never changes
+    behaviour behind the sentence the user read).
+    """
+    if not local:
+        return "sftp.op.delete_confirm"
+    return "sftp.local.trash_confirm" if backend else "sftp.local.delete_confirm"
 
 
 def preview_block_reason(path: str, size=0, facts=None) -> str:

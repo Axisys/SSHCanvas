@@ -11,6 +11,8 @@ import logging
 import os
 import queue
 import shutil
+import subprocess
+import sys
 import threading
 from typing import List, Optional
 
@@ -27,16 +29,16 @@ except ImportError:
 
 try:  # the shipped task vocabulary, the read policy and the machine payloads (never copied)
     from .sftp_worker import (KIND_COPY, KIND_DELETE, KIND_DOWNLOAD, KIND_LIST, KIND_MKDIR,
-                              KIND_MOVE, KIND_NORMALIZE, KIND_READ, KIND_RENAME, KIND_UPLOAD,
-                              MAX_READ_BYTES, MAX_TREE_DEPTH, MAX_TREE_ENTRIES,
+                              KIND_MOVE, KIND_NORMALIZE, KIND_READ, KIND_RENAME, KIND_TRASH,
+                              KIND_UPLOAD, MAX_READ_BYTES, MAX_TREE_DEPTH, MAX_TREE_ENTRIES,
                               PARTIAL_CODE, READ_CAP_NONE, READ_ERROR_BINARY, READ_ERROR_TOO_LARGE,
                               TREE_ERROR_TOO_BIG, classify_extension, is_directory_link,
                               provisional_name, task_payload)
 except ImportError:
     from sftp_worker import (KIND_COPY, KIND_DELETE, KIND_DOWNLOAD, KIND_LIST,  # type: ignore
                              KIND_MKDIR, KIND_MOVE, KIND_NORMALIZE, KIND_READ, KIND_RENAME,
-                             KIND_UPLOAD, MAX_READ_BYTES, MAX_TREE_DEPTH, MAX_TREE_ENTRIES,
-                             PARTIAL_CODE, READ_CAP_NONE, READ_ERROR_BINARY,
+                             KIND_TRASH, KIND_UPLOAD, MAX_READ_BYTES, MAX_TREE_DEPTH,
+                             MAX_TREE_ENTRIES, PARTIAL_CODE, READ_CAP_NONE, READ_ERROR_BINARY,
                              READ_ERROR_TOO_LARGE, TREE_ERROR_TOO_BIG, classify_extension,
                              is_directory_link, provisional_name, task_payload)
 
@@ -68,6 +70,8 @@ LOCAL_NOT_DIR = "not_dir"
 LOCAL_IS_DIR = "is_dir"
 LOCAL_EXISTS = "exists"
 LOCAL_UNREADABLE = "unreadable"
+#: v1.13.6: the reversible delete — the move to the OS trash was REFUSED (never a quiet `os.remove`).
+LOCAL_TRASH_FAILED = "trash_failed"
 
 # A Windows `OSError.winerror` of a file another process holds / a path over the platform limit.
 WINERROR_LOCKED = (32, 33)
@@ -85,6 +89,7 @@ LOCAL_ERROR_KEYS = {
     LOCAL_IS_DIR: "sftp.local.is_dir",
     LOCAL_EXISTS: "sftp.local.exists",
     LOCAL_UNREADABLE: "sftp.local.unreadable",
+    LOCAL_TRASH_FAILED: "sftp.local.trash_failed",
     # the note of a listing that skipped something (never a refusal of the listing itself)
     KIND_LIST_PARTIAL: "sftp.local.skipped",
 }
@@ -127,6 +132,98 @@ def local_error_code(exc) -> str:
 def local_error_payload(exc) -> str:
     """`OSError` → the `task_error` payload of the local surface (the OS's own text as the detail)."""
     return task_payload(local_error_code(exc), error=str(exc or ""))
+
+
+# ── v1.13.6: the REVERSIBLE delete — the OS trash and its declared backend ──────────────────────
+#: The two backends the surface knows. The name is what the pane's question says and what the docs
+#: name; a host with NEITHER keeps the shipped permanent delete and its existing warning.
+TRASH_BACKEND_WIN32 = "win32"
+TRASH_BACKEND_GIO = "gio"
+TRASH_BACKENDS = (TRASH_BACKEND_WIN32, TRASH_BACKEND_GIO)
+#: `gio trash -- <path>` is a child process: the wait is bounded so a hung GVFS never holds the queue.
+TRASH_GIO_TIMEOUT_SEC = 30
+# `SHFileOperationW` — the SHELL's own delete with the undo flag (the Recycle Bin).
+FO_DELETE = 3
+FOF_SILENT = 0x0004
+FOF_NOCONFIRMATION = 0x0010
+FOF_ALLOWUNDO = 0x0040
+FOF_NOERRORUI = 0x0400
+
+
+def trash_backend(platform=None, which=None) -> str:
+    """PURE: the declared name of THIS host's trash backend (`""` — it has none).
+
+    A Windows host answers `win32` (`SHFileOperationW` with `FOF_ALLOWUNDO`), a POSIX one `gio` when
+    that binary is on the PATH. The pane asks BEFORE the click, because the confirmation has to say
+    what will really happen and a host without a backend keeps the permanent delete it always had.
+    `platform` / `which` are the injection points of the suite — the real call reads `sys.platform`
+    and `shutil.which()`.
+    """
+    plat = str(sys.platform if platform is None else platform)
+    if plat.startswith("win"):
+        return TRASH_BACKEND_WIN32
+    finder = shutil.which if which is None else which
+    try:
+        return TRASH_BACKEND_GIO if finder("gio") else ""
+    except (OSError, TypeError, ValueError):
+        return ""
+
+
+def _trash_win32(path: str) -> None:
+    """`SHFileOperationW(FO_DELETE)` with `FOF_ALLOWUNDO` — the Recycle Bin, no shell, no prompt."""
+    import ctypes
+    from ctypes import wintypes
+
+    class _SHFILEOPSTRUCTW(ctypes.Structure):
+        _fields_ = [("hwnd", wintypes.HWND), ("wFunc", wintypes.UINT),
+                    ("pFrom", wintypes.LPCWSTR), ("pTo", wintypes.LPCWSTR),
+                    ("fFlags", wintypes.WORD), ("fAnyOperationsAborted", wintypes.BOOL),
+                    ("hNameMappings", ctypes.c_void_p), ("lpszProgressTitle", wintypes.LPCWSTR)]
+
+    operation = _SHFILEOPSTRUCTW()
+    operation.wFunc = FO_DELETE
+    # The API takes a DOUBLE NUL terminated list; ctypes appends one NUL to the Python value.
+    operation.pFrom = os.path.abspath(path) + "\x00"
+    operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT
+    code = int(ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation)))
+    if code:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, "SHFileOperationW=%d" % code)
+    if operation.fAnyOperationsAborted:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, "aborted by the OS")
+
+
+def _trash_gio(path: str) -> None:
+    """`gio trash -- <path>` — the GLib trash, no shell and no option injection (`--` first)."""
+    finder = shutil.which("gio")
+    if not finder:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, "gio is not on the PATH")
+    try:
+        proc = subprocess.run([finder, "trash", "--", str(path)],
+                              capture_output=True, timeout=TRASH_GIO_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, "gio timed out") from None
+    except OSError as exc:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, str(exc or "")) from None
+    if int(proc.returncode or 0):
+        detail = (proc.stderr or b"").decode("utf-8", "replace").strip()
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, detail or ("gio exit %s" % proc.returncode))
+
+
+def trash_move(path: str, backend: str = "") -> str:
+    """Move ONE path to the OS trash; the backend that really ran it (`""` — there is none).
+
+    A FAILED move RAISES (`LOCAL_TRASH_FAILED`, the OS's own detail inside the payload): the
+    reversible delete must never fall back to a `os.remove()` the user did not ask for. `backend`
+    is the value the pane resolved before the click; an empty one is resolved here.
+    """
+    chosen = backend if backend in TRASH_BACKENDS else trash_backend()
+    if chosen == TRASH_BACKEND_WIN32:
+        _trash_win32(path)
+    elif chosen == TRASH_BACKEND_GIO:
+        _trash_gio(path)
+    else:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, "no trash backend")
+    return chosen
 
 
 def local_entries(directory: str):
@@ -360,6 +457,18 @@ class LocalFsWorker(QThread):
         return self._queue_task(_LocalTask(
             self._next_id, KIND_DELETE, target, path=target, is_dir=is_dir))
 
+    def queue_trash(self, path: str, backend: str = "") -> Optional[int]:
+        """Move ONE local file OR directory to the OS trash — the reversible delete (v1.13.6).
+
+        The caller resolved `trash_backend()` BEFORE the click (its question names what happens) and
+        hands the answer in, so the backend that RUNS is the backend the user was told about. The
+        task is a KIND like every other: `task_done` names the path, `task_error` carries the
+        `trash_failed` payload of a refused move — and nothing here ever falls back to a remove.
+        """
+        target = str(path or "")
+        return self._queue_task(_LocalTask(self._next_id, KIND_TRASH, target, path=target,
+                                           path2=str(backend or "")))
+
     def queue_upload(self, local_path: str, target_dir: str,
                      remote_name: str = "") -> Optional[int]:
         """Copy a local FILE or DIRECTORY into a local directory (the pane's Upload door).
@@ -523,6 +632,8 @@ class LocalFsWorker(QThread):
             self._do_rename(task)
         elif task.kind == KIND_DELETE:
             self._do_delete(task)
+        elif task.kind == KIND_TRASH:
+            self._do_trash(task)
         elif task.kind in (KIND_COPY, KIND_UPLOAD, KIND_DOWNLOAD):
             self._do_copy(task)
         elif task.kind == KIND_MOVE:
@@ -649,6 +760,10 @@ class LocalFsWorker(QThread):
             os.rmdir(task.path)   # ONE empty directory: the tree cleanup belongs to `_move_tree`
         else:
             os.remove(task.path)
+
+    def _do_trash(self, task: _LocalTask):
+        """The REVERSIBLE delete: the OS trash backend the CLICK resolved, never a quiet remove."""
+        trash_move(task.path, task.path2)
 
     # ── the transfer engine (LOCAL_PANE.md §5/§6) ────────────────────────
 

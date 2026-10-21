@@ -4,16 +4,17 @@
 `SftpPaneViewerMixin` owns the panel: the share of the `QSplitter`, the read task and its answer, the
 header (size, the truncation notice, the encoding, the heuristic language), the pane's ONE
 `QSyntaxHighlighter` with its lazy window, the word-wrap mode, the per-pane ENCODING choice and the
-panel's MOVE into the other pane (`present_viewer_in()` / `restore_viewer()`). v1.13 adds the ARCHIVE
-view: the SAME slot carries the flat listing of a `zip` / `tar.gz` / `.car`, a member previews
-through the shipped reader, and the spool it reads goes with the close. The reader's CEILING
-(`ui_viewer_max_bytes`) is resolved ONCE by the pane and travels in the task (`AGENTS.md` §4.8).
+panel's MOVE into the other pane (`present_viewer_in()` / `restore_viewer()`). The SAME slot carries
+the ARCHIVE listing and the SEARCH results: ONE panel at a time, and `panel_in_slot()` is the ONE
+answer of what this pane shows. The reader's CEILING (`ui_viewer_max_bytes`) is resolved ONCE by the
+pane and travels in the task (`AGENTS.md` §4.8).
 
-Contract — `SFTP_PANES.md` §3b, `ARCHIVES.md`; mechanism — `DOCUMENTATION.md` §38, §64, §76.
+Contract — `SFTP_PANES.md` §3b, `ARCHIVES.md`; mechanism — `DOCUMENTATION.md` §38, §64, §76, §14f.
 """
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QTreeWidget,
+from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
+                               QLineEdit, QPlainTextEdit, QPushButton, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
 try:
@@ -32,6 +33,11 @@ try:  # v1.13: the pure archive reader behind the `Open archive` row
 except ImportError:
     import archive_view as archive  # type: ignore
 
+try:  # v1.13.6: the pure search engine behind the `Find text…` row
+    from . import sftp_search as search
+except ImportError:
+    import sftp_search as search  # type: ignore
+
 try:  # v1.3.1: the shipped read policy — the FLOOR of the reader's ceiling
     from .sftp_worker import MAX_READ_BYTES
 except ImportError:
@@ -39,10 +45,14 @@ except ImportError:
 
 try:  # v1.9.3: the DECLARED encoding list, its normaliser and the value of "the shipped rule"
     from .sftp_pane_helpers import (VIEWER_ENCODING_DEFAULT, VIEWER_ENCODINGS,
-                                    normalize_viewer_encoding)
+                                    load_remembered_encodings, normalize_viewer_encoding,
+                                    remember_encoding, remembered_encoding_for,
+                                    resolve_viewer_encoding, save_remembered_encodings)
 except ImportError:
     from sftp_pane_helpers import (VIEWER_ENCODING_DEFAULT, VIEWER_ENCODINGS,  # type: ignore
-                                   normalize_viewer_encoding)
+                                   load_remembered_encodings, normalize_viewer_encoding,
+                                   remember_encoding, remembered_encoding_for,
+                                   resolve_viewer_encoding, save_remembered_encodings)
 
 try:  # AGENTS.md §4.1: the ONE seam for a facade global — a mixin never imports the facade module
     from ..ui.mixin_support import host_attr
@@ -87,6 +97,17 @@ def viewer_freeze_seconds(cap) -> float:
 ARCHIVE_COLUMNS = 3
 ARCHIVE_COLUMN_WIDTH = 320
 
+#: v1.13.6: the RESULTS panel of a search — TWO hidden-header columns, the `path:line` pair and the
+#: matched text. ONE row per hit, capped by the engine's report (`sftp_search.MATCHES_PER_FILE`).
+SEARCH_COLUMNS = 2
+SEARCH_COLUMN_WIDTH = 380
+SEARCH_ROW_TEXT_MAX = 160
+#: The ONE sentence of a bound that stopped the walk — one i18n key per `sftp_search.CUT_*` code.
+SEARCH_CUT_KEYS = {search.CUT_ENTRIES: "sftp.search.cut_entries",
+                   search.CUT_DEPTH: "sftp.search.cut_depth",
+                   search.CUT_BYTES: "sftp.search.cut_bytes",
+                   search.CUT_MATCHES: "sftp.search.cut_matches"}
+
 
 class _ArchiveTree(QTreeWidget):
     """The FLAT listing of ONE archive: `Esc` closes the view, `Enter` previews the current member.
@@ -104,6 +125,61 @@ class _ArchiveTree(QTreeWidget):
         pane = self.pane
         if pane is None or not pane.archive_key(event):
             super().keyPressEvent(event)
+
+
+class _SearchTree(QTreeWidget):
+    """The FLAT result list of ONE search: `Esc` closes the panel, `Enter` opens the current file.
+
+    The twin of `_ArchiveTree` and for the same reason: the two keys are the view's own, the selection
+    walk stays Qt's, and the list takes no drop (it is a READING surface).
+    """
+
+    def __init__(self, pane, parent=None):
+        super().__init__(parent)
+        self.pane = pane
+
+    def keyPressEvent(self, event):  # noqa: N802 — Qt's own spelling
+        pane = self.pane
+        if pane is None or not pane.search_key(event):
+            super().keyPressEvent(event)
+
+
+class _FindTextDialog(QDialog):
+    """The query dialog of `Find text…` — the needle, the subfolder scope and the case switch.
+
+    A plain `QDialog` with three widgets, so a suite builds it and reads `query()` without an event
+    loop; the pane asks it through `_ask_search_query()` (the ONE seam a test replaces). Qt's own
+    `QDialogButtonBox` carries the OK / Cancel labels, so the dialog costs no key of its own.
+    """
+
+    def __init__(self, parent=None, query=None):
+        super().__init__(parent)
+        record = dict(query or {})
+        self.setWindowTitle(_t("sftp.search.title"))
+        box = QVBoxLayout(self)
+        box.setSpacing(6)
+        box.addWidget(QLabel(_t("sftp.search.needle"), self))
+        self.needle_edit = QLineEdit(str(record.get("needle") or ""), self)
+        box.addWidget(self.needle_edit)
+        self.subfolders_box = QCheckBox(_t("sftp.search.subfolders"), self)
+        self.subfolders_box.setChecked(search.query_scope(record) == search.SEARCH_SCOPE_SUBTREE)
+        box.addWidget(self.subfolders_box)
+        self.case_box = QCheckBox(_t("sftp.search.case"), self)
+        self.case_box.setChecked(bool(record.get("case_sensitive")))
+        box.addWidget(self.case_box)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                   | QDialogButtonBox.StandardButton.Cancel, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        box.addWidget(buttons)
+        self.needle_edit.setFocus()
+
+    def query(self):
+        """The query record of what the dialog holds (None — the needle is blank)."""
+        return search.normalize_query(
+            self.needle_edit.text(), case_sensitive=self.case_box.isChecked(),
+            scope=(search.SEARCH_SCOPE_SUBTREE if self.subfolders_box.isChecked()
+                   else search.SEARCH_SCOPE_HERE))
 
 
 class SftpPaneViewerMixin:
@@ -251,6 +327,10 @@ class SftpPaneViewerMixin:
         to the task and the size the listing reports — so the truncation fact is resolved HERE and
         travels into `decode_text()` (`N46`: a byte cut is not a different encoding).
         """
+        searched = self._search_reads.pop(task_id, None)
+        if searched is not None:
+            self._on_search_read(searched[0], searched[1], data)  # v1.13.6: a file of the walk
+            return
         path = self._read_tasks.pop(task_id, remote_path)
         if task_id != self._last_read:
             return  # an outdated answer (another file was opened since) — dropped
@@ -261,9 +341,19 @@ class SftpPaneViewerMixin:
             self._mark_row(path)
         truncated = host_attr(self, "read_was_truncated")(
             len(data), self.viewer_cap(), self._known_size(path))
-        text, encoding = host_attr(self, "decode_text")(bytes(data), truncated=truncated,
-                                                        encoding=self.viewer_encoding_choice)
+        text, encoding = self._decoded_text(bytes(data), truncated=truncated,
+                                          encoding=self.viewer_encoding_choice)
         self._show_viewer(path, len(data), text, encoding)
+
+    def _decoded_text(self, data, truncated: bool = False, encoding: str = "auto"):
+        """The ONE decode call site of the pane — the shipped rule PLUS the cut fact.
+
+        Both readers go through it: the preview (whose `truncated` is resolved from the cap and the
+        listing's size, `N46`) and the search walk (a file cut by the run's byte budget is the same
+        fact). ONE call site is what keeps "a byte cut is not a different encoding" true for both.
+        """
+        return host_attr(self, "decode_text")(bytes(data or b""), truncated=truncated,
+                                              encoding=encoding)
 
     def _show_viewer(self, path: str, size: int, text: str, encoding: str = "utf-8", total=None):
         """Fill the panel with the file and show it (an unshown panel gets sizes).
@@ -332,12 +422,16 @@ class SftpPaneViewerMixin:
     # ── v1.7rc3: the preview moved to the other pane (the mc F3 of the two-pane view) ──
 
     def panel_in_slot(self):
-        """The panel this pane SHOWS — the ARCHIVE listing while one is open, the reader otherwise.
+        """The panel this pane SHOWS — the SEARCH results, the ARCHIVE listing, or the reader.
 
-        ONE slot, ONE panel: the two are moved between the panes by the same two methods and the
+        ONE slot, ONE panel: the three are moved between the panes by the same two methods and the
         container asks "is a panel open" once (`viewer_host()`), which is what keeps the one-panel
-        rule true for both (`ARCHIVES.md` §5).
+        rule true for all of them (`ARCHIVES.md` §5, `AGENTS.md` §4.3.6).
         """
+        if getattr(self, "_search_open", False):
+            panel = getattr(self, "search_panel", None)
+            if panel is not None:
+                return panel
         if getattr(self, "_archive_open", False):
             panel = getattr(self, "archive_panel", None)
             if panel is not None:
@@ -390,16 +484,17 @@ class SftpPaneViewerMixin:
         splitter.setSizes(sizes)
 
     def viewer_host(self):
-        """The pane whose splitter currently carries a panel (None — no preview is open).
+        """The pane whose splitter currently carries a panel (None — no panel is open).
 
         ONE answer for the whole container: the pane that BORROWED the panel registers itself in
         `_viewer_host`, so "close the preview and restore the listing" has a single subject and
         the pane that opened it never has to guess. The state is the DECLARED `_viewer_open` /
-        `_archive_open` flag, never `QWidget.isVisible()` — a pane that is not on screen yet (a
-        never-shown dock tab, the offscreen test platform) reports its widgets as invisible while
-        its preview is really open.
+        `_archive_open` / `_search_open` flag, never `QWidget.isVisible()` — a pane that is not on
+        screen yet (a never-shown dock tab, the offscreen test platform) reports its widgets as
+        invisible while its panel is really open.
         """
-        if not (getattr(self, "_viewer_open", False) or getattr(self, "_archive_open", False)):
+        if not (getattr(self, "_viewer_open", False) or getattr(self, "_archive_open", False)
+                or getattr(self, "_search_open", False)):
             return None
         if self._viewer_host is not None:
             return self._viewer_host
@@ -981,7 +1076,7 @@ class SftpPaneViewerMixin:
             item = QAction(_t("sftp.viewer.encoding_auto") if codec == VIEWER_ENCODING_DEFAULT
                            else codec, submenu)
             item.setCheckable(True)
-            item.setChecked(codec == self._viewer_encoding_choice)
+            item.setChecked(codec == self.viewer_encoding_choice)
             item.triggered.connect(lambda _checked=False, code=codec:
                                    self._on_encoding_chosen(code))
             submenu.addAction(item)
@@ -997,12 +1092,14 @@ class SftpPaneViewerMixin:
         (`ui_viewer_encoding`), so the door is told WHICH pane asked
         (`apply_viewer_encoding(codec, pane=self)`): the value is written as the default for the
         panes to come and the sibling's own choice is left alone. A container that answers nothing
-        keeps the shipped writer.
+        keeps the shipped writer. v1.13.6: the SESSION also keeps this pane's choice
+        (`ui_sftp_encodings`), so re-opening the node returns both panes as they were left.
         """
         apply_one = getattr(self._container, "apply_viewer_encoding", None)
         if callable(apply_one):
             try:
                 apply_one(codec, pane=self)
+                self._remember_encoding(codec)
                 return
             except RuntimeError:
                 return   # Qt teardown — nothing left to re-read
@@ -1020,8 +1117,9 @@ class SftpPaneViewerMixin:
         Never raises.
         """
         resolved = normalize_viewer_encoding(codec)
-        changed = resolved != self._viewer_encoding_choice
+        changed = resolved != self.viewer_encoding_choice
         self._viewer_encoding_choice = resolved
+        self._viewer_encoding_chosen = resolved   # a REAL choice — the session memory keeps it
         for name, act in (getattr(self, "_encoding_actions", None) or {}).items():
             try:
                 act.setChecked(name == resolved)
@@ -1035,12 +1133,19 @@ class SftpPaneViewerMixin:
 
     @property
     def viewer_encoding_choice(self) -> str:
-        """The encoding this reader ASKS for — ITS OWN choice (v1.12.3).
+        """The encoding this reader ASKS for — its OWN choice, else the SESSION's memory, else the
+        remembered global default (`ui_viewer_encoding`); `auto` is the shipped utf-8 → latin-1 rule.
 
-        It starts as the container's remembered default (`ui_viewer_encoding`) and moves only when
-        THIS pane's menu asks for another codec; `auto` is the shipped utf-8 → latin-1 rule.
+        The value is resolved on the FIRST read (`v1.13.6`): a pane is built before its container
+        knows WHICH session it is, so the memory cannot be read in `__init__` — the `_restore_dir`
+        rule of the per-server directory memory. A resolved value is cached; an explicit choice
+        overwrites it for good (`set_viewer_encoding()`).
         """
-        return str(getattr(self, "_viewer_encoding_choice", "") or VIEWER_ENCODING_DEFAULT)
+        choice = getattr(self, "_viewer_encoding_choice", None)
+        if not choice:
+            choice = self._remembered_encoding() or resolve_viewer_encoding()
+            self._viewer_encoding_choice = choice
+        return str(choice or VIEWER_ENCODING_DEFAULT)
 
     def _on_viewer_menu(self, pos):
         """Show the reader's menu at the click (the event is the only caller of the seam)."""
@@ -1195,7 +1300,12 @@ class SftpPaneViewerMixin:
         v1.13: an open ARCHIVE view is the panel this method closes — `ARCHIVES.md` §5 makes the
         listing and a member's preview ONE session, so the archive panel goes home, the spool it
         read is dropped and only then does the reader's own content leave.
+        v1.13.6: a SEARCH results panel is the same slot and closes the same way — its walk is
+        dropped with it (a late answer finds no task of its own).
         """
+        if getattr(self, "_search_open", False):
+            self.restore_viewer()   # the RESULTS panel is the one the other pane may carry
+            self._reset_search()
         if getattr(self, "_archive_open", False):
             self.restore_viewer()   # the ARCHIVE panel is the one the other pane carries
             self._reset_archive()
@@ -1225,3 +1335,448 @@ class SftpPaneViewerMixin:
             except RuntimeError:
                 pass
             self._sync_secondary_ui()
+
+    # ── v1.13.6: FIND IT — the content search of THIS pane (`AGENTS.md` §4.3.6) ──────
+    # The walk is the SHIPPED task family (`queue_list()` / `queue_read()`), ONE task at a time,
+    # because the provider's queue is shared with the pane's own navigation; the query, the matcher
+    # and every bound live in the PURE `modules/sftp_search.py`. A stop drops the task maps, so an
+    # answer that lands afterwards belongs to nobody.
+
+    @property
+    def _search(self):
+        """The walk in flight — its query, its `SearchReport` and its two queues (None — no run)."""
+        return self.__dict__.get("_search_state")
+
+    @_search.setter
+    def _search(self, value):
+        self.__dict__["_search_state"] = value
+
+    @property
+    def _search_lists(self) -> dict:
+        """The directories this run listed: task id → `(directory, level)` (created with the first)."""
+        return self.__dict__.setdefault("_search_list_tasks", {})
+
+    @property
+    def _search_reads(self) -> dict:
+        """The candidate files this run is reading: task id → path (created with the first)."""
+        return self.__dict__.setdefault("_search_read_tasks", {})
+
+    @property
+    def search_open(self) -> bool:
+        """Are the RESULTS the panel this pane shows (the topical seam)?"""
+        return bool(getattr(self, "_search_open", False))
+
+    @property
+    def search_report(self) -> dict:
+        """The counters of the open run as the header shows them ({} — nothing runs)."""
+        state = self._search
+        return state["report"].as_dict() if state else {}
+
+    def search_rows(self) -> list:
+        """The rows the RESULTS panel carries, as `(path, line_no, text)` — the test seam."""
+        rows = []
+        tree = getattr(self, "search_tree", None)
+        if tree is None:
+            return rows
+        try:
+            for index in range(tree.topLevelItemCount()):
+                item = tree.topLevelItem(index)
+                label = item.text(0)
+                path = str(item.data(0, self.PATH_ROLE) or "")
+                rows.append((path, label.split(":")[-1], item.text(1)))
+        except (RuntimeError, AttributeError):
+            return []
+        return rows
+
+    def _op_find_text(self, item=None):
+        """The `Find text…` row: ask the query, then walk from the directory on the screen.
+
+        The search is THIS pane's — its provider (the session's worker, the local one or the
+        elevated one), its dialect and its own report — so two panes of two servers never share a
+        run. `item` is accepted for the row menu's shape and names no target: the ROOT is always
+        the directory the listing shows.
+        """
+        if self._refuse_without_provider():
+            return
+        query = self._ask_search_query()
+        if query is None:
+            return   # the dialog was cancelled — nothing walks
+        self._start_search(query)
+
+    def _ask_search_query(self):
+        """The query dialog — the ONE seam a suite replaces (the pane never runs `exec()` there)."""
+        dialog = _FindTextDialog(self, self._last_search_query())
+        try:
+            accepted = int(dialog.exec()) == int(QDialog.DialogCode.Accepted)
+        except (RuntimeError, AttributeError, TypeError):
+            return None
+        return dialog.query() if accepted else None
+
+    def _last_search_query(self) -> dict:
+        """The last query of THIS pane (the dialog's initial state; {} — never searched)."""
+        return dict(getattr(self, "_search_query", None) or {})
+
+    def _start_search(self, query, limits: dict = None) -> bool:
+        """Open the RESULTS panel and queue the FIRST step of the walk; False — nothing ran.
+
+        The panel takes the reader's slot (`panel_in_slot()`), so a preview already open is closed
+        through the container's ONE door first — ONE panel at a time. A local pane needs no special
+        case: its provider answers `queue_list()` over `local_entries()` and `queue_read()` over the
+        shipped read policy, exactly like a server does. `limits` overrides a declared bound of the
+        run (`modules/sftp_search.py`) — the seam a suite drives a cut through.
+        """
+        record = search.normalize_query((query or {}).get("needle"),
+                                        (query or {}).get("case_sensitive"),
+                                        (query or {}).get("scope"))
+        if record is None or self.provider is None or not self._current_dir:
+            return False
+        if not self._container.preview_allowed(self):
+            return False   # ONE panel at a time — the shipped sentence names the busy pane
+        self._search_query = record
+        self._container.close_preview()
+        self._search = {"query": record,
+                        "report": search.SearchReport(record, **dict(limits or {})),
+                        "dirs": [(self._current_dir, 0)], "files": [], "done": False}
+        self._search_lists.clear()
+        self._search_reads.clear()
+        panel = self._ensure_search_panel()
+        self.search_tree.clear()
+        self._search_open = True
+        self.search_label.setToolTip(self._current_dir)
+        self._sync_search_header()
+        self._container.present_viewer(self)
+        panel.show()
+        self._layout_viewer_share(panel)
+        self._search_advance()
+        return True
+
+    def _search_advance(self):
+        """Walk ONE step — list the next directory, read the next file, or finish the run.
+
+        ONE task at a time is the declared shape: the provider's queue is shared with the pane's
+        navigation, so a search that queued thousands of reads would make its own listing crawl.
+        A bound met here (or by an answer) ENDS the walk at the next step with the counters already
+        reached — `SearchReport.cut` is the ONE predicate of that decision.
+        """
+        state = self._search
+        if state is None or state.get("done"):
+            return
+        provider = self.provider
+        if provider is None:
+            self._finish_search()
+            return
+        report = state["report"]
+        if report.cut:
+            self._finish_search()      # a bound is met — nothing else is queued
+            return
+        if state["dirs"]:
+            directory, level = state["dirs"][0]
+            if not report.allow_depth(level):
+                self._finish_search()  # a deeper level is deeper still — the walk is over
+                return
+            state["dirs"].pop(0)
+            tid = provider.queue_list(directory)
+            if tid is None:
+                self._finish_search()
+                return
+            self._search_lists[int(tid)] = (directory, level)
+            return
+        if state["files"]:
+            path, size = state["files"][0]
+            cap = report.allow_read(self.viewer_cap())
+            if cap <= 0:
+                self._finish_search()  # the byte budget is spent — no read could run
+                return
+            state["files"].pop(0)
+            tid = provider.queue_read(path, int(size or 0), max_bytes=cap)
+            if tid is None:
+                self._finish_search()
+                return
+            self._search_reads[int(tid)] = (path, int(size or 0))
+            return
+        self._finish_search()
+
+    def _on_search_list(self, directory, level: int, entries):
+        """A directory of the walk answered: queue its candidate files and its subfolders."""
+        state = self._search
+        if state is None:
+            return
+        report = state["report"]
+        subtree = search.query_scope(state["query"]) == search.SEARCH_SCOPE_SUBTREE
+        paths = self.paths
+        for entry in list(entries or []):
+            if not report.allow_entries(1):
+                break
+            report.note_entries(1)
+            name = str(entry.get("name") or "")
+            if not name:
+                continue
+            full = paths.join(directory, name)
+            if entry.get("is_dir"):
+                if subtree:
+                    state["dirs"].append((full, int(level) + 1))
+                continue
+            state["files"].append((full, int(entry.get("size") or 0)))
+        self._sync_search_header()
+        self._search_advance()
+
+    def _on_search_read(self, path: str, size, data):
+        """A candidate answered: count it, match it, append the rows the report CARRIED.
+
+        The bytes are decoded with the pane's OWN encoding choice (the shipped decoder), so a
+        CP1251 file is searched as CP1251 text and the rows the panel shows are the rows a preview
+        would show.
+        """
+        state = self._search
+        if state is None:
+            return
+        report = state["report"]
+        query = state["query"]
+        raw = bytes(data or b"")
+        text, _encoding = self._decoded_text(raw, encoding=self.viewer_encoding_choice)
+        report.note_read(len(raw))
+        found, _cut = search.match_lines(text, query["needle"], bool(query["case_sensitive"]))
+        carried = report.note_matches(found)
+        rows = [(path, int(size or 0), number, line) for number, line in found[:carried]]
+        if rows:
+            self._append_search_rows(rows)
+        self._sync_search_header()
+        self._search_advance()
+
+    def _search_answer_error(self, task_id, kind: str, message: str = "") -> bool:
+        """Is this FAILED task one step of the walk? — True: it is counted and the walk goes on.
+
+        A refused READ (a binary file, one this account cannot read) is a file the search looked at:
+        it counts as scanned and the folder keeps walking. A refused LISTING costs that folder only.
+        """
+        state = self._search
+        if state is None:
+            return False
+        try:
+            task_id = int(task_id)
+        except (TypeError, ValueError):
+            return False
+        listed = self._search_lists.pop(task_id, None)
+        path = self._search_reads.pop(task_id, None)
+        if listed is None and path is None:
+            return False
+        if path is not None:
+            state["report"].note_read(0)   # opened and refused — still a file it looked at
+            self._sync_search_header()
+        self._search_advance()
+        return True
+
+    def _search_answer_cancelled(self, task_id) -> bool:
+        """A step of the walk was CANCELLED (the pane's own Cancel): the run stops with it."""
+        state = self._search
+        if state is None:
+            return False
+        try:
+            task_id = int(task_id)
+        except (TypeError, ValueError):
+            return False
+        listed = self._search_lists.pop(task_id, None)
+        path = self._search_reads.pop(task_id, None)
+        if listed is None and path is None:
+            return False
+        self._finish_search()
+        return True
+
+    def _finish_search(self):
+        """The walk is over: the final counters and the ONE sentence of the outcome (once)."""
+        state = self._search
+        if state is None or state.get("done"):
+            return
+        state["done"] = True
+        report = state["report"]
+        self._sync_search_header()
+        if report.cut:
+            self.message.emit(self._search_cut_text(report))
+        elif not report.matches:
+            self.message.emit(_t("sftp.search.none", needle=search.query_needle(state["query"])))
+
+    def _search_cut_text(self, report) -> str:
+        """ONE sentence naming the bound that stopped the run (the `sftp.archive.list_cut` rule)."""
+        reason = report.cut_reason
+        limit = {search.CUT_BYTES: host_attr(self, "format_size")(report.bytes_limit),
+                 search.CUT_MATCHES: report.matches_limit,
+                 search.CUT_DEPTH: report.depth_limit}.get(reason, report.entries_limit)
+        return _t(SEARCH_CUT_KEYS.get(reason, "sftp.search.cut_entries"), limit=limit)
+
+    def _sync_search_header(self):
+        """The panel's header: the needle and the counters the run really reached."""
+        state = self._search
+        if state is None:
+            return
+        report = state["report"]
+        try:
+            self.search_label.setText(_t("sftp.search.header",
+                                         needle=search.query_needle(state["query"]),
+                                         matches=report.matches, files=report.files_matched,
+                                         scanned=report.files_scanned))
+        except (RuntimeError, AttributeError):
+            pass   # Qt teardown — the label is already gone
+
+    def _ensure_search_panel(self):
+        """Build the RESULTS panel ONCE per pane — lazily, like every other cost of this view.
+
+        It mirrors the archive listing's shape (a header line with the ×, then the rows) because it
+        takes the SAME slot of the splitter; a pane that never searches builds none of it.
+        """
+        panel = getattr(self, "search_panel", None)
+        if panel is not None:
+            return panel
+        panel = QWidget()
+        panel.setMinimumWidth(self.viewer.minimumWidth())
+        box = QVBoxLayout(panel)
+        box.setContentsMargins(4, 0, 0, 0)
+        box.setSpacing(2)
+        head = QHBoxLayout()
+        head.setSpacing(6)
+        self.search_label = QLabel("")
+        host_attr(self, "_apply_status_style")(self.search_label, "status.sftp_row")
+        self.search_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.search_label.setWordWrap(False)
+        self.search_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.btn_search_close = QPushButton("\u00d7")   # × — the panel header's close cross
+        self.btn_search_close.setFixedWidth(24)
+        self.btn_search_close.setToolTip(_t("sftp.viewer.close_tooltip"))
+        self.btn_search_close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        head.addWidget(self.search_label, 1)
+        head.addWidget(self.btn_search_close, 0)
+        box.addLayout(head)
+        self.search_tree = _SearchTree(self)
+        self.search_tree.setColumnCount(SEARCH_COLUMNS)
+        self.search_tree.setHeaderHidden(True)   # a row says what it is: `path:line` and the text
+        self.search_tree.setRootIsDecorated(False)
+        self.search_tree.setUniformRowHeights(True)
+        self.search_tree.setColumnWidth(0, SEARCH_COLUMN_WIDTH)
+        self.search_tree.itemDoubleClicked.connect(self._on_search_item)
+        box.addWidget(self.search_tree, 1)
+        panel.hide()
+        self.search_panel = panel
+        self.btn_search_close.clicked.connect(self._on_search_close)
+        self.splitter.addWidget(panel)
+        try:
+            self.splitter.setCollapsible(self.splitter.indexOf(panel), True)
+        except (RuntimeError, TypeError):
+            pass   # Qt teardown — the splitter is already gone
+        return panel
+
+    def _append_search_rows(self, rows):
+        """Append the rows the report carried: `path:line` and the matched text, one per hit."""
+        tree = getattr(self, "search_tree", None)
+        if tree is None:
+            return
+        for path, size, number, line in rows:
+            item = QTreeWidgetItem([f"{path}:{number}", line[:SEARCH_ROW_TEXT_MAX]])
+            item.setData(0, self.PATH_ROLE, path)
+            item.setData(0, self.SIZE_ROLE, int(size or 0))
+            item.setToolTip(0, f"{path}:{number}")
+            item.setToolTip(1, line)
+            tree.addTopLevelItem(item)
+
+    def search_key(self, event) -> bool:
+        """`Esc` leaves the results, `Enter` opens the current file; True — the key is consumed."""
+        try:
+            key = int(event.key())
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if key == int(Qt.Key.Key_Escape):
+            return bool(self._container.close_preview())
+        if key in (int(Qt.Key.Key_Return), int(Qt.Key.Key_Enter)):
+            self.open_current_search_row()
+            return True
+        return False
+
+    def _on_search_item(self, item, _column=0):
+        """A double click on a result row — the ONE gesture of the list (`Enter` is its twin)."""
+        self._open_search_row(item)
+
+    def open_current_search_row(self):
+        """`Enter` on the results (the double click's twin)."""
+        try:
+            item = self.search_tree.currentItem()
+        except (RuntimeError, AttributeError):
+            return
+        if item is None:
+            self.message.emit(_t("sftp.cmd.no_selection"))
+            return
+        self._open_search_row(item)
+
+    def _open_search_row(self, item):
+        """Open the FILE of one result through the SHIPPED preview (the panel gives the slot up).
+
+        A jump to the matched LINE is deliberately NOT this version: the row says where the hit is
+        and the reader shows the file from its first line.
+        """
+        path = str(item.data(0, self.PATH_ROLE) or "") if item is not None else ""
+        if not path:
+            return
+        size = int(item.data(0, self.SIZE_ROLE) or 0)
+        if self.provider is None:
+            self.message.emit(_t("sftp.waiting_connection"))
+            return
+        if not self._container.preview_allowed(self):
+            return
+        self._container.close_preview()   # the RESULTS leave the slot, the reader takes it
+        self._queue_viewer_read(path, size)
+
+    def _on_search_close(self):
+        """The panel's × — the SHIPPED close door (the container closes whichever is open)."""
+        try:
+            self._container.close_preview()
+        except (RuntimeError, AttributeError):
+            self._reset_search()
+
+    def _reset_search(self):
+        """Drop the run — its task maps go FIRST, so an answer in flight belongs to nobody."""
+        self._search = None
+        self._search_open = False
+        self._search_lists.clear()
+        self._search_reads.clear()
+        panel = getattr(self, "search_panel", None)
+        if panel is None:
+            return
+        try:
+            self.search_tree.clear()
+            self.search_label.clear()
+            self.search_label.setToolTip("")
+            panel.hide()
+        except (RuntimeError, AttributeError):
+            pass   # Qt teardown — the panel is already gone
+
+    # ── v1.13.6: the per-SESSION encoding memory (`ui_sftp_encodings`) ───────
+
+    def _pane_index(self) -> int:
+        """This pane's INDEX in its container (0/1 — -1 when the container cannot say).
+
+        The memory is filed per pane POSITION, so the first pane's CP1251 and the second one's
+        Latin-1 come back as they were left.
+        """
+        try:
+            return list(self._container.panes).index(self)
+        except (AttributeError, RuntimeError, ValueError):
+            return -1
+
+    def _remembered_encoding(self) -> str:
+        """The codec the SESSION remembers for this pane (`""` — it never chose / no identity)."""
+        key = self.session_key()
+        index = self._pane_index()
+        if not key or index < 0:
+            return ""
+        return remembered_encoding_for(load_remembered_encodings(), key, index)
+
+    def _remember_encoding(self, codec) -> bool:
+        """File THIS pane's choice under the session — a merge-write of `ui_sftp_encodings`."""
+        key = self.session_key()
+        index = self._pane_index()
+        if not key or index < 0:
+            return False
+        mapping = remember_encoding(load_remembered_encodings(), key, index, codec)
+        return save_remembered_encodings(mapping)
+
+    @property
+    def remembered_encoding_choice(self) -> str:
+        """The codec THIS pane's user really CHOSE (`""` — it still follows the global default)."""
+        return str(getattr(self, "_viewer_encoding_chosen", "") or "")

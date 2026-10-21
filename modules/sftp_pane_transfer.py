@@ -72,8 +72,14 @@ class SftpPaneTransferMixin:
 
         v1.13: the ARCHIVE view's spool leg is asked FIRST (`_archive_answer()`), so a download the
         `Open archive` row queued reports itself and never falls through to a listing branch.
+
+        v1.13.6: a step of a SEARCH walk is asked beside it (`_search_answer_error()`) — a refused
+        file counts as one the search looked at and the walk goes on; its sentence is not the
+        preview's.
         """
         if self._archive_answer("error", task_id, message):
+            return
+        if self._search_answer_error(task_id, kind, message):
             return
         if kind == local_fs.KIND_LIST_PARTIAL:
             self.message.emit(host_attr(self, "local_error_text")(message))
@@ -862,6 +868,8 @@ class SftpPaneTransferMixin:
     def _on_task_cancelled(self, task_id: int, _kind: str):
         if self._archive_answer("cancelled", task_id, ""):
             return   # v1.13: a cancelled ARCHIVE spool leg drops the copy it was writing
+        if self._search_answer_cancelled(task_id):
+            return   # v1.13.6: a step of a search walk — the run stops with it
         kind = self._op_tasks.pop(task_id, None)
         # A cancelled pre-flight listing: its batch will never be queued (the
         # bookkeeping must not leak into the next transport).
@@ -875,6 +883,9 @@ class SftpPaneTransferMixin:
     def _on_task_finished(self, task_id: int):
         # v1.3.1: a read task that ended without an answer (cancelled) leaves no trace.
         self._read_tasks.pop(task_id, None)
+        # v1.13.6: a step of a search walk that ended any other way leaves no trace either.
+        self._search_lists.pop(task_id, None)
+        self._search_reads.pop(task_id, None)
         # v1.6.3: the same for the address bar's tasks and the completer's listings.
         self._normalize_tasks.pop(task_id, None)
         self._completer_lists.pop(task_id, None)

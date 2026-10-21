@@ -55,10 +55,11 @@ KIND_DELETE = "delete"
 KIND_NORMALIZE = "normalize"   # v1.6.3: the address bar's path resolution (the server's own)
 KIND_COPY = "copy"          # v1.7rc2: the remote→remote copy (a file, or a whole tree)
 KIND_MOVE = "move"          # v1.7rc2: the cross-directory move (a file, or a whole tree)
+KIND_TRASH = "trash"        # v1.13.6: the REVERSIBLE delete — the OS trash, a local provider's task
 
 # The operation kinds (no bytes, no progress bar): the page's status line stays
 # silent about them — the SFTP tab reports their outcome itself (its message signal).
-OP_KINDS = (KIND_MKDIR, KIND_RENAME, KIND_DELETE, KIND_COPY, KIND_MOVE)
+OP_KINDS = (KIND_MKDIR, KIND_RENAME, KIND_DELETE, KIND_COPY, KIND_MOVE, KIND_TRASH)
 
 # ── v1.5.2 (ROADMAP task 2): the logged family of the activity history ────────
 # The TRANSFER and FILE-MANAGER kinds are logged; `list` (navigation) and `read` (the

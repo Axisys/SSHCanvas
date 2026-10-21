@@ -200,6 +200,12 @@ class SftpPaneListingMixin:
             pass  # Qt teardown — the model is gone with the pane
 
     def _on_list_ready(self, task_id: int, remote_dir: str, entries: list):
+        # v1.13.6: a directory of the SEARCH walk — it feeds the run's queues and is NEVER rendered
+        # (the walk visits folders that are not on the screen). Asked FIRST, like the two below.
+        searched = self._search_lists.pop(task_id, None)
+        if searched is not None:
+            self._on_search_list(searched[0], searched[1], entries)
+            return
         # v1.6.3: the completer's listing — it feeds the completion model and is NEVER
         # rendered (that directory is not on the screen); it is checked FIRST, because the
         # answer may belong to the directory the user is typing while the tree shows another.

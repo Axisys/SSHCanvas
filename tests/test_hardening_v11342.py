@@ -387,7 +387,7 @@ for _key in ("diff.error_read", "sftp.viewer.too_large", "sftp.send.failed"):
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§7 the i18n pin is UNCHANGED — this patch adds no translation key",
-      EXPECTED_I18N_KEYS == 1162 + 4, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1162 + 4 + 13, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.4"),
       EXPECTED_APP_VERSION)
 check("§7 the pin names this patch's line or a later release and the format accepts it",

@@ -27,7 +27,7 @@ app = QApplication(sys.argv)
 
 import i18n
 import modules.sftp_tab as STAB
-from modules.sftp_worker import (SftpWorker, KIND_MKDIR, KIND_RENAME, KIND_DELETE,
+from modules.sftp_worker import (SftpWorker, KIND_MKDIR, KIND_RENAME, KIND_DELETE, KIND_TRASH,
                                  OP_KINDS, PART_SUFFIX)
 
 from _fakes import FakeSftpFS, FakeSftpClient, EventLog, wire_worker
@@ -227,9 +227,10 @@ check("mkdir created the directory on the 'server'", "/home/fresh" in fs1.dirs,
 check("mkdir's task_done detail is the new path",
       log1.of_kind("done", tid_mk)[0][2] == "/home/fresh",
       f"got={log1.of_kind('done', tid_mk)}")
-check("the operation kinds are the documented ones (v1.7rc2 added the copy/move family)",
-      OP_KINDS == (KIND_MKDIR, KIND_RENAME, KIND_DELETE, "copy", "move")
-      == ("mkdir", "rename", "delete", "copy", "move"),
+check("the operation kinds are the documented ones (v1.7rc2 added the copy/move family, v1.13.6 the "
+      "reversible delete)",
+      OP_KINDS == (KIND_MKDIR, KIND_RENAME, KIND_DELETE, "copy", "move", KIND_TRASH)
+      == ("mkdir", "rename", "delete", "copy", "move", "trash"),
       f"got={OP_KINDS}")
 
 tid_ls = worker1.queue_list("/home")
@@ -483,30 +484,33 @@ menu = tab5._build_context_menu(item_by_name(tab5, "a.txt"))
 actions = [a for a in menu.actions() if not a.isSeparator()]
 labels = [a.text() for a in actions]
 expected = [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"),
-            i18n.t("sftp.op.delete"), i18n.t("sftp.op.download"), i18n.t("sftp.op.upload"),
-            i18n.t("sftp.op.copy_path"),
+            i18n.t("sftp.op.delete"), i18n.t("sftp.search.row"), i18n.t("sftp.op.download"),
+            i18n.t("sftp.op.upload"), i18n.t("sftp.op.copy_path"),
             i18n.t("sftp.archive.open"),
             i18n.t("sftp.send.menu"), i18n.t("diff.send.menu"), i18n.t("sftp.refresh")]
-check("the context menu carries the four operations + the two row verbs (v1.13.3) + the archive "
-      "row + the Send-to / Send-to-Diff submenus + Refresh", labels == expected, f"labels={labels}")
-check("on a real row Rename/Delete/Copy are enabled",
-      all(a.isEnabled() for a in actions[:6]), f"got={[a.isEnabled() for a in actions]}")
+check("the context menu carries the four operations + Find text (v1.13.6) + the two row verbs "
+      "(v1.13.3) + the archive row + the Send-to / Send-to-Diff submenus + Refresh",
+      labels == expected, f"labels={labels}")
+check("on a real row Rename/Delete/Find text/Download/Upload/Copy are enabled",
+      all(a.isEnabled() for a in actions[:7]), f"got={[a.isEnabled() for a in actions]}")
 check("New folder is always available (the current directory is the target)",
       actions[0].isEnabled())
 check("the archive row is offered on a row its suffix declares (v1.13) and nowhere else",
-      actions[6].isEnabled() is False,
-      f"a.txt={actions[6].isEnabled()}")
+      actions[7].isEnabled() is False,
+      f"a.txt={actions[7].isEnabled()}")
 
 menu_up = tab5._build_context_menu(tab5._up_item)
 up_actions = [a for a in menu_up.actions() if not a.isSeparator()]
 check("on the '..' row Rename/Delete/Download are DISABLED (Upload keeps the directory under it)",
-      [a.isEnabled() for a in up_actions] == [True, False, False, False, True, False, False, True],
+      [a.isEnabled() for a in up_actions] == [True, False, False, True, False, True, False, False,
+                                              True],
       f"got={[a.isEnabled() for a in up_actions]}")
 
 menu_empty = tab5._build_context_menu(None)
 empty_actions = [a for a in menu_empty.actions() if not a.isSeparator()]
-check("on empty space only New folder / Upload / Refresh are enabled",
-      [a.isEnabled() for a in empty_actions] == [True, False, False, False, True, False, False, True],
+check("on empty space only New folder / Find text / Upload / Refresh are enabled",
+      [a.isEnabled() for a in empty_actions] == [True, False, False, True, False, True, False, False,
+                                                 True],
       f"got={[a.isEnabled() for a in empty_actions]}")
 
 check("the tree is drag-enabled and drag-only",

@@ -61,13 +61,13 @@ except ImportError:
             return QIcon()
 
 try:  # v1.3.1: the operation kinds THIS module still queues and the task payload readers
-    from .sftp_worker import (KIND_DELETE, KIND_MKDIR, KIND_RENAME, NAME_ERROR_UNSAFE,
+    from .sftp_worker import (KIND_DELETE, KIND_MKDIR, KIND_RENAME, KIND_TRASH, NAME_ERROR_UNSAFE,
                               READ_ERROR_TOO_LARGE, SftpWorker, parse_task_payload,
                               register_orphan_sftp_worker)
 except ImportError:
-    from sftp_worker import (KIND_DELETE, KIND_MKDIR, KIND_RENAME, NAME_ERROR_UNSAFE,
-                             READ_ERROR_TOO_LARGE, SftpWorker, parse_task_payload,
-                             register_orphan_sftp_worker)
+    from sftp_worker import (KIND_DELETE, KIND_MKDIR, KIND_RENAME, KIND_TRASH,  # type: ignore
+                             NAME_ERROR_UNSAFE, READ_ERROR_TOO_LARGE, SftpWorker,
+                             parse_task_payload, register_orphan_sftp_worker)
 
 try:  # v1.4.7 (ROADMAP task 4): detection + tokenizers + the ONE highlighter
     from . import syntax_highlight as syntax
@@ -1038,12 +1038,12 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # v1.7.3 (ROADMAP v1.7.3, task 4): the reader's word wrap — ONE global setting, read at
         # construction so both panes and every session agree.
         self._viewer_wrap = resolve_viewer_wrap()
-        # v1.9.3: the reader's ENCODING — the remembered DEFAULT of a pane, resolved ONCE at
-        # construction (the wrap rule above). v1.12.3: the value is a STARTING POINT, not a ceiling:
-        # each pane's own menu moves ITS value alone (`apply_viewer_encoding(codec, pane=self)`), so
-        # a CP1251 preview and a Latin-1 one live side by side. `_viewer_path` is the file the
-        # preview holds (a choice re-reads THAT file).
-        self._viewer_encoding_choice = resolve_viewer_encoding()
+        # v1.9.3: the reader's ENCODING — resolved on the FIRST read (`viewer_encoding_choice`), because
+        # a pane is built before its container knows WHICH session it is: the session's own memory
+        # (`ui_sftp_encodings`, v1.13.6) decides first, then the shipped global default. A pane's menu
+        # moves its own slot alone, so a CP1251 preview and a Latin-1 one live side by side.
+        # `_viewer_encoding_chosen` is the value the USER picked ("" — this pane never chose).
+        self._viewer_encoding_choice = self._viewer_encoding_chosen = None
         self._viewer_path = ""
         # v1.7.5: the reader's CEILING — the SAME "one global setting, resolved ONCE" rule as the
         # wrap above. The value travels into every read task, so the worker never reads a config.
@@ -1758,12 +1758,12 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._queue_op(self.provider.queue_rename(path, name), KIND_RENAME)
 
     def _op_delete(self, item):
-        """Delete a row — with a confirmation (QMessageBox — a module attribute).
+        """Delete a row — a confirmation first (QMessageBox — a module attribute).
 
-        A directory is removed with rmdir: a NON-EMPTY one reports the provider's error
-        (a recursive delete is not in this version). v1.7.4rc1: the confirmation of a LOCAL
-        row SAYS that the delete is permanent — there is no recycle bin (LOCAL_PANE.md §4).
-        v1.8: an ELEVATED pane refuses the delete before the question (ELEVATED_PANE.md §5).
+        A directory is removed with rmdir: a NON-EMPTY one reports the provider's error (a
+        recursive delete is not in this version). A LOCAL row goes to the OS TRASH when the platform
+        has a backend (`trash_backend()`), and the question says which really happens; without one
+        the permanent delete keeps its shipped warning. v1.8: an ELEVATED pane refuses first.
         """
         if self._refuse_elevated_write() or self._refuse_without_provider():
             return
@@ -1771,8 +1771,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         if not path:
             return
         is_dir = bool(item.data(0, self.ISDIR_ROLE))
-        key = "sftp.local.delete_confirm" if self.source == SOURCE_LOCAL \
-            else "sftp.op.delete_confirm"
+        key, backend = self._delete_plan()
         box = QMessageBox   # the monkeypatch STAB.QMessageBox works in the tests
         reply = box.question(
             self, _t("sftp.op.delete"),
@@ -1780,7 +1779,8 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
             box.Yes | box.No, box.No)
         if reply != box.Yes:
             return
-        self._queue_op(self.provider.queue_delete(path, is_dir), KIND_DELETE)
+        self._queue_op(self._delete_queue(path, is_dir, backend),
+                       KIND_TRASH if backend else KIND_DELETE)
 
     def _op_copy_path(self, item):
         """Copy the REMOTE path of the row to the clipboard (never a URL)."""

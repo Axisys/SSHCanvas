@@ -158,16 +158,17 @@ tab1._navigate("/")
 wait_until(lambda: _item(tab1, "data") is not None, timeout_ms=5000)
 
 _menu = tab1._build_context_menu(_item(tab1, "plain.txt"))
-check("§1 the row menu is New Folder / Rename / Delete / Download / Upload / Copy Path / Open archive "
-      "/ Send to / Send to Diff / Refresh",
+check("§1 the row menu is New Folder / Rename / Delete / Find text / Download / Upload / Copy Path / "
+      "Open archive / Send to / Send to Diff / Refresh",
       _labels(_menu) == [i18n.t("sftp.op.new_folder"), i18n.t("sftp.op.rename"),
-                         i18n.t("sftp.op.delete"), i18n.t("sftp.op.download"),
+                         i18n.t("sftp.op.delete"), i18n.t("sftp.search.row"),
+                         i18n.t("sftp.op.download"),
                          i18n.t("sftp.op.upload"), i18n.t("sftp.op.copy_path"),
                          i18n.t("sftp.archive.open"), i18n.t("sftp.send.menu"),
                          i18n.t("diff.send.menu"), i18n.t("sftp.refresh")],
       str(_labels(_menu)))
 check("§1 on a REAL file row both verbs are live beside Rename/Delete/Copy",
-      _enabled(_menu) == [True, True, True, True, True, True, False, True, True, True],
+      _enabled(_menu) == [True, True, True, True, True, True, True, False, True, True, True],
       str(_enabled(_menu)))
 check("§1 the two verbs live in the pane's OWN menu builder (no second menu, no map import)",
       "_build_context_menu" in _read("modules", "sftp_pane_dnd.py")
@@ -180,12 +181,12 @@ check("§1 the two verbs live in the pane's OWN menu builder (no second menu, no
 
 _menu_up = tab1._build_context_menu(tab1._up_item)
 check("§1 on the '..' row Rename/Delete/Download are disabled while Upload keeps its floor",
-      _enabled(_menu_up) == [True, False, False, False, True, False, False, True],
+      _enabled(_menu_up) == [True, False, False, True, False, True, False, False, True],
       str(_enabled(_menu_up)))
 
 _menu_empty = tab1._build_context_menu(None)
-check("§1 on empty space only New Folder / Upload / Refresh are live",
-      _enabled(_menu_empty) == [True, False, False, False, True, False, False, True],
+check("§1 on empty space only New Folder / Find text / Upload / Refresh are live",
+      _enabled(_menu_empty) == [True, False, False, True, False, True, False, False, True],
       str(_enabled(_menu_empty)))
 
 
@@ -560,9 +561,9 @@ _check_keys = ["sftp.op.download", "sftp.op.upload", "terminal.cmdlib.connect",
 check("§7 the NINE keys of the release are non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _check_keys),
       str({c: [k for k in _check_keys if not LANGS[c].get(k)] for c in sorted(LANGS)}))
-check("§7 ...and the pin carries them (1135 + this release's 9 + the later 18 + 4)",
+check("§7 ...and the pin carries them (1135 + this release's 9 + the later 18 + 4 + the 13 of v1.13.6)",
       len(_check_keys) == 9
-      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18 + 4,
+      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18 + 4 + 13,
       str(EXPECTED_I18N_KEYS))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
