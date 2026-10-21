@@ -273,8 +273,11 @@ class KnownHostsStore:
             if self.load_failed:
                 return self._refuse_overwrite()
             try:
-                if name in dict(store):
-                    del store[name]   # `HostKeys` deletes a host LINE at a time — the whole entry goes
+                # paramiko's `HostKeys.__delitem__` drops ONE entry whose hostname matches and
+                # stops, so deleting once retires the FIRST line only. The loop empties every line
+                # of the name in this same publish (`N140`).
+                while name in dict(store):
+                    del store[name]
                 store.add(name, keytype, key)
                 return self._write(store)
             except Exception as e:  # noqa: BLE001 — a failed replacement is a reported False

@@ -622,8 +622,8 @@ check("§6 ...and every one of them is USED by the shipped code (a key nobody re
       all(key in _SOURCES for key in _NEW_KEYS),
       str([key for key in _NEW_KEYS if key not in _SOURCES]))
 check_release_state(ROOT)
-check("§6 the shipped version is the one this file describes",
-      EXPECTED_APP_VERSION == "1.13.6" and releases_at_least(EXPECTED_APP_VERSION, "1.13.6"))
+check("§6 the shipped version is the one this file describes or a later release",
+      releases_at_least(EXPECTED_APP_VERSION, "1.13.6"), EXPECTED_APP_VERSION)
 check("§6 the JSON schema did NOT move (the memory lives in `config.json`)",
       __import__("version").VERSION_FORMAT == "0.9")
 check_i18n_parity(LANGS)

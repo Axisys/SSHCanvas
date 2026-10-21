@@ -163,21 +163,37 @@ except Exception:  # noqa: BLE001 — an old paramiko without Ed25519: RSA is th
 OLD_TYPE, NEW_TYPE = KEY_ECDSA.get_name(), KEY_SECOND.get_name()
 check("§2 fixture: two DIFFERENT algorithms", OLD_TYPE != NEW_TYPE, f"{OLD_TYPE} | {NEW_TYPE}")
 
+# The REVERSED fixture (N140): the algorithm that gets REPLACED is written FIRST. paramiko's
+# `HostKeys.__delitem__` drops ONE matching line per call, so this order is the one the shipped
+# check never built — with the old single `del` the sibling below survived the replacement.
 check("§2 the first connection pins its own algorithm",
-      _store.pin("h-replace", OLD_TYPE, KEY_ECDSA) is True
-      and set(_store.lookup("h-replace") or {}) == {OLD_TYPE},
+      _store.pin("h-replace", NEW_TYPE, KEY_SECOND) is True
+      and set(_store.lookup("h-replace") or {}) == {NEW_TYPE},
       str(sorted(_store.lookup("h-replace") or {})))
 check("§2 `pin()` stays ADDITIVE — a second algorithm of the same name is a legitimate entry",
-      _store.pin("h-replace", NEW_TYPE, KEY_SECOND) is True
+      _store.pin("h-replace", OLD_TYPE, KEY_ECDSA) is True
       and set(_store.lookup("h-replace") or {}) == {OLD_TYPE, NEW_TYPE},
       str(sorted(_store.lookup("h-replace") or {})))
+check("§2 the fixture really puts the REPLACED algorithm on the FIRST line",
+      open(STORE_PATH, encoding="utf-8").read().splitlines()[0].split()[1] == NEW_TYPE,
+      open(STORE_PATH, encoding="utf-8").read().splitlines()[:2])
+_store.pin("h-neighbour", OLD_TYPE, KEY_ECDSA)
+check("§2 ...and a SECOND host keeps a key of its own before the replacement",
+      set(_store.lookup("h-neighbour") or {}) == {OLD_TYPE},
+      str(sorted(_store.lookup("h-neighbour") or {})))
 check("§2 `replace()` writes the ONE new key and RETIRES every other keytype in the same publish",
       _store.replace("h-replace", NEW_TYPE, KEY_SECOND) is True
       and set(_store.lookup("h-replace") or {}) == {NEW_TYPE},
       str(sorted(_store.lookup("h-replace") or {})))
 _written = open(STORE_PATH, encoding="utf-8").read()
+_replace_lines = [ln for ln in _written.splitlines() if ln.split()[:1] == ["h-replace"]]
 check("§2 ...and the retired key is really gone from the FILE (one publish, not a second write)",
-      OLD_TYPE not in _written and NEW_TYPE in _written)
+      len(_replace_lines) == 1 and NEW_TYPE in _replace_lines[0]
+      and OLD_TYPE not in _replace_lines[0], str(_replace_lines))
+check("§2 ...while the SECOND host's own key survives the replacement untouched",
+      set(_store.lookup("h-neighbour") or {}) == {OLD_TYPE}
+      and any(ln.split()[:1] == ["h-neighbour"] for ln in _written.splitlines()),
+      str(sorted(_store.lookup("h-neighbour") or {})))
 
 # The CONNECT flow: the changed-key answer goes through the same writer.
 _store.pin("h-changed", OLD_TYPE, KEY_ECDSA)

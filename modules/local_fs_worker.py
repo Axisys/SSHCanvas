@@ -169,8 +169,28 @@ def trash_backend(platform=None, which=None) -> str:
         return ""
 
 
+def trash_path_problem(path) -> str:
+    """PURE: why `path` can never be trashed (`""` — it is an absolute path).
+
+    A trash has no "here": an EMPTY path resolves to the process's working directory for every OS
+    call (`os.path.abspath("")` IS that directory), and a relative one names a place the user never
+    pointed at. Both are REFUSED before a backend runs, so a caller's missing path can never delete
+    the folder the application happens to run in.
+    """
+    text = str(path or "")
+    if not text.strip():
+        return "blank path"
+    if not os.path.isabs(text):
+        return "relative path"
+    return ""
+
+
 def _trash_win32(path: str) -> None:
-    """`SHFileOperationW(FO_DELETE)` with `FOF_ALLOWUNDO` — the Recycle Bin, no shell, no prompt."""
+    """`SHFileOperationW(FO_DELETE)` with `FOF_ALLOWUNDO` — the Recycle Bin, no shell, no prompt.
+
+    The caller hands the VALIDATED absolute path (`trash_path_problem()`): this branch never
+    resolves one of its own, because `os.path.abspath("")` would be the CWD.
+    """
     import ctypes
     from ctypes import wintypes
 
@@ -183,7 +203,7 @@ def _trash_win32(path: str) -> None:
     operation = _SHFILEOPSTRUCTW()
     operation.wFunc = FO_DELETE
     # The API takes a DOUBLE NUL terminated list; ctypes appends one NUL to the Python value.
-    operation.pFrom = os.path.abspath(path) + "\x00"
+    operation.pFrom = str(path) + "\x00"
     operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT
     code = int(ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation)))
     if code:
@@ -213,14 +233,19 @@ def trash_move(path: str, backend: str = "") -> str:
     """Move ONE path to the OS trash; the backend that really ran it (`""` — there is none).
 
     A FAILED move RAISES (`LOCAL_TRASH_FAILED`, the OS's own detail inside the payload): the
-    reversible delete must never fall back to a `os.remove()` the user did not ask for. `backend`
-    is the value the pane resolved before the click; an empty one is resolved here.
+    reversible delete must never fall back to a `os.remove()` the user did not ask for. A blank or
+    relative path is refused by `trash_path_problem()` BEFORE any backend is resolved, so no OS
+    call can turn it into the process's working directory. `backend` is the value the pane resolved
+    before the click; an empty one is resolved here.
     """
+    detail = trash_path_problem(path)
+    if detail:
+        raise _LocalRefusal(LOCAL_TRASH_FAILED, detail)
     chosen = backend if backend in TRASH_BACKENDS else trash_backend()
     if chosen == TRASH_BACKEND_WIN32:
-        _trash_win32(path)
+        _trash_win32(str(path))
     elif chosen == TRASH_BACKEND_GIO:
-        _trash_gio(path)
+        _trash_gio(str(path))
     else:
         raise _LocalRefusal(LOCAL_TRASH_FAILED, "no trash backend")
     return chosen
@@ -463,7 +488,8 @@ class LocalFsWorker(QThread):
         The caller resolved `trash_backend()` BEFORE the click (its question names what happens) and
         hands the answer in, so the backend that RUNS is the backend the user was told about. The
         task is a KIND like every other: `task_done` names the path, `task_error` carries the
-        `trash_failed` payload of a refused move — and nothing here ever falls back to a remove.
+        `trash_failed` payload of a refused move — a blank or relative path is REFUSED there by
+        `trash_move()`'s guard, and nothing here ever falls back to a remove.
         """
         target = str(path or "")
         return self._queue_task(_LocalTask(self._next_id, KIND_TRASH, target, path=target,
