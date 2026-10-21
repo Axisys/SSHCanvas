@@ -329,7 +329,8 @@ class SftpPaneViewerMixin:
         """
         searched = self._search_reads.pop(task_id, None)
         if searched is not None:
-            self._on_search_read(searched[0], searched[1], data)  # v1.13.6: a file of the walk
+            path, size, cap = searched
+            self._on_search_read(path, size, data, cap)  # v1.13.6: a file of the walk
             return
         path = self._read_tasks.pop(task_id, remote_path)
         if task_id != self._last_read:
@@ -1358,7 +1359,7 @@ class SftpPaneViewerMixin:
 
     @property
     def _search_reads(self) -> dict:
-        """The candidate files this run is reading: task id → path (created with the first)."""
+        """The candidate files this run is reading: task id → `(path, size, cap)`."""
         return self.__dict__.setdefault("_search_read_tasks", {})
 
     @property
@@ -1492,7 +1493,9 @@ class SftpPaneViewerMixin:
             if tid is None:
                 self._finish_search()
                 return
-            self._search_reads[int(tid)] = (path, int(size or 0))
+            # The CAP travels with the task: the answer resolves the cut fact from it and the
+            # listing's own size, exactly as the preview does (the ONE decoder, one rule).
+            self._search_reads[int(tid)] = (path, int(size or 0), cap)
             return
         self._finish_search()
 
@@ -1520,12 +1523,14 @@ class SftpPaneViewerMixin:
         self._sync_search_header()
         self._search_advance()
 
-    def _on_search_read(self, path: str, size, data):
+    def _on_search_read(self, path: str, size, data, cap=None):
         """A candidate answered: count it, match it, append the rows the report CARRIED.
 
         The bytes are decoded with the pane's OWN encoding choice (the shipped decoder), so a
         CP1251 file is searched as CP1251 text and the rows the panel shows are the rows a preview
-        would show.
+        would show. `cap` is the ceiling the task was handed, so the CUT FACT is resolved here — a
+        read stopped inside a multi-byte character is not "another encoding" (`N46`, the preview's
+        rule) and its rows are not mojibake.
         """
         state = self._search
         if state is None:
@@ -1533,9 +1538,14 @@ class SftpPaneViewerMixin:
         report = state["report"]
         query = state["query"]
         raw = bytes(data or b"")
-        text, _encoding = self._decoded_text(raw, encoding=self.viewer_encoding_choice)
+        truncated = bool(host_attr(self, "read_was_truncated")(len(raw), cap,
+                                                              int(size or 0)))
+        text, _encoding = self._decoded_text(raw, truncated=truncated,
+                                            encoding=self.viewer_encoding_choice)
         report.note_read(len(raw))
-        found, _cut = search.match_lines(text, query["needle"], bool(query["case_sensitive"]))
+        found, cut = search.match_lines(text, query["needle"], bool(query["case_sensitive"]))
+        if cut:
+            report.note_file_cut()   # the PER-FILE cap — said once per run, never per file
         carried = report.note_matches(found)
         rows = [(path, int(size or 0), number, line) for number, line in found[:carried]]
         if rows:
@@ -1590,6 +1600,9 @@ class SftpPaneViewerMixin:
         state["done"] = True
         report = state["report"]
         self._sync_search_header()
+        if report.files_cut:
+            # ONE sentence per RUN, however many files met the cap (never one per file).
+            self.message.emit(_t("sftp.search.file_cut", limit=search.MATCHES_PER_FILE))
         if report.cut:
             self.message.emit(self._search_cut_text(report))
         elif not report.matches:
@@ -1728,6 +1741,19 @@ class SftpPaneViewerMixin:
             self._container.close_preview()
         except (RuntimeError, AttributeError):
             self._reset_search()
+
+    def _drop_search(self) -> bool:
+        """Drop the open run because its PROVIDER is leaving — the panel goes home, the maps go.
+
+        A search belongs to ONE provider (its task ids are that provider's), so a rebind never
+        resumes it: the walk was a question about the old tree. The container's `bind_worker()` asks
+        this BEFORE the new transport is bound; False — nothing was running.
+        """
+        if self._search is None:
+            return False
+        self.restore_viewer()
+        self._reset_search()
+        return True
 
     def _reset_search(self):
         """Drop the run — its task maps go FIRST, so an answer in flight belongs to nobody."""

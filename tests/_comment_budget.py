@@ -45,7 +45,7 @@ BLOCK_BUDGET_LINES = 5     # a comment block in the body: the invariant + the po
 
 # ── The pins (the goal state, REACHED: every budget below is the rule itself) ─────────────────
 NARRATIVE_PIN = 0          # HISTORY_MARKERS matches in the code text — the goal state
-HEADER_LINES_PIN = 3107    # module docstring lines, all files — RAISED only by a NEW module or topical
+HEADER_LINES_PIN = 3114    # module docstring lines, all files — RAISED only by a NEW module or topical
                            # file, whose header the changelog family's own entry names
 MAX_HEADER_PIN = 12        # the longest module docstring — the budget itself
 HEADER_FILES_PIN = 0       # module docstrings longer than HEADER_BUDGET_LINES — the goal state

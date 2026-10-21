@@ -3,8 +3,8 @@
 
 `normalize_query()` is the ONE reading of what the user typed; `match_lines()` is the ONE matcher, a
 `(line_no, text)` pair per hit and a cap per file; `SearchReport` counts what a run really reached
-(`files_scanned` / `files_matched` / `bytes_read` / `matches`) and names the bound that stopped it
-(`cut` + `cut_reason`). The walk and the read are the SHIPPED task family of the pane
+(`files_scanned` / `files_matched` / `files_cut` / `bytes_read` / `matches`) and names the bound that
+stopped it (`cut` + `cut_reason`). The walk and the read are the SHIPPED task family of the pane
 (`queue_list()` / `queue_read()`), so this module carries no Qt, no transport and no sentence: a bound
 travels as a MACHINE code here and the pane renders it.
 
@@ -95,8 +95,9 @@ def match_lines(text, needle, case_sensitive=False, limit=MATCHES_PER_FILE):
     """PURE: the hits of ONE file — `([(line_no, text)], cut)`, lines 1-based, at most `limit` pairs.
 
     The line text is trimmed of its `\\r` and of the trailing blanks (a row is read, not edited), the
-    number is what `path:line` says. `cut` is True when the file carried MORE hits than the cap: the
-    caller shows the rows it has and the counter is not an estimate.
+    number is what `path:line` says. `cut` is True only when the file carries ANOTHER hit after the
+    cap: the line past it is PEEKED and dropped, so a file with exactly the cap is whole and the
+    caller's sentence is never an estimate.
     """
     out = []
     cap = max(1, declared_limit(limit, MATCHES_PER_FILE))
@@ -104,9 +105,9 @@ def match_lines(text, needle, case_sensitive=False, limit=MATCHES_PER_FILE):
         line = raw.rstrip("\r").rstrip()
         if not line_matches(line, needle, case_sensitive):
             continue
-        out.append((number, line))
         if len(out) >= cap:
             return out, True
+        out.append((number, line))
     return out, False
 
 
@@ -115,8 +116,9 @@ class SearchReport:
 
     The caller owns the WALK (`queue_list()` / `queue_read()` of the pane's provider) and asks this
     object for every limit: `allow_depth()` before a directory is queued, `allow_entries()` per entry
-    the walk meets, `allow_read()` for the cap of ONE read. A bound is met once — the FIRST one wins
-    and is kept, so the sentence the user reads names the limit the run really hit.
+    the walk meets, `allow_read()` for the cap of ONE read. A run bound is met once — the FIRST one
+    wins and is kept, so the sentence the user reads names the limit the run really hit. The PER-FILE
+    cap is counted separately (`files_cut`): it stops no walk, and the pane reports it once per run.
     """
 
     def __init__(self, query=None, entries=MAX_TREE_ENTRIES, depth=MAX_TREE_DEPTH,
@@ -129,6 +131,7 @@ class SearchReport:
         self.entries = 0
         self.files_scanned = 0
         self.files_matched = 0
+        self.files_cut = 0
         self.bytes_read = 0
         self.matches = 0
         self._cut = ""
@@ -168,7 +171,12 @@ class SearchReport:
         return True
 
     def allow_read(self, cap) -> int:
-        """The cap ONE read may take: `cap` itself, the budget's rest, or 0 when the budget is spent."""
+        """The cap ONE read may take: `cap` itself, the budget's rest, or 0 when the budget is spent.
+
+        A rest SMALLER than the asked cap IS the budget stopping that read, so `CUT_BYTES` is
+        recorded HERE — the read it caps spends the last bytes the run had, and a short read nobody
+        names would leave the walk looking like a complete one.
+        """
         left = self.bytes_limit - self.bytes_read
         if left <= 0:
             self.cut_with(CUT_BYTES)
@@ -179,7 +187,10 @@ class SearchReport:
             wanted = 0
         if wanted <= 0:
             return 0
-        return min(wanted, left)
+        if left < wanted:
+            self.cut_with(CUT_BYTES)   # the budget, not the file, is what stops this read
+            return left
+        return wanted
 
     def note_entries(self, count: int = 1) -> int:
         """Count the entries the walk really saw (a directory and a file both count)."""
@@ -203,8 +214,7 @@ class SearchReport:
             count = 0
         if count <= 0:
             return 0
-        if count:
-            self.files_matched += 1
+        self.files_matched += 1
         room = self.matches_limit - self.matches
         if room <= 0:
             self.cut_with(CUT_MATCHES)
@@ -215,9 +225,15 @@ class SearchReport:
             self.cut_with(CUT_MATCHES)
         return carried
 
+    def note_file_cut(self) -> int:
+        """Count ONE file whose hits ran past `MATCHES_PER_FILE`; returns the files so far."""
+        self.files_cut += 1
+        return self.files_cut
+
     def as_dict(self) -> dict:
         """The report as the panel, the status line and the tests read it."""
         return {"needle": query_needle(self.query), "scope": query_scope(self.query),
                 "entries": self.entries, "files_scanned": self.files_scanned,
-                "files_matched": self.files_matched, "bytes_read": self.bytes_read,
+                "files_matched": self.files_matched, "files_cut": self.files_cut,
+                "bytes_read": self.bytes_read,
                 "matches": self.matches, "cut": self.cut, "cut_reason": self.cut_reason}

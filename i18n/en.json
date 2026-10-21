@@ -507,6 +507,7 @@
   "sftp.search.cut_depth": "The folder tree is deeper than {limit} levels — these are the matches found so far",
   "sftp.search.cut_bytes": "The search read its whole budget of {limit} — these are the matches found so far",
   "sftp.search.cut_matches": "The search stopped after {limit} matches — these are the matches found so far",
+  "sftp.search.file_cut": "Some files carry more than {limit} matches — only the first {limit} of each are listed",
   "sftp.viewer.word_wrap": "Word wrap",
   "sftp.local.source": "Source:",
   "sftp.local.server": "Server",

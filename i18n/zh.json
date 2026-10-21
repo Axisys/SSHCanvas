@@ -498,6 +498,7 @@
   "sftp.search.cut_depth": "文件夹层级超过 {limit} 层 — 这里是目前已找到的匹配",
   "sftp.search.cut_bytes": "搜索已用尽全部读取预算（{limit}）— 这里是目前已找到的匹配",
   "sftp.search.cut_matches": "搜索在 {limit} 处匹配后停止 — 这里是目前已找到的匹配",
+  "sftp.search.file_cut": "部分文件的匹配超过 {limit} 处 — 每个文件只列出前 {limit} 处",
   "sftp.viewer.word_wrap": "自动换行",
   "sftp.local.source": "来源：",
   "sftp.local.server": "服务器",

@@ -1352,17 +1352,15 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
     def bind_worker(self, old_worker, new_worker, source: str = ""):
         """Bind/unbind the pane's PROVIDER: `None` — the "waiting for connection" state.
 
-        The OLD provider is passed explicitly because the container has already replaced its
-        own reference when this runs — the pane must disconnect from the transport it was
-        really listening to, not from the new one. `_bound_provider` is the DECLARED record of
-        what this pane is really connected to, so it WINS over the argument: a pane that bound a
-        provider of its OWN (a LOCAL or an ELEVATED one) is never left listening to two.
+        The OLD provider is passed explicitly because the container has already replaced its own
+        reference when this runs — the pane must disconnect from the transport it really listened
+        to. `_bound_provider` is the DECLARED record of that connection and WINS over the argument,
+        so a pane bound to a provider of its OWN (LOCAL or ELEVATED) never listens to two.
 
-        A pane's bookkeeping belongs to ONE provider, so every task map is cleared here: a
-        listing, a read, an operation or a completer answer of the previous server must
-        never land in this one. The `source` keyword (v1.7.4rc1) is what a SWITCH passes: the
-        pane adopts the source and binds the provider that goes with it, while the container's
-        own call (`bind_worker(None, worker)`) keeps every pane on the source it holds.
+        A pane's bookkeeping belongs to ONE provider, so every task map is cleared here: a listing,
+        a read, an operation or a completer answer of the previous server must never land in this
+        one. The `source` keyword (v1.7.4rc1) is what a SWITCH passes — the pane adopts the source
+        and binds the provider that goes with it, while the container's own call keeps every pane.
         """
         if source:
             self._source = SOURCE_LOCAL if str(source) == SOURCE_LOCAL else SOURCE_REMOTE
@@ -1378,6 +1376,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
             # client of another user, and the session's transport never lands on it.
             new_worker = self._elevated_provider
         self._disconnect_worker(old)
+        self._drop_search()   # a search run belongs to ONE provider: a rebind DROPS it
         self._transfer_tasks.clear()
         self._own_transfers.clear()
         # v1.13: an archive read rides ONE provider as well — the spool it was downloading is
@@ -1836,6 +1835,7 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
         "_viewer_encoding_choice", "_viewer_path",
         # v1.13.4.3: the ARCHIVE view — the open listing, its copy and the spool legs in flight.
         "_archive", "_archive_open", "_archive_tasks", "_archive_dropped", "_archive_legs",
+        "_search_state", "_search_open", "_search_list_tasks", "_search_read_tasks",   # v1.13.6.2
     })
 
     # Local hints in the window's status bar (waiting for connection, no selection).

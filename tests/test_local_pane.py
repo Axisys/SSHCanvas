@@ -815,10 +815,14 @@ _rpane._relist("/inbox")
 wait_until(lambda: _rpane.current_dir == "/inbox", timeout_ms=5000)
 _dmsgs.clear()
 _rpane._on_pane_drop(_l_payload, _DropEvent())
+# The flow's OWN answer is the batch's closing report (`_finish_batch()`), so THAT is what the
+# check waits for; the bytes it committed are asserted beside it, never polled on their own.
+_ok_up_drop = wait_for(
+    lambda: i18n.t("sftp.cmd.copy_report", done=1, skipped=0, failed=0) in _dmsgs,
+    timeout_ms=5000)
 check("§7 a LOCAL row dropped on the REMOTE pane is an UPLOAD named by the SOURCE dialect",
-      wait_for(lambda: "/inbox/top.txt" in _fs2.files, timeout_ms=5000)
-      and bytes(_fs2.files["/inbox/top.txt"]) == b"top\n"
-      and any(str(m).startswith("Copied:") for m in _dmsgs), str(_dmsgs)[-160:])
+      _ok_up_drop and "/inbox/top.txt" in _fs2.files
+      and bytes(_fs2.files["/inbox/top.txt"]) == b"top\n", str(_dmsgs)[-160:])
 
 # and the other way: a REMOTE row onto the LOCAL pane
 _DOWN_DROP = fresh_dir("drop_in")
@@ -828,10 +832,12 @@ _rpane._relist("/home")
 wait_until(lambda: item_by_name(_rpane, "remote.txt") is not None, timeout_ms=5000)
 _dmsgs.clear()
 _lpane._on_pane_drop(_r_payload, _DropEvent())
+_ok_down_drop = wait_for(
+    lambda: i18n.t("sftp.cmd.copy_report", done=1, skipped=0, failed=0) in _dmsgs,
+    timeout_ms=5000)
 check("§7 a REMOTE row dropped on the LOCAL pane is a DOWNLOAD into the pane's directory",
-      wait_for(lambda: read_bytes(os.path.join(_DOWN_DROP, "remote.txt")) == b"R" * 8,
-               timeout_ms=5000)
-      and any(str(m).startswith("Copied:") for m in _dmsgs), str(_dmsgs)[-160:])
+      _ok_down_drop and read_bytes(os.path.join(_DOWN_DROP, "remote.txt")) == b"R" * 8,
+      str(_dmsgs)[-160:])
 
 _dmsgs.clear()
 _lpane._on_pane_drop(_r_payload, _DropEvent(shift=True))
@@ -915,7 +921,7 @@ check("the i18n pin counts the SHIPPED release (897 + the 17 of v1.7.4rc1 + the 
       " v1.8.1: the trust surface, and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair"
       " — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its"
       " export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
 check("VERSION_FORMAT did NOT move (a path is never written into a project)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("no new dependency was added for the local pane (the four pinned ones)",

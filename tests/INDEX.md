@@ -140,6 +140,7 @@ of the file itself.
 | `test_followups_v1124.py` | — | The repository map and the code text: the polish that closes the line (v1.12.4). |
 | `test_followups_v11313.py` | — | The five decisions the `v1.13.1.2` round carried out of the ledger, each answered (v1.13.1.3). |
 | `test_followups_v1136.py` | — | `v1.13.6` — FIND IT: the search of the Files panes, the reversible delete and the per-pane codec. |
+| `test_followups_v11362.py` | — | `v1.13.6.2` — the search that SAYS what it cut: the cap with the read, the per-file sentence and the dropped run. |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |

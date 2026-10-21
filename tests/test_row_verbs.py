@@ -563,7 +563,7 @@ check("§7 the NINE keys of the release are non-empty in every language",
       str({c: [k for k in _check_keys if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 ...and the pin carries them (1135 + this release's 9 + the later 18 + 4 + the 13 of v1.13.6)",
       len(_check_keys) == 9
-      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18 + 4 + 13,
+      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18 + 4 + 13 + 1,
       str(EXPECTED_I18N_KEYS))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)

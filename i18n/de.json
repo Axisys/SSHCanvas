@@ -498,6 +498,7 @@
   "sftp.search.cut_depth": "Der Ordnerbaum ist tiefer als {limit} Ebenen — dies sind die bisher gefundenen Treffer",
   "sftp.search.cut_bytes": "Die Suche hat ihr gesamtes Lesebudget ({limit}) verbraucht — dies sind die bisher gefundenen Treffer",
   "sftp.search.cut_matches": "Die Suche endete nach {limit} Treffern — dies sind die bisher gefundenen Treffer",
+  "sftp.search.file_cut": "Manche Dateien enthalten mehr als {limit} Treffer — von jeder werden nur die ersten {limit} aufgelistet",
   "sftp.viewer.word_wrap": "Zeilenumbruch",
   "sftp.local.source": "Quelle:",
   "sftp.local.server": "Server",

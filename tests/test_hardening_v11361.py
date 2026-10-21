@@ -10,7 +10,7 @@ import os
 import sys
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, bootstrap, check, check_i18n_parity,
-                     check_release_state, finish, load_i18n_langs, wait_for)
+                     check_release_state, finish, load_i18n_langs, releases_at_least, wait_for)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (the HOME isolation)
 
@@ -261,10 +261,10 @@ print("== §3 the release ==")
 
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
-check("§3 this patch adds NO translation key (the parity pin does not move)",
-      EXPECTED_I18N_KEYS == 1179, str(EXPECTED_I18N_KEYS))
+check("§3 this patch adds NO translation key (the pin counts 1179 + the 1 of v1.13.6.2)",
+      EXPECTED_I18N_KEYS == 1179 + 1, str(EXPECTED_I18N_KEYS))
 check("§3 the JSON schema did NOT move (`VERSION_FORMAT` stays 0.9)",
       __import__("version").VERSION_FORMAT == "0.9")
-check("§3 the pin names this patch's line", EXPECTED_APP_VERSION == "1.13.6.1",
+check("§3 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.6.1"),
       EXPECTED_APP_VERSION)
 finish()
