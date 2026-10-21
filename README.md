@@ -59,7 +59,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf` or `reboot`.
-*   **Command Library:** Convert historical commands into macros with version history (ring of 10) and JSON import/export. The side panel contains two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, with Open map/Profiles). This allows starting new sessions without returning to the map. Right-clicking a server provides **Connect to SSH** and **Quick Launch** options.
+*   **Command Library:** Convert historical commands into macros with version history (ring of 10) and JSON import/export. The side panel contains two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, with Open map/Profiles). This allows starting new sessions without returning to the map. Right-clicking a server provides **Connect to SSH** and **Quick Launch** options. A command can be marked **Requires confirmation**, so sending it asks for a Yes/No first (No is the default).
 *   **Command History:** A `History` tab per server is kept between sessions. Import from disk or `~/.bash_history`, filter/sort, and merge duplicates. Secrets are marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position during output. An external `ssh` terminal is available as an alternative, supporting per-server **jump hosts** via `~/.ssh/config`.
 *   **SFTP & Files Commander:**
@@ -233,7 +233,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 167 test files and the parallel runner |
+| `tests/` | 168 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

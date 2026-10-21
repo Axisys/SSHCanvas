@@ -112,7 +112,9 @@ class _StubDialog:
                 else QDialog.DialogCode.Rejected)
 
     def result_entry(self):
-        return dict(_StubDialog.data)
+        data = dict(_StubDialog.data)
+        data.setdefault("confirm", False)   # the form's box, unchecked
+        return data
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -169,9 +171,9 @@ print("== §2 the import/export pair: validate, then ONE atomic copy ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _entries = [{"id": "a1", "name": "Disk", "command": "df -h", "category": "System",
-             "enabled": True},
+             "enabled": True, "confirm": False},
             {"id": "a2", "name": "Awk", "command": "awk '{print $1}'", "category": "Scripts",
-             "enabled": False}]
+             "enabled": False, "confirm": True}]
 _out = os.path.join(WORK, "exported_library.json")
 _result = CL.export_library_file(_out, _entries)
 check("export writes the store's OWN document (so it could be dropped in as commands.json)",

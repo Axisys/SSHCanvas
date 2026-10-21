@@ -577,6 +577,6 @@ check("§7 the wallpaper moves no JSON schema (the keys live in config.json, not
       VERSION_FORMAT == "0.9", VERSION_FORMAT)
 check_release_state(ROOT)
 check(f"§7 the i18n pin carries the eight wallpaper keys ({EXPECTED_I18N_KEYS} = 1127 + 8 + the later keys)",
-      EXPECTED_I18N_KEYS == 1162, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1162 + 4, str(EXPECTED_I18N_KEYS))
 
 finish()

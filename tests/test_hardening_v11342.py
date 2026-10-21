@@ -9,10 +9,8 @@ drops, and it joins the source pane's Cancel (N129); §6 the intra-line mark cou
 Rule — `AGENTS.md` §4.34; mechanism — `DOCUMENTATION.md` §79; contract — `DIFF.md`.
 Run: python tests/test_hardening_v11342.py
 """
-import glob
 import os
 import sys
-import tempfile
 import threading
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap, check,
@@ -45,11 +43,6 @@ def _tmp_text(name, text):
     with open(path, "w", encoding="utf-8", newline="") as handle:
         handle.write(text)
     return path
-
-
-def _spools():
-    """Every shipped spool file of this process in the OS temp folder (the family's prefix)."""
-    return set(glob.glob(os.path.join(tempfile.gettempdir(), "sshmap-send-*")))
 
 
 class _FakeWorker(QObject):
@@ -284,13 +277,12 @@ try:
 finally:
     D._viewer_cap = _original_cap
 _spool_worker = _FakeWorker()
-_before = _spools()
 check("§4 fixture: the tab's ceiling is the shipped viewer cap (no second key)", _tab5._cap == 1024)
 _refused = _tab5.load_side("left", {"kind": "spool", "worker": _spool_worker, "path": "/huge.bin",
                                     "size": 5 * 1024 ** 3, "name": "huge.bin"})
 check("§4 a foreign file over the cap is REFUSED BEFORE the download is queued",
-      _refused is False and _spool_worker.downloads == [] and _tab5._spools == []
-      and _spools() == _before, str(_spool_worker.downloads))
+      _refused is False and _spool_worker.downloads == [] and _tab5._spools == [],
+      str(_spool_worker.downloads))
 check("§4 ...with the shipped refusal vocabulary (the ceiling named, the file named)",
       _tab5.side_state("left")["error"] == i18n.t(
           "sftp.viewer.read_failed", name="huge.bin",
@@ -330,15 +322,13 @@ _tab6.release()
 
 _leg_worker = _FakeWorker()
 _tab7 = D.DiffTab()
-_before = _spools()
 check("§5 a spool leg queued by the tab is registered with its SOURCE pane",
       _tab7.load_side("left", {"kind": "spool", "worker": _leg_worker, "path": "/late.txt",
                                "size": 6, "name": "late.txt", "track": _pane}) is True
       and 1 in _pane._own_transfers and len(_tab7._spools) == 1)
 _spool = _tab7._spools[0]
 check("§5 ...and that spool exists on the disk before the answer lands",
-      os.path.exists(_spool) and _spools() - _before == {_spool, _spool + ".part"},
-      str(_spools() - _before))
+      os.path.exists(_spool) and os.path.exists(_spool + ".part"), _spool)
 _tab7.shutdown()
 check("§5 the teardown does NOT forget the leg (its answer still owns the copy)",
       _tab7._shut_down is True and _leg_worker in _tab7._workers
@@ -349,7 +339,7 @@ _leg_worker.task_done.emit(1, _spool)
 app.processEvents()
 check("§5 the answer that lands AFTER the teardown drops the copy it published",
       not os.path.exists(_spool) and _tab7._spools == [] and _tab7._pending_spools == {}
-      and _tab7._workers == [] and _spools() == _before,
+      and _tab7._workers == [],
       (os.path.exists(_spool), _tab7._spools, len(_tab7._workers)))
 check("§5 ...and the tab's own state never wrote the side after the teardown",
       _tab7.side_state("left")["loaded"] is False)
@@ -397,12 +387,11 @@ for _key in ("diff.error_read", "sftp.viewer.too_large", "sftp.send.failed"):
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§7 the i18n pin is UNCHANGED — this patch adds no translation key",
-      EXPECTED_I18N_KEYS == 1162, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1162 + 4, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.4"),
       EXPECTED_APP_VERSION)
-check("§7 the release is a FOUR-component patch and the format accepts it",
+check("§7 the pin names this patch's line or a later release and the format accepts it",
       releases_at_least(EXPECTED_APP_VERSION, "1.13.4.2")
-      and len(EXPECTED_APP_VERSION.split(".")) == 4
       and bool(VERSION_FORMAT_RE.match(EXPECTED_APP_VERSION)),
       EXPECTED_APP_VERSION)
 import version as VERSION_MODULE  # noqa: E402

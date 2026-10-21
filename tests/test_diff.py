@@ -8,11 +8,9 @@ a live fake worker and the spool's drop; §7 the i18n keys, the release state an
 Contract — `DIFF.md`; rule — `AGENTS.md` §4.34; mechanism — `DOCUMENTATION.md` §79.
 Run: python tests/test_diff.py
 """
-import glob
 import os
 import re
 import sys
-import tempfile
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap,
                      check, check_i18n_format, check_i18n_parity, check_release_state, clear_cfg,
@@ -72,14 +70,8 @@ def _fresh_tab(cap=None):
         D._viewer_cap = original
 
 
-def _spools():
-    """Every shipped spool in the OS temp folder (the family's prefix is the ONE marker)."""
-    return set(glob.glob(os.path.join(tempfile.gettempdir(), "sshmap-send-*")))
-
-
 # ════════════════════════════════════════════════════════════════════════════
 print("== §1 the pure engine ==")
-# ════════════════════════════════════════════════════════════════════════════
 
 check("§1 the line split normalises the line endings (a CRLF copy is the same content)",
       D.split_lines("a\r\nb\nc\r") == ["a", "b", "c"]
@@ -441,16 +433,17 @@ check("§6 ...and its answer is decoded like a local one",
       _tab.side_state("left")["text"] == "remote line\nsecond\n"
       and _tab.side_state("left")["name"] == "remote.txt",
       _tab.side_state("left")["text"])
-_before_spools = _spools()
 check("§6 a spool leg is queued for a foreign session (the shipped download)",
       _tab.load_side("right", {"kind": "spool", "worker": _worker2, "path": "/remote.txt",
                                "size": 19, "name": "remote.txt"}) is True)
+_left_spool = list(_tab._spools)   # THIS tab's copy — a parallel run owns its own spool
 wait_until(lambda: _tab.side_state("right")["loaded"], timeout_ms=8000)
 check("§6 ...the spool is read and the two sides compare",
       _tab.side_state("right")["text"] == "remote line\nsecond\n"
       and _tab.status_text().startswith(i18n.t("diff.same")), _tab.status_text())
 check("§6 ...and the copy never outlives the decode",
-      _tab._spools == [] and _spools() == _before_spools, _tab._spools)
+      bool(_left_spool) and _tab._spools == []
+      and not any(os.path.exists(p) for p in _left_spool), _tab._spools)
 _tab.load_side("left", {"kind": "remote", "worker": _worker2, "path": "/blob.zip",
                         "size": 18, "name": "blob.zip"})
 wait_until(lambda: _tab.side_state("left")["error"], timeout_ms=5000)
@@ -517,9 +510,9 @@ check("§7 the EIGHTEEN keys of the release are non-empty in every language",
       all(LANGS[code].get(key) for code in LANGS for key in _NEW_KEYS),
       str({code: [key for key in _NEW_KEYS if not LANGS[code].get(key)]
            for code in sorted(LANGS)}))
-check("§7 ...and the pin carries them (1162 = 1144 + 18)",
-      len(_NEW_KEYS) == 18 and EXPECTED_I18N_KEYS == 1162
-      and EXPECTED_I18N_KEYS == 1144 + len(_NEW_KEYS), str(EXPECTED_I18N_KEYS))
+check("§7 ...and the pin carries them (1144 + the release's 18 + the later four)",
+      len(_NEW_KEYS) == 18
+      and EXPECTED_I18N_KEYS == 1144 + len(_NEW_KEYS) + 4, str(EXPECTED_I18N_KEYS))
 check("§7 the keys are really TRANSLATED, not the English copy",
       len({LANGS[code].get("terminal.diff.tooltip") for code in LANGS}) > 1
       and len({LANGS[code].get("diff.same") for code in LANGS}) > 1)

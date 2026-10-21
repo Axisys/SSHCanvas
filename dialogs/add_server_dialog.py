@@ -24,11 +24,33 @@ except ImportError:
     except ImportError:  # flat layout without ui/unmanaged — the dialog still opens
         _refusal_text = None
 
+from PySide6.QtCore import QSize
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QLineEdit, QPushButton, QSpinBox,
     QFileDialog, QDialogButtonBox, QHBoxLayout, QVBoxLayout,
-    QLabel, QComboBox, QCheckBox, QGroupBox, QWidget,
+    QLabel, QComboBox, QCheckBox, QGroupBox, QWidget, QApplication, QScrollArea, QStyle,
 )
+
+#: The share of the screen's usable height the dialog may take before the form SCROLLS. The four
+#: sections are taller than a laptop screen at the shipped font; the scroll is the fix
+#: (`DOCUMENTATION.md` §9).
+SCREEN_HEIGHT_FRACTION = 0.7
+
+
+class _FormScrollArea(QScrollArea):
+    """The form area: a scroll area whose SIZE HINT is the WHOLE form it holds.
+
+    A plain `QScrollArea` reports a short hint (about 256×192), so a dialog built around one opens
+    short and scrolls even on a tall screen. `AddServerDialog._fit_to_screen()` caps this hint by
+    70% of the usable screen — the scrollbar appears exactly when the form is taller than that.
+    """
+
+    def sizeHint(self):
+        hint = super().sizeHint()
+        widget = self.widget()
+        if widget is None:
+            return hint
+        return QSize(hint.width(), widget.sizeHint().height() + 2 * self.frameWidth())
 
 
 class AddServerDialog(QDialog):
@@ -333,9 +355,30 @@ class AddServerDialog(QDialog):
         self.notes_form.addRow(self.t("server.tags") if self._i18n_available else "Tags:",
                                self.tags_edit)
 
+        # ── The four sections live in a SCROLL AREA (v1.13.5) ──
+        # The profile block above and the Save/Cancel row below stay OUTSIDE it: the two controls a
+        # user needs on any screen never scroll away, while the form they fill can be taller than
+        # the window. The group objects, their order and every field identity are untouched.
+        self.form_container = QWidget()
+        self.form_layout = QVBoxLayout(self.form_container)
+        self.form_layout.setContentsMargins(0, 0, 0, 0)
         for _group in (self.identity_group, self.connection_group,
                        self.hardware_group, self.notes_group):
-            main_layout.addWidget(_group)
+            self.form_layout.addWidget(_group)
+        self.form_layout.addStretch()
+        self.form_scroll = _FormScrollArea()
+        self.form_scroll.setWidgetResizable(True)
+        self.form_scroll.setWidget(self.form_container)
+        main_layout.addWidget(self.form_scroll, 1)
+        # The dialog's minimum width reserves the viewport's whole chrome — the column margins, the
+        # frame and the VERTICAL scrollbar the capped height brings up — so the fields are never cut
+        # and no HORIZONTAL bar appears beside the vertical one.
+        _margins = main_layout.contentsMargins()
+        _bar = self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+        self.setMinimumWidth(max(
+            self.minimumWidth(),
+            self.form_container.minimumSizeHint().width()
+            + _margins.left() + _margins.right() + 2 * self.form_scroll.frameWidth() + _bar))
 
         # v0.9.5.6: "Connect via SSH" button — on the left; Save/Cancel — on the right
         # (QDialogButtonBox keeps the standard order).
@@ -363,6 +406,23 @@ class AddServerDialog(QDialog):
         # disabled (it only means something for an unmanaged card). Applied ONCE here, after
         # every widget the state touches exists; `_load_data()` re-applies it for an edit.
         self._apply_unmanaged_state(self.unmanaged.isChecked())
+        self._fit_to_screen()
+
+    def _fit_to_screen(self):
+        """Open at 70% of the usable screen height, capped by the dialog's own `sizeHint()`.
+
+        The height is a BUDGET, not a promise: a short screen makes the form area scroll
+        (`form_scroll`) while the profile block and the Save/Cancel row stay visible. A screen that
+        reports no usable geometry leaves Qt's own size hint in charge.
+        """
+        hint = self.sizeHint()
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:
+            self.resize(hint)
+            return
+        cap = int(screen.availableGeometry().height() * SCREEN_HEIGHT_FRACTION)
+        if cap > 0:
+            self.resize(hint.width(), min(hint.height(), cap))
 
     def _required_label(self, key: str) -> QLabel:
         """A form label carrying the REQUIRED marker (`*`) and the tooltip that says what it marks.

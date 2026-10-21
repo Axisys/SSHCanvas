@@ -252,7 +252,7 @@ CL.CommandLibraryDialog = _StubDialog
 CL.QMessageBox = _YesBox   # the shipped confirmation answers Yes (the module attribute seam)
 try:
     _StubDialog.data = {"name": "first (edited)", "command": "echo one",
-                        "category": "", "enabled": True}
+                        "category": "", "enabled": True, "confirm": False}
     _panel._edit_entry(_first)
     _after_edit = CL.CommandLibraryStore(LIB).load()
     check("§3 Edit acts on the record its ROW carries (the second record is untouched)",
@@ -600,8 +600,8 @@ print("== §9 the release ==")
 check_release_state(ROOT)
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
-check("§9 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.13.4.3")
-      and EXPECTED_APP_VERSION == "1.13.4.3", EXPECTED_APP_VERSION)
+check("§9 the pin names this release or a later one",
+      releases_at_least(EXPECTED_APP_VERSION, "1.13.4.3"), EXPECTED_APP_VERSION)
 check("§9 the patch adds NO key (the parity baseline is the shipped figure)",
       all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
       str({code: len(translation_keys(data)) for code, data in LANGS.items()}))

@@ -141,12 +141,30 @@ check("§2 the sixteen flat rows are FOUR declared sections (one QGroupBox each)
       str([g.title() for g in _groups]))
 
 _main = dlg.layout()
-check("§2 the sections keep the declared reading order, after the profile block",
-      _main.indexOf(dlg.identity_group) > 0
-      and _main.indexOf(dlg.identity_group) < _main.indexOf(dlg.connection_group)
-      < _main.indexOf(dlg.hardware_group) < _main.indexOf(dlg.notes_group),
-      str([_main.indexOf(g) for g in (dlg.identity_group, dlg.connection_group,
+_form = dlg.form_scroll.widget().layout()
+check("§2 the four sections live in ONE scroll area, in the declared reading order",
+      dlg.form_scroll.widget() is dlg.form_container
+      and dlg.form_scroll.widgetResizable() is True
+      and _form.itemAt(0).widget() is dlg.identity_group
+      and _form.indexOf(dlg.identity_group) < _form.indexOf(dlg.connection_group)
+      < _form.indexOf(dlg.hardware_group) < _form.indexOf(dlg.notes_group),
+      str([_form.indexOf(g) for g in (dlg.identity_group, dlg.connection_group,
                                       dlg.hardware_group, dlg.notes_group)]))
+check("§2 ...while the profile block and the Save/Cancel row stay OUTSIDE it (always visible)",
+      _main.indexOf(dlg.form_scroll) > 0
+      and not dlg.form_container.isAncestorOf(dlg.profile_combo)
+      and not dlg.form_container.isAncestorOf(dlg.ssh_connect_btn),
+      f"scroll@{_main.indexOf(dlg.form_scroll)}")
+_screen = QApplication.primaryScreen()
+_cap = int(_screen.availableGeometry().height() * 0.7) if _screen is not None else None
+_expected = (min(dlg.sizeHint().height(), _cap) if _cap else dlg.sizeHint().height())
+_expected = max(_expected, dlg.minimumSizeHint().height())
+check("§2 the dialog opens at 70% of the usable screen height, capped by its own size hint",
+      dlg.height() == _expected,
+      f"height={dlg.height()} hint={dlg.sizeHint().height()} cap={_cap}")
+check("§2 ...and it may SHRINK (the scroll answers the form, not a minimum height of the dialog)",
+      dlg.minimumSizeHint().height() < dlg.sizeHint().height(),
+      f"min={dlg.minimumSizeHint().height()} hint={dlg.sizeHint().height()}")
 
 
 def _label(form, row):

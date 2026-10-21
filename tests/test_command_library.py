@@ -127,10 +127,11 @@ if os.path.isfile(s1):
 st1 = CL.CommandLibraryStore(path=s1)
 lib = st1.load()
 check("the first run: 5 seeds", len(lib) == 5, str(len(lib)))
-check("the seeds: the fields id/name/command/category/enabled",
-      all(set(e) == {"id", "name", "command", "category", "enabled"} for e in lib))
-check("the seeds are enabled + unique ids",
-      all(e["enabled"] is True for e in lib) and len({e["id"] for e in lib}) == 5)
+check("the seeds: the fields id/name/command/category/enabled/confirm",
+      all(set(e) == {"id", "name", "command", "category", "enabled", "confirm"} for e in lib))
+check("the seeds are enabled, silent by default and carry unique ids",
+      all(e["enabled"] is True and e["confirm"] is False for e in lib)
+      and len({e["id"] for e in lib}) == 5)
 with open(s1, encoding="utf-8") as f:
     doc = json.load(f)
 check("the document: seeded=true + commands[]",
@@ -478,7 +479,7 @@ CL.CommandLibraryDialog = _StubDialog
 try:
     # ADD
     _STUB["data"] = {"name": "My Test Cmd", "command": "echo hello",
-                     "category": "Custom", "enabled": True}
+                     "category": "Custom", "enabled": True, "confirm": False}
     p8.add_btn.click()
     app.processEvents()
     lib8 = store8.load()
@@ -494,7 +495,7 @@ try:
     item = find_child(p8.tree, "My Test Cmd")
     p8.tree.setCurrentItem(item)
     _STUB["data"] = {"name": "My Test Cmd 2", "command": "echo hello2",
-                     "category": "Custom", "enabled": False}
+                     "category": "Custom", "enabled": False, "confirm": False}
     p8.edit_btn.click()
     app.processEvents()
     lib8 = store8.load()
@@ -595,15 +596,19 @@ dlg.command_edit.setPlainText("echo 1")
 app.processEvents()
 check("the dialog: OK is enabled with a name+command", dlg._ok.isEnabled() is True)
 r = dlg.result_entry()
-check("the dialog: result_entry (name/category/command/enabled)",
-      r == {"name": "only name", "category": "", "command": "echo 1", "enabled": True}, str(r))
+check("the dialog: result_entry (name/category/command/enabled/confirm)",
+      r == {"name": "only name", "category": "", "command": "echo 1",
+            "enabled": True, "confirm": False}, str(r))
 
 dlg2 = CL.CommandLibraryDialog(
-    {"id": "e1", "name": "N", "command": "C\n", "category": "K", "enabled": False},
+    {"id": "e1", "name": "N", "command": "C\n", "category": "K", "enabled": False,
+     "confirm": True},
     categories=["A"])
 check("the dialog: the edit mode — the fields are pre-filled (the command is not trimmed)",
       dlg2.name_edit.text() == "N" and dlg2.command_edit.toPlainText() == "C\n"
       and dlg2.category_edit.currentText() == "K" and dlg2.enabled_check.isChecked() is False)
+check("the dialog: the edit mode reads the confirmation flag of the record",
+      dlg2.confirm_check.isChecked() is True)
 
 
 # ════════════════════════════════════════════════

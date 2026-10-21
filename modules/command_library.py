@@ -3,14 +3,14 @@
 `CommandLibraryStore` owns `~/.sshmap/commands.json` — pure Python, no Qt: an atomic write of the WHOLE
 document with deliberately NO merge, because the file belongs to this module alone; the first run seeds
 five examples (`seeded: true`) and a corrupt file or a foreign type is a log line plus an EMPTY library.
-The library FILE is first-class: every write rotates the backup ring, a slot is restored through the
-shipped backup dialog and the import/export pair carries the WHOLE library. `CommandLibraryPanel` sits
-left of the session tabs in BOTH containers and holds TWO lists: the `Commands` head (the search, the
-"category → command" tree, the Add/Edit/Delete buttons, a double click / Enter sending a macro to the
-ACTIVE session through `page.widget.send_macro` → `terminal_thread.send_data()`, never the multi-input
-broadcast) and the `Servers` head (the map's aliases with their OWN row menu, a tag filter and a name
-sort). The collapse is the ONE key `ui_cmdlib_collapsed`. Test seams: explicit `path=`/`store=`, the
-module attributes `QMessageBox` / `QMenu` / `BackupsDialog`; `CommandLibraryDialog` is the form."""
+The library FILE is first-class: every write rotates the backup ring, a slot is restored and the pair
+of import/export carries the WHOLE library. `CommandLibraryPanel` sits left of the session tabs in BOTH
+containers and holds TWO lists: the `Commands` head (the search, the "category → command" tree, the
+Add/Edit/Delete buttons, a double click / Enter sending a macro to the ACTIVE session through
+`page.widget.send_macro` → `terminal_thread.send_data()`, never the multi-input broadcast — a record
+whose `confirm` flag is set asks ONE question first) and the `Servers` head (the map's aliases with
+their OWN row menu, a tag filter and a name sort). Collapse — the ONE key `ui_cmdlib_collapsed`; test
+seams — explicit `path=`/`store=`, the `QMessageBox`/`QMenu`/`BackupsDialog` attributes."""
 
 import hashlib
 import json
@@ -249,14 +249,14 @@ def _seed_entries() -> list:
          "Scripts"),
     ]
     return [{"id": uuid.uuid4().hex[:12], "name": name, "command": cmd,
-             "category": cat, "enabled": True} for (name, cmd, cat) in seeds]
+             "category": cat, "enabled": True, "confirm": False} for (name, cmd, cat) in seeds]
 
 
 class CommandLibraryStore:
     """The command library store (~/.sshmap/commands.json).
 
     The document format: {"seeded": true, "commands": [{id, name, command, category,
-    enabled}, ...]}. path — explicit (a test seam) or the default. load()/save()
+    enabled, confirm}, ...]}. path — explicit (a test seam) or the default. load()/save()
     never raise; corrupt data → an empty library + a log line."""
 
     def __init__(self, path: str = None):
@@ -297,7 +297,7 @@ class CommandLibraryStore:
 
     @staticmethod
     def _normalize(e):
-        """An entry → {id, name, command, category, enabled} or None (invalid)."""
+        """An entry → {id, name, command, category, enabled, confirm} or None (invalid)."""
         if not isinstance(e, dict):
             return None
         name = e.get("name")
@@ -312,8 +312,9 @@ class CommandLibraryStore:
         category = e.get("category")
         category = category.strip() if isinstance(category, str) else ""
         enabled = e.get("enabled", True)
+        confirm = e.get("confirm", False)
         return {"id": cid, "name": name, "command": command,
-                "category": category, "enabled": bool(enabled)}
+                "category": category, "enabled": bool(enabled), "confirm": bool(confirm)}
 
     # ── writing ─────────────────────────────────────────────────────────────
 
@@ -499,6 +500,15 @@ def suggested_name(command) -> str:
         if line.strip():
             return line.strip()[:SUGGESTED_NAME_MAX].strip()
     return ""
+
+
+def needs_confirmation(entry) -> bool:
+    """True when the record asks ONE question before it is sent — the ONLY reader of `confirm`. PURE.
+
+    The flag is additive: a `commands.json` without the key reads False, so no file migrates. A
+    non-dict (a category row, a stale menu record) asks nothing.
+    """
+    return bool(isinstance(entry, dict) and entry.get("confirm", False))
 
 
 def read_library_file(source_path) -> dict:
@@ -728,7 +738,7 @@ class _CommandTree(QTreeWidget):
 # ── the add/edit dialog ─────────────────────────────────────────────────────
 
 class CommandLibraryDialog(QDialog):
-    """v1.3: the library command dialog (name / category / command / enabled).
+    """v1.3: the library command dialog (name / category / command / enabled / confirm).
 
     The MODE is the ID: an `entry` that carries one is the stored record being edited (the title
     says so), while an `entry` WITHOUT one is a NEW record whose fields are PRE-FILLED — the form the
@@ -737,7 +747,8 @@ class CommandLibraryDialog(QDialog):
     (new ones are typed freely). OK is blocked until the name AND the command are non-empty
     (a double guard: the disabled button + the check in _on_accept). The command is NOT
     stripped at the edges (the trailing line breaks matter — build_macro_payload
-    normalizes them on send)."""
+    normalizes them on send). The `Requires confirmation` box sits UNDER `Enabled`: an ADD form
+    opens unchecked, the EDIT form reads the record."""
 
     def __init__(self, entry: dict = None, categories: list = None, parent=None):
         super().__init__(parent)
@@ -755,11 +766,15 @@ class CommandLibraryDialog(QDialog):
         self.command_edit.setFixedHeight(120)
         self.enabled_check = QCheckBox(t("terminal.cmdlib.enabled"))
         self.enabled_check.setChecked(True)
+        self.confirm_check = QCheckBox(t("terminal.cmdlib.confirm_required"))
+        self.confirm_check.setToolTip(t("terminal.cmdlib.confirm_tooltip"))
+        self.confirm_check.setChecked(False)
 
         form.addRow(t("terminal.cmdlib.name"), self.name_edit)
         form.addRow(t("terminal.cmdlib.category"), self.category_edit)
         form.addRow(t("terminal.cmdlib.command"), self.command_edit)
         form.addRow("", self.enabled_check)
+        form.addRow("", self.confirm_check)
 
         box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -775,6 +790,7 @@ class CommandLibraryDialog(QDialog):
             self.category_edit.setCurrentText(cat)
             self.command_edit.setPlainText(entry.get("command", ""))
             self.enabled_check.setChecked(bool(entry.get("enabled", True)))
+            self.confirm_check.setChecked(needs_confirmation(entry))
         else:
             # The add mode: the category is NOT pre-filled with the first of the list —
             # an editable QComboBox would show items[0] by default; an empty text
@@ -801,12 +817,13 @@ class CommandLibraryDialog(QDialog):
         self.accept()
 
     def result_entry(self) -> dict:
-        """{name, category, command, enabled} — the panel issues the id (a new one / its own)."""
+        """{name, category, command, enabled, confirm} — the panel issues the id (a new one / its own)."""
         return {
             "name": self.name_edit.text().strip(),
             "category": self.category_edit.currentText().strip(),
             "command": self.command_edit.toPlainText(),
             "enabled": bool(self.enabled_check.isChecked()),
+            "confirm": bool(self.confirm_check.isChecked()),
         }
 
 
@@ -1908,14 +1925,18 @@ class CommandLibraryPanel(QWidget):
             self.send_entry(entry)
 
     def send_entry(self, entry: dict):
-        """Send the command to the ACTIVE session (ROADMAP v1.3).
+        """Send the command to the ACTIVE session (ROADMAP v1.3) — ONE question first when the
+        record asks for it.
 
         The active session — the container's `active_session` if it installed one
         (v1.3.3.5: the terminal window's SPLIT pane, i.e. the pane the user clicked —
         ROADMAP task 6), otherwise `session_tabs.currentWidget()` (the v1.3 rule); the
         send — a dynamic call of page.widget.send_macro(text) (a direct
         terminal_thread.send_data(), NOT the multi-input broadcast). A disabled entry —
-        a quiet no-op. No active / a dead session — a status message, no exceptions."""
+        a quiet no-op. No active / a dead session — a status message, no exceptions.
+        `needs_confirmation()` records ask `terminal.cmdlib.confirm_send` with **No** as the
+        default: a No — or a dialog that cannot be shown — sends NOTHING and says nothing
+        (the dialog IS the answer)."""
         t = get_translator()
         if not entry or not entry.get("enabled", True):
             return   # a disabled entry is not sent (muted in the tree)
@@ -1925,6 +1946,8 @@ class CommandLibraryPanel(QWidget):
         if page is not None:
             widget = getattr(page, "widget", None)
             fn = getattr(widget, "send_macro", None)
+            if callable(fn) and needs_confirmation(entry) and not self._confirm_send(entry):
+                return
             if callable(fn):
                 try:
                     ok = bool(fn(str(entry.get("command", ""))))
@@ -1939,6 +1962,24 @@ class CommandLibraryPanel(QWidget):
             self.status_message.emit(t("terminal.cmdlib.sent_to", alias=alias), 4000)
         else:
             self.status_message.emit(t("terminal.cmdlib.no_active_session"), 4000)
+
+    def _confirm_send(self, entry) -> bool:
+        """The ONE question of the send door — True only for an explicit Yes.
+
+        The `QMessageBox` module attribute is the shipped test seam (the delete path uses the same
+        one); a dialog that cannot be shown answers False, i.e. NOTHING is sent.
+        """
+        t = get_translator()
+        box = QMessageBox   # the monkeypatch CL.QMessageBox works in the tests
+        try:
+            reply = box.question(
+                self.window() or self,
+                t("terminal.cmdlib.confirm_title"),
+                t("terminal.cmdlib.confirm_send", name=str(entry.get("name", ""))),
+                box.Yes | box.No, box.No)
+            return reply == box.Yes
+        except Exception:   # noqa: BLE001 — no dialog, no send
+            return False
 
     # ── CRUD ────────────────────────────────────────────────────────────────
 
@@ -1973,7 +2014,7 @@ class CommandLibraryPanel(QWidget):
             self._entries.append({
                 "id": uuid.uuid4().hex[:12], "name": d["name"],
                 "command": d["command"], "category": d["category"],
-                "enabled": d["enabled"],
+                "enabled": d["enabled"], "confirm": d["confirm"],
             })
             self._commit()
 
@@ -1986,7 +2027,8 @@ class CommandLibraryPanel(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             d = dlg.result_entry()
             e.update({"name": d["name"], "command": d["command"],
-                      "category": d["category"], "enabled": d["enabled"]})
+                      "category": d["category"], "enabled": d["enabled"],
+                      "confirm": d["confirm"]})
             self._commit()
 
     def _edit_entry(self, e):
@@ -1996,7 +2038,8 @@ class CommandLibraryPanel(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             d = dlg.result_entry()
             e.update({"name": d["name"], "command": d["command"],
-                      "category": d["category"], "enabled": d["enabled"]})
+                      "category": d["category"], "enabled": d["enabled"],
+                      "confirm": d["confirm"]})
             self._commit()
 
     def _duplicate_entry(self, e):
@@ -2004,6 +2047,7 @@ class CommandLibraryPanel(QWidget):
         for "(copy)" is not defined; the user renames it in the dialog if they want)."""
         new = dict(e)
         new["id"] = uuid.uuid4().hex[:12]
+        new["confirm"] = needs_confirmation(e)   # the record is the source; a stale copy is not
         self._entries.append(new)
         self._commit()
 
@@ -2058,7 +2102,7 @@ class CommandLibraryPanel(QWidget):
             return False
         dlg = CommandLibraryDialog(
             {"name": (name or "").strip() or suggested_name(command),
-             "command": command, "category": "", "enabled": True},
+             "command": command, "category": "", "enabled": True, "confirm": False},
             categories=self._existing_categories(), parent=self.window() or self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return False
@@ -2066,7 +2110,7 @@ class CommandLibraryPanel(QWidget):
         self._entries.append({
             "id": uuid.uuid4().hex[:12], "name": d["name"],
             "command": d["command"], "category": d["category"],
-            "enabled": d["enabled"],
+            "enabled": d["enabled"], "confirm": d["confirm"],
         })
         ok = self._commit()
         if ok:
