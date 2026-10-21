@@ -31,7 +31,7 @@ import modules.sftp_worker as SW
 from modules.sftp_pane_listing import ACTIVE_PANE_MARK
 from modules.sftp_tab import (SOURCE_LOCAL, SftpTab, _SftpRowItem, clamp_viewer_max_bytes,
                               format_size, preview_block_reason, resolve_viewer_max_bytes,
-                              row_name, row_path, save_viewer_max_bytes)
+                              row_name, row_path)
 from modules.sftp_worker import (MAX_READ_BYTES, READ_CAP_NONE, READ_ERROR_TOO_LARGE, SftpWorker,
                                  _SftpTask)
 from ui import theme_qss
@@ -276,17 +276,6 @@ check("§2 the resolver clamps into the range and refuses a foreign value (PURE)
       and resolve_viewer_max_bytes({STAB.VIEWER_MAX_BYTES_CONFIG: "8"}) == MAX_READ_BYTES
       and resolve_viewer_max_bytes({STAB.VIEWER_MAX_BYTES_CONFIG: 2 ** 40})
       == STAB.VIEWER_MAX_BYTES_MAX)
-clear_cfg()
-check("§2 ...and it round-trips through config.json (a merge-write, clamped)",
-      save_viewer_max_bytes(7 * MAX_READ_BYTES)
-      and read_cfg({}).get(STAB.VIEWER_MAX_BYTES_CONFIG) == 7 * MAX_READ_BYTES
-      and resolve_viewer_max_bytes() == 7 * MAX_READ_BYTES)
-clear_cfg()
-save_viewer_max_bytes(10 ** 12)
-check("§2 an out-of-range write to config.json is CLAMPED, never stored raw",
-      read_cfg({}).get(STAB.VIEWER_MAX_BYTES_CONFIG) == STAB.VIEWER_MAX_BYTES_MAX
-      and resolve_viewer_max_bytes() == STAB.VIEWER_MAX_BYTES_MAX,
-      str(read_cfg({}).get(STAB.VIEWER_MAX_BYTES_CONFIG)))
 clear_cfg()
 
 check("§2 the cap travels IN THE TASK — neither worker reads a config",

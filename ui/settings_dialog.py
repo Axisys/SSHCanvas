@@ -1295,12 +1295,19 @@ class SettingsDialog(QDialog):
         return f"{seconds:.1f}"
 
     def viewer_max_bytes(self) -> int:
-        """The collected CEILING in BYTES (the value box speaks MiB — the row's own unit)."""
+        """The collected CEILING in BYTES, CLAMPED (the value box speaks MiB — the row's own unit).
+
+        The WRITE side of the ONE range: a value outside it cannot reach `config.json` even if the
+        widget is replaced, and a build without the Files surface keeps the step (which IS the min).
+        """
+        step = int(getattr(self, "_viewer_max_step", 1024 * 1024) or 1024 * 1024)
         try:
             mib = int(self.viewer_max_spin.value())
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            return int(getattr(self, "_viewer_max_step", 1024 * 1024) or 1024 * 1024)
-        return mib * int(getattr(self, "_viewer_max_step", 1024 * 1024) or 1024 * 1024)
+            return step
+        sftp = _viewer_max_module()
+        clamp = getattr(sftp, "clamp_viewer_max_bytes", None) if sftp is not None else None
+        return int(clamp(mib * step)) if callable(clamp) else mib * step
 
     # ── "Statuses" tab (the StatusChecker probe interval + timeout) ─────────────
 
@@ -2157,7 +2164,8 @@ class SettingsDialog(QDialog):
             "terminal_files_mode": self.files_mode_combo.currentData() or "tab",
             # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's ceiling in bytes — the ONE owner
             # of the cap every pane hands to its read tasks ("Files" tab; the pane re-reads
-            # it, so a change invalidates its "no preview" facts).
+            # it, so a change invalidates its "no preview" facts). `viewer_max_bytes()` judges
+            # the value through the module's own range before it is written.
             "ui_viewer_max_bytes": self.viewer_max_bytes(),
             "terminal_palette": self.palette_combo.currentData() or "default",
             "terminal_font_size": int(self.font_size_spin.value()),

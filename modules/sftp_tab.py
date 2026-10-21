@@ -35,7 +35,7 @@ try:  # v1.2.5: central theme (status labels — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from ..ui import theme_qss
 except ImportError:
     try:
@@ -69,17 +69,17 @@ except ImportError:
                              NAME_ERROR_UNSAFE, READ_ERROR_TOO_LARGE, SftpWorker,
                              parse_task_payload, register_orphan_sftp_worker)
 
-try:  # v1.4.7 (ROADMAP task 4): detection + tokenizers + the ONE highlighter
+try:  # v1.4.7: detection + tokenizers + the ONE highlighter
     from . import syntax_highlight as syntax
 except ImportError:
     import syntax_highlight as syntax
 
-try:  # v1.7.3 (ROADMAP v1.7.3, task 1): the cross-session relay and its dialog
+try:  # v1.7.3: the cross-session relay and its dialog
     from . import sftp_send as send
 except ImportError:  # flat launch from the project root
     import sftp_send as send
 
-try:  # v1.7.3 (ROADMAP v1.7.3, task 1): the parent-chain host hook of the Send-to provider
+try:  # v1.7.3: the parent-chain host hook of the Send-to provider
     from .terminal_split import find_host_hook
 except ImportError:  # flat launch from the project root
     from terminal_split import find_host_hook
@@ -156,11 +156,7 @@ COMMANDER_RATIO_MAX = 0.8
 #: dropped again when it goes off, so the single-pane look costs no floor at all.
 COMMANDER_MIN_PANE_PX = 200
 
-#: The floor of the shared row of the pane (v1.7rc3), in pixels: the button row lives inside ONE
-#: wrapper widget (so the two-pane view can hide it as a unit) and a bare `QWidget` would report
-#: its layout's WHOLE minimum — a row of five buttons — as the pane's, which raises the terminal
-#: WINDOW's own floor. The wrapper is therefore allowed to shrink and CLIP the row, exactly as the
-#: row behaved before the wrapper existed.
+#: The floor of the `_ButtonRow` wrapper, in pixels (the class docstring owns the story of the row).
 BUTTONS_BAR_MIN_WIDTH = 0
 
 #: The worker signals a pane binds (the container owns the worker, the pane its slots).
@@ -435,25 +431,12 @@ def resolve_viewer_max_bytes(cfg: dict = None) -> int:
     return clamp_viewer_max_bytes(value)
 
 
-def save_viewer_max_bytes(value) -> bool:
-    """Write the ONE cap key, CLAMPED (merge-write; False — the config could not be written)."""
-    try:
-        from i18n import save_config
-    except Exception:  # noqa: BLE001 — a build without i18n cannot remember it
-        return False
-    try:
-        return bool(save_config({VIEWER_MAX_BYTES_CONFIG: clamp_viewer_max_bytes(value)}))
-    except Exception:  # noqa: BLE001 — a write failure must not break the reader
-        return False
-
-
 def pane_payload(mime_data):
     """The `{session, pane, path}` payload of a drag that started inside a pane (None — foreign).
 
-    A malformed payload (not JSON, not an object, no path) is a FOREIGN drag: the pane then behaves
-    exactly as it did before the private type existed. v1.7.4rc2 adds the SOURCE dialect of the row
-    (`source`, `size`): a local row and a remote one carry paths of two different spellings, so a
-    drop resolves the basename with the dialect that really produced it.
+    A malformed payload (not JSON, not an object, no path) is a FOREIGN drag. The `source` field is
+    the row's DIALECT (`source`, `size`): a local row and a remote one carry paths of two different
+    spellings, so a drop resolves the basename with the dialect that really produced it.
     """
     if mime_data is None or not mime_data.hasFormat(PANE_DRAG_MIME):
         return None
@@ -509,7 +492,7 @@ def load_commander_settings():
 
 
 def _apply_status_style(widget, key: str) -> None:
-    """v1.4.3 (ROADMAP task 4): apply a muted status-label style from the registry.
+    """v1.4.3: apply a muted status-label style from the registry.
 
     Falls back to the pre-v1.4.3 inline string when the Qt theme module is not
     importable (a flat run outside the project tree), so a status label is styled
@@ -591,22 +574,12 @@ def local_files(mime_data) -> list:
 
 
 class _SftpRowItem(QTreeWidgetItem):
-    """ONE row of a pane's listing, ordered by the ROLES (v1.7.5 — the sortable listing).
+    """ONE row of a pane's listing, ordered by the ROLES (the tree asks this `__lt__`).
 
-    `QTreeWidget`'s own item ordering is the ONLY sorter (`sortItems()` calls this `__lt__` through
-    the tree's model), so the sorting costs no re-listing and no second sort table. The order is
-    declared in the ROLES, which both SOURCES fill identically, so a LOCAL pane sorts exactly like a
-    remote one (`LOCAL_PANE.md` §3) and a column that means nothing for a directory keeps the two
-    GROUP rules intact:
-
-      * the ".." row (`pinned`) is FIRST whatever the column and the direction;
-      * DIRECTORIES stay grouped ABOVE the files, whatever the column and the direction;
-      * inside one group the chosen COLUMN decides, then the path breaks a tie deterministically.
-
-    Two rules the pane must keep for this to hold: Qt is always asked for `AscendingOrder` (its
-    `DescendingOrder` REVERSES the comparator, which would put the files above the directories) and
-    the real direction lives on the PANE (`_sort_column` / `_sort_desc`), where this comparison
-    reads it.
+    Group rules — ANY column, ANY direction (`AGENTS.md` §4.3.6):
+      * the ".." row (`pinned`) FIRST, then DIRECTORIES above the files;
+      * the chosen COLUMN inside one group, then the path as the deterministic tie-break;
+      * Qt is asked for `AscendingOrder` only — `_sort_column` / `_sort_desc` hold the direction.
     """
 
     def __init__(self, *args, **kwargs):
@@ -671,7 +644,7 @@ class _SftpRowItem(QTreeWidgetItem):
 
 
 class _SftpTree(QTreeWidget):
-    """The listing tree of a PANE (v1.3.3.2, ROADMAP task 5): drag-OUT.
+    """The listing tree of a PANE (v1.3.3.2): drag-OUT.
 
     A row can be dragged into a terminal, an editor or a chat window: the drag
     payload is the REMOTE PATH of the row as `text/plain` (the file itself is not
@@ -782,15 +755,12 @@ class _SftpTree(QTreeWidget):
 
 
 class _ButtonRow(QWidget):
-    """The row of the pane's buttons as ONE widget (v1.7rc3).
+    """The pane's button row as ONE widget (v1.7rc3) — the two-pane view needs it as a unit.
 
-    The two-pane view needs the row as a unit: the FIRST pane keeps it and the SECOND one hides it
-    and shows the key hints in the same line. A bare `QWidget` would report its LAYOUT's whole
-    minimum size — a row of five buttons — and that number travels up into the terminal window's own
-    floor, so a narrow window that would clip the row refuses to shrink instead. The row is
-    therefore allowed to shrink and clip, exactly as it behaved while it was a plain layout of the
-    pane (`BUTTONS_BAR_MIN_WIDTH` is the declared floor, and the HEIGHT keeps the layout's hint so
-    the hint row can borrow it).
+    The FIRST pane keeps the row, the SECOND hides it for the key hints. A bare `QWidget` would
+    report its LAYOUT's whole minimum (five buttons) as the pane's, which raises the terminal
+    WINDOW's floor, so a narrow window that clips the row refuses to shrink. The row therefore
+    shrinks and CLIPS: the floor is `BUTTONS_BAR_MIN_WIDTH`, the HEIGHT keeps the layout's hint.
     """
 
     def minimumSizeHint(self):  # noqa: N802 — Qt's own spelling
@@ -985,7 +955,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # that the worker really refused (see preview_block_reason); per session.
         self._blocked = {}
         self._blocked_icon_cache = None
-        # v1.3.3.2 (ROADMAP task 1): the file operations — task_id → kind, so an
+        # v1.3.3.2: the file operations — task_id → kind, so an
         # answer refreshes the listing and an error is reported as an OPERATION
         # error (the queue itself is untouched), and the pre-flight listings of a
         # drop on a directory row — task_id → (target dir, local files).
@@ -1015,7 +985,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._archive_tasks = {}
         self._archive_dropped = set()
         self._archive_legs = {}
-        # v1.6.3 (ROADMAP task 4): the address bar's own bookkeeping — the normalize tasks
+        # v1.6.3: the address bar's own bookkeeping — the normalize tasks
         # in flight (task_id → the text the user typed) and the completer's listings
         # (task_id → the directory they answer). `_completer_dir` is the directory the
         # completer is currently fed with, so the typed directory is listed at most ONCE
@@ -1031,11 +1001,11 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._op_targets = {}
         self._batches = {}
         self._batch_seq = 0
-        # v1.7.3 (ROADMAP v1.7.3, task 2): the remembered directory of this session — the hint the
+        # v1.7.3: the remembered directory of this session — the hint the
         # FIRST transport of each pane opens, and the flag that keeps a second list from re-asking.
         self._restored = False
         self._restore_dir = ""
-        # v1.7.3 (ROADMAP v1.7.3, task 4): the reader's word wrap — ONE global setting, read at
+        # v1.7.3: the reader's word wrap — ONE global setting, read at
         # construction so both panes and every session agree.
         self._viewer_wrap = resolve_viewer_wrap()
         # v1.9.3: the reader's ENCODING — resolved on the FIRST read (`viewer_encoding_choice`), because
@@ -1101,11 +1071,9 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         outer.addWidget(self.header_label)
         self._sync_header()
 
-        # Path row — the current directory (the "address bar").
-        # v1.6.3 (ROADMAP task 4): it is an EDITABLE QLineEdit now — Enter navigates through
-        # the SERVER's own resolution (the worker's queue_normalize), so `~`, a relative path
-        # and a symlink stay the remote's business. Before the connection it is read-only and
-        # carries the waiting text (the pre-connection state of the old QLabel).
+        # Path row — the current directory (the "address bar"): EDITABLE, because Enter navigates
+        # through the SERVER's own resolution (the worker's `queue_normalize`), so `~`, a relative
+        # path and a symlink stay the remote's business. Read-only until a transport is bound.
         self.path_label = QLineEdit(t("sftp.waiting_connection"))
         _apply_status_style(self.path_label, "status.sftp_row")
         self.path_label.setReadOnly(True)   # until set_worker() binds a transport
@@ -1151,11 +1119,8 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         bar.addWidget(self.btn_upload)
         bar.addWidget(self.btn_download)
         bar.addWidget(self.btn_cancel)
-        # The button row as ONE widget, so the SECOND pane of the two-pane view can hide it (a commander
-        # has ONE button row) and show the key hints in the same line. The layout is built INTO the widget
-        # (never `addLayout` on the pane and then a re-parent — Qt refuses a layout that already has an
-        # owner), and the wrapper carries a DELIBERATELY small minimum width: a bare QWidget reports its
-        # layout's whole minimum (a row of five buttons) and would raise the WINDOW's own floor by that row.
+        # ONE widget, so the second pane hides the row as a unit; the layout is built INTO it (Qt
+        # refuses a layout that already has an owner) and the floor is the class's own (`_ButtonRow`).
         self.buttons_bar = _ButtonRow()
         self.buttons_bar.setLayout(bar)
         outer.addWidget(self.buttons_bar)
@@ -1203,7 +1168,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         # v1.7rc1: the focus inside a pane makes it the ACTIVE pane of the container.
         self.tree.focus_in = self.activate
 
-        # v1.3.1 (ROADMAP task 1): the preview panel — QSplitter [tree | viewer].
+        # v1.3.1: the preview panel — QSplitter [tree | viewer].
         # The panel starts hidden (it appears on a double click on a text file);
         # the splitter is a horizontal pair, the viewer is collapsible — but the
         # size is only fixed via minimumWidth + setSizes (Qt gotcha #13:
@@ -1352,15 +1317,10 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
     def bind_worker(self, old_worker, new_worker, source: str = ""):
         """Bind/unbind the pane's PROVIDER: `None` — the "waiting for connection" state.
 
-        The OLD provider is passed explicitly because the container has already replaced its own
-        reference when this runs — the pane must disconnect from the transport it really listened
-        to. `_bound_provider` is the DECLARED record of that connection and WINS over the argument,
-        so a pane bound to a provider of its OWN (LOCAL or ELEVATED) never listens to two.
-
-        A pane's bookkeeping belongs to ONE provider, so every task map is cleared here: a listing,
-        a read, an operation or a completer answer of the previous server must never land in this
-        one. The `source` keyword (v1.7.4rc1) is what a SWITCH passes — the pane adopts the source
-        and binds the provider that goes with it, while the container's own call keeps every pane.
+        `_bound_provider` (the DECLARED record) WINS over `old_worker`, so a pane bound to a
+        provider of its OWN (LOCAL or ELEVATED) never listens to two. Every task map belongs to ONE
+        provider and is cleared here; the `source` keyword is what a SWITCH passes (the pane adopts
+        the source and binds its provider, while the container's own call keeps every pane).
         """
         if source:
             self._source = SOURCE_LOCAL if str(source) == SOURCE_LOCAL else SOURCE_REMOTE
@@ -1453,10 +1413,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
     def _disconnect_worker(self, worker):
         """Drop this pane's slots from the provider it is REALLY bound to (idempotent).
 
-        The EXACT bound slot is what disconnects: `signal.disconnect(<the receiver QObject>)` is a
-        TypeError in PySide6 6.11, and swallowing it left the pane listening to the provider it had
-        just left — whose task ids then collided with the new one's. A provider this pane never
-        bound is not asked (`_bound_provider` is the ONE record of the connection).
+        `_bound_provider` is the ONE record — a receiver-wide `disconnect` is a TypeError anyway.
         """
         if worker is None or worker is not self._bound_provider:
             return
@@ -1519,17 +1476,12 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
             pass   # the C++ object is already gone
 
     def set_source(self, source: str, notify: bool = True) -> bool:
-        """Switch this pane's DATA SOURCE and re-bind its provider (v1.7.4rc1).
+        """Switch this pane's DATA SOURCE and re-bind its provider; False — the switch was refused.
 
-        The pane's own bookkeeping belongs to ONE provider, so the switch goes through the SAME
-        `bind_worker()` path a new connection takes: the old provider is disconnected, every task
-        map is cleared and the new provider is bound and listed. `False` — the switch was refused
-        (the source is unknown, or it is not allowed on this pane at all), and the caller puts its
-        control back; a refusal that is asked for is SAID, never a silent no-op.
-
-        v1.8: the control has a THIRD position. `SOURCE_ELEVATED` is the CLIENT's token and not a
-        data source (`ELEVATED_PANE.md` §1), so it is delegated to the elevation cluster and the
-        data source below stays the shipped pair.
+        The switch goes through the SAME `bind_worker()` path a new connection takes, and a refusal
+        is SAID with `sftp.local.unavailable` — never a silent no-op. `SOURCE_ELEVATED` is the
+        CLIENT's token and not a data source (`ELEVATED_PANE.md` §1): it is delegated to the
+        elevation cluster, and the data source below stays the shipped pair.
         """
         token = str(source or "")
         if token == SOURCE_ELEVATED:
@@ -1623,10 +1575,10 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         self._drop_staged_all()
         self.close_viewer()
 
-    # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
+    # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to this pane's own labels.
+        """v1.4.3: re-apply the theme to this pane's own labels.
 
         Both label styles come from the ONE registry (`_apply_status_style`), so
         the switch is the same call the constructor made. Never raises.
@@ -1732,7 +1684,7 @@ class _SftpPane(SftpPaneWalkMixin, SftpPaneListingMixin, SftpPaneViewerMixin,
         except RuntimeError:
             pass  # the C++ object was already destroyed (a close race)
 
-    # ── the file operations the row context menu fires (ROADMAP task 1) ───────────────
+    # ── the file operations the row context menu fires ───────────────
 
     def _op_new_folder(self):
         """New folder in the CURRENT directory (mkdir through THIS pane's provider queue)."""
@@ -1841,7 +1793,7 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
     # Local hints in the window's status bar (waiting for connection, no selection).
     message = Signal(str)
 
-    # v1.6.3 (ROADMAP task 5): the user switched the cwd follow. The TAB only reports it —
+    # v1.6.3: the user switched the cwd follow. The TAB only reports it —
     # the session (TerminalSessionPage) installs the hook, applies it live and persists the
     # `terminal_follow_cwd` key, because the follow is a state of the SESSION, not of a view.
     follow_cwd_changed = Signal(bool)
@@ -1887,7 +1839,7 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(4)
 
-        # v1.6.3 (ROADMAP task 5): "follow the shell's directory" — the OSC 7 switch of THIS
+        # v1.6.3: "follow the shell's directory" — the OSC 7 switch of THIS
         # session. It is a SESSION state: the page installs the hook and persists the key, and
         # the switch belongs to the CONTAINER (v1.7rc1) so the two-pane mode cannot offer two
         # answers to the one OSC 7 report the session receives.
@@ -2423,16 +2375,9 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
     def preview_allowed(self, pane, report=True) -> bool:
         """May `pane` open — or be shown — a preview now? False — a panel of the OTHER pane is up.
 
-        **ONE preview exists at a time**, and the rule is about the OWNER of the open panel: a pane
-        that opens a file while its OWN panel is displayed (in its splitter or in the other pane's)
-        is never in its own way — the new read replaces the content of the same widget, which is
-        what walking a listing with `F3` does all day long. A file opened while the OTHER pane owns
-        the open panel is REFUSED with ONE sentence (`sftp.cmd.preview_busy`), because the two
-        panels would have to share one splitter.
-
-        `report=False` is the SHOW path (`present_viewer()`): the sentence belongs to the user's key,
-        and by the time an asynchronous read answers, that key is long gone — the panel then simply
-        stays in its own pane instead of dressing the other one.
+        ONE preview at a time, judged by the OWNER: its own pane replaces its content (the `F3`
+        walk), the other owner REFUSES with `sftp.cmd.preview_busy`; `report=False` is the SHOW
+        path, whose key is long gone.
         """
         if pane is None or pane not in self._panes:
             return True   # a foreign pane: nothing to route, the caller keeps its in-pane panel
@@ -2448,15 +2393,9 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
     def present_viewer(self, pane) -> bool:
         """Show `pane`'s panel WHERE THE OTHER PANE IS (the mc `F3`); False — it stays in its own.
 
-        Called from `_show_viewer()` — with the content already in the widget — so the OTHER pane
-        only ever turns into a panel when there is really something to read in it. False for the
-        ONE-pane case (the shipped in-pane panel) and for a read whose answer lost the race against
-        a preview the other pane opened meanwhile (there the panel shows in its OWN pane: honest,
-        and it keeps the one-preview rule true).
-
-        v1.13: a pane that ALREADY carries a panel of this one (the archive listing) keeps it — the
-        reader then shows a member in the pane it was opened from, which is exactly the commander's
-        two-sided look (`ARCHIVES.md` §5).
+        False for ONE pane, for an other pane that already carries a panel of this one (`ARCHIVES.md`
+        §5), and for a read that lost the race against a preview opened meanwhile — the panel then
+        shows in its OWN pane, keeping the one-preview rule true.
         """
         if pane is None or pane not in self._panes:
             return False
@@ -2809,7 +2748,7 @@ class SftpTab(QWidget, sftp_extract.SftpExtractMixin):
         pane = self._active_pane
         return pane.current_dir if pane is not None else "/"
 
-    # ── v1.3.3.1 (ROADMAP task 1): live i18n — the walk over BOTH panes ──
+    # ── v1.3.3.1: live i18n — the walk over BOTH panes ──
 
     def retranslate(self):
         """v1.3.3.1: re-text the container and EVERY pane in the current language.

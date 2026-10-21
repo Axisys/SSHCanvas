@@ -141,6 +141,7 @@ of the file itself.
 | `test_followups_v11313.py` | — | The five decisions the `v1.13.1.2` round carried out of the ledger, each answered (v1.13.1.3). |
 | `test_followups_v1136.py` | — | `v1.13.6` — FIND IT: the search of the Files panes, the reversible delete and the per-pane codec. |
 | `test_followups_v11362.py` | — | `v1.13.6.2` — the search that SAYS what it cut: the cap with the read, the per-file sentence and the dropped run. |
+| `test_followups_v11363.py` | — | `v1.13.6.3` — the ceiling that keeps itself: ONE clamp on both sides of the reader's cap. |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |
@@ -222,6 +223,7 @@ of the file itself.
 | `test_sftp_viewer.py` | — | v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP, ROADMAP v1.3.1). |
 | `test_sidebar_context_menu.py` | — | Regression v0.9.6 — the context menu in the sidebar (the server list). |
 | `test_sidebar_panel.py` | — | `ui/sidebar.py`: `SidebarPanel` — a facade of `MainWindow` plus `retranslate` (v0.9.9.4). |
+| `test_size_budget.py` | — | The module-size gate — an ALWAYS-ON ratchet: no pinned module grows, the band cannot be crossed silently. |
 | `test_ssh_config_import.py` | — | v1.4.1 — Import from ~/.ssh/config (ROADMAP v1.4.1, tasks 1–6). |
 | `test_ssh_connect.py` | — | `modules/ssh_connect.py` — the ONE connect builder (`N50`'s consolidation, `AGENTS.md` §4.4). |
 | `test_ssh_dialogs.py` | — | SSH dialogs: assembly, keyring save v0.9.5.6, the "Connect" button (former smoke_test §6a+§7). |
