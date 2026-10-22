@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v1.14rc4 — the container as a FACADE: the pane's assembly and the three `SftpTab` mixins.
 
-§1 the MRO and the facade; §2 all 81 container names still answer on `SftpTab` (a table, not a
+§1 the MRO and the facade; §2 all 82 container names still answer on `SftpTab` (a table, not a
 sample); §3 the forwarding pair and the QWidget overrides; §4 the className seams and the live
 `host_attr` substitution; §5 the moved bodies are the shipped ones; §6 the behaviour the split must
 not change and the release state.
@@ -30,7 +30,7 @@ from version import APP_VERSION, VERSION_FORMAT  # noqa: E402
 
 LANGS = load_i18n_langs(ROOT)
 
-#: the 81 names of the container, per owner — the ONE table this file audits (the plan's mapping)
+#: the 82 names of the container, per owner — the ONE table this file audits (the plan's mapping)
 FACADE = ["__init__", "release", "retranslate", "refresh_theme", "close_viewer", "resizeEvent",
           "_on_pane_splitter_moved", "_pane_for_widget", "eventFilter", "_pane_under_drag",
           "_forward_drag", "dragEnterEvent", "dragMoveEvent", "dropEvent", "__getattr__",
@@ -52,7 +52,9 @@ VIEWER = ["preview_pane", "preview_source", "preview_in_other_pane", "preview_al
           "present_viewer", "close_preview", "_restore_borrowed_viewer", "apply_viewer_wrap",
           "apply_viewer_encoding", "apply_viewer_max_bytes",
           # v1.14.1: the reader's verbs — the background walk and the `Network ▸` row
-          "apply_viewer_background", "append_network_menu", "run_network_command"]
+          "apply_viewer_background", "append_network_menu", "run_network_command",
+          # v1.14.1.2: the hue the readers wear NOW — the answer of a write that was not STORED
+          "_reader_hue"]
 OWNERS = {"modules/sftp_container_panes.py": ("SftpContainerPanesMixin", SCP.SftpContainerPanesMixin,
                                               PANES),
           "modules/sftp_container_session.py": ("SftpContainerSessionMixin",
@@ -100,9 +102,9 @@ check("§1 ...and none of them is defined by a mixin as well (a second truth is 
            for _rel, (_n, cls, methods) in OWNERS.items() if name in cls.__dict__],
       str([name for name in FACADE
            for _rel, (_n, cls, methods) in OWNERS.items() if name in cls.__dict__]))
-check("§1 the three mixins own the plan's 25 + 27 + 13 methods and define nothing else (v1.14.1 adds "
-      "the session's `session_data` and the reader's three verbs)",
-      [len(methods) for _r, (_n, _c, methods) in OWNERS.items()] == [25, 27, 13]
+check("§1 the three mixins own the plan's 25 + 27 + 14 methods and define nothing else (v1.14.1 adds "
+      "the session's `session_data` and the reader's three verbs; v1.14.1.2 the hue a failed write keeps)",
+      [len(methods) for _r, (_n, _c, methods) in OWNERS.items()] == [25, 27, 14]
       and all(sorted(_class_method_names(rel, name)) == sorted(methods)
               for rel, (name, _cls, methods) in OWNERS.items()),
       str({rel: (len(_class_method_names(rel, name)), len(methods))
@@ -111,8 +113,9 @@ check("§1 the facade's own class body holds exactly the 16 names the table decl
       sorted(_class_method_names("modules/sftp_tab.py", "SftpTab")) == sorted(FACADE),
       str(sorted(set(_class_method_names("modules/sftp_tab.py", "SftpTab")) - set(FACADE)))
       + str(sorted(set(FACADE) - set(_class_method_names("modules/sftp_tab.py", "SftpTab")))))
-check("§1 the plan's total is 81 methods — the number the release names (77 + v1.14.1's four)",
-      len(FACADE) + len(PANES) + len(SESSION) + len(VIEWER) == 81,
+check("§1 the plan's total is 82 methods — the number the release names (77 + v1.14.1's four + "
+      "v1.14.1.2's one)",
+      len(FACADE) + len(PANES) + len(SESSION) + len(VIEWER) == 82,
       str(len(FACADE) + len(PANES) + len(SESSION) + len(VIEWER)))
 check("§1 the pane's assembly is the SEVENTH pane mixin and `__init__` is the assembly CALL",
       isinstance(PASM.SftpPaneAssemblyMixin, type)
@@ -124,7 +127,7 @@ check("§1 the pane's assembly is the SEVENTH pane mixin and `__init__` is the a
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 every one of the 81 names still answers on `SftpTab` ==")
+print("== §2 every one of the 82 names still answers on `SftpTab` ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 clear_cfg()
@@ -141,7 +144,7 @@ for name in FACADE + PANES + SESSION + VIEWER:
         _answered.append(name)
     except AttributeError:
         continue
-check(f"§2 all 81 container names ANSWER on the instance ({len(_answered)}/81)", len(_answered) == 81,
+check(f"§2 all 82 container names ANSWER on the instance ({len(_answered)}/82)", len(_answered) == 82,
       str([n for n in FACADE + PANES + SESSION + VIEWER if n not in _answered]))
 check("§2 ...and `hasattr` is honest about a name nobody owns",
       not hasattr(TAB, "_there_is_no_such_name_v114rc4"))

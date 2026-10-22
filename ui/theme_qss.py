@@ -347,17 +347,27 @@ QToolButton:checked {{
 """
 
 
+def viewer_background_qss(hue, base_hex: str) -> str:
+    """The reader's ONE surface rule, from a HUE and the theme's own surface (PURE, v1.14.1.2).
+
+    ONE source for the surface and for the chip that mirrors it: the pane hands the hue it is
+    APPLYING, so the widget can never wear a tone the chip does not show, and the config is
+    persistence only (a failed write leaves both at the old value). An absent or refused hue answers
+    the theme's own `base_bg` — the colour the global `QPlainTextEdit` rule paints.
+    """
+    fill = base_hex if hue is None else viewer_background_hex(hue, base_hex)
+    return f"QPlainTextEdit#SftpViewerText {{ background-color: {fill}; }}"
+
+
 def _viewer_surface_qss(t) -> str:
-    """The READER's own surface (`modules/sftp_pane_verbs.py`, v1.14.1) — always ONE rule.
+    """The READER's own surface (`modules/sftp_pane_verbs.py`) — always ONE rule.
 
     `ui_viewer_background` holds a HUE; the colour keeps the theme surface's LIGHTNESS, so the syntax
-    palette that was tuned to `base_bg` stays readable. No hue (or a refused one) answers the theme's
-    own `base_bg`, which is exactly what the global `QPlainTextEdit` rule paints — the reader and the
-    theme cannot disagree, and the registry keeps its promise that a name builds a string.
+    palette that was tuned to `base_bg` stays readable. The registry name exists for the WALKS (a
+    theme switch re-reads the config through it); a live apply builds its rule from the hue it is
+    handing out (`viewer_background_qss()`), which is what keeps the surface and the chip together.
     """
-    hue = _viewer_background_hue()
-    fill = t.base_bg if hue is None else viewer_background_hex(hue, t.base_bg)
-    return f"QPlainTextEdit#SftpViewerText {{ background-color: {fill}; }}"
+    return viewer_background_qss(_viewer_background_hue(), t.base_bg)
 
 
 def _find_bar_qss(t) -> str:

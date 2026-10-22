@@ -232,8 +232,9 @@ check("§3 Esc closes the bar and drops the matches",
 pane.open_viewer_find()
 pane._on_viewer_find_query("beta")
 pane._show_viewer("/tmp/other.txt", 4, "beta")
-check("§3 a NEW file resets the run (the matches indexed the previous document)",
-      pane.viewer_find_state()["total"] == 0 and pane.viewer_find_state()["query"] == "",
+check("§3 a NEW file RE-SEEDS the run over it (the query is kept, the count is recomputed)",
+      pane.viewer_find_state() == {"query": "beta", "current": 1, "total": 1}
+      and pane.viewer_text.textCursor().selectedText() == "beta",
       str(pane.viewer_find_state()))
 pane._on_viewer_find_query("beta")
 pane.close_viewer()

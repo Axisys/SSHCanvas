@@ -22,10 +22,10 @@ try:  # v1.1.4: shared seam for swapping the facade module's globals (see mixin_
 except ImportError:
     from mixin_support import host_attr
 
-try:  # v1.6.5: the ONE predicate of the unmanaged gate
-    from ..models.server import is_unmanaged as _is_unmanaged
+try:  # the TWO node predicates: the unmanaged gate, and "this card still owes its facts" (§4.15)
+    from ..models.server import is_unmanaged as _is_unmanaged, needs_info_collection
 except ImportError:  # flat launch from the project root
-    from models.server import is_unmanaged as _is_unmanaged
+    from models.server import is_unmanaged as _is_unmanaged, needs_info_collection
 
 try:  # v1.7.5.1: the ONE URL-scheme rule (the opener and the three writers)
     from ..models.server import is_launchable_url
@@ -542,8 +542,7 @@ class SshMixin:
         # v0.9: automatic server info collection after a successful connect
         # (the dialog's password has not been lost yet; NOT via StatusChecker —
         # that one is designed to work without authentication)
-        if getattr(node.data, "os_name", "") == "" and \
-                hasattr(dlg, "password_edit"):
+        if needs_info_collection(node.data) and hasattr(dlg, "password_edit"):
             self._collect_node_info(
                 node, password=dlg.password_edit.text(), auto=True)
 

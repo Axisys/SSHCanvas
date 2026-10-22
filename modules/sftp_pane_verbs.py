@@ -3,11 +3,11 @@
 
 `SftpViewerVerbsMixin` adds the two controls the preview lacked to the panel `SftpPaneViewerMixin`
 builds: a find bar over the reader's DOCUMENT (`Ctrl+F`, `Enter` / `Shift+Enter`, `Esc`, a `k / N`
-counter — `QTextDocument.find()` is the search, so no second engine exists) and the background chip
-that paints the reader's surface with the hue of `ui_viewer_background`. The bar is a ROW of the panel
-(hidden until asked for), the chip a 22 px control in its header; neither covers the text. The hue is
-read by the PURE `modules/sftp_pane_helpers.py`, the colour is the `viewer.background` builder of
-`ui/theme_qss.py`.
+counter — `QTextDocument.find()` is the search, so no second engine exists; the query is DEBOUNCED
+and a match stores its UTF-16 pair) and the background chip that paints the surface with the hue of
+`ui_viewer_background` (ONE painter with the chip: `theme_qss.viewer_background_qss`). The bar is a
+ROW of the panel (re-seeded on every new document), the chip a 22 px header control; the hue is read
+by the PURE `modules/sftp_pane_helpers.py`, the presets by `ui/accent_presets.py`.
 
 Contract — `SFTP_PANES.md` §3b, `AGENTS.md` §4.15; mechanism — `DOCUMENTATION.md` §38.
 """
@@ -50,13 +50,48 @@ except ImportError:  # flat launch from the project root
     from sftp_pane_helpers import (VIEWER_BACKGROUND_PRESETS,  # type: ignore
                                    resolve_viewer_background, viewer_background_hue)
 
+try:  # the ONE log of this module — a failed config write is said ONCE (AGENTS.md §4.15)
+    from .logger import get_logger
+except ImportError:
+    try:
+        from modules.logger import get_logger
+    except ImportError:  # pragma: no cover — a stripped build logs nowhere
+        import logging
+
+        def get_logger(name):  # noqa: N802 — the same signature
+            return logging.getLogger(name)
+
+log = get_logger(__name__)
+
 #: The matches the counter walks before it stops counting — a `QTextDocument.find()` per hit over a
-#: 1 MB file would be O(n²), so the total is a DECLARED bound and the counter says "N+" when it is met.
+#: 1 MB file would be O(n²), so the total is a DECLARED bound and the counter says "N+" when a
+#: FURTHER hit exists past it.
 VIEWER_FIND_MATCH_MAX = 2000
+
+#: The debounce of the query field, in milliseconds: a burst of keystrokes runs ONE scan per pause, so
+#: a document at the reader's 250 MiB ceiling is never walked per character typed (declared window
+#: 150..250 ms — `tests/test_followups_v11412.py` §4 drives the burst).
+VIEWER_FIND_DEBOUNCE_MS = 180
 
 #: The inset of the bar's own layout, in pixels, and the chip's side (the header's cross is 24 px).
 VIEWER_FIND_MARGIN = 4
 VIEWER_BACKGROUND_CHIP_PX = 22
+
+
+def persist_viewer_background(host, hue) -> bool:
+    """Write the ONE hue through the host's own door and answer whether it was STORED (N154).
+
+    The write's ANSWER is the contract: a surface painted from a key that was never written shows a
+    colour the next build forgets, so both callers — the chip's pane and the container's walk — leave
+    the surface AND the chip at the old hue when this answers False, and the log carries ONE line.
+    """
+    try:
+        stored = bool(host_attr(host, "save_viewer_background")(hue))
+    except (RuntimeError, TypeError, AttributeError):
+        stored = False
+    if not stored:
+        log.warning("the reader's background %r was not stored — the readers keep their own", hue)
+    return stored
 
 
 class ViewerTextView(QPlainTextEdit):
@@ -171,17 +206,29 @@ class ViewerFindBar(QWidget):
         self.btn_close.setToolTip(_t("sftp.viewer.close_tooltip"))
         self.set_count(*self._count)
 
-    def set_count(self, current: int, total):
-        """The counter: `k / N` (or `k / N+` at the bound), the empty state when nothing matches.
+    def set_count(self, current: int, total=None):
+        """The counter: `k / N` (or `k / N+` past the bound), `No matches`, or NOTHING.
 
-        `total` may be a STRING (`"2000+"`) — the bound the walk met, said instead of a number it
-        never reached, so the panel never presents a truncated count as the whole one.
+        `total` is `None` while the field is EMPTY — no query means no sentence at all; `0` is a query
+        that really found nothing; a STRING (`"2000+"`) is the bound that has a FURTHER hit past it,
+        said instead of a count the walk never reached.
         """
         self._count = (int(current), total)
+        if total is None:
+            self.count_label.setText("")
+            return
         if isinstance(total, int) and total <= 0:
             self.count_label.setText(_t("search.no_results"))
             return
         self.count_label.setText(_t("sftp.find.count", cur=int(current), total=total))
+
+    def set_query(self, text: str):
+        """Re-seed the field with `text` and NO signal — the pane owns the state, not `textChanged`."""
+        blocked = self.query_edit.blockSignals(True)
+        try:
+            self.query_edit.setText(str(text or ""))
+        finally:
+            self.query_edit.blockSignals(blocked)
 
     def refresh_theme(self):
         """Re-read the find card's stylesheet (a theme switch). Never raises."""
@@ -218,7 +265,13 @@ class SftpViewerVerbsMixin:
         self._viewer_find_matches = []
         self._viewer_find_current = -1
         self._viewer_find_query = ""
+        self._viewer_find_more = False
         self._viewer_find_bar = None
+        # The debounce: ONE single-shot timer, restarted by every keystroke, so a burst runs ONE scan.
+        self._viewer_find_timer = QTimer(self)
+        self._viewer_find_timer.setSingleShot(True)
+        self._viewer_find_timer.setInterval(VIEWER_FIND_DEBOUNCE_MS)
+        self._viewer_find_timer.timeout.connect(self._run_viewer_find_scan)
         self._apply_stored_viewer_background(deferred=True)
 
     def _apply_stored_viewer_background(self, deferred: bool = False):
@@ -254,7 +307,7 @@ class SftpViewerVerbsMixin:
         if bar is not None:
             return bar
         bar = ViewerFindBar(self.viewer)
-        bar.query_changed.connect(self._on_viewer_find_query)
+        bar.query_changed.connect(self._schedule_viewer_find)
         bar.next_requested.connect(self.viewer_find_next)
         bar.prev_requested.connect(self.viewer_find_prev)
         bar.close_requested.connect(self.close_viewer_find)
@@ -325,19 +378,55 @@ class SftpViewerVerbsMixin:
             return ""
 
     def _on_viewer_find_query(self, text: str):
-        """The query changed: a fresh match list over the WHOLE document, the first hit revealed."""
+        """The query was ASKED for (a door, not a keystroke): a fresh match list, the first hit.
+
+        The field is brought in line with the query (signals blocked): every entry point searches for
+        what the bar SHOWS, or a re-run of `_refit_viewer_find()` would find nothing to repeat.
+        """
         self._viewer_find_query = str(text or "")
+        self._stop_viewer_find_scan()
+        bar = getattr(self, "_viewer_find_bar", None)
+        if bar is not None and bar.query_edit.text() != self._viewer_find_query:
+            try:
+                bar.set_query(self._viewer_find_query)
+            except RuntimeError:
+                self._viewer_find_bar = None
+        self._refresh_viewer_find_matches()
+
+    def _schedule_viewer_find(self, text: str):
+        """A KEYSTROKE: keep the query and let the debounce run ONE pass after the pause."""
+        self._viewer_find_query = str(text or "")
+        timer = getattr(self, "_viewer_find_timer", None)
+        if timer is None:
+            self._refresh_viewer_find_matches()
+            return
+        timer.start(VIEWER_FIND_DEBOUNCE_MS)   # restarting IS the coalescing of a burst
+
+    def _stop_viewer_find_scan(self):
+        """Drop a pending debounced pass (a door that searches NOW supersedes it). Never raises."""
+        timer = getattr(self, "_viewer_find_timer", None)
+        if timer is not None:
+            try:
+                timer.stop()
+            except RuntimeError:
+                self._viewer_find_timer = None
+
+    def _run_viewer_find_scan(self):
+        """The debounce's ONE pass — the timer stopped coalescing the keystrokes."""
         self._refresh_viewer_find_matches()
 
     def _refresh_viewer_find_matches(self):
         """Collect the matches of the query (bounded) and show the first one.
 
-        `QTextDocument.find()` walks forward from a cursor, so ONE pass collects the starts in
-        document order; the walk stops at `VIEWER_FIND_MATCH_MAX` and the counter says the bound was
-        met (`N+`) instead of presenting the number it stopped at as the whole one.
+        `QTextDocument.find()` walks forward from a cursor, so ONE pass collects the matches in
+        document order, each as its `(selectionStart, selectionEnd)` PAIR — `QTextCursor` positions
+        are UTF-16 units, so `start + len(query)` would select nothing for every non-BMP character.
+        The walk stops at `VIEWER_FIND_MATCH_MAX`; ONE further find() decides whether the counter may
+        say `N+` (a bound met by EXACTLY N hits is `N`, never `N+`).
         """
         query = self._viewer_find_query.strip()
         matches = []
+        self._viewer_find_more = False
         try:
             document = self.viewer_text.document()
         except RuntimeError:
@@ -348,7 +437,9 @@ class SftpViewerVerbsMixin:
                 cursor = document.find(query, cursor)
                 if cursor.isNull():
                     break
-                matches.append(cursor.selectionStart())
+                matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+            self._viewer_find_more = (len(matches) >= VIEWER_FIND_MATCH_MAX
+                                      and not document.find(query, cursor).isNull())
         self._viewer_find_matches = matches
         self._viewer_find_current = 0 if matches else -1
         if matches:
@@ -356,12 +447,17 @@ class SftpViewerVerbsMixin:
         self._sync_viewer_find_counter()
 
     def _sync_viewer_find_counter(self):
-        """Push the counter into the bar — the bound is said as `N+`, never as `N`."""
+        """Push the counter into the bar — an empty field says nothing, the bound says `N+`."""
         bar = getattr(self, "_viewer_find_bar", None)
         if bar is None:
             return
         total = len(getattr(self, "_viewer_find_matches", None) or [])
-        shown = f"{VIEWER_FIND_MATCH_MAX}+" if total >= VIEWER_FIND_MATCH_MAX else total
+        if not str(getattr(self, "_viewer_find_query", "") or "").strip():
+            shown = None   # no query at all — the bar has no sentence to give
+        elif total and getattr(self, "_viewer_find_more", False):
+            shown = f"{VIEWER_FIND_MATCH_MAX}+"
+        else:
+            shown = total
         try:
             bar.set_count(self._viewer_find_current + 1 if total else 0, shown)
         except RuntimeError:
@@ -373,12 +469,11 @@ class SftpViewerVerbsMixin:
         index = int(getattr(self, "_viewer_find_current", -1))
         if not (0 <= index < len(matches)):
             return
-        start = int(matches[index])
+        start, end = matches[index]
         try:
             cursor = QTextCursor(self.viewer_text.document())
-            cursor.setPosition(start)
-            cursor.setPosition(start + len(self._viewer_find_query.strip()),
-                               QTextCursor.MoveMode.KeepAnchor)
+            cursor.setPosition(int(start))
+            cursor.setPosition(int(end), QTextCursor.MoveMode.KeepAnchor)
             self.viewer_text.setTextCursor(cursor)
             self.viewer_text.centerCursor()
         except RuntimeError:
@@ -403,17 +498,46 @@ class SftpViewerVerbsMixin:
         self._sync_viewer_find_counter()
         return True
 
+    def _refit_viewer_find(self):
+        """The document CHANGED: the bar that stays visible must tell the truth about the new one.
+
+        A visible bar is re-seeded from its own field: `_reset_viewer_find()` clears the stale query
+        (signals blocked) and the pass then re-runs the SAME query over the document on the screen, so
+        a visible "No matches" is never left over a document it did not search, and `Enter` steps
+        again. A closed bar costs one dict lookup.
+        """
+        bar = getattr(self, "_viewer_find_bar", None)
+        query = ""
+        if bar is not None:
+            try:
+                query = str(bar.query_edit.text() or "")
+            except RuntimeError:
+                self._viewer_find_bar = bar = None
+        self._reset_viewer_find()
+        if bar is None or not query.strip():
+            return
+        try:
+            bar.set_query(query)   # signals blocked — the re-run below is the pane's, not a keystroke
+        except RuntimeError:
+            self._viewer_find_bar = None
+            return
+        self._on_viewer_find_query(query)
+
     def _reset_viewer_find(self):
-        """Forget the matches (the document they index into is about to change)."""
+        """Forget the matches (the document they index into is about to change). Never raises."""
         self._viewer_find_matches = []
         self._viewer_find_current = -1
         self._viewer_find_query = ""
+        self._viewer_find_more = False
+        self._stop_viewer_find_scan()
         bar = getattr(self, "_viewer_find_bar", None)
-        if bar is not None:
-            try:
-                bar.set_count(0, 0)
-            except RuntimeError:
-                self._viewer_find_bar = None
+        if bar is None:
+            return
+        try:
+            bar.set_query("")       # the field never keeps a query no match list was built from
+            bar.set_count(0, None)  # an empty field says nothing — not "No matches"
+        except RuntimeError:
+            self._viewer_find_bar = None
 
     # ── the background hue (`ui_viewer_background`) ──────────────────────
 
@@ -430,24 +554,28 @@ class SftpViewerVerbsMixin:
         """Apply ONE hue to this reader's surface (`None` — the theme's own look).
 
         The hue is NORMALISED by the pure reader, so a hand-edited value never reaches the QSS
-        builder; `persist` writes the ONE key of the reader's family. Returns the applied hue.
+        builder; `persist` writes the ONE key of the reader's family. A write that FAILS leaves the
+        surface and the chip at the old hue and is said once — the answer is the whole point.
+        Returns the hue the reader wears afterwards.
         """
         resolved = viewer_background_hue(hue)[0]
+        if persist and not persist_viewer_background(self, resolved):
+            return self.viewer_background_hue
         self._viewer_background = resolved
-        if persist:
-            host_attr(self, "save_viewer_background")(resolved)
         self._apply_viewer_background(resolved)
         return resolved
 
     def _apply_viewer_background(self, hue):
-        """Paint the reader with `hue` and mirror it on the chip — the ONE writer of the surface.
+        """Paint the reader with `hue` and mirror it on the chip — the ONE painter of BOTH (N154).
 
-        The registry builder reads the SAME hue from the config, so this method is only the
-        refresh: an empty hue leaves no rule at all and the global `QPlainTextEdit` look stands.
+        The surface is built from the hue ARGUMENT (`theme_qss.viewer_background_qss`), never re-read
+        from the config: the config is persistence only, so a switch, a second container's write and
+        a failed save all leave the chip and the surface on the same colour by construction.
         """
-        if theme_qss is not None:
+        if theme_qss is not None and theme_module is not None:
             try:
-                self.viewer_text.setStyleSheet(theme_qss.style("viewer.background"))
+                self.viewer_text.setStyleSheet(
+                    theme_qss.viewer_background_qss(hue, str(theme_module.THEME.base_bg)))
             except RuntimeError:
                 return   # Qt teardown — the panel is already gone
         self._paint_viewer_background_chip(hue)

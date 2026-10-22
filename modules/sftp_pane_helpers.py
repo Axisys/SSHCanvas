@@ -6,10 +6,9 @@ byte buffer into the text a row or the reader shows — no widget, no provider, 
 reader's encoding/wrap settings (`ui_viewer_encoding`, `ui_viewer_wrap`, `ui_sftp_encodings`), the TWO
 path DIALECTS (`PathDialect` / `dialect_for`), the per-server directory memory (`ui_sftp_dirs`), the
 row ROLES and the source/drag vocabulary the widget module imports, the row readers (`row_path` /
-`row_name`), the cut predicate, the reader's BACKGROUND hue, the `Network ▸` address detector with its
-three commands, and the Commander's own settings; `ask_conflict()` is the ONE overwrite
-question, with its `QMessageBox` taken from the facade (`STAB.QMessageBox`). Every name is re-exported
-by `modules.sftp_tab` — `SFTP_PANES.md` §5-§6; `DOCUMENTATION.md` §59, §64, §66, §68.
+`row_name`), the cut predicate, the reader's BACKGROUND hue (presets: `ui/accent_presets.py`), the
+`Network ▸` detector, the Commander's settings and `ask_conflict()` — the ONE overwrite question (its
+`QMessageBox` from the facade) — re-exported by `modules.sftp_tab`: `SFTP_PANES.md` §5-§6, docs §59-§68.
 """
 
 import codecs
@@ -46,6 +45,11 @@ try:  # v1.14.1.1: the ONE finite-number gate of a stored config value (`models/
     from models.server import finite_number
 except ImportError:  # the package layout (`sshmap.modules.*`)
     from ..models.server import finite_number  # type: ignore
+
+try:  # the reader's chip vocabulary — the Appearance tab's OWN table (`ui/accent_presets.py`, §4.6)
+    from ui.accent_presets import ACCENT_PRESETS
+except ImportError:  # the package layout (`sshmap.modules.*`)
+    from ..ui.accent_presets import ACCENT_PRESETS  # type: ignore
 
 
 # ── The pane's VOCABULARY — the row roles, the two sources and the drag payload ──────
@@ -246,15 +250,11 @@ def save_viewer_encoding(value) -> bool:
         return False
 
 
-#: v1.14.1: the READER's BACKGROUND — ONE global key holding a HUE (0..359) and nothing else: a free
-#: COLOUR would make the syntax ink unreadable, while a hue keeps the tone of `base_bg` derivable.
+#: v1.14.1: the READER's BACKGROUND — ONE key holding a HUE (0..359); a free COLOUR would make the ink unreadable.
 VIEWER_BACKGROUND_CONFIG = "ui_viewer_background"
 VIEWER_BACKGROUND_HUE_MIN = 0
 VIEWER_BACKGROUND_HUE_MAX = 359
-#: The presets the reader's chip offers — `(name, hue)`; each NAME is the Appearance tab's own i18n key.
-VIEWER_BACKGROUND_PRESETS = (("sky", 198.4), ("cyan", 187.0), ("green", 142.0), ("amber", 38.0),
-                             ("orange", 25.0), ("pink", 330.0), ("violet", 262.0),
-                             ("slate", 215.0))
+VIEWER_BACKGROUND_PRESETS = ACCENT_PRESETS   #: the chip's presets — the Appearance tab's OWN table
 
 
 def viewer_background_hue(value):

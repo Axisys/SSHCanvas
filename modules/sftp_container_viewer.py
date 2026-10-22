@@ -28,6 +28,11 @@ except ImportError:  # flat launch from the project root
     from sftp_pane_helpers import (NETWORK_VERBS, network_command,  # type: ignore
                                    parse_network_target, viewer_background_hue)
 
+try:  # v1.14.1.2: the ONE write-and-answer of the reader's hue (its failure gets the ONE log line)
+    from .sftp_pane_verbs import persist_viewer_background
+except ImportError:  # flat launch from the project root
+    from sftp_pane_verbs import persist_viewer_background  # type: ignore
+
 try:  # v1.14.1: the split of the container this tab lives in — the parent-chain walk
     from .terminal_split import find_split
 except ImportError:  # flat launch from the project root
@@ -209,14 +214,17 @@ class SftpContainerViewerMixin:
     def apply_viewer_background(self, hue, pane=None):
         """Write the ONE reader-background key and apply it to EVERY pane (v1.14.1).
 
-        The twin of `apply_viewer_max_bytes()`: the KEY goes first (the `viewer.background` QSS
-        builder reads the config, so a pane refreshed before the write would paint the old hue),
-        then each pane repaints its own surface. The pane that ASKED is answered with ONE status
-        sentence — the choice is global and persistent, and nothing else on the screen would say so.
-        Returns the NORMALISED hue (None — the theme's own look).
+        The twin of `apply_viewer_max_bytes()`, and the write is the ONE thing asked FIRST: a key that
+        was NOT stored means nothing changed — every reader keeps the hue it wears and ONE log line
+        carries the failure (the chip never shows a colour the surface does not wear, §4.15). On a
+        stored key each pane repaints from the hue ARGUMENT, and the pane that ASKED is answered with
+        ONE status sentence (the choice is global and persistent, and nothing else on the screen
+        would say so). Returns the hue the readers wear afterwards (`None` — the theme's own look).
         """
         resolved = viewer_background_hue(hue)[0]
-        host_attr(self, "save_viewer_background")(resolved)
+        kept = self._reader_hue(pane)
+        if not persist_viewer_background(self, resolved):
+            return kept
         for target in list(self._panes):
             try:
                 target.set_viewer_background(resolved, persist=False)
@@ -229,6 +237,15 @@ class SftpContainerViewerMixin:
             except RuntimeError:
                 pass   # Qt teardown — the reader that asked is already gone
         return resolved
+
+    def _reader_hue(self, pane=None):
+        """The hue the readers wear NOW — the asking pane's, else the first one's (`None` — theme)."""
+        for target in ([pane] if pane is not None else []) + list(self._panes):
+            try:
+                return target.viewer_background_hue
+            except (AttributeError, RuntimeError):
+                continue   # a bare stub / Qt teardown — ask the next pane
+        return None
 
     # ── v1.14.1: the reader's `Network ▸` verbs (the SESSION's, over its selection) ──
 

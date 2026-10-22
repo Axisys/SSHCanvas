@@ -142,6 +142,19 @@ def is_linux_host(target) -> bool:
     return name.lower() == LINUX_KERNEL.lower()
 
 
+def needs_info_collection(target) -> bool:
+    """Does this node still owe a collection — the connect path's ONE predicate (v1.14.1.2)?
+
+    The facts arrive as ONE batch (the OS name and the kernel name are two sections of the same
+    `exec_command`), so a node carrying ONE of them without the other is a project written before the
+    second fact existed: it needs the collection, or the kernel-gated verbs stay closed on a file
+    that shipped before them. Both present = measured. PURE and duck-typed like `is_linux_host()`.
+    """
+    data = getattr(target, "data", target)
+    return not (str(getattr(data, "os_name", "") or "").strip()
+                and str(getattr(data, "kernel_name", "") or "").strip())
+
+
 def info_collected_epoch(value) -> float:
     """Coerce a raw "info_collected_at" value into epoch seconds (v1.5.3).
 

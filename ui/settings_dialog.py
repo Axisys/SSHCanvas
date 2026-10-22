@@ -39,6 +39,14 @@ except ImportError:
     except ImportError:
         theme_qss = None
 
+try:  # the accent vocabulary — ONE PURE home shared with the Files reader's chip (AGENTS.md §4.6)
+    from . import accent_presets
+except ImportError:
+    try:
+        from ui import accent_presets
+    except ImportError:  # flat layout: the ui/ directory itself is on sys.path
+        import accent_presets
+
 try:  # i18n — top-level package (flat run from the project root)
     from i18n import t as _translate
 except Exception:  # pragma: no cover - fallback path
@@ -197,21 +205,13 @@ def load_ui_settings():
 #: The accent swatches of the tab: (key suffix, hue, representative hex).
 #: The hex is computed, not typed — a swatch cannot drift from its hue.
 def accent_swatches():
-    """[(name, hue, hex)] — the presets the "Appearance" tab offers (v1.4.3).
+    """[(name, hue, hex)] — the presets the "Appearance" tab offers, from the ONE PURE home.
 
     Sky is FIRST and equals the default hue, so "reset to the default look" is
     one click on the leftmost swatch. The middle of the accent's own range is the
-    generator's job: every entry is `theme.accent_hex(hue)`.
+    generator's job: every entry is `theme.accent_hex(hue)`, so a swatch cannot drift from its hue.
     """
-    presets = [("sky", theme.DEFAULT_ACCENT_HUE),
-               ("cyan", 187.0),
-               ("green", 142.0),
-               ("amber", 38.0),
-               ("orange", 25.0),
-               ("pink", 330.0),
-               ("violet", 262.0),
-               ("slate", 215.0)]
-    return [(name, hue, theme.accent_hex(hue)) for name, hue in presets]
+    return [(name, hue, theme.accent_hex(hue)) for name, hue in accent_presets.ACCENT_PRESETS]
 
 
 def swatch_style(fill: str, selected: bool = False) -> str:

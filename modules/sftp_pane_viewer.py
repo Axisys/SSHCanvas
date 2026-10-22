@@ -405,7 +405,7 @@ class SftpPaneViewerMixin:
             highlighter.reset_for_document()
         self._highlight_range = None
         self.viewer_text.setPlainText(text)   # the cursor lands at the start by itself
-        self._reset_viewer_find()             # v1.14.1: the matches indexed the PREVIOUS document
+        self._refit_viewer_find()             # the bar that STAYS re-runs its query over THIS document
         self._viewer_open = True
         # The panel is where the FILE is: with two panes it takes the OTHER pane's slot (mc/far),
         # with one it stays inside this one (the shipped look). The move happens HERE — with the
