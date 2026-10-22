@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """v1.2.13 — the mouse wheel in the full-screen TUI (SGR/X10 passthrough)
-(ROADMAP v1.2.13, PYTE82_AUDIT.md batch C).
+(PYTE82_AUDIT.md batch C).
 
 The headless matrix of the modes: DECSET 1000/1002/1003 × 1006 → `mouse_tracking() == (enabled, sgr)`,
 with 1006 ALONE giving `(False, True)` — the xterm semantics are that 1006 only encodes the reports, so
-without 1000/1002/1003 there are no mouse events at all (the ROADMAP acceptance is corrected here); the
+without 1000/1002/1003 there are no mouse events at all (the xterm semantics win here); the
 disable, the RIS (`\x1bc`) clearing the modes, and the htop-style toggle mid-session (read on every event,
 never cached). The offscreen Qt with a fake thread: with 1006 the wheel sends EXACTLY `\x1b[<64;{col};{row}M` (up = 64, down = 65 — the button codes 1/2 plus 64) and with 1002 but no 1006 it sends X10 `\x1b[M` plus `[96|97, 32+col, 32+row]`, the coordinates clamped to the grid and to the X10 protocol limit of 223 (= 255−32; the wide coordinates exist only through the UTF-8 1005 / the SGR 1006). The alt screen without tracking is a no-op (nothing in the PTY, the scrollback untouched, the event not consumed), the passthrough takes priority over `terminal_wheel = "off"` (which otherwise ignores the event), the plain scrollback still pages, and the wheel bytes never ride the multi-input hub because the coordinates are session-local. `terminal_thread=None` with tracking raises nothing."""
 import sys
@@ -56,7 +56,7 @@ scr = TerminalScreen(columns=80, lines=24)
 check("a fresh screen: mouse_tracking() == (False, False)",
       scr.mouse_tracking() == (False, False), str(scr.mouse_tracking()))
 
-# 1006 ALONE — encoding, not tracking (the corrected acceptance, ROADMAP v1.2.13)
+# 1006 ALONE — encoding, not tracking (the xterm semantics, v1.2.13)
 scr.feed(b"\x1b[?1006h")
 check("the 1006 alone → (False, True): the SGR-encoding without the 1000/1002/1003 tracking is not enabled",
       scr.mouse_tracking() == (False, True), str(scr.mouse_tracking()))

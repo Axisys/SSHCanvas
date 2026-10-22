@@ -105,7 +105,7 @@ def texts_of(container) -> dict:
     """{label: text} of every user-visible string a container owns.
 
     Buttons, labels, tooltips, tab titles+tooltips, tree headers and window titles —
-    exactly the surfaces the ROADMAP acceptance lists (tab titles, buttons, headers,
+    exactly the surfaces a user can see (tab titles, buttons, headers,
     tooltips, status labels, window titles). Never raises on a dead C++ object.
     """
     out = {}
@@ -322,7 +322,7 @@ check("switching back restores the dock title and its pages",
       and dock_page.sftp_tab.btn_cancel.text() == read_lang("en")["sftp.cancel"],
       dock.windowTitle())
 
-# The "no preview" row tooltip is re-texted without a re-listing (task 1)
+# The "no preview" row tooltip is re-texted without a re-listing
 from PySide6.QtWidgets import QTreeWidgetItem  # noqa: E402
 dock_page.sftp_tab._blocked = {"/etc/big.bin": "too_large"}
 item = QTreeWidgetItem(["./big.bin", "", ""])
@@ -443,7 +443,7 @@ for _code in i18n_lang_codes(ROOT):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the language list without a restart (task 3) ==")
+print("== §4 the language list without a restart ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("the language submenu object is kept on the window (the rebuild anchor)",
@@ -535,7 +535,7 @@ _dlg.destroy()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 placeholders and line breaks (task 4) ==")
+print("== §5 placeholders and line breaks ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("placeholder_names() reads the SET of {placeholders}",
@@ -624,7 +624,7 @@ check_i18n_format(load_i18n_langs(ROOT))
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the counter / baseline guards over README.md and ROADMAP.md (task 5) ==")
+print("== §6 the counter / baseline guards over README.md and ROADMAP.md ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _real_test_count = len([f for f in os.listdir(os.path.join(ROOT, "tests"))
@@ -673,9 +673,9 @@ def _audit_roadmap():
     check("ROADMAP.md: no quoted figure is a stale outlier of the chain",
           # v1.4.5: the bound is RELATIVE to the pin (the absolute "600" of v1.3.3.1 went stale the
           # moment the shipped key count passed it — the pin is the only number that may live here).
-          # The 1.13 line's remaining three slots (the terminal background, the Files/Servers row
-          # verbs and the Diff tab — ROADMAP.md, "The planned chain of this line") project ~30 keys,
-          # not the one-slot 20 of a one-version plan.
+          # A planned slot quotes what its own section states: the `1.14` line's rc milestones add NO
+          # key, and a THEME's projection stays under this window (the widest one the plan ever wrote
+          # was ~30 keys, not the one-slot 20 of a one-version plan).
           all(EXPECTED_I18N_KEYS - 1 <= f <= EXPECTED_I18N_KEYS + 40 for f in figures),
           f"quoted={figures} pin={EXPECTED_I18N_KEYS}")
     check("ROADMAP.md spells the baseline out in the header (a released section is removed from the "
@@ -709,7 +709,7 @@ print("== §7 zh.json's missing line break + the release state ==")
 
 _en_desc = read_lang("en")["dialog.manage_profiles_desc"]
 _zh_desc = read_lang("zh")["dialog.manage_profiles_desc"]
-check("the defect task 4 found is fixed: zh carries en's line break",
+check("the defect is fixed: zh carries en's line break",
       newline_count(_zh_desc) == newline_count(_en_desc) == 1,
       f"zh={newline_count(_zh_desc)} en={newline_count(_en_desc)}")
 check("the fix kept the translation (not a copied English string)",
@@ -725,7 +725,7 @@ for _code in i18n_lang_codes(ROOT):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §8 the note-debounce hotfix (task 6) ==")
+print("== §8 the note-debounce hotfix ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 mw3 = MW.MainWindow()
@@ -869,8 +869,8 @@ check("the pin counts the keys of the SHIPPED release (v1.5.2 added THIRTEEN —
       " — 925 + 20 + 41 + 1 + 16 = 1003, and v1.8.3 adds TWENTY-THREE: the Plugins window — its "
       "title and the three column captions, its three buttons, the door of the Plugins menu, the "
       "checked-servers hint, the two empty sentences and the twelve column headers of its tables"
-      " — 1003 + 23 = 1026, and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the four section titles of the Add Server dialog, its four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.9.8 adds THIRTEEN: the two `Clear` asks with their two hints and their one title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; v1.13.2 adds EIGHT: the wallpaper row of the terminal settings — its label, its two buttons, its placement with its three values and its opacity row; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu with its connect row, its `All tags`, its two sort directions and their tooltip and the two quick-launch sentences; v1.13.4 adds EIGHTEEN: the Diff tab — its tab title, its row and tooltip, its two side names, its empty sentence, its header, its two buttons, its encoding line, its three comparison sentences, its binary and read refusals, and the Files menu's submenu with its row and its no-targets sentence; v1.13.5 adds FOUR: the confirmation box of a library record (its label and its tooltip) and the question it asks (its title and its sentence); v1.13.6 adds THIRTEEN: the content search of the Files panes, the reversible local delete and the per-session codec, and v1.13.6.2 adds ONE: the per-file cut sentence of that search",
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1,
+      " — 1003 + 23 = 1026, and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the four section titles of the Add Server dialog, its four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.9.8 adds THIRTEEN: the two `Clear` asks with their two hints and their one title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; v1.13.2 adds EIGHT: the wallpaper row of the terminal settings — its label, its two buttons, its placement with its three values and its opacity row; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu with its connect row, its `All tags`, its two sort directions and their tooltip and the two quick-launch sentences; v1.13.4 adds EIGHTEEN: the Diff tab — its tab title, its row and tooltip, its two side names, its empty sentence, its header, its two buttons, its encoding line, its three comparison sentences, its binary and read refusals, and the Files menu's submenu with its row and its no-targets sentence; v1.13.5 adds FOUR: the confirmation box of a library record (its label and its tooltip) and the question it asks (its title and its sentence); v1.13.6 adds THIRTEEN: the content search of the Files panes, the reversible local delete and the per-session codec, and v1.13.6.2 adds ONE: the per-file cut sentence of that search; v1.14 adds ONE: the `Find text` button's tooltip",
+      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1,
       str(EXPECTED_I18N_KEYS))
 check_release_state(ROOT)
 for _code in i18n_lang_codes(ROOT):

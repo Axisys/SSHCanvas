@@ -96,8 +96,8 @@ def _close_quiet(channel) -> None:
         return
     try:
         closer()
-    except Exception:  # noqa: BLE001 — a dead channel is the state this call wanted
-        pass
+    except Exception as e:  # noqa: BLE001 — a dead channel is the state this call wanted
+        _log_line("debug", f"Closing the plugin's channel failed: {e}")
 
 
 def _read_capped(stream, limit: int = OUTPUT_MAX, deadline=None, control=None):
@@ -131,8 +131,8 @@ def _read_capped(stream, limit: int = OUTPUT_MAX, deadline=None, control=None):
             if callable(settimeout):
                 try:
                     settimeout(max(DEADLINE_MIN_WAIT, left))
-                except Exception:  # noqa: BLE001 — a channel that cannot bound its own recv
-                    pass
+                except Exception as e:  # noqa: BLE001 — a channel that cannot bound its own recv
+                    _log_line("debug", f"The channel cannot bound its recv ({e}) — polling instead")
         want = min(OUTPUT_CHUNK, limit - len(buf))
         try:
             chunk = recv(want) if callable(recv) else stream.read(want)
@@ -225,8 +225,8 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         try:
             stdin.close()
-        except Exception:  # noqa: BLE001 — a closed stdin is not an error
-            pass
+        except Exception as e:  # noqa: BLE001 — a closed stdin is not an error
+            _log_line("debug", f"Closing the command's stdin failed: {e}")
         # The budget of the OUTPUT phase, taken once here: connect has its own bounds above.
         deadline = time.monotonic() + _budget_seconds(timeout)
         try:
@@ -265,8 +265,8 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
         try:
             if client is not None:
                 client.close()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            _log_line("debug", f"Closing the plugin run's client failed: {e}")
 
 
 class PluginCommandRunner(QThread):
@@ -290,7 +290,7 @@ class PluginCommandRunner(QThread):
                  node_facts: Optional[Dict[str, dict]] = None,
                  parent=None):
         super().__init__(parent)
-        # v1.6.4 (ROADMAP task 1): the managed plugin worker names itself — the manager's
+        # v1.6.4: the managed plugin worker names itself — the manager's
         # orphan registry keeps it alive past its wait budget, so this is one of the threads
         # Qt's "Destroyed while running" abort would otherwise report as ''. No behaviour.
         self.setObjectName("PluginCommandRunner")
@@ -431,7 +431,7 @@ def _log_line(level: str, message: str) -> None:
     try:
         from modules.logger import get_logger
         getattr(get_logger("modules.plugin_runner"), level)(message)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — optional import
         pass
 
 

@@ -30,7 +30,7 @@ import os
 def _anchor(node):
     """The anchor position of the note: the top-right corner of the node's CARD + (12, 12).
 
-    v1.4.2 (ROADMAP task 4): the anchor is `card_rect_scene()` — the drop-shadow became
+    v1.4.2: the anchor is `card_rect_scene()` — the drop-shadow became
     a halo on all four sides, so the painted boundingRect is SHADOW_BLUR bigger and the
     note would otherwise be expected 9 px off the card.
     """

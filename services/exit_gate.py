@@ -102,7 +102,11 @@ def stop_thread(thread) -> str:
             return name
         except (RuntimeError, TypeError):
             continue   # the C++ object is gone, or the door wants an argument
-        except Exception:  # noqa: BLE001 — a door that raises is tried no further
+        except Exception as e:  # noqa: BLE001 — a door that raises is tried no further
+            log = _log()
+            if log:
+                log.debug("The exit door %s() of %s raised (%s) — the next door answers",
+                          name, _name_of(thread), e)
             continue
     return ""
 
@@ -131,7 +135,7 @@ def _terminate(thread) -> bool:
         try:
             log.warning("Exit gate: thread '%s' ignored its own stop door and was TERMINATED "
                         "(the declared last resort)", _name_of(thread))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — the caller owns the fallback: the report carries the name
             pass
     return ended
 

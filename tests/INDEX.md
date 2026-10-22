@@ -108,10 +108,11 @@ of the file itself.
 | `test_audit_v15rc5.py` | — | v1.5rc5 — the review batch (hardening): the batch-level checks of the nine defects. |
 | `test_audit_v161.py` | — | v1.6.1 — the review batch (hardening): the shipped facts, the guards and the leftovers. |
 | `test_autosave_backups.py` | — | Regression v0.9.7 — autosave + the project backup ring buffer. |
-| `test_bidirectional_arrows.py` | — | Bidirectional arrows (v1.2.6, ROADMAP task 1). |
+| `test_bidirectional_arrows.py` | — | Bidirectional arrows (v1.2.6). |
 | `test_bookmarks.py` | — | v1.6.7 — The bookmarks: ONE application-level place for the links the team uses. |
 | `test_canvas_truth.py` | — | v1.6.3 — the canvas at the cell: the glyph grid, the mouse the TUI asks for, the Files tab that answers back. |
 | `test_chrome.py` | — | v1.5rc4 — Density, focus & findability: the chrome answers the same questions as the map. |
+| `test_code_pointers.py` | — | The plan pointers — an ALWAYS-ON gate: the app tree names no plan, and a decision names its OWNER. |
 | `test_collapse.py` | — | Server card collapsing v0.8.4 (former DESIGN.md §D) (former tests/smoke_collapse.py). |
 | `test_command_confirm.py` | — | The command that asks first: the `confirm` flag of a library record and the ONE question |
 | `test_command_guard.py` | — | v1.9.6 — the command guard: the PURE classifier, the policy, the ONE dialog and its doors. |
@@ -128,6 +129,7 @@ of the file itself.
 | `test_elevated_pane.py` | — | The ELEVATED Files pane (v1.8): the sudo command table and its allowlist, the handshake over a |
 | `test_elevated_pane_contract.py` | — | The clause audit of `ELEVATED_PANE.md` (v1.8) against the SHIPPED code — one section per clause |
 | `test_encoding.py` | — | v1.5rc2 — the ENCODING gate: "no meaning in a colour alone" + the print-friendly export. |
+| `test_except_budget.py` | — | The swallowed-error gate — an ALWAYS-ON ratchet: a `pass` that can hide a logic error says why it does. |
 | `test_export_background.py` | — | Regression v0.9.1: map export to image + background image. |
 | `test_export_fidelity.py` | — | v1.3.3.7 — Export fidelity: the drawio vertex keeps the map's data, SVG joins the formats. |
 | `test_ext_terminal_dialog.py` | — | Regression v0.9.9.2 — the external terminal UI (presets and reset to defaults). |
@@ -142,6 +144,7 @@ of the file itself.
 | `test_followups_v1136.py` | — | `v1.13.6` — FIND IT: the search of the Files panes, the reversible delete and the per-pane codec. |
 | `test_followups_v11362.py` | — | `v1.13.6.2` — the search that SAYS what it cut: the cap with the read, the per-file sentence and the dropped run. |
 | `test_followups_v11363.py` | — | `v1.13.6.3` — the ceiling that keeps itself: ONE clamp on both sides of the reader's cap. |
+| `test_followups_v11402.py` | — | The silence that says why: the swallowed-error audit's first batch (v1.14rc2). |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |
@@ -160,17 +163,17 @@ of the file itself.
 | `test_i18n_languages.py` | — | v1.3.3 — Languages without writing code ("name" in JSON + parity policy + documentation): the release's themed test. |
 | `test_i18n_live.py` | slow | v1.3.3.1 — Live i18n: the containers follow a language switch + the checks of the policy. |
 | `test_index.py` | — | The generated suite map — `tests/INDEX.md` is fresh and every test file carries its docstring. |
-| `test_inventory.py` | — | v1.5.5 — The inventory: the LIST mode becomes a report (ROADMAP v1.5.5). |
+| `test_inventory.py` | — | v1.5.5 — The inventory: the LIST mode becomes a report (v1.5.5). |
 | `test_keyring_fail_backend.py` | — | Regression v0.9.4b: the keyring fail backend + review notes. |
 | `test_keyring_validation.py` | — | Regression v0.9.5.5 (security #1): the keyring backend — validation and guard. |
 | `test_language_folder.py` | — | v1.3.3.8 — the user language folder, the import/export manager and ONE `terminal_max_open` range. |
 | `test_last_mile.py` | — | v1.6.8 — The last mile, closing the line: the gesture the map already had, and the problem set it already knew. |
 | `test_leftovers_v110.py` | — | v1.10rc1 — the leftovers of the closed line and the auto-open option. |
 | `test_leftovers_v110rc2.py` | — | v1.10rc2 — the leftovers the `1.10rc1` slot recorded: the marshalled send path, the PTY's |
-| `test_list_mode.py` | — | v1.4.6 — List mode: collapsing the map = server parameters (ROADMAP v1.4.6). |
+| `test_list_mode.py` | — | v1.4.6 — List mode: collapsing the map = server parameters (v1.4.6). |
 | `test_local_pane.py` | — | The LOCAL pane (v1.7.4rc2): the provider seam, the two path dialects, the OS listing of the |
 | `test_local_pane_contract.py` | — | v1.7.4 — the LOCAL pane, the closing release: the CLAUSE AUDIT of the frozen contract |
-| `test_main_window_split.py` | — | v1.1.4: main_window.py hygiene — split into mixins (ROADMAP v1.1.4; the v1.8rc1/rc2/rc3 waves add nineteen). |
+| `test_main_window_split.py` | — | v1.1.4: main_window.py hygiene — split into mixins (the v1.8rc1/rc2/rc3 waves add nineteen). |
 | `test_map_answers.py` | — | v1.8.4 — the map arranges itself and answers: the whole-map layout, the reverse traversal, the inode fact. |
 | `test_map_bigpicture.py` | — | v1.4.2 — The big-picture map level: the minimap, the cached card drop-shadow, the group fold. |
 | `test_map_images.py` | — | v1.5.1 — map images: "Copy Map as Image" and the fixed-frame documentation poster. |
@@ -184,19 +187,19 @@ of the file itself.
 | `test_node_labels.py` | — | Review fixes v0.8.0: node elide and max width, status markers in the sidebar (a former smoke-test part). |
 | `test_note_attach.py` | — | v1.2.4: attaching notes to servers + a special line (the v1.2.4 release theme). |
 | `test_notes.py` | — | Sticky notes: drag / resize / edit / delete plus the JSON round trip (a former smoke-test part). |
-| `test_pdf_export.py` | — | v0.9.9.7 — Map PDF export (ROADMAP v0.9.9.7); the page geometry is pinned in §6 of this file. |
+| `test_pdf_export.py` | — | v0.9.9.7 — Map PDF export (v0.9.9.7); the page geometry is pinned in §6 of this file. |
 | `test_plugin_command.py` | — | v1.9.3 — the CORE-owned command dialog: the door, its targets and the rows it produces. |
 | `test_plugin_examples.py` | — | v1.4 — the example plugins of `examples/plugins/` (the minimal one and the two monitors). |
 | `test_plugin_examples_local.py` | — | v1.9.4 — the two examples whose fact is LOCAL (`examples/plugins/certificates.py`, `watch_command.py`). |
 | `test_plugin_examples_monitors.py` | — | v1.9.2 — the two PROVEN examples (`examples/plugins/open_ports.py`, `app_versions.py`). |
 | `test_plugin_runtime.py` | — | v1.4rc2 — Plugin foundation, part 2: `PluginContext` and Main Thread isolation |
-| `test_plugin_ui.py` | — | v1.4rc3 — Plugin foundation, part 3: the UI hooks and dogfooding (ROADMAP tasks 7–9). |
-| `test_plugins.py` | — | v1.4rc1 — Plugin foundation, part 1: discovery and manager (ROADMAP v1.4rc1). |
+| `test_plugin_ui.py` | — | v1.4rc3 — Plugin foundation, part 3: the UI hooks and dogfooding. |
+| `test_plugins.py` | — | v1.4rc1 — Plugin foundation, part 1: discovery and manager (v1.4rc1). |
 | `test_plugins_panel.py` | — | v1.8.3 — the Plugins window: the plugin list, the server list and the session event ring. |
 | `test_problem_first.py` | — | v1.5.4 — trouble first: the map answers "where is the problem". |
 | `test_production_guard.py` | — | v1.9 — the production-tag guard: ONE policy, ONE dialog and the TWO verbs' call sites. |
-| `test_project_lifecycle.py` | — | v1.3.3.6 (ROADMAP "Projects: open, recover, remember"): the life cycle of a project file. |
-| `test_pyproject.py` | — | v0.9.9.6 — pyproject.toml: installable identity for 1.0 (ROADMAP). |
+| `test_project_lifecycle.py` | — | v1.3.3.6: the life cycle of a project file. |
+| `test_pyproject.py` | — | v0.9.9.6 — pyproject.toml: installable identity for 1.0. |
 | `test_pyte_compat.py` | — | v1.2.11 — Terminal: pyte 0.8.2 compatibility (private SGR + LNM). |
 | `test_pyte_fork.py` | — | v1.3rc1 — Terminal: the managed pyte fork (vendored 0.8.2 + patch manifest); v1.5.7.1 — the |
 | `test_pyte_hardening.py` | — | v1.5.7.1 — Terminal: the pyte fork takes the five defects of the dependency audit. |
@@ -211,64 +214,66 @@ of the file itself.
 | `test_scrollback_batching.py` | — | v1.2.14 — Scrollback: batching of the auto-return to the live line (PYTE82_AUDIT.md batch D2). |
 | `test_selection_sync.py` | — | Regression v0.9.9.1 — selection sync without blockSignals (a reentry guard). |
 | `test_settings_dialog.py` | — | v1.1 — Settings dialog (hub): the release's themed test. |
-| `test_settings_options.py` | — | v1.1.1 — Small options around the hub: the release's themed test (ROADMAP v1.1.1). |
+| `test_settings_options.py` | — | v1.1.1 — Small options around the hub: the release's themed test (v1.1.1). |
 | `test_sftp_commander.py` | — | The Files Commander, step 2: the copy and the move across the panes. |
 | `test_sftp_commander_contract.py` | — | v1.7 — Files Commander, the closing release: the CLAUSE AUDIT of the frozen contract |
 | `test_sftp_commander_keys.py` | — | The Files Commander, step 3: the mc/far walk, the hint row and the preview of the other pane. |
+| `test_sftp_container_split.py` | — | v1.14rc4 — the container as a FACADE: the pane's assembly and the three `SftpTab` mixins. |
 | `test_sftp_dnd.py` | — | Drag & drop of files from the desktop into the SFTP tab. |
 | `test_sftp_ops.py` | — | SFTP as a file manager: the operations and an atomic (loss-free) transfer. |
-| `test_sftp_pane_split.py` | — | The two waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over six pane mixins. |
-| `test_sftp_syntax.py` | — | v1.4.7 — Syntax highlighting in the SFTP viewer (numbers, JSON/XML/YAML, ROADMAP v1.4.7). |
-| `test_sftp_tab.py` | — | v1.1.3 — SFTP tab in the terminal window (ROADMAP v1.1.3, tasks 1–5). |
-| `test_sftp_viewer.py` | — | v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP, ROADMAP v1.3.1). |
+| `test_sftp_pane_split.py` | — | The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over seven pane mixins. |
+| `test_sftp_syntax.py` | — | v1.4.7 — Syntax highlighting in the SFTP viewer (numbers, JSON/XML/YAML). |
+| `test_sftp_tab.py` | — | v1.1.3 — SFTP tab in the terminal window (v1.1.3). |
+| `test_sftp_viewer.py` | — | v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP). |
 | `test_sidebar_context_menu.py` | — | Regression v0.9.6 — the context menu in the sidebar (the server list). |
 | `test_sidebar_panel.py` | — | `ui/sidebar.py`: `SidebarPanel` — a facade of `MainWindow` plus `retranslate` (v0.9.9.4). |
 | `test_size_budget.py` | — | The module-size gate — an ALWAYS-ON ratchet: no pinned module grows, the band cannot be crossed silently. |
-| `test_ssh_config_import.py` | — | v1.4.1 — Import from ~/.ssh/config (ROADMAP v1.4.1, tasks 1–6). |
+| `test_small_verbs.py` | — | `v1.14` — THE SMALL VERBS: the bookmarks FRAME, the filter's clear act and the pane's `Find text`. |
+| `test_ssh_config_import.py` | — | v1.4.1 — Import from ~/.ssh/config (v1.4.1). |
 | `test_ssh_connect.py` | — | `modules/ssh_connect.py` — the ONE connect builder (`N50`'s consolidation, `AGENTS.md` §4.4). |
 | `test_ssh_dialogs.py` | — | SSH dialogs: assembly, keyring save v0.9.5.6, the "Connect" button (former smoke_test §6a+§7). |
 | `test_ssh_terminal.py` | — | Regression tests v0.8.1 — four fixes. |
 | `test_ssh_undo_lifecycle.py` | — | v1.1.2RC1 — the SSH path: undo, paramiko defaults, thread lifecycle (release theme). |
 | `test_status_checker.py` | — | Server statuses: probe_ssh, node colors, pulse, StatusChecker (former smoke_test §6d). |
-| `test_status_parallel.py` | — | v1.1.2 final — Parallel status probes (release theme, ROADMAP v1.1.2 final). |
+| `test_status_parallel.py` | — | v1.1.2 final — Parallel status probes. |
 | `test_system_info.py` | — | Auto-fill of server data v0.9: `services/system_info_collector.py` (a former smoke-test part). |
 | `test_tags.py` | — | Regression v0.9.4: server tags/color labels. |
-| `test_terminal_acceptance.py` | — | v1.0 — Terminal v1, final: full acceptance of all RCs + terminal_* config (ROADMAP tasks 9–10). |
+| `test_terminal_acceptance.py` | — | v1.0 — Terminal v1, final: full acceptance of all RCs + terminal_* config. |
 | `test_terminal_background.py` | — | The terminal wallpaper — `terminal_background*` under the grid (v1.13.2). |
-| `test_terminal_colors.py` | — | v1.0RC1 — the color engine + per-cell canvas (ROADMAP v1.0RC1). |
+| `test_terminal_colors.py` | — | v1.0RC1 — the color engine + per-cell canvas (v1.0RC1). |
 | `test_terminal_containers.py` | — | v1.7.2 — Terminal containers: the split in the dock, the single window, the merge and the titles. |
 | `test_terminal_dock.py` | — | Terminals docked in the map window (`terminal_mode`: windows/tabs). |
 | `test_terminal_doors.py` | — | The bottom row belongs to the `Servers` head (v1.12.2) — `Open map` / `Profiles` / `Open project`. |
 | `test_terminal_ergonomics.py` | — | v1.6.4 — the cheap batch: the thread names, the marked secret, the Ctrl+wheel zoom and the activity dot. |
 | `test_terminal_files_panel.py` | — | The Files tree as a right-hand panel of a standalone terminal window. |
 | `test_terminal_history.py` | — | v1.5.7 — the command history: the terminal's third tab, one history per server. |
-| `test_terminal_input.py` | — | v1.0RC2 — keyboard + selection/copy (ROADMAP v1.0RC2). |
+| `test_terminal_input.py` | — | v1.0RC2 — keyboard + selection/copy (v1.0RC2). |
 | `test_terminal_links.py` | — | v1.9 — the `OSC 8` link of the canvas: the pure run hit test, the gesture, the allowlist and the underline. |
 | `test_terminal_mouse.py` | — | v1.2.13 — the mouse wheel in the full-screen TUI (SGR/X10 passthrough) |
 | `test_terminal_output.py` | — | Working with the terminal's output: the find bar, the reset and the transcript. |
 | `test_terminal_page.py` | — | TerminalSessionPage — the session as a reusable widget (window → page). |
 | `test_terminal_panel.py` | — | The terminal panel that holds both lists (v1.11) — the `Commands \| Servers` heads and the close path. |
 | `test_terminal_reconnect.py` | — | The reconnect of a session and the `tmux attach` that rides it (v1.9.1) — the ONE re-arm path. |
-| `test_terminal_scroll.py` | — | v1.0RC3 — PTY resize + scrollback + dirty rendering (ROADMAP v1.0RC3). |
-| `test_terminal_selection_menu.py` | — | v1.2.7 — Terminal: double/triple-click selection + context menu (ROADMAP v1.2.7). |
-| `test_terminal_split.py` | — | v1.3.3.5 — Terminal split: a second pane under the sessions (ROADMAP v1.3.3.5). |
+| `test_terminal_scroll.py` | — | v1.0RC3 — PTY resize + scrollback + dirty rendering (v1.0RC3). |
+| `test_terminal_selection_menu.py` | — | v1.2.7 — Terminal: double/triple-click selection + context menu (v1.2.7). |
+| `test_terminal_split.py` | — | v1.3.3.5 — Terminal split: a second pane under the sessions (v1.3.3.5). |
 | `test_terminal_standalone.py` | — | The terminal on its own (v1.12) — `main.py --only-terminal` and the surface behind it. |
 | `test_terminal_standalone_contract.py` | — | The clause audit of `TERMINAL_STANDALONE.md` (v1.12) against the SHIPPED code — one section per |
-| `test_terminal_tabs.py` | — | v1.2.1 — Multiple SSH sessions as tabs in one terminal window (ROADMAP v1.2.1). |
+| `test_terminal_tabs.py` | — | v1.2.1 — Multiple SSH sessions as tabs in one terminal window (v1.2.1). |
 | `test_terminal_truth.py` | — | v1.6.2 — the terminal that stops lying: a dead session, the DEC graphics, the column, the cursor. |
 | `test_terminal_widget_split.py` | — | `1.8rc5` — the `terminal_widget.py` split: `TerminalWidget` becomes a facade over five canvas mixins. |
 | `test_theme.py` | — | v1.1.5 → v1.4.3 — the central theme `ui/theme.py`: the `Theme` object, LIGHT, the accent hue. |
 | `test_theme_contrast.py` | — | v1.5rc1 — the CONTRAST GATE: the LIGHT palette, the two accent roles and the numbers that pin them. |
 | `test_trust_surface.py` | — | v1.8.1 — the trust and keys surface: the first connection ASKS, the store is manageable, a credential |
 | `test_ui_consistency.py` | — | v1.9.8 — the panels and the consistency: the cells, the stamps, the two menus, the session rows. |
-| `test_ui_density.py` | — | v1.4.5 — UI density & first run (ROADMAP v1.4.5): the compact sidebar grid, the first-run |
-| `test_ui_entry.py` | — | v1.9.7 — the first ten minutes (ROADMAP v1.9.7): the card that is really compact, the Add |
+| `test_ui_density.py` | — | v1.4.5 — UI density & first run (v1.4.5): the compact sidebar grid, the first-run |
+| `test_ui_entry.py` | — | v1.9.7 — the first ten minutes (v1.9.7): the card that is really compact, the Add |
 | `test_ui_polish.py` | — | UI polish: nodes, grid, fit/zoom, status bar, icons, arrow hit zones (a former smoke-test part). |
 | `test_ui_requests.py` | — | v1.5.6 — the customer requests: the Export menu, a third first-run button, environment |
 | `test_undo_redo.py` | — | Regression tests v0.8.3 — Undo/Redo. |
 | `test_unmanaged.py` | — | v1.6.5 — the neighbours on the map: a card for a server you do not administer. |
 | `test_view_toggles.py` | — | Collapsing the sidebar and the map into a thin line (buttons + menu). |
-| `test_wcwidth_cjk.py` | — | v1.2.9 — full wcwidth(3) for CJK (ROADMAP "Terminal hygiene", task 2). |
+| `test_wcwidth_cjk.py` | — | v1.2.9 — full wcwidth(3) for CJK. |
 | `test_worker_guard.py` | slow | SSHWorker: the active threads registry + the node deletion guard (former smoke_test.py §6c). |
 
 <!-- AUTOGEN:END test-files -->

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """The LOCAL file provider of a Commander pane — ONE thread with a FIFO queue over the OS disk.
 
-It answers the SAME method names and signals as `modules/sftp_worker.SftpWorker`, so a pane binds
-either provider without branching (LOCAL_PANE.md §1). The read policy, the row shape and the
-transfer rules are the SHIPPED ones, imported instead of copied: the four transfer methods are the
-LOCAL engine (§5/§6) — `shutil.copy2` through a `.part` + `os.replace`, a move inside one volume and
-copy+delete across volumes; every refusal travels as a MACHINE code (`task_payload()`)."""
+It answers the SAME method names and signals as `modules/sftp_worker.SftpWorker` (LOCAL_PANE.md §1),
+and the read policy, the row shape and the transfer rules are IMPORTED from it, never copied. The four
+transfer methods are the LOCAL engine (§5/§6) — `shutil.copy2` through a `.part` + `os.replace`, a move
+inside one volume and copy+delete across volumes; a refusal is a MACHINE code (`task_payload()`)."""
 
 import logging
 import os
@@ -399,7 +398,7 @@ def register_orphan_local_provider(worker: "LocalFsWorker"):
         try:
             _orphan_providers.remove(w)
         except ValueError:
-            pass  # already removed (a double finished — does not happen in practice)
+            log.debug("The orphan registry did not hold %r — a double finished", w)
     worker.finished.connect(_drop)
 
 
@@ -742,6 +741,7 @@ class LocalFsWorker(QThread):
             cap = int(task.max_bytes or READ_CAP_NONE)
         except (TypeError, ValueError):
             cap = READ_CAP_NONE
+            log.debug("The read ceiling %r is unreadable — the shipped bound answers", task.max_bytes)
         truncating = cap > 0
         limit = cap if truncating else MAX_READ_BYTES
         if not truncating and int(task.total_size or 0) > limit:
@@ -874,8 +874,8 @@ class LocalFsWorker(QThread):
                     task.total_size = 1
                     self._emit(self.progress, task.id, 1, 1)
                     return
-                except OSError:
-                    pass   # another volume — the walk below is the honest fallback
+                except OSError as e:
+                    log.debug("The rename of %s onto %s was refused (%s) — the walk answers", source, target, e)
             self._move_tree(task, source, target)
             return
         size = int(os.path.getsize(source) or 0)   # a missing source → the OS's own refusal
@@ -1026,7 +1026,8 @@ class LocalFsWorker(QThread):
         try:
             os.makedirs(path, exist_ok=True)
             return True
-        except OSError:
+        except OSError as e:
+            log.debug("The extraction folder %s was not created (%s)", path, e)
             return False
 
     @staticmethod
@@ -1062,8 +1063,7 @@ class LocalFsWorker(QThread):
 
         `is_directory_link()` sees a Windows JUNCTION (`os.path.islink()` does not) and the
         `os.listdir()` call sits INSIDE the guard (v1.7.5.1, N55): one folder the OS refuses to
-        enumerate is SKIPPED, not the end of the whole tree — which is what the per-entry rule
-        already promised.
+        enumerate is SKIPPED, not the end of the tree — what the per-entry rule already promised.
         """
         self._check_cancel()
         if depth > MAX_TREE_DEPTH:

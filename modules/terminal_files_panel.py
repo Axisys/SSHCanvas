@@ -44,7 +44,7 @@ def get_translator():
     return _t_cache
 
 class _FilesPanel(QWidget):
-    """v1.7.1 (ROADMAP v1.7.1): the right-hand FILES panel of the terminal window.
+    """v1.7.1: the right-hand FILES panel of the terminal window.
 
     The mirrored `CommandLibraryPanel`: a `_CollapseStrip` (24 px) plus a body, both members
     of ONE layout so the hidden one costs 0 px, and ONE owner-written config key for the
@@ -236,7 +236,7 @@ class _FilesPanel(QWidget):
         if getattr(self, "_splitter_watch", None) is not parent:
             try:
                 parent.splitterMoved.connect(self._on_splitter_moved)
-            except (RuntimeError, TypeError):
+            except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: a foreign splitter
                 pass   # Qt teardown / a foreign splitter — the width memory simply stands still
             self._splitter_watch = parent
         return parent
@@ -349,7 +349,7 @@ class TerminalFilesPanelMixin:
     """
 
     def show_files_tab(self) -> bool:
-        """v1.7rc1 (ROADMAP v1.7rc1, task 3): bring the "Files" tab to the front.
+        """v1.7rc1: bring the "Files" tab to the front.
 
         The door the Files Commander control opens: turning the two-pane view ON while the
         session shows the CANVAS would build panes nobody can see, so the container asks the

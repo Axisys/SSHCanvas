@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.9.7 — the first ten minutes (ROADMAP v1.9.7): the card that is really compact, the Add
+"""v1.9.7 — the first ten minutes (v1.9.7): the card that is really compact, the Add
 Server dialog's four declared sections and their hints, the empty map that stops pointing at
 nothing, and the ONE dashed selection frame the card and the group share.
 
@@ -63,7 +63,7 @@ def close_window(win):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The compact card (task 1)
+# 1. The compact card
 # ════════════════════════════════════════════════════════════
 print("== 1. the compact card ==")
 
@@ -122,7 +122,7 @@ check("§1 a badge never enters the height — the compact floor is the floor ei
       f"bare={_bare[:2]} badged={_badged[:2]}")
 
 # ════════════════════════════════════════════════════════════
-# 2. The Add Server dialog (tasks 2-4)
+# 2. The Add Server dialog
 # ════════════════════════════════════════════════════════════
 print("== 2. the Add Server dialog ==")
 
@@ -228,7 +228,7 @@ check("§2 the dialog still builds its data (the grouping changed no field)",
 dlg.deleteLater()
 
 # ════════════════════════════════════════════════════════════
-# 3. The two shipped strings (task 5)
+# 3. The two shipped strings
 # ════════════════════════════════════════════════════════════
 print("== 3. the strings ==")
 
@@ -255,7 +255,7 @@ check("§3 the live dialog applies exactly that pair",
 _disk_dlg.deleteLater()
 
 # ════════════════════════════════════════════════════════════
-# 4. The empty map (task 6)
+# 4. The empty map
 # ════════════════════════════════════════════════════════════
 print("== 4. the empty map ==")
 
@@ -315,7 +315,7 @@ check("§4 the View item still writes the PREFERENCE (the two questions wrap it,
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 5. The selection frame (task 7)
+# 5. The selection frame
 # ════════════════════════════════════════════════════════════
 print("== 5. the selection frame ==")
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.5.1 (ROADMAP task 2): render the DOCUMENTATION poster of the README from the EXAMPLE map.
+"""v1.5.1: render the DOCUMENTATION poster of the README from the EXAMPLE map.
 
 Not part of the suite (the runner skips `_`-prefixed files), like `_gen_index.py`: it is the generator
 behind the image the README links, so the picture is REPRODUCIBLE rather than a hand-made screenshot.

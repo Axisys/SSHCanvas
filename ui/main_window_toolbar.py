@@ -30,7 +30,7 @@ _VIEW_TOOLBAR_ITEMS = (
     ("view.toggle_map", "map_panel", "view.toggle_map", "Map / List"),
     ("view.toggle_minimap", "minimap", "view.toggle_minimap", "Minimap"),
     ("view.toggle_legend", "legend", "view.toggle_legend", "Legend"),
-    # v1.6.7 (ROADMAP task 4): the BOOKMARKS panel — the sixth member of the cluster, next
+    # v1.6.7: the BOOKMARKS panel — the sixth member of the cluster, next
     # to the legend because both are floating panels over the canvas.
     ("view.toggle_bookmarks", "bookmarks", "view.toggle_bookmarks", "Bookmarks"),
     ("view.toggle_activity", "activity", "view.toggle_activity", "Activity panel"),
@@ -93,7 +93,7 @@ class ToolbarMixin:
                 text = self.t(key) if self._i18n_available else _fallback[key]
                 action = toolbar.addAction(text, slot)
                 self._register_i18n(action, key)
-                # v1.3.3.3 (task 3): every one of these also exists in a menu, and the
+                # v1.3.3.3: every one of these also exists in a menu, and the
                 # MENU item is the hotkey target — the toolbar button only mirrors the
                 # same slot (see the note above _apply_hotkeys).
                 self._mark_toolbar_mirror(action)
@@ -119,7 +119,7 @@ class ToolbarMixin:
         self.act_undo.setEnabled(False)
         try:
             host_attr(self, "set_action_icon")(self.act_undo, "undo")
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the action works without its icon
             pass
         self.undo_stack.canUndoChanged.connect(self.act_undo.setEnabled)
 
@@ -130,7 +130,7 @@ class ToolbarMixin:
         self.act_redo.setEnabled(False)
         try:
             host_attr(self, "set_action_icon")(self.act_redo, "redo")
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the action works without its icon
             pass
         self.undo_stack.canRedoChanged.connect(self.act_redo.setEnabled)
 
@@ -165,10 +165,10 @@ class ToolbarMixin:
         self._minimap_toolbar_btn = self._view_toolbar_buttons["view.toggle_minimap"]
         self._sidebar_toolbar_btn = self._view_toolbar_buttons["view.toggle_sidebar"]
         self._map_toolbar_btn = self._view_toolbar_buttons["view.toggle_map"]
-        # v1.6 (ROADMAP task 7): the activity panel's button — the fifth member of the
+        # v1.6: the activity panel's button — the fifth member of the
         # cluster (the attribute survives for the same reason as the four above).
         self._activity_toolbar_btn = self._view_toolbar_buttons["view.toggle_activity"]
-        # v1.6.7 (ROADMAP task 4): the bookmarks panel's button — the sixth member of the
+        # v1.6.7: the bookmarks panel's button — the sixth member of the
         # cluster (the attribute survives for the same reason as the five above).
         self._bookmarks_toolbar_btn = self._view_toolbar_buttons["view.toggle_bookmarks"]
         # The Plugins window's button — the seventh member, wired in `_setup_menubar` to the
@@ -212,7 +212,7 @@ class ToolbarMixin:
         # therefore done by hand in `_apply_ui_translations()` (the ACTION carries it).
         self._sync_toolbar_overflow(self.width())
 
-    # ── v1.5rc4 (ROADMAP task 2): the toolbar overflow policy ──────────────────
+    # ── v1.5rc4: the toolbar overflow policy ───────────────────────────────────
     # Pinned: OVERFLOW, never wrapping; the keep-set is the five overflowable buttons plus
     # the core ones that never move (undo/redo and the four view toggles). ONE method
     # decides, and the threshold is MEASURED: the sum of what the toolbar's own widgets ask
@@ -305,7 +305,7 @@ class ToolbarMixin:
         """
         try:
             action.setShortcut(QKeySequence())   # the same "no shortcut" value the registry uses
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — best effort (declared): the button still clicks
             pass  # Qt teardown / an unexpected wrapper — the button still clicks
 
     def _wire_view_toolbar_button(self, action_id: str, action) -> None:
@@ -368,7 +368,7 @@ class ToolbarMixin:
         except RuntimeError:
             pass  # Qt teardown
 
-    # ── v1.6.1 (ROADMAP task 7): the toolbar's right-click menu ────────────────
+    # ── v1.6.1: the toolbar's right-click menu ─────────────────────────────────
 
     def _panel_switch_actions(self):
         """The checkable VIEW actions of the panel cluster, in the toolbar's own order.
@@ -396,7 +396,7 @@ class ToolbarMixin:
 
         Qt's own `QMainWindow::createPopupMenu()` lists the `toggleViewAction()` of every
         toolbar and dock; the main bar is a bare `QToolBar()` with no window title, so
-        that row is a lone checkmark with an EMPTY label (v1.6.1, ROADMAP task 7). This
+        that row is a lone checkmark with an EMPTY label (v1.6.1). This
         override lists the PANEL switches instead — their labels come from the action
         registry, so the menu adds no i18n key — plus the dock rows that really carry a
         name. A widget that cannot be NAMED is not listed at all, and neither is the

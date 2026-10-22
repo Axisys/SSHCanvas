@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v0.9.9.7 — Map PDF export (ROADMAP v0.9.9.7); the page geometry is pinned in §6 of this file.
+"""v0.9.9.7 — Map PDF export (v0.9.9.7); the page geometry is pinned in §6 of this file.
 
 Offscreen and WITHOUT parsing the PDF content, the checks are: the file really exists after
 `MapScene.render_to_pdf()` with a size > 0, the `%PDF` header, the `%%EOF` marker and a return value equal

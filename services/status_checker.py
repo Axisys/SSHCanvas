@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
-try:  # v1.5.2: the round summary (the activity history, ROADMAP task 2)
+try:  # v1.5.2: the round summary (the activity history)
     from modules.logger import get_logger
 except ImportError:  # pragma: no cover — the package layout (sshmap.services.*)
     from ..modules.logger import get_logger
@@ -45,8 +45,8 @@ MANUAL_INTERVAL_SEC = 0        # the sentinel: no round starts by itself
 MIN_INTERVAL_SEC = 5
 MAX_INTERVAL_SEC = 86400
 
-# v1.1.2 final (tasks 1–3): parallel probes and a soft auto-interval
-DEFAULT_MAX_PARALLEL = 16      # default for the status_max_parallel key (ROADMAP: "default 16")
+# v1.1.2 final: parallel probes and a soft auto-interval
+DEFAULT_MAX_PARALLEL = 16      # default for the status_max_parallel key
 MAX_PARALLEL_LIMIT = 64        # clamp ceiling (dialog spinbox and validator — one range)
 LARGE_MAP_THRESHOLD = 50       # N > 50 nodes → round interval doubles ("N > ~50")
 
@@ -66,7 +66,7 @@ MANUAL_STALE_SEC = 86400.0
 
 
 def round_summary(results) -> str:
-    """The ONE line a finished round leaves in the log (v1.5.2, ROADMAP task 2).
+    """The ONE line a finished round leaves in the log (v1.5.2).
 
     PURE, so the topical test pins the sentence without a probe: the counts by status in
     the fixed order online → warn → offline, plus `?` for an answer that is none of the
@@ -128,7 +128,7 @@ def is_manual_interval(resolved_sec) -> bool:
 
 
 def get_status_settings() -> dict:
-    """v1.1 (ROADMAP task 4) + v1.1.2 final (task 2): status settings from ~/.sshmap/config.json.
+    """v1.1 + v1.1.2 final: status settings from ~/.sshmap/config.json.
 
     Source — i18n.load_config() (never raises, {} on error). Returns:
         {"interval_sec": int, "manual": bool, "probe_timeout_sec": float, "max_parallel": int}
@@ -140,7 +140,7 @@ def get_status_settings() -> dict:
                                    (clamped 1..MAX_PARALLEL_LIMIT; v1.1.2 final).
     Corrupt values (non-numeric, bool) → default. Never raises.
 
-    v1.6.6 (ROADMAP task 1): the resolved PAIR is answered — `interval_sec` and the
+    v1.6.6: the resolved PAIR is answered — `interval_sec` and the
     `manual` flag it implies (`resolve_interval_sec()` + `is_manual_interval()` are the ONE
     place that decides both), so no caller has to compare a number to a magic zero.
     """
@@ -148,8 +148,8 @@ def get_status_settings() -> dict:
     try:
         from i18n import load_config
         cfg = load_config() or {}
-    except Exception:  # noqa: BLE001 — the config is optional, defaults matter more
-        pass
+    except Exception as e:  # noqa: BLE001 — the config is optional, defaults matter more
+        log.debug("The status settings could not be read (%s) — the defaults answer", e)
 
     def _num(value, default: float) -> float:
         try:
@@ -157,12 +157,13 @@ def get_status_settings() -> dict:
                 return float(default)
             return float(value)
         except (TypeError, ValueError):
+            log.debug("The config value %r is not a number — %s answers", value, default)
             return float(default)
 
     interval = resolve_interval_sec(cfg.get("status_interval_sec"))
     timeout = _num(cfg.get("status_probe_timeout_sec"), PROBE_TIMEOUT_S)
     timeout = max(0.2, min(timeout, 60.0))
-    # v1.1.2 final (task 2): ceiling of parallel probes — clamped as in the dialog (1..64)
+    # v1.1.2 final: ceiling of parallel probes — clamped as in the dialog (1..64)
     max_parallel = int(_num(cfg.get("status_max_parallel"), DEFAULT_MAX_PARALLEL))
     max_parallel = max(1, min(max_parallel, MAX_PARALLEL_LIMIT))
     return {"interval_sec": interval, "manual": is_manual_interval(interval),
@@ -196,7 +197,7 @@ def _build_targets(servers) -> list:
     """Normalize an iterable of ``(id, host, port)`` into the probe target list.
 
     Shared by ``StatusChecker.set_servers`` and ``MainWindow._sync_status_targets``
-    (v1.3.3.3, ROADMAP task 5: the manual round builds its targets with the SAME
+    (v1.3.3.3: the manual round builds its targets with the SAME
     normalization instead of a second, drifting copy). An entry without an id or a
     host is dropped — the probe would be meaningless; a broken port falls back to 22
     and is clamped to the protocol range.
@@ -208,6 +209,7 @@ def _build_targets(servers) -> list:
         try:
             p = int(port) if port else 22
         except (TypeError, ValueError):
+            log.debug("The port of server %s is unreadable (%r) — 22 answers", sid, port)
             p = 22
         targets.append((sid, str(host).strip(), max(1, min(65535, p))))
     return targets
@@ -239,11 +241,13 @@ class _ProbeThread(QThread):
         try:
             mp = int(max_parallel)
         except (TypeError, ValueError):
+            log.debug("max_parallel is unreadable (%r) — %s answers", max_parallel,
+                      DEFAULT_MAX_PARALLEL)
             mp = DEFAULT_MAX_PARALLEL
         self._max_parallel = max(1, min(mp, MAX_PARALLEL_LIMIT))
 
     def run(self):
-        # v1.1.2 final (task 1): ThreadPoolExecutor instead of a sequential loop.
+        # v1.1.2 final: ThreadPoolExecutor instead of a sequential loop.
         # Worst case of a round: ceil(N/max_parallel) × timeout (was N × timeout).
         # Cancellation is checked before each submission: submitted probes run out
         # their network timeout, new ones are not submitted; the executor waits for all
@@ -261,8 +265,9 @@ class _ProbeThread(QThread):
             for fut in as_completed(futures):
                 try:
                     answer = fut.result()
-                except Exception:
+                except Exception as e:
                     answer = (STATUS_OFFLINE, "")  # a probe must not crash the round
+                    log.debug("The probe of %s raised (%s) — reported offline", futures[fut], e)
                 if answer is None:
                     continue  # probe cancelled before it started — no result (as before)
                 if isinstance(answer, tuple):
@@ -296,22 +301,26 @@ class _ProbeThread(QThread):
             return None
         try:
             status = probe_ssh(host, port, self._timeout)
-        except Exception:
+        except Exception as e:
             status = STATUS_OFFLINE  # a probe must not crash the round
+            log.debug("The SSH probe of %s:%s raised (%s) — reported offline", host, port, e)
         detail = ""
         if self._status_provider is not None:
             try:
                 merged = self._status_provider(sid, status)
-            except Exception:
+            except Exception as e:
                 merged = None  # a broken provider never breaks a round
+                log.debug("The status provider of %s raised (%s) — its opinion is skipped", sid, e)
             if merged:
                 try:
                     merged_status, merged_detail = merged[0], merged[1]
                     if merged_status in SEVERITY:
                         status = merged_status
                     detail = str(merged_detail or "")
-                except (IndexError, TypeError):
+                except (IndexError, TypeError) as e:
                     detail = ""
+                    log.debug("The status provider of %s answered a foreign shape (%r: %s)",
+                              sid, merged, e)
         return status, detail
 
 
@@ -350,13 +359,13 @@ class StatusChecker(QObject):
         self._busy = False                # is a round already running?
         self._last_results: dict = {}     # id -> last status
         self._last_details: dict = {}     # id -> last plugin detail (v1.4rc2)
-        # v1.5rc3 (ROADMAP task 3): id -> epoch seconds of the last result, plus the end
+        # v1.5rc3: id -> epoch seconds of the last result, plus the end
         # of the last completed round. The window reads them to answer "checked N min ago"
         # and to paint the stale mark; a status itself is never derived from them.
         self._last_times: dict = {}
         self._last_round_at: float = 0.0
         self._status_provider = None      # v1.4rc2: provider(sid, ssh_status) -> (kind, detail)
-        # v1.5 (ROADMAP): the ids the checker must NEVER probe while the DEMO map is the
+        # v1.5: the ids the checker must NEVER probe while the DEMO map is the
         # open project — their status is EMULATED by `storage/example_project.py`, and a
         # round would repaint them `offline` within 30 s and turn the demo into a lie.
         # A skipped id is not a target at all (`_subset`), so no probe, no result, no
@@ -364,7 +373,7 @@ class StatusChecker(QObject):
         self._skip_ids: set = set()
         self._thread: _ProbeThread | None = None
         self._cancel = threading.Event()  # AUDIT v0.7.2 #5: cancel the current round
-        # v1.6.6 (ROADMAP task 2): the cadence's third state and whether periodic checking
+        # v1.6.6: the cadence's third state and whether periodic checking
         # was ever ASKED for. `_manual_only` is the live switch ("no round starts by itself");
         # `_enabled` remembers a `start()` that a `stop()` has not undone, so switching the
         # manual mode OFF resumes the periodic rounds the user had already enabled — and
@@ -391,7 +400,7 @@ class StatusChecker(QObject):
 
     @property
     def manual_only(self) -> bool:
-        """v1.6.6 (ROADMAP task 2): is the checker in the manual-only mode?
+        """v1.6.6: is the checker in the manual-only mode?
 
         The ONE predicate of the mode, read by the two guards that decide whether a round may
         start by itself (`start()` and `MainWindow._load_project_at()`). Purely a MODE: the
@@ -401,7 +410,7 @@ class StatusChecker(QObject):
 
     @property
     def max_parallel(self) -> int:
-        """v1.1.2 final (task 2): ceiling of parallel probes per round (clamped 1..64)."""
+        """v1.1.2 final: ceiling of parallel probes per round (clamped 1..64)."""
         return self._max_parallel
 
     @property
@@ -410,11 +419,11 @@ class StatusChecker(QObject):
         return len(self._targets)
 
     def is_large_map(self) -> bool:
-        """v1.1.2 final (task 3): "large map" — N > LARGE_MAP_THRESHOLD (50)."""
+        """v1.1.2 final: "large map" — N > LARGE_MAP_THRESHOLD (50)."""
         return len(self._targets) > LARGE_MAP_THRESHOLD
 
     def effective_interval_ms(self) -> int:
-        """v1.1.2 final (task 3): the effective round interval.
+        """v1.1.2 final: the effective round interval.
 
         A soft safeguard instead of a hard limit on the number of servers: for
         large maps (N > LARGE_MAP_THRESHOLD) the base interval doubles — a round
@@ -425,7 +434,7 @@ class StatusChecker(QObject):
         return self._interval * 2 if self.is_large_map() else self._interval
 
     def set_interval(self, ms: int):
-        """v1.1 (ROADMAP task 4): change the round interval on the fly (the "Statuses" dialog).
+        """v1.1: change the round interval on the fly (the "Statuses" dialog).
 
         Clamped as in the constructor (no more often than once per 5 s). Works while
         the timer is active too — QTimer.setInterval restarts the countdown.
@@ -439,11 +448,11 @@ class StatusChecker(QObject):
             pass  # Qt teardown — the timer's C++ object is already destroyed
 
     def set_probe_timeout(self, seconds: float):
-        """v1.1 (ROADMAP task 4): change the probe timeout (takes effect from the next round)."""
+        """v1.1: change the probe timeout (takes effect from the next round)."""
         self._probe_timeout = max(0.2, float(seconds))
 
     def set_max_parallel(self, n: int):
-        """v1.1.2 final (task 2): change the ceiling of parallel probes on the fly.
+        """v1.1.2 final: change the ceiling of parallel probes on the fly.
 
         Clamped 1..MAX_PARALLEL_LIMIT; takes effect from the next round (the current
         one runs in its own executor). Corrupt value → default (the set_probe_timeout
@@ -456,7 +465,7 @@ class StatusChecker(QObject):
         self._max_parallel = max(1, min(mp, MAX_PARALLEL_LIMIT))
 
     def set_manual_only(self, flag: bool) -> None:
-        """v1.6.6 (ROADMAP task 2): the ONE live switch of the manual-only mode.
+        """v1.6.6: the ONE live switch of the manual-only mode.
 
         ON — the periodic timer is stopped AT ONCE and no later `start()` will arm it, and no
         deferred first round will slip through (the slot re-asks this flag when it fires).
@@ -494,7 +503,7 @@ class StatusChecker(QObject):
         """v1.4rc2: the last plugin detail of the server ("" — none was ever reported)."""
         return self._last_details.get(server_id, "")
 
-    # ── v1.5rc3 (ROADMAP task 3): the age of a result ───────────────────────────
+    # ── v1.5rc3: the age of a result ────────────────────────────────────────────
 
     def stale_threshold_s(self) -> float:
         """How old a result may be before it is presented as stale (seconds).
@@ -504,7 +513,7 @@ class StatusChecker(QObject):
         "two missed rounds" rule as a small one. The single place that decides it; the
         card only paints what it is told.
 
-        v1.6.6 (ROADMAP task 1): in the MANUAL mode the answer is the DECLARED
+        v1.6.6: in the MANUAL mode the answer is the DECLARED
         `MANUAL_STALE_SEC` (one day) instead. There are no rounds to miss, and the age of a
         status is then the ONLY clock — a threshold of 90 s would mark every manual check
         stale before the user had a chance to look at it.
@@ -542,7 +551,7 @@ class StatusChecker(QObject):
         self._targets = _build_targets(servers)
 
     def set_skip_ids(self, server_ids) -> None:
-        """v1.5 (ROADMAP): ids this checker must NEVER probe (the demo's emulated nodes).
+        """v1.5: ids this checker must NEVER probe (the demo's emulated nodes).
 
         Called by the window with `storage.example_project.demo_status_ids()` while the
         example map is the open project and with NOTHING for every other project, so the
@@ -557,13 +566,13 @@ class StatusChecker(QObject):
     def _subset(self, server_ids=None) -> list:
         """The targets of a round: all of them, or only the given server ids.
 
-        v1.3.3.3 (ROADMAP task 5): the on-demand round of the node context menu checks
+        v1.3.3.3: the on-demand round of the node context menu checks
         the SELECTION, not the map — ``server_ids=None`` keeps the periodic behaviour
         (every target), a list restricts it (an unknown id is skipped). The order
         follows the stored target list, so a manual round of the whole selection behaves
         exactly like a periodic one.
 
-        v1.5 (ROADMAP): the SKIPPED ids (`set_skip_ids`) are dropped here, whatever the
+        v1.5: the SKIPPED ids (`set_skip_ids`) are dropped here, whatever the
         caller asked for — the demo's emulated nodes are never probed.
         """
         if self._skip_ids:
@@ -583,7 +592,7 @@ class StatusChecker(QObject):
     def start_round(self, server_ids=None) -> bool:
         """Start a check round. If the previous one is still running — do nothing.
 
-        v1.3.3.3 (ROADMAP task 5): an optional ``server_ids`` restricts the round to
+        v1.3.3.3: an optional ``server_ids`` restricts the round to
         those servers (the "Check statuses now" action probes the selection). Returns
         True when a round really started — False for "already busy" / "nothing to
         probe", so the caller can tell the user the truth. The probes themselves are
@@ -620,15 +629,15 @@ class StatusChecker(QObject):
             if self._thread is thread:
                 self._thread = None
             thread.deleteLater()
-            # v1.5rc3 (ROADMAP task 3): the round is closed — its age is measurable
+            # v1.5rc3: the round is closed — its age is measurable
             self._last_round_at = time.time()
-            # v1.1.2 final (task 3): the interval of the NEXT tick — for the current size
+            # v1.1.2 final: the interval of the NEXT tick — for the current size
             # of the map (targets may have changed during the round: nodes added/removed).
             try:
                 self._timer.setInterval(self.effective_interval_ms())
             except RuntimeError:
                 pass  # Qt teardown — the timer's C++ object is already destroyed
-            # v1.5.2 (ROADMAP task 2): the round summary — ONE record per round for the
+            # v1.5.2: the round summary — ONE record per round for the
             # log file AND the activity panel (the per-node answers live on the cards).
             # Guarded: a broken logging setup must never break a round's completion.
             try:
@@ -645,7 +654,7 @@ class StatusChecker(QObject):
         return True
 
     def _deferred_first_round(self):
-        """The 2 s deferred first round of `start()` — a GUARDED slot (v1.6.6, task 2).
+        """The 2 s deferred first round of `start()` — a GUARDED slot (v1.6.6).
 
         A `QTimer.singleShot` cannot be un-armed, so switching the manual mode ON inside the
         2 s window would otherwise let exactly one stray round through — the one promise the
@@ -671,7 +680,7 @@ class StatusChecker(QObject):
         the event sequence is still unfolding, and in headless tests
         without an event loop the deferred call simply never happens (safe).
 
-        v1.6.6 (ROADMAP task 2): in the MANUAL-only mode this arms NOTHING — no timer and no
+        v1.6.6: in the MANUAL-only mode this arms NOTHING — no timer and no
         deferred round (`_deferred_first_round()` re-asks the flag anyway). Opening the
         application is not "check my servers now": the manual doors are the only way in.
         """
@@ -703,7 +712,7 @@ class StatusChecker(QObject):
                     from modules.logger import get_logger as _gl
                     _gl("services.status_checker").warning(
                         f"Probe thread did not finish within {wait_ms} ms after cancel")
-                except Exception:
+                except Exception:  # noqa: BLE001 — the log is a side channel: the round already returned
                     pass
 
     def shutdown(self):

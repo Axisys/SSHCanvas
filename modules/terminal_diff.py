@@ -676,7 +676,7 @@ class DiffTab(QWidget):
                     continue
                 try:
                     signal.disconnect(slot)
-                except (TypeError, RuntimeError):
+                except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                     pass   # not connected / the C++ object is already gone
         self._workers.clear()
 
@@ -711,7 +711,7 @@ class DiffTab(QWidget):
             return
         try:
             register(int(task_id))
-        except (RuntimeError, AttributeError, TypeError, ValueError):
+        except (RuntimeError, AttributeError, TypeError, ValueError):  # noqa: BLE001 — teardown of a dead object: a dead widget is not cancellable
             pass   # a dead widget is already "not cancellable"
 
     def _on_read_ready(self, task_id, remote_path, data):
@@ -797,7 +797,7 @@ class DiffTab(QWidget):
         """Drop ONE spool and forget it (the copy never outlives the decode — `DIFF.md` §3)."""
         try:
             self._spools.remove(spool)
-        except ValueError:
+        except ValueError:  # noqa: BLE001 — best effort (declared): a double drop
             pass
         _drop_spool(spool)
 

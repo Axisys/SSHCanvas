@@ -40,11 +40,11 @@ import ui.hotkey_registry as HR  # noqa: E402
 LANGS = load_i18n_langs(ROOT)
 
 NEW_KEYS = [
-    # the group aggregate (task 1)
+    # the group aggregate
     "group.status.empty", "group.status.unchecked",
-    # the "problems only" lens (task 2)
+    # the "problems only" lens
     "statusbar.problems", "statusbar.problems.tooltip", "statusbar.problems.active",
-    # the active-filter plaque (task 3)
+    # the active-filter plaque
     "filter.plaque.title", "filter.plaque.search", "filter.plaque.tag",
     "filter.plaque.status", "filter.plaque.problems", "filter.plaque.tooltip",
 ]
@@ -81,7 +81,7 @@ def write_cfg(data):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the group aggregate — the worst member status and the counts (task 1) ==")
+print("== §1 the group aggregate — the worst member status and the counts ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§1 the severity order is DECLARED and ascending (the last entry is the worst)",
@@ -286,7 +286,7 @@ for _key in ("group.status.empty", "group.status.unchecked"):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print('== §2 the "problems only" lens — one transient toggle (task 2) ==')
+print('== §2 the "problems only" lens — one transient toggle ==')
 # ════════════════════════════════════════════════════════════════════════════
 
 _chip = _win.problems_chip
@@ -396,7 +396,7 @@ for _key in ("statusbar.problems", "statusbar.problems.tooltip", "statusbar.prob
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 the active-filter plaque — the map says what it is showing (task 3) ==")
+print("== §3 the active-filter plaque — the map says what it is showing ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _plaque = _win.filter_plaque

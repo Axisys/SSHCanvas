@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.0RC1 — the color engine + per-cell canvas (ROADMAP v1.0RC1).
+"""v1.0RC1 — the color engine + per-cell canvas (v1.0RC1).
 
 `resolve_color` (headless, no widgets) maps brown/brightbrown to yellow/br_yellow (SGR 33/93), passes the
 256-colour and truecolor hexes through, handles the pyte typo 'bfightmagenta' (SGR 4;105), falls back to
@@ -323,7 +323,7 @@ check("two colors — two runs, a drawText per glyph (v1.6.3)",
       f"stats={_wr2.last_paint_stats}")
 
 # ════════════════════════════════════════════════════════════
-# 6. Integration: SSHTerminalWindow → TerminalWidget (RC1 task 3)
+# 6. Integration: SSHTerminalWindow → TerminalWidget
 # ════════════════════════════════════════════════════════════
 print("== SSHTerminalWindow integration ==")
 import modules.ssh_terminal as ST

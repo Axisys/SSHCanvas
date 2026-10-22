@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.1.1 — Small options around the hub: the release's themed test (ROADMAP v1.1.1).
+"""v1.1.1 — Small options around the hub: the release's themed test (v1.1.1).
 
 Every item is independently shippable and each is covered by its own block: #1 the fonts —
 `ui_font_family` / `ui_font_size` for the UI and `terminal_font` for the terminal (read since v1.0, its

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4.5 — UI density & first run (ROADMAP v1.4.5): the compact sidebar grid, the first-run
+"""v1.4.5 — UI density & first run (v1.4.5): the compact sidebar grid, the first-run
 empty state, the live status bar, the legend panel and the splitter-handle rule.
 
 The topical test of the release: offscreen, no network (the probes answer instantly), no real session.
@@ -104,7 +104,7 @@ def close_window(win):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The compact action grid (task 1)
+# 1. The compact action grid
 # ════════════════════════════════════════════════════════════
 print("== 1. the compact action grid ==")
 
@@ -202,7 +202,7 @@ check("set_buttons_visible(True): the six cells are back",
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 2. The first-run empty state (task 2)
+# 2. The first-run empty state
 # ════════════════════════════════════════════════════════════
 print("== 2. the first-run empty state ==")
 
@@ -296,7 +296,7 @@ app.processEvents()
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 3. The live status bar: the status filter (task 3)
+# 3. The live status bar: the status filter
 # ════════════════════════════════════════════════════════════
 print("== 3. the live status bar ==")
 
@@ -387,7 +387,7 @@ check("the filter is TRANSIENT: nothing about it was written to config.json",
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 4. The legend panel (task 4)
+# 4. The legend panel
 # ════════════════════════════════════════════════════════════
 print("== 4. the legend panel ==")
 
@@ -478,7 +478,7 @@ check("dragging the panel moves it and persists {x, y}",
       and _saved.get("y") == legend.y(),
       f"start={_start} now={legend.pos()} saved={_saved}")
 
-# ── v1.5 (ROADMAP): the SNAP — dropping the panel at an anchored edge re-attaches it ──
+# ── v1.5: the SNAP — dropping the panel at an anchored edge re-attaches it ──
 # The legend hangs from LEFT|BOTTOM; the drag above went UP and right, i.e. away from both
 # (the threshold is 24 px = twice the 12 px default margin), so it stayed detached.
 check("v1.5 the drag really landed away from both anchored edges (a threshold is not a magnet)",
@@ -584,7 +584,7 @@ check("the legend is not part of the map content the fit frames",
 close_window(win3)
 
 # ════════════════════════════════════════════════════════════
-# 5. The splitter handle (task 5)
+# 5. The splitter handle
 # ════════════════════════════════════════════════════════════
 print("== 5. the splitter handle ==")
 

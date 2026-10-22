@@ -645,7 +645,7 @@ check("§7 the TEN keys of the release are present and non-empty in every langua
       # v1.13.3's NINE: the row verbs and the Servers menu, v1.13.4's EIGHTEEN: the Diff tab,
       # v1.13.5's FOUR: the confirmation box and its question, v1.13.6's THIRTEEN: the search's
       # eleven and the trash's two, and v1.13.6.2's ONE: the per-file cut sentence).
-      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13 - 1,
+      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13 - 1 - 1,
       str({c: [k for k in _NEW_KEYS if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 `{patterns}` is the ONE placeholder of the filter and every language carries it",
       all(set(_placeholders(LANGS[c]["terminal.standalone.project_filter"])) == {"patterns"}

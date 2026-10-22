@@ -62,7 +62,7 @@ def build_palette(theme=None) -> QPalette:
 # ── The application stylesheet ────────────────────────────────────────────────
 
 def build_qss(theme=None) -> str:
-    """**THE** application QSS of a theme (v1.4.3, ROADMAP task 4).
+    """**THE** application QSS of a theme (v1.4.3).
 
     One theme in → one stable string out (the acceptance test compares two calls
     and asserts LIGHT ≠ DARK on the surfaces). The rules are the *global* ones:
@@ -152,7 +152,7 @@ QTabBar::tab {{
 QTabBar::tab:selected {{
     background-color: {t.surface_alt};
 }}
-/* v1.9.8 (task 5): an INACTIVE tab label keeps the primary ink — the muted tone the audit
+/* v1.9.8: an INACTIVE tab label keeps the primary ink — the muted tone the audit
    measured was too close to the surface behind it, and the selected BACKGROUND is what tells the
    two apart. */
 QTabBar::tab:!selected {{
@@ -237,7 +237,7 @@ QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
 # stable names; a widget calls `theme_qss.style("<key>")` at construction and
 # `theme_qss.refresh(self, "<key>")` from its `refresh_theme()`.
 
-#: v1.5rc4 (ROADMAP task 5): the thickness of the visible focus frame, in pixels —
+#: v1.5rc4: the thickness of the visible focus frame, in pixels —
 #: declared HERE because the frame is a stylesheet for a standard widget and a pen
 #: width for a custom canvas, and the two must be the same number. `ui/focus_ring.py`
 #: reads this constant instead of carrying a second copy.
@@ -299,7 +299,7 @@ STYLE_BUILDERS = {
     "status.bar_filter": lambda t: f"color: {t.accent_strong}; padding-right: 10px;",
     "status.bar_filter_active": lambda t: (
         f"color: {t.accent_strong_hover}; font-weight: bold; padding-right: 10px;"),
-    # v1.4.5 (ROADMAP task 2): the one button of the first-run empty state — the
+    # v1.4.5: the one button of the first-run empty state — the
     # primary action of an empty map, so it carries the accent fill instead of the
     # neutral surface the global QPushButton rule gives every other button.
     # v1.5rc1: an accent FILL THAT CARRIES TEXT — the strong tone, with the strong
@@ -317,7 +317,7 @@ QPushButton#EmptyStateButton:hover {{
     background-color: {t.accent_strong_hover};
 }}
 """,
-    # v1.5rc3 (ROADMAP task 2): the Undo affordance next to a destructive action's
+    # v1.5rc3: the Undo affordance next to a destructive action's
     # status message (ui/status_bar.py). It is a LINK-like button (ink, no frame) and
     # it is INK on the window surface — the STRONG accent, exactly like the status
     # counters above (the decorative sky measured 1.96:1 in LIGHT).
@@ -335,7 +335,7 @@ QToolButton#UndoOfferButton:hover {{
 }}
 """,
     "status.sftp_row": lambda t: f"color: {t.text_muted}; padding: 2px 0;",    "status.terminal_row": lambda t: f"color: {t.text_muted}; padding: 4px 0;",    "status.terminal_bold": lambda t: f"font-weight: bold; color: {t.text_primary};",
-    # v1.9.8 (task 3): the terminal's two CORNER controls (Split Terminal / Files Commander) and
+    # v1.9.8: the terminal's two CORNER controls (Split Terminal / Files Commander) and
     # the session tab's close mark. The shipped buttons wore the global QPushButton rule, which
     # paints no :checked state at all — a checkable control looked the same on and off. The padding
     # stays TIGHT on purpose: the corner sits on the session tab bar, whose width is part of the
@@ -357,7 +357,7 @@ QPushButton:checked {{
     border: 1px solid {t.accent_strong_hover};
 }}
 """,
-    # v1.9.8 (task 4) / v1.11: the EXCLUSIVE row of checkable `QToolButton`s — the source switch of a
+    # v1.9.8 / v1.11: the EXCLUSIVE row of checkable `QToolButton`s — the source switch of a
     # Files pane (`Server | Local | Elevated`) and the two heads of the terminal panel
     # (`Commands | Servers`). The INACTIVE state is what a user has to read — the platform's
     # auto-raised QToolButton left it too close to the surface it sits on — so the ink is explicit and
@@ -434,7 +434,7 @@ QTextEdit#StickyNoteEditor {{
     padding: 6px;
 }}
 """,
-    # v1.5rc4 (ROADMAP task 5): the VISIBLE FOCUS of a keyboard domain that is a
+    # v1.5rc4: the VISIBLE FOCUS of a keyboard domain that is a
     # standard widget (the sidebar's tree — ui/focus_ring.py owns the state). The
     # INACTIVE entry keeps the very same 2 px so a focus change never reflows the
     # layout; the ACTIVE one is the STRONG accent (ink-level contrast, v1.5rc1 role),
@@ -504,7 +504,7 @@ def refresh(widget, name: str) -> None:
 # ── The live switch ───────────────────────────────────────────────────────────
 
 def apply_theme(theme=None, app=None, refresh_windows: bool = True):
-    """Apply a theme to the live application (v1.4.3, ROADMAP task 4).
+    """Apply a theme to the live application (v1.4.3).
 
     The whole switch, in the ONE place it happens:
 
@@ -536,7 +536,7 @@ def apply_theme(theme=None, app=None, refresh_windows: bool = True):
     try:
         for widget in application.topLevelWidgets():
             _refresh_tree(widget)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — best effort (declared): a refresh must not fail the appliers
         pass
     return instance
 

@@ -488,6 +488,7 @@
   "sftp.archive.extract_bomb": "解压已在写入前停止：压缩包将展开为 {size}，共 {count} 个成员 — 最多写入 {limit}",
   "sftp.archive.merge_facts": "文件夹将合并：同名文件会被替换，已有的其他文件保留",
   "sftp.search.row": "查找文本…",
+  "sftp.search.tooltip": "在此文件夹的文件中搜索文本",
   "sftp.search.title": "查找文本",
   "sftp.search.needle": "要查找的文本",
   "sftp.search.subfolders": "包含子文件夹",

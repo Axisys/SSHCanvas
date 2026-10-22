@@ -19,7 +19,7 @@ try:
 except ImportError:
     from models.server import server_data_from_dict
 
-try:  # v1.6.5 (ROADMAP task 1): the unmanaged card owns no credentials — the keyring
+try:  # v1.6.5: the unmanaged card owns no credentials — the keyring
     from ..models.server import is_unmanaged as _is_unmanaged  # is never written for it
 except ImportError:
     from models.server import is_unmanaged as _is_unmanaged
@@ -32,7 +32,7 @@ except ImportError:
     from graphics.connection_arrow import DEFAULT_CONNECTION_TYPE
 
 
-# v1.3.3.6 (ROADMAP task 1): the MRU list of the project files. ``config.json`` key,
+# v1.3.3.6: the MRU list of the project files. ``config.json`` key,
 # newest first, deduplicated by the normalized absolute path, missing files pruned on
 # read. The cap is deliberately small: the File menu is a way back to yesterday's map,
 # not a file browser (a welcome screen with a longer list is NOT in v1.3.3.6).
@@ -103,7 +103,7 @@ class ProjectIOMixin:
         if self.log:
             self.log.info("New project created")
 
-    # ── v1.5rc3 (ROADMAP task 1): the example map ───────────────────────────────
+    # ── v1.5rc3: the example map ────────────────────────────────────────────────
 
     def _open_example_map(self) -> bool:
         """Load the DEMO project (`storage/example_project.py`) through the ordinary path.
@@ -125,7 +125,7 @@ class ProjectIOMixin:
           * `_example_project` marks the window (the title says so) until a new/open/save
             clears it — the map is never confused with a user file.
 
-        v1.5 (ROADMAP): the demo carries EMULATED statuses. `DEMO_STATUSES` is declared in
+        v1.5: the demo carries EMULATED statuses. `DEMO_STATUSES` is declared in
         the factory and applied HERE, after the load, through the ordinary
         `ServerNode.set_status(..., emulated=True)` — and the skip set is installed BEFORE
         the load, so the round that a project load always starts cannot probe them (it
@@ -155,12 +155,12 @@ class ProjectIOMixin:
             self._set_emulated_statuses({})
         return ok
 
-    # ── v1.5 (ROADMAP): the EMULATED statuses of the demo map ───────────────────
+    # ── v1.5: the EMULATED statuses of the demo map ─────────────────────────────
 
     def _set_emulated_statuses(self, statuses: dict) -> None:
         """Remember which node ids carry an EMULATED status and keep the checker in step.
 
-        v1.5 (ROADMAP): ONE place owns the emulation state. `statuses` is the demo's
+        v1.5: ONE place owns the emulation state. `statuses` is the demo's
         declaration (`storage/example_project.DEMO_STATUSES`) while the example map is the
         open project, and an EMPTY mapping for every other project — so the skip set of
         `StatusChecker` (`set_skip_ids`, filtered in its `_subset()`) can never outlive the
@@ -172,7 +172,7 @@ class ProjectIOMixin:
         if checker is None:
             return
         try:
-            # v1.6.5 (ROADMAP task 3): the checker's skip set is ONE question —
+            # v1.6.5: the checker's skip set is ONE question —
             # `_status_skip_ids()` answers it (the emulated ids AND every unmanaged card), so
             # the demo's emulation and the "never probe a neighbour" rule cannot drift apart.
             checker.set_skip_ids(self._status_skip_ids())
@@ -228,7 +228,7 @@ class ProjectIOMixin:
                     width=float(raw_g.get("width") or NodeGroup.DEFAULT_W),
                     height=float(raw_g.get("height") or NodeGroup.DEFAULT_H),
                     group_id=str(raw_g.get("id") or "")[:8] or None,
-                    # v1.4.2 (ROADMAP task 5): the FOLD state — optional keys, written
+                    # v1.4.2: the FOLD state — optional keys, written
                     # only while a group is folded. The member badges arrive as ordinary
                     # server records with their saved positions, so the group is rebuilt
                     # with the flag alone (no re-layout: the file holds the grid).
@@ -516,14 +516,14 @@ class ProjectIOMixin:
                          raw: dict = None, example: bool = False) -> bool:
         """v0.9.7: the common load path (File→Open and restore from a backup/autosave).
 
-        ROADMAP v0.9.7 #3: if the autosave is NEWER than the file on disk —
+        If the autosave is NEWER than the file on disk —
         offer to restore it BEFORE loading (answering "Yes" only replaces
         the in-memory content being loaded; the file on disk changes only
         on a later save). skip_autosave_prompt — the explicit restore path
         (the user already chose the source; a repeated prompt about a newer
         autosave would be disorienting).
 
-        v1.3.3.6 (ROADMAP task 1/3): a successful load puts the path at the head of
+        v1.3.3.6: a successful load puts the path at the head of
         the `recent_projects` MRU; a load that RAISES no longer ends in a bare
         critical dialog — `_recover_unreadable_project` asks the backup ring and the
         autosave first (with consent). The recovery offer is keyed on the FILE being
@@ -531,7 +531,7 @@ class ProjectIOMixin:
         already-parsed project (the keyring, the sidebar, the view) must not offer to
         overwrite a perfectly good file — that keeps the historic dialog.
 
-        v1.5rc3 (ROADMAP task 1): `raw` is an ALREADY-PARSED project and `example`
+        v1.5rc3: `raw` is an ALREADY-PARSED project and `example`
         marks the DEMO one (`_open_example_map`). A dict supplied by the caller skips
         the file reading, the autosave prompt and the recovery path — there is no file
         to read, no autosave to be newer and nothing to recover — and joins the SAME
@@ -539,7 +539,7 @@ class ProjectIOMixin:
         nor `_project_file`; `_update_window_title()` is what tells the user that the
         map on screen is an example.
 
-        v1.5 (ROADMAP): every load that is NOT the demo ends the emulation — the demo's
+        v1.5: every load that is NOT the demo ends the emulation — the demo's
         `DEMO_STATUSES` may never survive into a user's project (it is installed by
         `_open_example_map()` before it calls this method).
         """
@@ -550,7 +550,7 @@ class ProjectIOMixin:
                 from storage.project import load_project as _load_project
                 raw = _load_project(path)
             except Exception as e:  # noqa: BLE001 — the file cannot be read: recover, do not dead-end
-                # v1.3.3.6 (task 3): the ring buffer and the autosave are consulted BEFORE
+                # v1.3.3.6: the ring buffer and the autosave are consulted BEFORE
                 # the critical dialog (which stays for the "nothing to restore" case).
                 return self._recover_unreadable_project(path, e)
 
@@ -613,7 +613,7 @@ class ProjectIOMixin:
                                                          node_scope)
                 cm = _get_cm()
                 for node in list(self.scene.nodes()):
-                    # v1.6.5 (ROADMAP task 1): an UNMANAGED card has no credentials — the
+                    # v1.6.5: an UNMANAGED card has no credentials — the
                     # whole credential family is closed for it, so a keyring entry that a
                     # previous version left behind is not read back into it either.
                     if _is_unmanaged(node.data):
@@ -632,7 +632,7 @@ class ProjectIOMixin:
 
             self.refresh_sidebar()
             self._close_map_search_if_open()  # v0.9.8: a new project — close the search
-            # v1.5rc3 (ROADMAP task 1): a demo project carries no path — `_project_file`
+            # v1.5rc3: a demo project carries no path — `_project_file`
             # stays empty (File → Save therefore asks for a name, and the demo is never
             # written anywhere behind the user's back), and the window says out loud that
             # it is an example (the title marker; cleared by the next new/open/save).
@@ -644,7 +644,7 @@ class ProjectIOMixin:
             self.statusBar().showMessage(
                 self.t("status.example_loaded") if example
                 else self.t("status.project_loaded"))
-            # v1.3.3.6 (task 1): a load IS the definition of "recent" — but only a FILE
+            # v1.3.3.6: a load IS the definition of "recent" — but only a FILE
             # is. An example is not "yesterday's work" and never joins the MRU.
             if path:
                 self._remember_recent_project(path)
@@ -663,7 +663,7 @@ class ProjectIOMixin:
                 self, self.t("msg.error_title"), self.t("msg.load_failed", error=str(e)))
             return False
 
-    # ── v1.3.3.6 (ROADMAP task 3): recovery when the project cannot be read ──
+    # ── v1.3.3.6: recovery when the project cannot be read ──
 
     def _unreadable_sources(self, path: str) -> list:
         """The recovery material of an unreadable project, NEWEST first.
@@ -748,7 +748,7 @@ class ProjectIOMixin:
         return "skip"
 
     def _recover_unreadable_project(self, path: str, error) -> bool:
-        """Offer a restore when the project file cannot be read (v1.3.3.6, task 3).
+        """Offer a restore when the project file cannot be read (v1.3.3.6).
 
         Returns True only when a restore happened AND the project loaded. NOTHING is
         overwritten without an explicit choice: "Restore" copies the chosen slot over
@@ -867,7 +867,7 @@ class ProjectIOMixin:
             for node in list(self.scene.nodes()):
                 pw = getattr(node.data, 'password', '')
                 sid = getattr(node.data, 'id', '')
-                # v1.6.5 (ROADMAP task 1): the keyring is NEVER written for an UNMANAGED
+                # v1.6.5: the keyring is NEVER written for an UNMANAGED
                 # card. The dialog clears the field for it, so this guard is the second
                 # half of the rule — a password that reached the model by any other route
                 # (a hand-edited file, an older build, a programmatic path) still does not
@@ -901,10 +901,10 @@ class ProjectIOMixin:
 
             # Reset the unsaved-changes marker (former AUDIT.md, medium #7 — see CHANGELOG.md)
             self._dirty = False
-            # v1.5rc3 (ROADMAP task 1): the demo map became the user's OWN project the
+            # v1.5rc3: the demo map became the user's OWN project the
             # moment it was written to a file — the title marker goes away with it.
             self._example_project = False
-            # v1.5 (ROADMAP): and so does the EMULATION. Nothing was ever serialized (a
+            # v1.5: and so does the EMULATION. Nothing was ever serialized (a
             # status is a measurement, not data), the file carries no status field and the
             # copy probes for real from here on; the cards keep what they show until the
             # first real result replaces it — always still marked as the demo's.
@@ -918,7 +918,7 @@ class ProjectIOMixin:
                     "\n".join(self.t("msg.credentials_save_failed", alias=a) for a in unsaved_aliases))
 
             self.statusBar().showMessage(self.t("status.project_saved"))
-            # v1.3.3.6 (task 1): a successful save joins the MRU too — Save As makes the
+            # v1.3.3.6: a successful save joins the MRU too — Save As makes the
             # NEW path the head (the previous path stays below it until it is pruned).
             self._remember_recent_project(path)
 
@@ -940,7 +940,7 @@ class ProjectIOMixin:
                     cached_pw = cm.load_password(sid, scope=node_scope(node.data))
                     if cached_pw:
                         node.data.password = cached_pw
-            except Exception:
+            except Exception:  # noqa: BLE001 — the caller owns the fallback: the connect asks again
                 pass
 
             if self.log:
@@ -948,13 +948,13 @@ class ProjectIOMixin:
             QMessageBox.critical(self, self.t("msg.error_title"), self.t("msg.save_failed", error=str(e)))
             return False
 
-    # ── v0.9.7: autosave + backups (ROADMAP v0.9.7) ─────────────────────
+    # ── v0.9.7: autosave + backups (v0.9.7) ─────────────────────────────
 
     def _autosave_tick(self):
         """v0.9.7 #1: the timer tick — autosave only when dirty and a file is open.
 
         A new unsaved project (_project_file is None) is NOT autosaved:
-        there would be no file to restore it into (ROADMAP #3 is tied to
+        there would be no file to restore it into (an autosave is tied to
         the "open file"). Passwords do not enter the autosave —
         serialize_scene goes through server_data_to_dict, which strips them
         (see models/server.py).
@@ -994,7 +994,7 @@ class ProjectIOMixin:
     def _backup_items(self, project_path: str = None) -> list:
         """v0.9.7 #2: rows for the backup dialog — autosave + ring slots (newest first).
 
-        v1.3.3.6 (task 3): `project_path` defaults to the OPEN project, but the
+        v1.3.3.6: `project_path` defaults to the OPEN project, but the
         recovery path passes the file that failed to load (a drop / a Recent item is
         not necessarily `self._project_file`).
         """
@@ -1012,7 +1012,7 @@ class ProjectIOMixin:
                     "label": self.t("backups.autosave"),
                     "path": auto_path, "mtime": st.st_mtime, "size": st.st_size,
                 })
-            except OSError:
+            except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
                 pass
         for b in _as_mod.list_backups(target):
             items.append({
@@ -1024,7 +1024,7 @@ class ProjectIOMixin:
     def _show_backups_dialog(self, project_path: str = None):
         """v0.9.7 #2: the dialog with the ring buffer of backups (+ the latest autosave).
 
-        v1.3.3.6 (task 3): an optional explicit target — the recovery path opens the
+        v1.3.3.6: an optional explicit target — the recovery path opens the
         list of the file it could not read. Called as a QAction slot it receives no
         argument (or a bool from an auto-connection), which the `isinstance` guard
         below turns back into the open project.
@@ -1057,7 +1057,7 @@ class ProjectIOMixin:
         (the same logic as File→Open: undo stack, dirty, keyring keys,
         statuses).
 
-        v1.3.3.6 (task 3): `target_path` — the explicit target of a recovery restore
+        v1.3.3.6: `target_path` — the explicit target of a recovery restore
         (defaults to the open project file).
         """
         target = target_path if isinstance(target_path, str) and target_path \

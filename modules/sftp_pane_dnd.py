@@ -69,7 +69,7 @@ def _facade_attr(name, default=None):
 
 class SftpPaneDndMixin:
     """The drag & drop and the row context menu (mixed into `_SftpPane`)."""
-    # ── v1.3.3.2: the file operations (ROADMAP task 1) ───────────────────
+    # ── v1.3.3.2: the file operations ────────────────────────────────────
 
     def _on_context_menu(self, pos):
         """The tree's context menu (the seam is `_build_context_menu(item)`)."""
@@ -105,7 +105,7 @@ class SftpPaneDndMixin:
         act_upload = menu.addAction(_t("sftp.op.upload"))
         act_copy = menu.addAction(_t("sftp.op.copy_path"))
         act_archive = menu.addAction(_t("sftp.archive.open"))
-        # v1.7.3 (task 1): `Send to ▸ <session>` — the rows of the sessions open RIGHT NOW.
+        # v1.7.3: `Send to ▸ <session>` — the rows of the sessions open RIGHT NOW.
         sub = self._build_send_menu(item)
         if sub is not None:
             menu.addMenu(sub)
@@ -207,7 +207,7 @@ class SftpPaneDndMixin:
     def _op_download_row(self, item):
         """`Download` — ONE row, a file OR a whole folder, into a directory the user picks.
 
-        A folder needs no new machinery (the ROADMAP decision): `queue_download()` carries a remote
+        A folder needs no new machinery (`AGENTS.md` §4.3.6): `queue_download()` carries a remote
         DIRECTORY as a bounded tree on the worker thread, so the row is the shipped
         `_queue_downloads()` batch of ONE — its local-name gate and its ONE conflict question.
         """
@@ -246,7 +246,7 @@ class SftpPaneDndMixin:
         self._queue_uploads(files, target, set())
         self.message.emit(_t("sftp.drop_queued", count=len(files), dir=target))
 
-    # ── v1.7.3 (task 1): `Send to ▸ <session>` — the cross-session relay ──
+    # ── v1.7.3: `Send to ▸ <session>` — the cross-session relay ──
 
     def _build_send_menu(self, item):
         """The `Send to ▸ <session>` submenu of one row (None — an empty space, no row at all).
@@ -445,7 +445,7 @@ class SftpPaneDndMixin:
             event.acceptProposedAction()
 
     def dropEvent(self, event):
-        # v1.7.3 (task 3): a row dragged out of a pane and dropped INTO a pane is the v1.7rc2
+        # v1.7.3: a row dragged out of a pane and dropped INTO a pane is the v1.7rc2
         # copy (a MOVE with `Shift`) with a PANE as its destination.
         payload = host_attr(self, "pane_payload")(event.mimeData())
         if payload is not None:
@@ -536,7 +536,7 @@ class SftpPaneDndMixin:
             return None   # the C++ object is gone / the source is not an ancestor
 
     def _drop_target_dir(self, event) -> str:
-        """v1.3.3.2 (ROADMAP task 4): the directory UNDER THE CURSOR.
+        """v1.3.3.2: the directory UNDER THE CURSOR.
 
         A directory row (including "..") is the target; a file row and empty space
         keep the current directory — the second half of the "drop into a specific

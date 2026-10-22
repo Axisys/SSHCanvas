@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.0RC3 — PTY resize + scrollback + dirty rendering (ROADMAP v1.0RC3).
+"""v1.0RC3 — PTY resize + scrollback + dirty rendering (v1.0RC3).
 
 The scrollback on the ready-made `pyte.HistoryScreen` (`DOCUMENTATION.md` §12; input arrives with `\r\n` —
 the convention since RC3, and the fork keeps LNM on — patch 0002 — so a bare `\n` is CR+LF): the history
@@ -106,7 +106,7 @@ def spin(ms):
 
 
 class FakeChannel:
-    """The fake paramiko channel counting the calls of resize_pty (ROADMAP v1.0RC3)."""
+    """The fake paramiko channel counting the calls of resize_pty (v1.0RC3)."""
 
     def __init__(self):
         self.closed = False
@@ -498,7 +498,7 @@ class CountingHistory(TS.SshmapHistoryScreen):
 
     The D2 batching exists because those calls would otherwise be spun in a loop (one per page); the
     pinned restore must not reintroduce them, so the topical test counts THEM — never
-    milliseconds (the ROADMAP acceptance says so explicitly).
+    milliseconds.
     """
     page_ops = 0
 

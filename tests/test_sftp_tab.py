@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.1.3 — SFTP tab in the terminal window (ROADMAP v1.1.3, tasks 1–5).
+"""v1.1.3 — SFTP tab in the terminal window (v1.1.3).
 
 The theme: a worker thread with the task queue (list/upload/download) over the LIVE transport plus the
 `Terminal | Files` tab. Everything is checked WITHOUT the network, on a fake `SFTPClient` with an
@@ -150,7 +150,7 @@ print("== 3. worker: cancellation ==")
 
 fs3 = FakeSftpFS()
 # v1.3.3.2: the destination EXISTS — the pin of this section is the ATOMIC upload
-# (ROADMAP task 6): a cancelled upload must not truncate the previous remote file.
+#: a cancelled upload must not truncate the previous remote file.
 fs3.add_file("/slow.bin", b"ORIGINAL")
 client3 = FakeSftpClient(fs3, chunk_delay=0.02)  # ~10 chunks × 20 ms = 200 ms
 worker3 = SftpWorker(client3)
@@ -177,7 +177,7 @@ prog_slow = [e[2] for e in log3.of_kind("progress", tid_slow)]
 check("the transfer is interrupted BEFORE the end (the progress < the total)",
       prog_slow and prog_slow[-1] < SLOW_SIZE,
       f"last={prog_slow[-1] if prog_slow else None} total={SLOW_SIZE}")
-# v1.3.3.2 (ROADMAP task 3/6): the PINNED behaviour of v1.1.3 — "a cancelled upload
+# v1.3.3.2: the PINNED behaviour of v1.1.3 — "a cancelled upload
 # leaves a shorter file on the server" — is DELIBERATELY GONE. The upload goes to
 # `/slow.bin.part` and is renamed on success, so a cancel leaves the previous remote
 # file byte-identical and no provisional file behind.
@@ -257,14 +257,15 @@ msgs = []
 tab.message.connect(msgs.append)
 tab.set_worker(worker6)  # → _relist("/")
 
-# v1.3.3.2: the BUTTON SET is unchanged — the file operations of the version live in
-# the tree's context menu, they did not add a sixth/… button to the tab.
-check("the button set of the tab is the five v1.1.3 buttons (the operations are menu items)",
-      [b.text() for b in (tab.btn_up, tab.btn_refresh, tab.btn_upload,
+# v1.3.3.2: the file operations live in the tree's context menu, so they added no button.
+# v1.14: the SEARCH gained a control of its own (`Find text`), between `Refresh` and the stretch —
+# the row is six buttons now, and the pin below is re-decided with it.
+check("the button set of the tab is the six buttons (navigation, search, operations)",
+      [b.text() for b in (tab.btn_up, tab.btn_refresh, tab.btn_find, tab.btn_upload,
                           tab.btn_download, tab.btn_cancel)]
-      == [i18n.t("sftp.up"), i18n.t("sftp.refresh"), i18n.t("sftp.upload"),
-          i18n.t("sftp.download"), i18n.t("sftp.cancel")],
-      f"got={[b.text() for b in (tab.btn_up, tab.btn_upload, tab.btn_cancel)]}")
+      == [i18n.t("sftp.up"), i18n.t("sftp.refresh"), i18n.t("sftp.search.row"),
+          i18n.t("sftp.upload"), i18n.t("sftp.download"), i18n.t("sftp.cancel")],
+      f"got={[b.text() for b in (tab.btn_up, tab.btn_refresh, tab.btn_find, tab.btn_upload, tab.btn_cancel)]}")
 
 wait_until(lambda: tab.tree.topLevelItemCount() >= 2, timeout_ms=5000)
 names = [tab.tree.topLevelItem(i).text(0) for i in range(tab.tree.topLevelItemCount())]

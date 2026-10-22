@@ -395,24 +395,28 @@ def canvas_func_owner(func, root=None):
     return ""
 
 
-# The `_SftpPane` FAMILY: the `modules/sftp_tab.py` facade plus every `sftp_pane_*.py` pane mixin.
-# Same rule as the MainWindow family above (`ROADMAP.md`'s `1.8rc4` wave): a pane cluster moves into
-# a mixin without changing a line of a method's body, so a pin must read it WHEREVER the family
-# defines it — a pin that names `modules/sftp_tab.py` stops protecting the day the method moves.
+# The `_SftpPane` FAMILY: the `modules/sftp_tab.py` facade (it holds BOTH facades, the pane's and the
+# container's) plus every `sftp_pane_*.py` mixin and every `sftp_container_*.py` one. Same rule as the
+# MainWindow family above (`ROADMAP.md`'s `1.8rc4` wave): a cluster moves into a mixin without changing
+# a line of a method's body, so a pin must read it WHEREVER the family defines it — a pin that names
+# `modules/sftp_tab.py` stops protecting the day the method moves.
 PANE_FAMILY_GLOB = os.path.join("modules", "sftp_pane*.py")
+CONTAINER_FAMILY_GLOB = os.path.join("modules", "sftp_container*.py")
 PANE_FACADE = "modules/sftp_tab.py"
 
 
 def pane_family_files(root):
-    """Every file of the pane family, as paths relative to `root` (sorted, one glob + the facade)."""
+    """Every file of the Files-tab family, as paths relative to `root` (sorted, two globs + the facade)."""
     import glob
-    found = sorted(os.path.relpath(p, root).replace("\\", "/")
-                   for p in glob.glob(os.path.join(root, PANE_FAMILY_GLOB)))
-    return [PANE_FACADE] + [rel for rel in found if rel != PANE_FACADE]
+    found = set()
+    for pattern in (PANE_FAMILY_GLOB, CONTAINER_FAMILY_GLOB):
+        found.update(os.path.relpath(p, root).replace("\\", "/")
+                     for p in glob.glob(os.path.join(root, pattern)))
+    return [PANE_FACADE] + [rel for rel in sorted(found) if rel != PANE_FACADE]
 
 
 def pane_family_sources(root):
-    """{relative path: source} of the pane family — the facade and every pane mixin."""
+    """{relative path: source} of the Files-tab family — the facade, the pane mixins, the container mixins."""
     out = {}
     for rel in pane_family_files(root):
         with open(os.path.join(root, rel), encoding="utf-8") as fh:
@@ -496,8 +500,8 @@ def example_plugin_problems(name, source):
 # in 12 i18n files + the APP_VERSION/requirements pins in 7 release-state sections).
 # The misses of the keys themselves against the code are caught by check_i18n_keys.py.
 # ─────────────────────────────────────────────────────────────────────────────
-EXPECTED_APP_VERSION = "1.13.6.3"     # the current release (a sentinel: it catches "a bump to the wrong version")
-EXPECTED_I18N_KEYS = 1180       # the parity of the TRANSLATION keys of every language file vs en (the
+EXPECTED_APP_VERSION = "1.14"        # the current release (a sentinel: it catches "a bump to the wrong version")
+EXPECTED_I18N_KEYS = 1181       # the parity of the TRANSLATION keys of every language file vs en (the
                                 # "name"/"partial" meta keys are excluded) — ONE number per release; the
                                 # per-release counts live in the changelog family, never here
 VERSION_FORMAT_RE = re.compile(r"^\d+(\.\d+){1,3}([Rr][Cc]\d+)?$")  # "1.1.3", "1.0RC4", "0.9.9.7", "1.2.10rc1" (v1.2.10: + lowercase rc)
@@ -562,7 +566,7 @@ def load_i18n_langs(root, codes=None, encoding=None):
     return langs
 
 
-# ── v1.3.3.1 (ROADMAP task 4): placeholders and line breaks ──────────────────
+# ── v1.3.3.1: placeholders and line breaks ───────────────────────────────────
 # The two defect types the v1.3.3 policy could not see. The helpers live HERE (the
 # "one place" rule): both tests/check_i18n_keys.py and tests/test_i18n_languages.py /
 # tests/test_i18n_live.py consume them.
@@ -628,7 +632,7 @@ def i18n_format_problems(langs, reference=I18N_REFERENCE):
 def i18n_parity_warnings(langs, reference=I18N_REFERENCE):
     """The parity WARNINGS of the discovered languages: [] = none.
 
-    v1.3.3.1 (ROADMAP task 2): a file with the meta key `"partial": true` is a
+    v1.3.3.1: a file with the meta key `"partial": true` is a
     deliberately incomplete translation — it loads and works (the runtime
     en-fallback covers the missing keys), so its MISSING keys and its key COUNT are
     reported here as warnings instead of defects. Everything else stays strict.
@@ -736,6 +740,27 @@ def releases_at_least(value, release=None):
         return tuple(digits + [0] * (4 - len(digits)))[:4] if digits else (0, 0, 0, 0)
 
     return parts(value) >= parts(release)
+
+
+def changelog_family_text(root, family="CHANGELOG"):
+    """The text of ONE changelog family: the LIVE file plus every CLOSED line of it.
+
+    A topical check that asserts "the changelog family carries this release" must not name the live
+    file alone: the rollover (`AGENTS.md` §9.2) moves the release's section into
+    `CHANGELOG_HISTORY_V<digits>.md` (and its twin into `CHANGELOG_DETAILS_V<digits>.md`) and re-heads
+    the live one, so a pin on the live file alone turns red the day the line closes.
+    """
+    import glob
+    live, closed = (("CHANGELOG_DETAILS.md", "CHANGELOG_DETAILS_V*.md") if family == "DETAILS"
+                    else ("CHANGELOG.md", "CHANGELOG_HISTORY_V*.md"))
+    parts = []
+    for path in [os.path.join(root, live)] + sorted(glob.glob(os.path.join(root, closed))):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                parts.append(fh.read())
+        except OSError:
+            continue
+    return "\n".join(parts)
 
 
 def check_release_state(root):

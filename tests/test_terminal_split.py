@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.3.3.5 — Terminal split: a second pane under the sessions (ROADMAP v1.3.3.5).
+"""v1.3.3.5 — Terminal split: a second pane under the sessions (v1.3.3.5).
 
 The topical test of the release: offscreen, no network (the fake threads of `ST.SSHTerminalThread`).
 §1 the layout and ONE checkable action (`terminal.split`); §2 the pane's birth (a REAL
@@ -234,7 +234,7 @@ check("the pane's shell output does not leak into the top canvas",
 
 
 # ════════════════════════════════════════════════════════════
-# 4. The geometry rules (task 3a)
+# 4. The geometry rules
 # ════════════════════════════════════════════════════════════
 print("== 4. the geometry rules ==")
 
@@ -294,7 +294,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════
-# 5. Focus and the bridges (task 6)
+# 5. Focus and the bridges
 # ════════════════════════════════════════════════════════════
 print("== 5. focus and the bridges ==")
 
@@ -343,7 +343,7 @@ top_a.terminal_thread.channel.sent.clear()
 win_a.cmdlib_panel.send_entry({"id": "x", "name": "n", "command": "uptime",
                                "category": "", "enabled": True})
 app.processEvents()
-check("... and to the FOCUSED PANE once the user is in it (ROADMAP task 6)",
+check("... and to the FOCUSED PANE once the user is in it",
       pane_a.terminal_thread.channel.sent == [b"uptime\n"]
       and top_a.terminal_thread.channel.sent == [],
       f"top={top_a.terminal_thread.channel.sent!r} pane={pane_a.terminal_thread.channel.sent!r}")
@@ -375,7 +375,7 @@ check("the mode off restores the pane's inner title (badge dropped) and drops th
 
 
 # ════════════════════════════════════════════════════════════
-# 6. The registry rules: the limit ignores the pane, the dot counts it (task 2)
+# 6. The registry rules: the limit ignores the pane, the dot counts it
 # ════════════════════════════════════════════════════════════
 print("== 6. the registry rules ==")
 
@@ -492,7 +492,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════
-# 7. The teardown paths (task 2/4)
+# 7. The teardown paths
 # ════════════════════════════════════════════════════════════
 print("== 7. the teardown paths ==")
 
@@ -581,7 +581,7 @@ check("the shutdown section left no session in the registry",
 
 
 # ════════════════════════════════════════════════════════════
-# 8. Persistence — the state and the ratio survive save→load (task 5)
+# 8. Persistence — the state and the ratio survive save→load
 # ════════════════════════════════════════════════════════════
 print("== 8. persistence ==")
 

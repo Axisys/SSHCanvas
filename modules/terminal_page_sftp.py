@@ -34,7 +34,7 @@ class TerminalPageSftpMixin:
     _SFTP_KIND_KEYS = {"upload": "sftp.uploading", "download": "sftp.downloading",
                        "read": "sftp.viewer.reading", "copy": "sftp.copying"}
 
-    # ── v1.1.3: the SFTP tab (ROADMAP tasks 2-4) ────────────────────────────
+    # ── v1.1.3: the SFTP tab ────────────────────────────────────────────────
 
     def _ensure_sftp(self) -> bool:
         """Ask for the session's SFTP channel — WITHOUT blocking the GUI thread.
@@ -248,7 +248,7 @@ class TerminalPageSftpMixin:
             text = t("sftp.progress", name=label, pct=int(done * 100 // total),
                      done=host_attr(self, "format_size")(done),
                      total=host_attr(self, "format_size")(total))
-            # v1.3.3.4 (ROADMAP task 6): the measured throughput and the ETA, appended
+            # v1.3.3.4: the measured throughput and the ETA, appended
             # to the same line (an empty string while the meter has nothing honest to show).
             detail = self._transfer_detail(task_id, done, total)
             if detail:
@@ -259,7 +259,7 @@ class TerminalPageSftpMixin:
         self.status_message.emit(text, 0)
 
     def _transfer_detail(self, task_id: int, done: int, total: int) -> str:
-        """v1.3.3.4 (ROADMAP task 6): "1.2 MB/s · ETA 0:42" — or "" while unmeasurable.
+        """v1.3.3.4: "1.2 MB/s · ETA 0:42" — or "" while unmeasurable.
 
         The meter is created on the first sample of the task and dropped with it
         (SUCCESS, error and cancel all call _drop_transfer_meter). Never raises: a
@@ -296,7 +296,7 @@ class TerminalPageSftpMixin:
         if self._shut_down:
             return   # v1.8rc6 (N56): the posted-emission guard of the transfer family
         t = host_attr(self, "get_translator")()
-        self._drop_transfer_meter(task_id)   # v1.3.3.4 (task 6): the meter dies with the task
+        self._drop_transfer_meter(task_id)   # v1.3.3.4: the meter dies with the task
         entry = self._sftp_tasks.pop(task_id, None)
         if entry is not None and entry[0] in self._SFTP_PROGRESS_KINDS:
             self._sftp_busy = max(0, self._sftp_busy - 1)
@@ -311,7 +311,7 @@ class TerminalPageSftpMixin:
         if self._shut_down:
             return   # v1.8rc6 (N56): the posted-emission guard of the transfer family
         t = host_attr(self, "get_translator")()
-        self._drop_transfer_meter(task_id)   # v1.3.3.4 (task 6): the meter dies with the task
+        self._drop_transfer_meter(task_id)   # v1.3.3.4: the meter dies with the task
         entry = self._sftp_tasks.pop(task_id, None)
         if entry is not None and entry[0] in self._SFTP_PROGRESS_KINDS:
             self._sftp_busy = max(0, self._sftp_busy - 1)
@@ -339,7 +339,7 @@ class TerminalPageSftpMixin:
         if self._shut_down:
             return   # v1.8rc6 (N56): the posted-emission guard of the transfer family
         t = host_attr(self, "get_translator")()
-        self._drop_transfer_meter(task_id)   # v1.3.3.4 (task 6): the meter dies with the task
+        self._drop_transfer_meter(task_id)   # v1.3.3.4: the meter dies with the task
         entry = self._sftp_tasks.pop(task_id, None)
         if entry is not None and entry[0] in self._SFTP_PROGRESS_KINDS:
             self._sftp_busy = max(0, self._sftp_busy - 1)
@@ -355,7 +355,7 @@ class TerminalPageSftpMixin:
         try:
             self._sftp_worker = None
             self._sftp_tasks.clear()
-            self._transfer_meters.clear()   # v1.3.3.4 (task 6): no live task — no meter
+            self._transfer_meters.clear()   # v1.3.3.4: no live task — no meter
             self._sftp_busy = 0
             self.progress_hidden.emit()
             if getattr(self, "sftp_tab", None) is not None:

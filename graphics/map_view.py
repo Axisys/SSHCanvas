@@ -37,7 +37,7 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.4.4 (ROADMAP task 1/2): the motion standards — the camera flights
+try:  # v1.4.4: the motion standards — the camera flights
     from ..ui import motion
 except ImportError:
     try:
@@ -45,7 +45,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         motion = None
 
-try:  # v1.5rc4 (ROADMAP task 5): the ONE visible-focus indicator of the three domains
+try:  # v1.5rc4: the ONE visible-focus indicator of the three domains
     from ..ui import focus_ring
 except ImportError:
     try:
@@ -53,7 +53,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         focus_ring = None
 
-try:  # v1.6.5 (ROADMAP task 4): the ONE gate of an unmanaged card
+try:  # v1.6.5: the ONE gate of an unmanaged card
     from ..ui import unmanaged
 except ImportError:
     try:
@@ -61,7 +61,7 @@ except ImportError:
     except ImportError:  # flat layout without ui/unmanaged — no row is ever gated
         unmanaged = None
 
-try:  # v1.9.8 (ROADMAP v1.9.8, task 2): the ONE order of the server menu (the sidebar reads it too)
+try:  # v1.9.8: the ONE order of the server menu (the sidebar reads it too)
     from ..ui import server_menu
 except ImportError:  # flat layout: the ui/ directory itself is on sys.path
     from ui import server_menu
@@ -91,7 +91,7 @@ def _t(key: str, **kw) -> str:
 
 
 def _gate_row(act, action: str, node, label_key: str) -> bool:
-    """Disable a node-context row the UNMANAGED gate refuses (v1.6.5, ROADMAP task 4).
+    """Disable a node-context row the UNMANAGED gate refuses (v1.6.5).
 
     The menu builder's ONE call: the policy lives in `ui/unmanaged.py` (the action table
     and the sentence), the label is the row's OWN translated text, and a row that is not
@@ -151,7 +151,7 @@ class MapView(QGraphicsView):
         self._focus_ring = focus_ring.FocusRing(owner=self) if focus_ring is not None else None
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 5): re-read the theme for the view.
+        """v1.4.3: re-read the theme for the view.
 
         `MapScene.drawBackground` paints over the viewport, but the view's own
         background brush is what shows before the first `drawBackground` — it
@@ -168,7 +168,7 @@ class MapView(QGraphicsView):
             self._focus_ring.refresh_theme()
         self.viewport().update()
 
-    # ── v1.5rc4 (ROADMAP task 5): the VISIBLE FOCUS of the map ────────────────
+    # ── v1.5rc4: the VISIBLE FOCUS of the map ─────────────────────────────────
     # The map is the domain whose keys are not obvious (in `terminal_mode = "tabs"` it
     # shares the window with a live shell): the ring says "the map owns the keyboard",
     # the same indicator the sidebar and the terminal canvas show.
@@ -178,7 +178,7 @@ class MapView(QGraphicsView):
         return bool(self._focus_ring is not None and self._focus_ring.is_active())
 
     def drawForeground(self, painter, rect):
-        """Paint the focus frame of the map (v1.5rc4, ROADMAP task 5).
+        """Paint the focus frame of the map (v1.5rc4).
 
         Drawn in the VIEW's foreground layer with a COSMETIC pen: the frame is the
         viewport's edge in DEVICE pixels, so it stays a 2 px line at any zoom (a scene
@@ -208,10 +208,10 @@ class MapView(QGraphicsView):
     # UI polish: allowed zoom range (shared by wheel, fit, and restore).
     ZOOM_MIN = 0.1
     ZOOM_MAX = 5.0
-    # v1.3.3.3 (task 2): one keyboard step of the Zoom In / Zoom Out actions
+    # v1.3.3.3: one keyboard step of the Zoom In / Zoom Out actions
     # (the wheel keeps its own cursor-anchored 1.15/0.87 factors).
     ZOOM_STEP = 1.25
-    # v1.4.4 (task 2): Qt's own margin inside `QGraphicsView::fitInView()` — the fit
+    # v1.4.4: Qt's own margin inside `QGraphicsView::fitInView()` — the fit
     # target of the camera flight has to reproduce it, or the flight lands next to the
     # instant fit instead of on it.
     FIT_VIEW_MARGIN_PX = 2
@@ -235,7 +235,7 @@ class MapView(QGraphicsView):
         self._zoom = 1.0
         self._notify_zoom()
 
-    # ── v1.4.4 (ROADMAP task 1/2): the camera — flights, interruption, the fit target ──
+    # ── v1.4.4: the camera — flights, interruption, the fit target ──
     # The camera is ONE state: a scale + a scene point under the centre of the viewport.
     # `apply_camera()` is the single writer (ui/motion.py calls it every frame); a flight
     # is always interruptible, and every INSTANT path stops a running one first, so the
@@ -260,7 +260,7 @@ class MapView(QGraphicsView):
         self._zoom = scale
         try:
             self.centerOn(center)
-        except (TypeError, RuntimeError):
+        except (TypeError, RuntimeError):  # noqa: BLE001 — best effort (declared): the scale still landed
             pass  # an unusable point — the scale still landed
         self._notify_zoom()
         return True
@@ -291,7 +291,7 @@ class MapView(QGraphicsView):
             self, scale, center,
             motion.DURATION_NORMAL if ms is None else ms) is not None
 
-    # v1.3.3.3 (ROADMAP v1.3.3.3, task 2): a step API next to reset_zoom()/
+    # v1.3.3.3: a step API next to reset_zoom()/
     # set_zoom_and_center() — the "View → Zoom In / Zoom Out" actions need a
     # keyboard-reachable zoom that does not depend on the pointer position.
 
@@ -349,7 +349,7 @@ class MapView(QGraphicsView):
         self.resized.emit()
 
     def wheelEvent(self, event: QWheelEvent):
-        # v1.4.4 (ROADMAP task 1): the wheel is manual control — a flying camera is
+        # v1.4.4: the wheel is manual control — a flying camera is
         # stopped immediately (the animation never fights the user's hand).
         self.stop_camera_flight()
         delta = event.angleDelta().y()
@@ -382,7 +382,7 @@ class MapView(QGraphicsView):
 
         Returns False if there is no content. Zoom is clamped to the
         [ZOOM_MIN, ZOOM_MAX] range like the wheel; _zoom is kept in sync with the transform.
-        v1.4.4 (ROADMAP task 2): the USER action ("Fit map", Ctrl+Shift+F) flies to the
+        v1.4.4: the USER action ("Fit map", Ctrl+Shift+F) flies to the
         same target through `fly_to_content()`; this method stays the instant one (tools,
         tests and the fallback of the flight when the viewport has no geometry yet).
         """
@@ -407,7 +407,7 @@ class MapView(QGraphicsView):
         return True
 
     def fit_view_target(self, margin: float = 80.0):
-        """v1.4.4 (ROADMAP task 2): the (scale, centre) `fit_to_content()` would apply.
+        """v1.4.4: the (scale, centre) `fit_to_content()` would apply.
 
         The pure half of the fit — separated so the camera FLIGHT can fly to exactly the
         transform the instant primitive would produce (same KeepAspectRatio arithmetic,
@@ -440,7 +440,7 @@ class MapView(QGraphicsView):
         return scale, QPointF(rect.center())
 
     def fly_to_content(self, margin: float = 80.0, ms: int = None) -> bool:
-        """v1.4.4 (ROADMAP task 2): "Fit map" as a smooth camera FLIGHT (250 ms, OutQuad).
+        """v1.4.4: "Fit map" as a smooth camera FLIGHT (250 ms, OutQuad).
 
         The same `fit_to_content()` result, reached in motion instead of a snap. Nothing
         to frame (an empty map) → False, exactly as the instant primitive; no viewport
@@ -532,10 +532,10 @@ class MapView(QGraphicsView):
         self.unsetCursor()
 
     def mousePressEvent(self, event: QMouseEvent):
-        # v1.4.4 (ROADMAP task 1): any press is manual control — a flying camera is
+        # v1.4.4: any press is manual control — a flying camera is
         # stopped before the gesture starts (pan, node drag, rubber band, connect drag).
         self.stop_camera_flight()
-        # v1.8.4 (ROADMAP task 2): Ctrl+LMB on a card asks "what breaks if I stop this one" —
+        # v1.8.4: Ctrl+LMB on a card asks "what breaks if I stop this one" —
         # the dependency highlight. The window owns the state (it is the ONE owner of the dim);
         # the press is NOT consumed, so Ctrl+click keeps its shipped multi-selection, and a
         # Ctrl+click that lands on empty space drops the highlight (the question was left).
@@ -618,7 +618,7 @@ class MapView(QGraphicsView):
     def mouseMoveEvent(self, event: QMouseEvent):
         if self._connect_source is not None and self._rubber_band is not None:
             scene_pos = self.mapToScene(event.position().toPoint())
-            # v1.4.2 (ROADMAP task 4): the band starts on the CARD edge (card_rect_scene),
+            # v1.4.2: the band starts on the CARD edge (card_rect_scene),
             # not on the shadow halo-inflated boundingRect.
             _rect_fn = getattr(self._connect_source, "card_rect_scene", None)
             src_rect = _rect_fn() if callable(_rect_fn) else self._connect_source.sceneBoundingRect()
@@ -697,7 +697,7 @@ class MapView(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def focusInEvent(self, event: QFocusEvent):
-        """v1.5rc4 (ROADMAP task 5): the map took the keyboard — show the focus ring."""
+        """v1.5rc4: the map took the keyboard — show the focus ring."""
         if self._focus_ring is not None:
             self._focus_ring.set_active(True)
         super().focusInEvent(event)
@@ -705,7 +705,7 @@ class MapView(QGraphicsView):
     def focusOutEvent(self, event: QFocusEvent):
         """v1.1.2RC2 (N3): focus loss ("blur") — the capture may have been lost, the release won't come.
 
-        v1.5rc4 (ROADMAP task 5): the same event drops the focus ring — the map no longer
+        v1.5rc4: the same event drops the focus ring — the map no longer
         owns the keyboard.
         """
         self._reset_stuck_drag_state()
@@ -730,7 +730,7 @@ class MapView(QGraphicsView):
             self._cancel_connect_drag()
             self.connect_drag_finished.emit()
             return
-        # v1.5rc4 (ROADMAP task 6): the keyboard walk is handled BEFORE Delete, because
+        # v1.5rc4: the keyboard walk is handled BEFORE Delete, because
         # Tab/arrows/Enter/Esc must not fall through to Qt's focus chain or to the
         # view's own scrolling while a card is selected (see _handle_navigation_key).
         if self._handle_navigation_key(event):
@@ -778,7 +778,7 @@ class MapView(QGraphicsView):
         super().keyPressEvent(event)
 
     def event(self, e):
-        """v1.5rc4 (ROADMAP task 6): Tab/Shift+Tab must reach the keyboard walk.
+        """v1.5rc4: Tab/Shift+Tab must reach the keyboard walk.
 
         The lesson, applied to the map: Qt 6 handles bare Tab/Shift+Tab as
         FOCUS NAVIGATION inside `QWidget::event()` — the keys never reach
@@ -910,7 +910,7 @@ class MapView(QGraphicsView):
             try:
                 select(node, center=True)
                 return True
-            except (RuntimeError, TypeError):
+            except (RuntimeError, TypeError):  # noqa: BLE001 — the caller owns the fallback: the direct selection follows
                 pass  # an unexpected host — fall through to the direct selection
         try:
             scene = self.scene()
@@ -980,7 +980,7 @@ class MapView(QGraphicsView):
         if callable(sync):
             try:
                 sync()
-            except (RuntimeError, TypeError):
+            except (RuntimeError, TypeError):  # noqa: BLE001 — best effort (declared): the scene is already cleared
                 pass  # a host without the sync hook — the scene is already cleared
         return True
 
@@ -1042,7 +1042,7 @@ class MapView(QGraphicsView):
             if self.clear_keyboard_selection():
                 event.accept()
                 return True
-            # v1.8.4 (ROADMAP task 2): nothing was selected — Esc drops the dependency
+            # v1.8.4: nothing was selected — Esc drops the dependency
             # highlight instead (the second view state the key can undo).
             clear = getattr(self.window(), "_clear_dependency_focus", None)
             if callable(clear) and clear():
@@ -1064,7 +1064,7 @@ class MapView(QGraphicsView):
         if callable(position):
             try:
                 return position().toPoint()
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): an older binding without position()
                 pass  # legacy binding without position() — event.pos() below
         return event.pos()
 
@@ -1075,7 +1075,7 @@ class MapView(QGraphicsView):
         if callable(global_position):
             try:
                 return global_position().toPoint()
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): an older binding without globalPosition()
                 pass  # legacy binding without globalPosition() — event.globalPos() below
         return event.globalPos()
 
@@ -1109,7 +1109,7 @@ class MapView(QGraphicsView):
         the ~6k group child elements. Measured ~3x faster than the full walk
         (tests/_bench_rubber.py, CHANGELOG v1.2.10rc3).
 
-        The ROADMAP-suggested `scene().items(rect)` (Qt spatial index)
+        The `scene().items(rect)` alternative (Qt spatial index)
         was MEASURED and REJECTED: on Qt 6.11.1/PySide6 6.11.1 the per-candidate
         overhead is ~2.6 us, so a rectangle covering the whole map cost 15.6 ms versus
         0.9 ms for a plain walk of ALL elements — slower than the OLD code (the win
@@ -1190,7 +1190,7 @@ class MapView(QGraphicsView):
                     if not hasattr(win, "_run_quick_launch_entry"):
                         break
                     act_ql = ql_sub.addAction(str(e.get("name") or e.get("value") or "?"))
-                    # v1.6.5 (ROADMAP task 4): a COMMAND entry is an SSH verb and is refused
+                    # v1.6.5: a COMMAND entry is an SSH verb and is refused
                     # for an unmanaged card; a URL entry stays — the browser needs no shell
                     # on that host. The gate asks the ENTRY's type, not the row's.
                     if str(e.get("type", "url")).strip().lower() == "command":
@@ -1227,7 +1227,7 @@ class MapView(QGraphicsView):
                     w._connect_ssh_to_selected()
 
                 act_ssh.triggered.connect(_ssh)
-                # v1.6.5 (ROADMAP task 4): the whole SSH family of the node menu is
+                # v1.6.5: the whole SSH family of the node menu is
                 # DISABLED (with the reason in the tooltip) for an unmanaged card.
                 _gate_row(act_ssh, "ssh", win_node, "ctx.ssh_connect")
 
@@ -1281,7 +1281,7 @@ class MapView(QGraphicsView):
             if hasattr(win, "_ping_node"):
                 act_ping = menu.addAction(_t("ctx.ping"))
                 act_ping.triggered.connect(lambda _=False, n=win_node: self.window()._ping_node(n))
-                # v1.6.5 (ROADMAP task 5): the ICMP check is the ONE network call an
+                # v1.6.5: the ICMP check is the ONE network call an
                 # unmanaged card may make — it stays in the menu, disabled until the card
                 # opted in (with the refusal sentence saying so).
                 _gate_row(act_ping, "ping", win_node, "ctx.ping")
@@ -1309,7 +1309,7 @@ class MapView(QGraphicsView):
 
         def collect_info(menu):
             # v0.9: automatic server-info collection (Linux) over SSH.
-            # v1.5.3 (ROADMAP task 2): the row now starts the BOUNDED BATCH — the selection
+            # v1.5.3: the row now starts the BOUNDED BATCH — the selection
             # when several cards are selected, this node otherwise (`_collect_info_many`),
             # so one entry covers "gather information for these" and "for this one".
             if hasattr(win, "_collect_info_many"):
@@ -1449,7 +1449,7 @@ class MapView(QGraphicsView):
                     try:
                         from modules.logger import get_logger
                         get_logger(__name__).warning(f"plugin context menu failed: {e}")
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001 — the log is a side channel
                         pass
 
         # ── v0.9.3: group operations on multi-selection ─────────
@@ -1475,7 +1475,7 @@ class MapView(QGraphicsView):
                         if hasattr(w, "_delete_selected_nodes"):
                             w._delete_selected_nodes()
                     act_delmulti.triggered.connect(_del_sel)
-                # v1.6 (ROADMAP task 1): the BULK EDIT of the selection — right next to
+                # v1.6: the BULK EDIT of the selection — right next to
                 # "connect selected" / "delete selected", the two neighbours the plan
                 # names. The window owns the dialog and the ONE undo command; the row
                 # only reports the gesture (and the Edit menu carries the same slot).
@@ -1538,7 +1538,7 @@ class MapView(QGraphicsView):
                             fn()
                 act_grp.triggered.connect(_add_group)
 
-            # ── v1.5.1 (ROADMAP task 1): "Copy Map as Image" on the empty map ──────
+            # ── v1.5.1: "Copy Map as Image" on the empty map ───────────────────────
             # The empty-space branch is where a user reaches for it ("give me a picture of
             # this"), and the window owns the action: the item calls the same method the
             # File menu calls (a context menu is rebuilt on every right click, so it cannot
@@ -1553,7 +1553,7 @@ class MapView(QGraphicsView):
                         fn()
                 act_copy_map.triggered.connect(_copy_map)
 
-            # ── v1.8.4 (ROADMAP task 1): "Arrange Map…" — the whole map in one gesture ──
+            # ── v1.8.4: "Arrange Map…" — the whole map in one gesture ──
             # The empty-space branch is the natural door (the map IS empty space), and the
             # window owns the mode question, the pure geometry and the ONE undo step.
             if hasattr(win, "_ask_arrange_map"):
@@ -1580,7 +1580,7 @@ class MapView(QGraphicsView):
                     if hasattr(w, "_rename_group"):
                         w._rename_group(g)
                 act_rg.triggered.connect(_rename)
-                # v1.4.2 (ROADMAP task 5): the fold — the mirror of the title-band chevron.
+                # v1.4.2: the fold — the mirror of the title-band chevron.
                 # The window owns the action (it pushes CmdToggleGroupCollapse).
                 try:
                     _folded = bool(grp.is_collapsed())
@@ -1593,7 +1593,7 @@ class MapView(QGraphicsView):
                     if hasattr(w, "_toggle_group_collapsed"):
                         w._toggle_group_collapsed(g)
                 act_fold.triggered.connect(_fold)
-                # v1.6 (ROADMAP task 6): the auto-arrangement — next to Rename / Fold /
+                # v1.6: the auto-arrangement — next to Rename / Fold /
                 # Delete, the third verb of a group. The mode question belongs to the
                 # window (`_ask_arrange_group`), which also answers the folded refusal.
                 if hasattr(win, "_ask_arrange_group"):

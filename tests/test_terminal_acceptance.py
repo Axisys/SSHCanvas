@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.0 — Terminal v1, final: full acceptance of all RCs + terminal_* config (ROADMAP tasks 9–10).
+"""v1.0 — Terminal v1, final: full acceptance of all RCs + terminal_* config.
 
 One run WITHOUT the network covers the v1.0 acceptance on simulated TUI output: bash (the prompt and
 `ls --color` with SGR 34/93/256 and truecolor) through the terminal window; vim (the hidden cursor
@@ -415,7 +415,7 @@ write_cfg({"terminal_wheel": "bogus"})
 check("v1.1.2RC3: the broken terminal_wheel → the default 'scrollback'",
       load_terminal_settings()["wheel"] == "scrollback")
 
-# v1.6.3 (task 5): terminal_follow_cwd — the OSC 7 follow of the Files tab. OPT-IN: only a
+# v1.6.3: terminal_follow_cwd — the OSC 7 follow of the Files tab. OPT-IN: only a
 # REAL bool turns it on (the tab's checkbox is the UI; the key is not a settings-hub row).
 write_cfg({"terminal_follow_cwd": True})
 check("v1.6.3: the terminal_follow_cwd=True is read",

@@ -268,7 +268,7 @@ check("the drop without the local files: NOT accepted", not ev_dirs.isAccepted()
 check("the hint drop_no_files (the dragged directories)",
       msgs == [i18n.t("sftp.drop_no_files")], f"msgs={msgs}")
 
-# ── v1.3.3.2 (ROADMAP task 4): the drop target is the directory UNDER THE CURSOR ──
+# ── v1.3.3.2: the drop target is the directory UNDER THE CURSOR ──
 # A directory row is a target; a file row and empty space keep the current directory.
 fs_row = FakeSftpFS()
 fs_row.add_dir("/data")

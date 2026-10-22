@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4.1 — Import from ~/.ssh/config (ROADMAP v1.4.1, tasks 1–6).
+"""v1.4.1 — Import from ~/.ssh/config (v1.4.1).
 
 §1 the parser (the directives, ssh's own defaults, the case-insensitivity, `=`, quoting, continuations and
 comments); §2 first-obtained-wins (a repeated `Host` alias fills only the gaps); §3 the skip and note
@@ -714,7 +714,7 @@ check("§9 the hint and the result carry their placeholders",
       and "{detail}" in json.load(open(os.path.join(ROOT, "i18n", "en.json"),
                                        encoding="utf-8-sig"))["sshconfig.reason.include_missing"])
 
-# The documentation guards live in tests/test_docs.py (the ROADMAP baseline, the released-section
+# The documentation guards live in tests/test_docs.py (the ROADMAP.md baseline, the released-section
 # rule, the changelog entry) are about the DOCUMENTS, not about this importer: they moved to
 # tests/test_docs.py §1/§2. A topical test must not read the gitignored docs at all — a fresh
 # clone has none of them, so such a check is a crash waiting for the first person without them.

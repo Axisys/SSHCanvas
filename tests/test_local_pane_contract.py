@@ -343,7 +343,7 @@ check("§3 the pane's SOURCE HEADER LINE is CARRIED (the v1.7.5 clause shipped w
                         and "**`v1.7.5` (SHIPPED):**" in CONTRACT))
       and hasattr(_pane_l, "header_label")
       and _pane_l.header_label is _pane_l.source_header_label(),
-      "the contract's amendment and its widget ship in ONE slot (ROADMAP v1.7.5, task 3)")
+      "the contract's amendment and its widget ship in ONE slot (v1.7.5)")
 _HEADER_HINT = _pane_l.header_label.sizeHint().height()
 _pane_l.header_label.setText("x" * 400)
 check("§3 the header line is ONE row: no wrap, no focus, a longer text does not grow it",
@@ -664,7 +664,7 @@ check("§9 the version pin is the release this audit ships with",
 check("§9 the i18n pin counts the shipped keys (the local pane's 18 + the v1.7.5 slot's 4 + "
       "the v1.7.5.1 slot's 6 + the v1.8 elevated pane's 20 + the v1.8.1 trust surface's 41 + the ONE "
       "of v1.8.1.1) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§9 VERSION_FORMAT did NOT move (a path is never written into a project)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§9 no new dependency was added for the local pane (the four pinned ones)",

@@ -39,7 +39,7 @@ class BackgroundImage(QGraphicsObject):
     # Signals for MainWindow (project dirty marker)
     moved = Signal()
     resized = Signal()
-    # v1.6 (ROADMAP task 4): the COMPLETED gestures — the undo commands' seam (the
+    # v1.6: the COMPLETED gestures — the undo commands' seam (the
     # NodeGroup.moveCommitted/resizeCommitted pattern). `moved`/`resized` fire during the
     # gesture (incremental steps, the dirty marker) and these fire ONCE per release with
     # the geometry the gesture started from, which is what a QUndoCommand needs.
@@ -69,7 +69,7 @@ class BackgroundImage(QGraphicsObject):
         self._drag_mode = None
         self._drag_start_scene = None
         self._size_start = None
-        # v1.6 (ROADMAP task 4): the geometry the CURRENT gesture started from — the undo
+        # v1.6: the geometry the CURRENT gesture started from — the undo
         # commands are built from it on release (NodeGroup._gesture_start_pos).
         self._gesture_start_pos = None
 
@@ -154,7 +154,7 @@ class BackgroundImage(QGraphicsObject):
             else:
                 self._drag_mode = "move"
             self._drag_start_scene = scene_pos
-            # v1.6 (ROADMAP task 4): snapshot the geometry the gesture starts from — the
+            # v1.6: snapshot the geometry the gesture starts from — the
             # moveCommitted/resizeCommitted signals carry the BEFORE side of the undo entry.
             self._gesture_start_pos = QPointF(self.pos())
             event.accept()  # do NOT pass it to the scene — ScrollHandDrag would steal the gesture
@@ -192,7 +192,7 @@ class BackgroundImage(QGraphicsObject):
             self._drag_start_scene = None
             self._size_start = None
             self._gesture_start_pos = None
-            # v1.6 (ROADMAP task 4): the gesture is complete → the window's undo command.
+            # v1.6: the gesture is complete → the window's undo command.
             # Emitted only on a real geometry change (otherwise an empty stack entry).
             try:
                 if mode == "move" and start_pos is not None:

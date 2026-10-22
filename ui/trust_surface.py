@@ -38,7 +38,7 @@ def _parent():
         for widget in QApplication.topLevelWidgets():
             if widget.isVisible():
                 return widget
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — the caller owns the fallback: no answer is the declared state
         pass
     return None
 

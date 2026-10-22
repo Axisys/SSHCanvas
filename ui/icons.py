@@ -451,7 +451,7 @@ def _draw_legend(p):
 
 
 def _draw_activity(p):
-    """v1.6 (ROADMAP task 7): the ACTIVITY panel — the initial "A" inside the panel FRAME.
+    """v1.6: the ACTIVITY panel — the initial "A" inside the panel FRAME.
 
     The frame is the one the panel family wears (`sidebar_panel` / `map_panel` / `minimap`):
     the same rounded 14×13 square. The interior carries the INITIAL of the surface rather
@@ -510,7 +510,7 @@ def _draw_bookmarks(p):
 
 
 def _draw_split(p):
-    """v1.9.8 (task 3): the SPLIT TERMINAL — one frame with a second pane BELOW the first.
+    """v1.9.8: the SPLIT TERMINAL — one frame with a second pane BELOW the first.
 
     The pane the action opens appears under the session, so the frame is divided by a HORIZONTAL
     line (the divider is drawn inside the frame's stroke, which is what keeps the two panes apart
@@ -526,7 +526,7 @@ def _draw_split(p):
 
 
 def _draw_files(p):
-    """v1.9.8 (task 3): the FILES COMMANDER — two panes side by side (the two-pane view).
+    """v1.9.8: the FILES COMMANDER — two panes side by side (the two-pane view).
 
     A vertical divider splits the frame and each half carries a file hint: one short line at the
     top (a name) over a longer one (its row). The glyph says "two listings", which is exactly what
@@ -548,7 +548,7 @@ def _draw_files(p):
 
 
 def _draw_close(p):
-    """v1.9.8 (task 3): the session tab's CLOSE mark — a thin X in the theme's own ink.
+    """v1.9.8: the session tab's CLOSE mark — a thin X in the theme's own ink.
 
     The style's stock tab-close glyph is a hard red cross, which reads as an ALERT for a routine
     control; this drawer replaces it with the same monochrome stroke every other icon wears.
@@ -562,7 +562,7 @@ def _draw_close(p):
 
 
 def _draw_menu_dots(p):
-    """v1.9.8 (task 3): a "…" MENU mark — three dots, for an icon-only menu button.
+    """v1.9.8: a "…" MENU mark — three dots, for an icon-only menu button.
 
     A glyph the ellipsis character cannot be: an icon-only QToolButton whose text is "…" has no
     shape of its own in the icon set, so a theme switch and an icon walk could not reach it.
@@ -590,25 +590,25 @@ _DRAWERS = {
     # v1.2.4.1: panel-collapse icon pair (View menu + corner buttons)
     "sidebar_panel": _draw_sidebar_panel,
     "map_panel": _draw_map_panel,
-    # v1.4.2 (ROADMAP task 2): the minimap panel (the View menu item)
+    # v1.4.2: the minimap panel (the View menu item)
     "minimap": _draw_minimap,
-    # v1.4.5 (ROADMAP task 4): the legend panel (the View menu item + the toolbar button)
+    # v1.4.5: the legend panel (the View menu item + the toolbar button)
     "legend": _draw_legend,
-    # v1.6 (ROADMAP task 7): the ACTIVITY panel — the sixth view toggle, which joins the
+    # v1.6: the ACTIVITY panel — the sixth view toggle, which joins the
     # toolbar cluster with its own glyph (the View menu item + the toolbar button).
     "activity": _draw_activity,
-    # v1.6.7 (ROADMAP task 4): the BOOKMARKS panel — the sixth view toggle of the cluster
+    # v1.6.7: the BOOKMARKS panel — the sixth view toggle of the cluster
     # (the View menu item + the toolbar button), with its own ribbon glyph.
     "bookmarks": _draw_bookmarks,
     # The PLUGINS window — the seventh mirror of the cluster, with the panel frame and a "P".
     "plugins_panel": _draw_plugins_letter,
-    # v1.3.3.3 (task 2): the zoom pair of the View menu (project-drawn, no image files)
+    # v1.3.3.3: the zoom pair of the View menu (project-drawn, no image files)
     "zoom_in": _draw_zoom_in,
     "zoom_out": _draw_zoom_out,
     # v1.4rc3 (plugin foundation): the puzzle glyph of the "Plugins" menu items and
     # of the plugin section of the command palette.
     "plugin": _draw_plugin,
-    # v1.9.8 (task 3): the terminal's two corner controls, the session tab's close mark and the
+    # v1.9.8: the terminal's two corner controls, the session tab's close mark and the
     # icon-only menu button of the Commands panel.
     "split": _draw_split,
     "files": _draw_files,

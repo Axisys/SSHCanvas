@@ -34,7 +34,7 @@ from models.server import ServerData  # noqa: E402
 
 
 # ════════════════════════════════════════════════════════════
-# §1 The session that says it ended (task 1)
+# §1 The session that says it ended
 # ════════════════════════════════════════════════════════════
 print("== §1 the session that says it ended ==")
 
@@ -249,13 +249,13 @@ paramiko.SSHClient = _ORIG_CLIENT
 # 1.7 The line the session writes when the stream ends exists in EVERY language (the task
 #     REUSES `terminal.session_closed` — the one key the session's `_on_closed` already writes).
 import i18n  # noqa: E402
-check("the end-of-session line is the shipped `terminal.session_closed` (no new key for task 1)",
+check("the end-of-session line is the shipped `terminal.session_closed` (no new key)",
       i18n.t("terminal.session_closed") not in ("terminal.session_closed", ""),
       i18n.t("terminal.session_closed"))
 
 
 # ════════════════════════════════════════════════════════════
-# §2 The DEC graphics charset (task 2) — the application's own seam
+# §2 The DEC graphics charset — the application's own seam
 # ════════════════════════════════════════════════════════════
 print("== §2 the DEC graphics charset ==")
 
@@ -302,7 +302,7 @@ check("the DEC patch is in the manifest (provenance is `tests/test_pyte_fork.py`
 
 
 # ════════════════════════════════════════════════════════════
-# §3 The History tab's Command column (task 3)
+# §3 The History tab's Command column
 # ════════════════════════════════════════════════════════════
 print("== §3 the History tab's Command column ==")
 
@@ -379,7 +379,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════
-# §4 The cursor (task 4)
+# §4 The cursor
 # ════════════════════════════════════════════════════════════
 print("== §4 the cursor ==")
 

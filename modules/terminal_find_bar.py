@@ -16,7 +16,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from ..ui import theme_qss
 except ImportError:
     try:
@@ -37,7 +37,7 @@ def _t(key: str) -> str:
 def _bar_style() -> str:
     """The card's stylesheet from the registry ("" without the ui package).
 
-    v1.4.3 (ROADMAP task 4): the pre-v1.4.3 inline f-string moved into
+    v1.4.3: the pre-v1.4.3 inline f-string moved into
     ui/theme_qss.py ("find_bar") so the initial styling and a theme switch share
     ONE builder. The panel keeps its own sizes (the canvas is a monospace
     surface); only the colours follow the theme.
@@ -167,7 +167,7 @@ class TerminalFindBar(QWidget):
         self._update_count_label()   # redraw the counter in the new language
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-read the card's stylesheet from the registry."""
+        """v1.4.3: re-read the card's stylesheet from the registry."""
         if theme_qss is None:
             return
         theme_qss.refresh(self, "find_bar")

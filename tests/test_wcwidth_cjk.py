@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.2.9 — full wcwidth(3) for CJK (ROADMAP "Terminal hygiene", task 2).
+"""v1.2.9 — full wcwidth(3) for CJK.
 
 It replaces the `east_asian_width` W/F heuristic of RC1, so the known v1.0 limitation is closed: the width
 comes from the SAME `wcwidth` library pyte 0.8.2 uses for the grid layout, therefore the canvas
@@ -90,7 +90,7 @@ _mismatch = [c for c in SAMPLE if is_wide_char(c) != (_wcwidth(c) == 2)]
 check("is_wide_char == (wcwidth(ch) == 2) over a sample of %d characters" % len(SAMPLE),
       not _mismatch, repr(_mismatch))
 
-# Hygiene: the unicodedata.east_asian_width heuristic is no longer in the module (task 2) —
+# Hygiene: the unicodedata.east_asian_width heuristic is no longer in the module —
 # nor an import, nor an attribute access (historical mentions in a docstring are allowed).
 _src = inspect.getsource(TW)
 check("the unicodedata.east_asian_width heuristic is removed from terminal_widget.py",

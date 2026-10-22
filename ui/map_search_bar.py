@@ -15,7 +15,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from . import theme_qss
 except ImportError:
     try:
@@ -35,7 +35,7 @@ def _t(key: str) -> str:
 
 # Dark panel theme (app palette): a WINDOW_BG card on the CANVAS_BG canvas,
 # ACCENT border — the same one used for MapView matches/selection.
-# v1.4.3 (ROADMAP task 4): the QSS moved into the ONE registry
+# v1.4.3: the QSS moved into the ONE registry
 # (ui/theme_qss.py, the "search_bar" entry) — the widget applies it at
 # construction and re-applies it from refresh_theme() after a theme switch.
 
@@ -126,7 +126,7 @@ class MapSearchBar(QWidget):
     # ── Public API (MainWindow controls the state) ────────────────
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-read the card's stylesheet.
+        """v1.4.3: re-read the card's stylesheet.
 
         A QSS string is a VALUE: the switch has to hand the widget a new one (the
         registry builder is the one place that knows how). Called by

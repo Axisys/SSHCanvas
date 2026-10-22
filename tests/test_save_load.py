@@ -89,7 +89,7 @@ for s in raw["servers"]:
 loaded1 = win2.scene._nodes.get("snode001")
 check("reload: key_path restored via server_data_from_dict", loaded1 is not None and loaded1.data.key_path == r"C:\keys\web.pem")
 
-# v1.6 (ROADMAP task 3): a SECOND link between the same pair is CREATED, not refused in
+# v1.6: a SECOND link between the same pair is CREATED, not refused in
 # silence — the parallel-link offset keeps the two arcs apart (the old check asserted the
 # silent refusal, which is exactly the "sometimes it connects, sometimes not" report).
 a = win2.scene.add_connection("snode001", "snode002", "l1")

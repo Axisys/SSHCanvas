@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4rc1 — Plugin foundation, part 1: discovery and manager (ROADMAP v1.4rc1).
+"""v1.4rc1 — Plugin foundation, part 1: discovery and manager (v1.4rc1).
 
 The first rc implements the frozen API v1 contract (`PLUGINS.md`) up to discovery: two sources (the
 entry-point group `sshmap.plugins/v1` and the user folder `~/.sshmap/plugins/*.py`), the MANIFEST check
@@ -89,7 +89,7 @@ def new_window():
 
 
 def plugin_log_records():
-    """Capture the manager's log lines (the ROADMAP "a record in modules/logger.py")."""
+    """Capture the manager's log lines (ONE record — `modules/logger.py`)."""
     lines = []
 
     class _Handler(logging.Handler):
@@ -281,7 +281,7 @@ check("a missing third-party dependency → 'import' (a normal ImportError)",
 check("a half-imported failed module does not stay in sys.modules (a later reload is clean)",
       f"{PM.LOCAL_MODULE_PREFIX}syntax" not in sys.modules
       and f"{PM.LOCAL_MODULE_PREFIX}missing_dep" not in sys.modules)
-check("every failure left a record in the application log (ROADMAP rc1 task 1)",
+check("every failure left a record in the application log",
       len([line for line in _lines if "failed to load" in line]) == 3
       and all(any(name in line for name in ("syntax", "raises", "missing_dep"))
               for line in _lines if "failed to load" in line),
@@ -607,7 +607,7 @@ def _main_line(statement):
 _main_window_line = _main_line("win = MainWindow()")
 _discovery_line = _main_line("win.start_plugin_discovery()")
 _loop_line = _main_line("sys.exit(app.exec())")
-check("main.py runs the discovery (ROADMAP rc1: after MainWindow creation, before app.exec())",
+check("main.py runs the discovery (after MainWindow creation, before app.exec())",
       _discovery_line > 0 and _main_window_line > 0 and _loop_line > 0,
       f"lines: MainWindow={_main_window_line} discovery={_discovery_line} loop={_loop_line}")
 check("the call sits after the MainWindow creation and before the event loop",
@@ -633,7 +633,7 @@ check("the documented hook names are the ones the code records",
       all(h in _plugins_doc for h in PM.HOOKS), str(PM.HOOKS))
 check("the folder and the config key of the contract match the code",
       "~/.sshmap/plugins" in _plugins_doc and PM.CONFIG_KEY == "plugins")
-check("the in-process isolation limitation is documented (ROADMAP: hard isolation is NOT a goal)",
+check("the in-process isolation limitation is documented (hard isolation is NOT a goal)",
       "segfault" in _plugins_doc.lower() and "in-process" in _plugins_doc.lower())
 if os.path.exists(PLUGINS_INTERNAL_MD):
     with open(PLUGINS_INTERNAL_MD, encoding="utf-8") as f:

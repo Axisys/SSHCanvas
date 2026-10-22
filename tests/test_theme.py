@@ -169,7 +169,7 @@ check("§2 an unknown module attribute still raises AttributeError (no silent ca
 check("§2 dir(theme) lists the live names (autocompletion is not lost)",
       "NODE_BG" in dir(theme) and "STATUS_COLORS" in dir(theme) and "THEME" in dir(theme))
 
-# ── §2b v1.4.7: the syntax palette is a PER-INSTANCE pair (the plan's task 1) ──
+# ── §2b v1.4.7: the syntax palette is a PER-INSTANCE pair ──────────────────────
 check("§2b both instances carry all 8 syntax fields (a one-sided palette is forbidden)",
       SYNTAX_FIELDS <= {f.name for f in dataclasses.fields(theme.DARK)}
       and SYNTAX_FIELDS <= {f.name for f in dataclasses.fields(theme.LIGHT)}

@@ -107,7 +107,7 @@ try:
 except Exception as e:  # noqa: BLE001
     check("a dead C++ object in the registry: the broadcast does not raise, the others receive", False, repr(e))
 
-# _thread_alive — liveness for the broadcast (task 4)
+# _thread_alive — liveness for the broadcast
 check("_thread_alive: an open channel → True", _thread_alive(t_a) is True)
 t_dead = _FakeThread("h9", "u", 22)
 t_dead.channel.closed = True
@@ -211,7 +211,7 @@ check("the status message, status.multi_enabled",
 
 
 # ════════════════════════════════════════════════════════
-# 3. Broadcast at the single input point (task 1)
+# 3. Broadcast at the single input point
 # ════════════════════════════════════════════════════════
 print("== 3. broadcast at the single input point ==")
 
@@ -257,7 +257,7 @@ check("the exit from the mode reset the UI: the plaque is hidden, the badge / th
 
 
 # ════════════════════════════════════════════════════════
-# 4. F12 exit (task 3): not Esc — Esc goes to the shell as \\x1b
+# 4. F12 exit: not Esc — Esc goes to the shell as \\x1b
 # ════════════════════════════════════════════════════════
 print("== 4. F12 exit ==")
 
@@ -290,7 +290,7 @@ mw._toggle_multi_input(False)
 
 
 # ════════════════════════════════════════════════════════
-# 5. Ctrl+V (bracketed paste) in multi mode is also duplicated (task 4)
+# 5. Ctrl+V (bracketed paste) in multi mode is also duplicated
 # ════════════════════════════════════════════════════════
 print("== 5. Ctrl+V bracketed paste broadcast ==")
 
@@ -317,7 +317,7 @@ mw._toggle_multi_input(False)
 
 
 # ════════════════════════════════════════════════════════
-# 6. A dead session: the registry via the standard path, broadcast without breakage (task 4)
+# 6. A dead session: the registry via the standard path, broadcast without breakage
 # ════════════════════════════════════════════════════════
 print("== 6. dead session ==")
 

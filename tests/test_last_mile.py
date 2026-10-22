@@ -49,13 +49,13 @@ LANGS = load_i18n_langs(ROOT)
 
 #: The THIRTEEN keys of the release — the ONE list §7 iterates.
 NEW_KEYS = (
-    # the row (task 1)
+    # the row
     "ctx.connect_to",
-    # the hint (task 2)
+    # the hint
     "empty.state.connect_hint",
-    # the picker (task 3)
+    # the picker
     "connection.no_match",
-    # the report (tasks 4/5)
+    # the report
     "file.export_problems",
     "report.problems.alias", "report.problems.host", "report.problems.status",
     "report.problems.reason", "report.problems.checked", "report.problems.stale",
@@ -106,7 +106,7 @@ class FakeNode:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the row: 'Connect to…' in BOTH node menus (task 1) ==")
+print("== §1 the row: 'Connect to…' in BOTH node menus ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§1 the sidebar's declaration gained ONE row in the `ctx.*` family",
@@ -213,7 +213,7 @@ _side_menu.deleteLater()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 the hint: the gesture named where it is discovered (task 2) ==")
+print("== §2 the hint: the gesture named where it is discovered ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _hint = _t("empty.state.connect_hint", add_connection=_t("edit.add_connection"))
@@ -242,7 +242,7 @@ check("§2 the hint is NOT a per-card tooltip (the refusal of the plan)",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 the searchable pickers (task 3) ==")
+print("== §3 the searchable pickers ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _TEXTS = ["web-1 (10.10.0.1)", "db-1 (db.internal)", "cache (192.168.5.7)"]
@@ -325,7 +325,7 @@ check("§3 the dialog imports no scene module (the module + callbacks discipline
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the report's pure half (task 4) ==")
+print("== §4 the report's pure half ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§4 the columns are declared ONCE (five, in reading order)",
@@ -392,7 +392,7 @@ check("§4 a duck-typed entry without a freshness method still yields an empty c
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 the action and its reports (task 5) ==")
+print("== §5 the action and its reports ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§5 ONE registry action, in the file family, with an EMPTY default",
@@ -495,7 +495,7 @@ check("§5 a cancelled dialog writes nothing and shows no box",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the line's closing audit — the facts the 1.6 line DECLARED (task 6) ==")
+print("== §6 the line's closing audit — the facts the 1.6 line DECLARED ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 def _src(*parts) -> str:
@@ -669,7 +669,7 @@ check("§7 the pin counts the SHIPPED release (828 + the 13 keys of v1.6.8"
       " delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a"
       " move that would cross the two sources, and v1.8 adds TWENTY: the elevated pane and the 41 of"
       " v1.8.1: the trust surface; v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS >= 854 and EXPECTED_I18N_KEYS == 828 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1,
+      EXPECTED_I18N_KEYS >= 854 and EXPECTED_I18N_KEYS == 828 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1,
       str(EXPECTED_I18N_KEYS))
 check("§7 EXPECTED_APP_VERSION is the release this file describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7"), EXPECTED_APP_VERSION)

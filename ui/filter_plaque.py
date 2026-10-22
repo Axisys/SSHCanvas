@@ -116,7 +116,7 @@ class FilterPlaque(QWidget):
         font = QFont(self.font())
         try:
             font.setPointSizeF(max(font.pointSizeF() + delta, 7.0))
-        except (TypeError, ValueError):  # pragma: no cover - a font without a point size
+        except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
             pass
         font.setBold(bool(bold))
         return font

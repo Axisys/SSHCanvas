@@ -212,8 +212,8 @@ lnm = pyte.HistoryScreen(40, 5)
 pyte.ByteStream(lnm).feed(b"ab\ncd")
 check("LNM default: b'ab\\ncd' → [\"ab\", \"cd\"]", lines(lnm)[:2] == ["ab", "cd"],
       repr(lines(lnm)[:2]))
-# An explicit LNM disable by the remote program — RM 20 (\\x1b[20l): the \\x1b[2l from the plan
-# ROADMAP — a known typo (that is IRM, mode 2) — pinned in test_pyte_compat.py.
+# An explicit LNM disable by the remote program — RM 20 (\\x1b[20l): the \\x1b[2l is a typo of the plan
+# — IRM (mode 2), pinned in test_pyte_compat.py.
 lnm_off = pyte.HistoryScreen(40, 5)
 pyte.ByteStream(lnm_off).feed(b"\x1b[20lab\ncd")
 check("LNM: after \\x1b[20l a bare LF without CR — \"cd\" at offset x=2",

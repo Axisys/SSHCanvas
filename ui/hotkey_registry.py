@@ -25,7 +25,7 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     "file.new":             {"label": "file.new_project",    "default": "Ctrl+N"},
     "file.open":            {"label": "file.open",           "default": "Ctrl+O"},
     "file.save":            {"label": "file.save",           "default": "Ctrl+S"},
-    # v1.3.3.3 (task 1): "Save As…" had no shortcut and no way to get one.
+    # v1.3.3.3: "Save As…" had no shortcut and no way to get one.
     "file.save_as":         {"label": "file.save_as",        "default": "Ctrl+Shift+S"},
     # Edit
     "edit.undo":            {"label": "edit.undo",           "default": "Ctrl+Z"},
@@ -42,22 +42,22 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     "node.ssh_connect":     {"label": "ctx.ssh_connect",     "default": "Ctrl+Return"},
     "node.edit_server":     {"label": "ctx.edit_server",     "default": "Ctrl+E"},
     "node.add_note":        {"label": "ctx.add_note",        "default": "Ctrl+Shift+N"},
-    # v1.3.3.3 (task 5): the on-demand status round — the node context menu on the map
+    # v1.3.3.3: the on-demand status round — the node context menu on the map
     # and in the sidebar; no hotkey by default.
     "node.check_status":    {"label": "ctx.check_status",    "default": ""},
-    # v1.5.3 (ROADMAP task 2): "Gather information" — ONE bounded batch of system-info
+    # v1.5.3: "Gather information" — ONE bounded batch of system-info
     # collections for the SELECTION (the whole map when nothing is selected). The label
     # REUSES `ctx.collect_info` (the sidebar/map context-menu row), so one entry point has
     # one name and no new string; no hotkey out of the box, like its neighbours.
     "node.collect_info":    {"label": "ctx.collect_info",    "default": ""},
-    # v1.5.3 (ROADMAP task 3): "Diagnose Offline…" — the on-demand reachability report
+    # v1.5.3: "Diagnose Offline…" — the on-demand reachability report
     # (DNS → TCP → SSH banner → ICMP ping) of the selected node. The sentence reaches the
     # card tooltip, the status bar and the activity history; assignable, no key by default.
     "node.diagnose":        {"label": "ctx.diagnose_offline", "default": ""},
     # View
     "view.fit_map":         {"label": "view.fit_map",        "default": "Ctrl+Shift+F"},
     "view.find_on_map":     {"label": "view.find_on_map",    "default": "Ctrl+F"},
-    # v1.3.3.3 (task 2): zoom becomes a first-class action — a real step API on MapView.
+    # v1.3.3.3: zoom becomes a first-class action — a real step API on MapView.
     "view.reset_zoom":      {"label": "view.reset_zoom",     "default": "Ctrl+0"},
     "view.zoom_in":         {"label": "view.zoom_in",        "default": "Ctrl+="},
     "view.zoom_out":        {"label": "view.zoom_out",       "default": "Ctrl+-"},
@@ -66,7 +66,7 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     # v1.2.3: multi-input — installed ONLY while the mode is on (see _sync_multi_shortcut)
     "view.multi_input":     {"label": "view.multi_input",    "default": "F12",
                              "dynamic": True},
-    # ── v1.3.3.3 (task 3): the remaining GLOBAL actions — EMPTY defaults ───────────
+    # ── v1.3.3.3: the remaining GLOBAL actions — EMPTY defaults ────────────────────
     # They have no hotkey out of the box (the behaviour is unchanged: the menu item
     # exists, the keyboard cannot reach it) but every one of them is assignable in the
     # "Hotkeys" tab. "Reset to defaults" clears exactly these fields.
@@ -78,12 +78,12 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     "file.export_drawio":   {"label": "file.export_drawio",   "default": ""},
     "file.export_pdf":      {"label": "file.export_pdf",      "default": ""},
     "file.export_svg":      {"label": "file.export_svg",      "default": ""},
-    # v1.5.1 (ROADMAP task 1): "Copy Map as Image" — the 2× render of the CURRENT theme
+    # v1.5.1: "Copy Map as Image" — the 2× render of the CURRENT theme
     # straight to the clipboard, with NO palette question (an export is a document, a copy
     # is "what I am looking at"). File menu + the empty-space map menu; an EMPTY default
     # like its export siblings.
     "file.copy_map":        {"label": "file.copy_map",        "default": ""},
-    # v1.5.1 (ROADMAP task 2): "Save Documentation Image…" — the SAME render machinery with
+    # v1.5.1: "Save Documentation Image…" — the SAME render machinery with
     # a FIXED frame (1600×900 logical at 2× = 3200×1800 px), content fitted and centred on
     # the canvas background. A POSTER of the map (a scene render: the floating panels and
     # the chrome are children of the view, so they are deliberately not in the image).
@@ -95,11 +95,11 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     # default like their export siblings: assignable, no key taken from anyone.
     "file.copy_list":       {"label": "file.copy_list",       "default": ""},
     "file.export_list":     {"label": "file.export_list",     "default": ""},
-    # v1.6 (ROADMAP task 5): "Export Connections…" — the second DATA report ("who talks to
+    # v1.6: "Export Connections…" — the second DATA report ("who talks to
     # whom", one row per arrow), on the same pure RFC-4180 writer as the inventory report.
     # An EMPTY default like its report sibling.
     "file.export_connections": {"label": "file.export_connections", "default": ""},
-    # v1.6.8 (ROADMAP task 5): "Export Problems…" — the THIRD DATA report, over the cards
+    # v1.6.8: "Export Problems…" — the THIRD DATA report, over the cards
     # that need attention (`storage/export_problems.py`, the v1.5.4 predicate). It is the
     # connection report's sibling and rides the same writer and the same format question.
     # An EMPTY default like every other export: assignable, no key taken from anyone.
@@ -109,37 +109,37 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     "file.exit":            {"label": "file.exit",            "default": ""},
     "edit.connect_selected": {"label": "edit.connect_selected", "default": ""},
     "edit.delete_selected": {"label": "edit.delete_selected", "default": ""},
-    # v1.6 (ROADMAP task 1): "Bulk edit selection…" — tags / comment / quick launch for
+    # v1.6: "Bulk edit selection…" — tags / comment / quick launch for
     # the whole selection in ONE undo step. An EMPTY default like its multi-selection
     # neighbours, so the keyboard can reach an action that only lived in a context menu.
     "edit.selected":        {"label": "edit.bulk_edit",       "default": ""},
-    # v1.6 (ROADMAP task 6): "Arrange group members…" — the members of a group line up in
+    # v1.6: "Arrange group members…" — the members of a group line up in
     # one gesture. The id keeps an EXISTING family prefix (`edit.`) on purpose:
     # `action_family()` derives the "Hotkeys" tab's family from the prefix, and a
     # `group.…` id would fall back instead of joining the table.
     "edit.arrange_group":   {"label": "ctx.arrange_group",    "default": ""},
     "view.center_map":      {"label": "view.center_map",      "default": ""},
-    # v1.5rc4 (ROADMAP task 6): "Focus the map" — the ONE new registry action of the
+    # v1.5rc4: "Focus the map" — the ONE new registry action of the
     # release ("at most ONE"): it hands the keyboard to the map canvas, which then walks
     # its cards with Tab (MapView's keyboard navigation) and shows it with the visible
-    # focus ring (§4.17/task 5). No hotkey out of the box — assignable like the rest.
+    # focus ring (`AGENTS.md` §4.17). No hotkey out of the box — assignable like the rest.
     "view.focus_map":       {"label": "view.focus_map",       "default": ""},
     "view.collapse_all":    {"label": "view.collapse_all",    "default": ""},
     "view.expand_all":      {"label": "view.expand_all",      "default": ""},
-    # v1.4.2 (ROADMAP task 2): the minimap panel — a checkable View item, and (like the
+    # v1.4.2: the minimap panel — a checkable View item, and (like the
     # rest of the overlay family) assignable without stealing a key from anyone.
     "view.toggle_minimap":  {"label": "view.toggle_minimap",  "default": ""},
-    # v1.4.5 (ROADMAP task 4): the legend panel — the same family (a checkable View
+    # v1.4.5: the legend panel — the same family (a checkable View
     # item next to the minimap, mirrored by a toolbar button); assignable, no key
     # out of the box.
     "view.toggle_legend":   {"label": "view.toggle_legend",   "default": ""},
-    # v1.5.2 (ROADMAP task 3): the ACTIVITY panel — the history surface. The same family
+    # v1.5.2: the ACTIVITY panel — the history surface. The same family
     # (a checkable View item), and the ONE panel toggle with NO toolbar mirror: the
     # v1.5rc4 toolbar overflow policy measures the live buttons, and a fifth view toggle
     # would crowd the strip for a window that is opened to READ, not to glance at.
     # Assignable, no key out of the box.
     "view.toggle_activity": {"label": "view.toggle_activity", "default": ""},
-    # v1.6.7 (ROADMAP task 4): the BOOKMARKS panel — the application-level list of the links
+    # v1.6.7: the BOOKMARKS panel — the application-level list of the links
     # the team uses (a wiki, a dashboard, a console). The same family as the other panel
     # toggles (a checkable View item with a toolbar mirror) and the same registry rule: an
     # EMPTY default — assignable in "Hotkeys", no key taken from anyone.
@@ -163,7 +163,7 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     # sources (entry points + ~/.sshmap/plugins/*.py) without a restart. No hotkey out
     # of the box; assignable like every other action.
     "plugins.reload":       {"label": "plugins.reload",       "default": ""},
-    # v1.4rc3 (ROADMAP task 8): "Run on selected servers" — the `run_on_nodes` hook of
+    # v1.4rc3: "Run on selected servers" — the `run_on_nodes` hook of
     # every loaded plugin for the current selection. No hotkey out of the box (the item
     # is enabled only while a plugin really implements the hook).
     "plugins.run_on_nodes": {"label": "plugins.run_on_nodes", "default": ""},
@@ -228,7 +228,7 @@ def default_sequence(action_id: str) -> str:
 
 
 def default_hotkeys() -> Dict[str, str]:
-    """The FULL registry default mapping {action_id: sequence} (v1.3.3.3, task 4).
+    """The FULL registry default mapping {action_id: sequence} (v1.3.3.3).
 
     The single source for the "Reset to defaults" button of the "Hotkeys" tab: it
     writes THIS mapping through the ordinary merge-write (``save_hotkeys``), so no
@@ -239,11 +239,11 @@ def default_hotkeys() -> Dict[str, str]:
 
 
 def empty_default_action_ids() -> List[str]:
-    """The ids whose registry default is empty = "no hotkey" (v1.3.3.3, task 3)."""
+    """The ids whose registry default is empty = "no hotkey" (v1.3.3.3)."""
     return list(EMPTY_DEFAULT_ACTIONS)
 
 
-# ── v1.5rc4 (ROADMAP task 4): the families (the grouping of the "Hotkeys" tab) ──────
+# ── v1.5rc4: the families (the grouping of the "Hotkeys" tab) ───────────────────────
 
 def action_family(action_id: str) -> str:
     """The family of an action (v1.5rc4) — derived from its id, never declared twice.

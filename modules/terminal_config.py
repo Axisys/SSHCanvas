@@ -24,7 +24,7 @@ except ImportError:
     from modules.terminal_widget import (CURSOR_STYLE_DEFAULT, CURSOR_STYLES,
                                          FONT_SIZE_MAX, FONT_SIZE_MIN)
 
-# v1.13.2 (ROADMAP v1.13.2): the wallpaper's three keys and their ONE validator. The module is Qt-free
+# v1.13.2: the wallpaper's three keys and their ONE validator. The module is Qt-free
 # and answers the declared defaults for anything unusable (`AGENTS.md` §4.3, `DOCUMENTATION.md` §78).
 try:
     from .terminal_background import load_background_settings

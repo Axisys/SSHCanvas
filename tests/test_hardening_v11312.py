@@ -435,7 +435,7 @@ for _key in ("sftp.archive.extract_done", "sftp.archive.extract_bomb", "sftp.cmd
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§8 the pin of this release's line plus the fifth read's TWO keys — no key of the patch itself",
-      EXPECTED_I18N_KEYS == 1125 + 2 + 8 + 9 + 18 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1125 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§8 the pin names this release's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.1"),
       EXPECTED_APP_VERSION)
 

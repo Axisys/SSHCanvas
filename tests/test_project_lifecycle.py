@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.3.3.6 (ROADMAP "Projects: open, recover, remember"): the life cycle of a project file.
+"""v1.3.3.6: the life cycle of a project file.
 
 Four holes of the released 1.3.3.x line, closed in one topical test (offscreen, sandbox HOME, no network).
 The MRU: `recent_projects` in `config.json` (newest first, deduplicated by the normalized absolute path,

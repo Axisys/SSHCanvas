@@ -47,6 +47,24 @@ def _url_role() -> int:
     return int(Qt.ItemDataRole.UserRole)
 
 
+#: The pen width of a selected row's FRAME, in pixels — the selection is a RECTANGLE, never a fill.
+SELECTION_FRAME_WIDTH = 1.5
+
+
+def selection_frame_rect(rect, width: float = SELECTION_FRAME_WIDTH) -> QRectF:
+    """The rectangle a selected row's frame is drawn in — PURE: no painter, no option, no state.
+
+    The panel's own `ROW_INSET` keeps the frame off the row's edge, and HALF the pen keeps a
+    1.5 px stroke INSIDE that inset instead of straddling it; a rect too narrow for both
+    collapses to one pixel rather than to a negative width.
+    """
+    pen = max(float(width), 0.0)
+    inset = float(BookmarkPanel.ROW_INSET) + pen / 2.0
+    return QRectF(float(rect.left()) + inset, float(rect.top()) + inset,
+                  max(float(rect.width()) - 2.0 * inset, 1.0),
+                  max(float(rect.height()) - 2.0 * inset, 1.0))
+
+
 class _BookmarkList(QListWidget):
     """The row list — its own Enter key, so ONE act is ONE path (gotcha #11).
 
@@ -70,7 +88,9 @@ class _BookmarkRowDelegate(QStyledItemDelegate):
 
     The background (selection / hover / alternating) is the style's own, so the theme keeps
     owning it; only the TEXT is drawn here, in the live theme tones — the name in
-    `TEXT_PRIMARY`, the address a point smaller in `TEXT_MUTED`.
+    `TEXT_PRIMARY`, the address a point smaller in `TEXT_MUTED`. A SELECTED row is painted
+    UNSELECTED and then framed: a highlight FILL under the muted address is unreadable, so the
+    selection is a rectangle (`selection_frame_rect()`) and the row keeps its own background.
     """
 
     #: The gap between the two lines of a row.
@@ -82,9 +102,13 @@ class _BookmarkRowDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         view_option = QStyleOptionViewItem(option)
         self.initStyleOption(view_option, index)
-        view_option.text = ""      # the style draws the FRAME, never the text
+        view_option.text = ""      # the style paints the BACKGROUND; this delegate paints the ink
         widget = view_option.widget
         style = widget.style() if widget is not None else QApplication.style()
+        selected = bool(view_option.state & QStyle.StateFlag.State_Selected)
+        if selected:
+            # Drop ONLY the selection: the base / alternate / hover fills stay the style's.
+            view_option.state &= ~QStyle.StateFlag.State_Selected
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, view_option, painter, widget)
 
         rect = QRectF(option.rect)
@@ -95,7 +119,7 @@ class _BookmarkRowDelegate(QStyledItemDelegate):
             url_font = QFont(option.font)
             try:
                 url_font.setPointSizeF(max(url_font.pointSizeF() - 1.0, 6.0))
-            except (TypeError, ValueError):  # pragma: no cover — a font without a point size
+            except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
                 pass
             half = (rect.height() - self.LINE_GAP) / 2.0
 
@@ -121,6 +145,39 @@ class _BookmarkRowDelegate(QStyledItemDelegate):
                         url, Qt.TextElideMode.ElideRight, int(url_rect.width())))
         finally:
             painter.restore()
+        if selected:
+            self.paint_selection_frame(painter, option)
+
+    @staticmethod
+    def paint_selection_frame(painter, option):
+        """Draw the frame of a SELECTED row: one rectangle, no rounding, no fill, no theme field."""
+        pen = QPen(QColor(option.palette.highlight().color()), float(SELECTION_FRAME_WIDTH))
+        pen.setStyle(Qt.PenStyle.SolidLine)
+        pen.setCapStyle(Qt.PenCapStyle.SquareCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
+        painter.save()
+        try:
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(selection_frame_rect(option.rect))
+        finally:
+            painter.restore()
+
+
+class _BookmarkFilter(QLineEdit):
+    """The panel's filter field: ONE act, two gestures — the clear button and `Esc` empty the query.
+
+    A `QLineEdit` subclass rather than an event filter: `keyPressEvent` is the field's own, and
+    `clear()` emits `textChanged`, so the rows come back through the shipped path and never
+    through a second one.
+    """
+
+    def keyPressEvent(self, event):  # noqa: N802 — Qt API
+        if event.key() == Qt.Key.Key_Escape and self.text():
+            self.clear()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class BookmarkPanel(QFrame):
@@ -167,8 +224,9 @@ class BookmarkPanel(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedWidth(self.WIDTH)
 
-        self.filter = QLineEdit(self)
+        self.filter = _BookmarkFilter(self)
         self.filter.setObjectName("BookmarkFilter")
+        self.filter.setClearButtonEnabled(True)
         self.filter.textChanged.connect(self._on_filter_changed)
 
         self.list = _BookmarkList(self)
@@ -197,7 +255,7 @@ class BookmarkPanel(QFrame):
         font = QFont(self.font())
         try:
             font.setPointSizeF(max(font.pointSizeF() + delta, 7.0))
-        except (TypeError, ValueError):  # pragma: no cover — a font without a point size
+        except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
             pass
         font.setBold(bool(bold))
         return font

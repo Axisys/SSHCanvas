@@ -262,7 +262,7 @@ print("== §3 the release ==")
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§3 this patch adds NO translation key (the pin counts 1179 + the 1 of v1.13.6.2)",
-      EXPECTED_I18N_KEYS == 1179 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1179 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§3 the JSON schema did NOT move (`VERSION_FORMAT` stays 0.9)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§3 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.6.1"),

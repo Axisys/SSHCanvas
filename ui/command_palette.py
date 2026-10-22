@@ -36,12 +36,12 @@ def _t(key: str, **kw) -> str:
     if _translate is not None:
         try:
             return _translate(key, **kw) if kw else _translate(key)
-        except Exception:
+        except Exception:  # noqa: BLE001 — optional import: a build without i18n keeps the key
             pass
     return key
 
 
-try:  # v1.6.5 (ROADMAP task 4): the ONE gate of an unmanaged card
+try:  # v1.6.5: the ONE gate of an unmanaged card
     from . import unmanaged
 except ImportError:
     try:
@@ -108,7 +108,7 @@ class CommandPalette(QDialog):
         super().__init__(parent or main_window)
         self.mw = main_window
         self._commands = []      # [(label, kind, callable)]
-        # v1.5rc3 (ROADMAP task 4): the "start here" machinery. `_action_ids` maps the
+        # v1.5rc3: the "start here" machinery. `_action_ids` maps the
         # identity of a collected command's callable to its registry action id (the
         # palette walks QActions, which carry their id in `_hotkey_targets`), and
         # `_recent` is the session's list of recently RUN action ids, newest first.
@@ -116,7 +116,7 @@ class CommandPalette(QDialog):
         self._recent = []        # [action_id, …] — bounded by PALETTE_RECENT_MAX
         self._start_here = []    # [(label, kind, callable)] — the block, built per open
         self._header_rows = 0    # 1 while the "Start here" header row is on screen
-        # v1.6.5 (ROADMAP task 4): the node the gate asks about — the palette's commands
+        # v1.6.5: the node the gate asks about — the palette's commands
         # act on the SELECTION, so a row whose verb needs a login is disabled while an
         # unmanaged card is the one the selection holds.
         self._gate_target = None
@@ -226,7 +226,7 @@ class CommandPalette(QDialog):
             servers = self.mw.scene.nodes()
         except Exception:
             servers = []
-        # v1.6.5 (ROADMAP task 4): the gate's subject — the selected card, when the window
+        # v1.6.5: the gate's subject — the selected card, when the window
         # has exactly one. Read HERE (the same pass that collects the rows) so the whole
         # palette is judged against ONE snapshot of the selection.
         try:
@@ -316,7 +316,7 @@ class CommandPalette(QDialog):
     def _reveal_node(node):
         """Center the view on the node + highlight it.
 
-        v1.2.4.1 (task 5): map collapsed — centering is skipped (selection
+        v1.2.4.1: map collapsed — centering is skipped (selection
         still works; no exceptions and no auto-showing the map).
         """
         mw = node.scene().views()[0].window() if node.scene().views() else None
@@ -325,7 +325,7 @@ class CommandPalette(QDialog):
         node.setSelected(True)
         if mw is not None and hasattr(mw, "view") \
                 and not getattr(mw, "_map_collapsed", False):
-            # v1.4.4 (ROADMAP task 1): the palette jumps to the node NOW — a running
+            # v1.4.4: the palette jumps to the node NOW — a running
             # camera flight (a sidebar reveal / a fit) is cancelled first, otherwise the
             # animation would keep moving the camera over the palette's centering.
             stopper = getattr(mw.view, "stop_camera_flight", None)
@@ -360,7 +360,7 @@ class CommandPalette(QDialog):
         text = self.input.text().strip()
         self.listw.clear()
         self._header_rows = 0
-        # v1.5rc3 (ROADMAP task 4): an EMPTY query is the first screen — it opens with
+        # v1.5rc3: an EMPTY query is the first screen — it opens with
         # the bounded "Start here" block (a header row + up to START_HERE_MAX commands)
         # instead of dropping the user into the alphabetical middle of everything. A
         # typed query is a search and behaves exactly as it always did.
@@ -398,7 +398,7 @@ class CommandPalette(QDialog):
         # `_run_current()` feeds into the "recently used" list of the start-here block.
         action_id = self._action_ids.get(id(fn), "")
         item.setData(Qt.UserRole + 1, action_id)
-        # v1.6.5 (ROADMAP task 4): a command that cannot work on the selected card is
+        # v1.6.5: a command that cannot work on the selected card is
         # DISABLED here and carries the gate's own sentence in its tooltip — the palette
         # filters through the SAME table the two context menus use, so it can neither offer
         # a verb the menus refuse nor refuse one they offer.
@@ -442,14 +442,14 @@ class CommandPalette(QDialog):
             return
         fn = item.data(Qt.UserRole)
         action_id = item.data(Qt.UserRole + 1)
-        # v1.6.5 (ROADMAP task 4): a gated row is disabled, and Enter on it is NOT a way
+        # v1.6.5: a gated row is disabled, and Enter on it is NOT a way
         # around the gate (the event filter calls this method directly, so Qt's own refusal
         # to activate a disabled item is not enough).
         if not (item.flags() & Qt.ItemFlag.ItemIsEnabled):
             self.accept()
             return
         self.accept()
-        # v1.5rc3 (ROADMAP task 4): a command that was really RUN is what the next
+        # v1.5rc3: a command that was really RUN is what the next
         # "Start here" block offers first (the caption row has no command — no record).
         self._remember_action(str(action_id or ""))
         if callable(fn):

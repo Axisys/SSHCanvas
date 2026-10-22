@@ -31,9 +31,9 @@ from ui.settings_dialog import SettingsDialog
 
 CFG_PATH = os.path.join(os.path.expanduser("~"), ".sshmap", "config.json")
 
-# The v1.3.1.1 shortcuts + the v1.3.3.3 additions (task 1: file.save_as Ctrl+Shift+S;
-# task 2: view.reset_zoom/zoom_in/zoom_out Ctrl+0 / Ctrl+= / Ctrl+-). The actions with
-# an EMPTY default (task 3) are listed separately below — they are assignable, not
+# The v1.3.1.1 shortcuts + the v1.3.3.3 additions (file.save_as Ctrl+Shift+S;
+# view.reset_zoom/zoom_in/zoom_out Ctrl+0 / Ctrl+= / Ctrl+-). The actions with
+# an EMPTY default are listed separately below — they are assignable, not
 # pre-bound. Canonical PortableText: "Delete" is "Del".
 EXPECTED_DEFAULTS = {
     "file.new": "Ctrl+N", "file.open": "Ctrl+O", "file.save": "Ctrl+S",
@@ -47,11 +47,11 @@ EXPECTED_DEFAULTS = {
     "view.fit_map": "Ctrl+Shift+F", "view.find_on_map": "Ctrl+F",
     "view.reset_zoom": "Ctrl+0", "view.zoom_in": "Ctrl+=", "view.zoom_out": "Ctrl+-",
     "palette.open": "Ctrl+K", "view.multi_input": "F12",
-    # v1.5rc3 (ROADMAP task 4): the cheat-sheet — the ONE new key of the release.
+    # v1.5rc3: the cheat-sheet — the ONE new key of the release.
     "help.cheatsheet": "F1",
 }
 
-# v1.3.3.3 (task 3): the global actions that ship with NO hotkey (`default: ""`).
+# v1.3.3.3: the global actions that ship with NO hotkey (`default: ""`).
 # Each of them must still be a REAL menu item (node.check_status: the Edit-menu item
 # plus both context menus) and must appear as a row in the "Hotkeys" tab.
 EMPTY_DEFAULT_IDS = {
@@ -72,16 +72,16 @@ EMPTY_DEFAULT_IDS = {
     "plugins.run_on_nodes",
     # v1.4.1: the second import path — "Import from SSH Config…" (File menu).
     "file.import_ssh_config",
-    # v1.4.2: the minimap panel — a checkable View item (the ROADMAP task 2).
+    # v1.4.2: the minimap panel — a checkable View item.
     "view.toggle_minimap",
-    # v1.4.5: the legend panel — a checkable View item + its toolbar mirror (task 4).
+    # v1.4.5: the legend panel — a checkable View item + its toolbar mirror.
     "view.toggle_legend",
     # v1.5rc3: "Open the example map" — the Help item of the demo map (no key out of the box).
     "help.example",
-    # v1.5rc4: "Focus the map" — the keyboard handover to the canvas (task 6); the ONE
+    # v1.5rc4: "Focus the map" — the keyboard handover to the canvas; the ONE
     # new registry action of the release, an EMPTY default like its neighbours.
     "view.focus_map",
-    # v1.5.2: the activity panel — the checkable View item of the history surface (task 3).
+    # v1.5.2: the activity panel — the checkable View item of the history surface.
     "view.toggle_activity",
     # v1.6.7: the bookmarks panel — the checkable View item of the application-level link
     # list (its editor is reached from the panel, so the switch is the only action).
@@ -135,7 +135,7 @@ def action_sequences(window, action_id):
 ALL_IDS = sorted(set(EXPECTED_DEFAULTS) | EMPTY_DEFAULT_IDS)
 
 # ════════════════════════════════════════════════════════════
-# 1. The registry: completeness, labels, no orphans (task 1)
+# 1. The registry: completeness, labels, no orphans
 # ════════════════════════════════════════════════════════════
 print("== 1. the action registry ==")
 
@@ -253,7 +253,7 @@ check("source: no literal setShortcut(...) sequences left in the UI modules", no
       str(src_literals))
 
 # ════════════════════════════════════════════════════════════
-# 2. Storage: load / save / merge / broken values (task 3)
+# 2. Storage: load / save / merge / broken values
 # ════════════════════════════════════════════════════════════
 print("== 2. storage & validation ==")
 
@@ -305,7 +305,7 @@ check("save: the file stays valid JSON with the 'hotkeys' key",
       isinstance(read_cfg({}).get("hotkeys"), dict))
 
 # ════════════════════════════════════════════════════════════
-# 3. The "Hotkeys" tab of the settings dialog (task 2)
+# 3. The "Hotkeys" tab of the settings dialog
 # ════════════════════════════════════════════════════════════
 print("== 3. the settings dialog ==")
 
@@ -414,7 +414,7 @@ check("dialog: retranslate() updates the tab, the headers, the reset button and 
 i18n.set_language("en")
 
 # ════════════════════════════════════════════════════════════
-# 4. Live application: startup + after the dialog's OK (task 3)
+# 4. Live application: startup + after the dialog's OK
 # ════════════════════════════════════════════════════════════
 print("== 4. application at startup and live ==")
 
@@ -437,7 +437,7 @@ check("startup: an unknown action_id does not break the window (the defaults sur
       action_sequences(mw3, "file.open") == ["Ctrl+O"]
       and action_sequences(mw3, "file.save") == ["Ctrl+Alt+S"])
 
-# v1.3.3.3 (task 3): an action with an empty default can be ASSIGNED through the config
+# v1.3.3.3: an action with an empty default can be ASSIGNED through the config
 write_cfg({"hotkeys": {"view.collapse_all": "Ctrl+Alt+C"}})
 mw3b = new_window()
 check("startup: an empty-default action becomes reachable once assigned",
@@ -481,7 +481,7 @@ check("startup: a freshly built window picks up the live-saved values",
       and action_sequences(mw5, "palette.open") == [""])
 
 # ════════════════════════════════════════════════════════════
-# 5. F12 multi-input: configurable, but installed ONLY in the mode (task 4)
+# 5. F12 multi-input: configurable, but installed ONLY in the mode
 # ════════════════════════════════════════════════════════════
 print("== 5. multi-input (F12) ==")
 
@@ -539,7 +539,7 @@ app.processEvents()
 check("multi: after the live change the mode still owns the key (off → no shortcut)",
       mw9.act_multi_input.shortcut() == QKeySequence())
 
-# The terminal canvas's own keys are NOT registry actions (the scope boundary, task 5)
+# The terminal canvas's own keys are NOT registry actions (the DECLARED scope boundary)
 check("scope: the terminal canvas keys are NOT configurable (not in the registry)",
       not any(a in ids for a in ("terminal.f12", "terminal.ctrl_c", "terminal.arrows"))
       and not any("terminal" in a for a in ids))
@@ -554,7 +554,7 @@ print("== 6. i18n & release ==")
 hotkey_keys = ["settings.tab.hotkeys", "settings.hotkeys.action",
                "settings.hotkeys.sequence", "settings.hotkeys.disabled_hint",
                "settings.hotkeys.conflict",
-               # v1.3.3.3 (task 4)
+               # v1.3.3.3
                "settings.hotkeys.reset", "settings.hotkeys.reset_done"]
 missing = [k for k in hotkey_keys
            if any(not langs[c].get(k, "").strip() for c in ("en", "ru", "zh", "de"))]

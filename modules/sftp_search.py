@@ -202,7 +202,7 @@ class SearchReport:
         self.files_scanned += 1
         try:
             self.bytes_read += max(0, int(size or 0))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError):  # noqa: BLE001 — the caller owns the fallback: the byte total stands
             pass
         return self.bytes_read
 

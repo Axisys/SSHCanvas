@@ -58,7 +58,7 @@ else:  # a fallback, so the checks below do not fail with AttributeError
 check("arrow path is a single cubic Bezier (moveTo + curve)",
       _gpath.elementCount() == 4 and _gpath.elementAt(0).isMoveTo()
       and _gpath.elementAt(1).isCurveTo(), str(_gpath.elementCount()))
-# v1.4.2 (ROADMAP task 4): the arrow ends on the node's CARD, not on its painted
+# v1.4.2: the arrow ends on the node's CARD, not on its painted
 # boundingRect — the drop-shadow became a halo on all four sides, so the boundingRect is
 # SHADOW_BLUR bigger than the card. `card_rect_scene()` is the anchor API.
 rect_a, rect_b = node_a.card_rect_scene(), node_b.card_rect_scene()

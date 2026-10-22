@@ -123,9 +123,13 @@ class CredentialManager:
                         "plaintext/insecure fallback is not allowed for credentials."
                     )
                 self._backend_available = False
-        except Exception:
-            # No keyring backend available (e.g., headless system)
+        except Exception as e:
+            # No keyring backend available (e.g., headless system). The REASON is the answer the user
+            # needs: an unavailable store is not an empty one, and nothing here is persisted.
             self._backend_available = False
+            log = _log()
+            if log:
+                log.debug("No usable keyring backend (%s) — no credential is persisted", e)
 
     @property
     def is_available(self) -> bool:
@@ -145,7 +149,10 @@ class CredentialManager:
         import keyring.errors
         try:
             return self._keyring_backend.get_password(service, username)
-        except keyring.errors.NoKeyringError:
+        except keyring.errors.NoKeyringError as e:
+            log = _log()
+            if log:
+                log.debug("No keyring store answered the read of %s (%s)", username, e)
             return None
         except Exception as e:  # noqa: BLE001
             log = _log()
@@ -159,7 +166,11 @@ class CredentialManager:
         try:
             self._keyring_backend.set_password(service, username, value)
             return True
-        except keyring.errors.NoKeyringError:
+        except keyring.errors.NoKeyringError as e:
+            log = _log()
+            if log:
+                log.debug("No keyring store accepted the write of %s (%s) — nothing was saved",
+                          username, e)
             return False
         except Exception as e:  # noqa: BLE001
             log = _log()
@@ -173,7 +184,11 @@ class CredentialManager:
         try:
             self._keyring_backend.delete_password(service, username)
             return True
-        except keyring.errors.NoKeyringError:
+        except keyring.errors.NoKeyringError as e:
+            log = _log()
+            if log:
+                log.debug("No keyring store answered the delete of %s (%s) — there was nothing "
+                          "to drop", username, e)
             return True
         except Exception as e:  # noqa: BLE001
             _pde = getattr(keyring.errors, "PasswordDeleteError", None)

@@ -35,13 +35,13 @@ LANGS = load_i18n_langs(ROOT)
 NOW = time.time()
 
 NEW_KEYS = [
-    # the age of the collected facts (task 1)
+    # the age of the collected facts
     "node.info.collected_now", "node.info.collected_min",
     "node.info.collected_hours", "node.info.collected_days",
-    # the batch collection (task 2)
+    # the batch collection
     "status.info_batch_progress", "status.info_batch_done",
     "status.info_batch_failed", "status.info_batch_none",
-    # the reachability report (task 3)
+    # the reachability report
     "ctx.diagnose", "status.diagnose_running", "diagnose.ok", "diagnose.dns_failed",
     "diagnose.dns_timeout", "diagnose.tcp_refused", "diagnose.tcp_timeout",
     "diagnose.tcp_failed", "diagnose.banner_silent", "diagnose.banner_foreign",
@@ -49,7 +49,7 @@ NEW_KEYS = [
 ]
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the age of the collected facts (task 1) ==")
+print("== §1 the age of the collected facts ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 # ── the model: an OPTIONAL field with a refused value ────────────────────────
@@ -188,7 +188,7 @@ for _key in ("node.info.collected_now", "node.info.collected_min",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 collecting for many nodes at once (task 2) ==")
+print("== §2 collecting for many nodes at once ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 from services import info_batch as IB  # noqa: E402
@@ -457,7 +457,7 @@ finally:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 why is it red? — the reachability report (task 3) ==")
+print("== §3 why is it red? — the reachability report ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 from services import diagnostics as DG  # noqa: E402
@@ -730,7 +730,7 @@ check("§4 the registry grew 52 -> 54 (the assignable set 29 -> 31: no key out o
       len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39
       and {"node.collect_info", "node.diagnose"} <= set(HR.empty_default_action_ids()),
       f"{len(HR.HOTKEY_ACTIONS)} / {len(HR.empty_default_action_ids())}")
-check("§4 task 1's OPEN question is decided: the schema does NOT change",
+check("§4 the OPEN question is decided: the schema does NOT change",
       _version.VERSION_FORMAT == "0.9", _version.VERSION_FORMAT)
 _req = [ln.split(">=")[0].strip() for ln in
         open(os.path.join(ROOT, "requirements.txt"), encoding="utf-8").read().splitlines()

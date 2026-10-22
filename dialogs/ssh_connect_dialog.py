@@ -112,7 +112,7 @@ class SSHConnectDialog(QDialog):
                 profile_section.addRow("", QLabel(self.t("profile.select_profile_hint")))
                 profile_section.addRow("", self.profile_label)
                 profile_section.addRow("", combo_hbox)
-            except Exception:
+            except Exception:  # noqa: BLE001 — optional import: a build without i18n keeps the profile row
                 pass
         
         if not hasattr(self, 'profile_combo') or self.profile_combo is None:
@@ -422,7 +422,7 @@ class SSHConnectDialog(QDialog):
             user=user,
             port=port,
             key_path=key_path or None,
-            # v1.12.3 (ROADMAP task 2): the node's jump host rides into `ssh -J` — the field itself is
+            # v1.12.3: the node's jump host rides into `ssh -J` — the field itself is
             # edited in the server properties dialog, and this dialog writes nothing on the failure
             # path, so the value it passes is exactly the one the card carries.
             jump=(getattr(self.server_data, "jump_host", "") or "").strip() or None,
@@ -490,7 +490,7 @@ class SSHConnectDialog(QDialog):
                     try:
                         from modules.logger import get_logger
                         get_logger(__name__).warning(f"keyring save failed: {e}")
-                    except Exception:
+                    except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the save
                         pass
                 if not saved_ok:
                     # The same i18n key as in _do_save (behavior parity)
@@ -548,7 +548,7 @@ class SSHConnectDialog(QDialog):
                         _get_log(__name__).warning(
                             "SSHWorker still running at dialog close; "
                             "detaching (internal timeouts will finish it)")
-                    except Exception:
+                    except Exception:  # noqa: BLE001 — the log is a side channel: the close already detached it
                         pass
                     worker.setParent(None)  # detach from the dialog: the QObject outlives the window close
         event.accept()

@@ -8,7 +8,7 @@ try:
     from ..graphics.map_scene import MapScene
     from ..graphics.map_view import MapView
     from ..graphics.server_node import ServerNode
-    # v1.5.4 (ROADMAP tasks 1/2): the ONE declaration of "in trouble" — the group
+    # v1.5.4: the ONE declaration of "in trouble" — the group
     # aggregate and the "problems only" lens must mean the same thing by construction
     from ..graphics.node_group import is_in_trouble as node_in_trouble
 except ImportError:
@@ -25,11 +25,11 @@ try:
     from ..dialogs.ssh_config_import_dialog import SshConfigImportDialog
     # v1.5rc2: the export palette question (the print-friendly default + its opt-out)
     from ..dialogs.export_options_dialog import ExportOptionsDialog
-    # v1.6 (ROADMAP tasks 1/6): the bulk edit of the selection and the group arrangement —
+    # v1.6: the bulk edit of the selection and the group arrangement —
     # both are used by the mixin through host_attr (the MW.<name> test seam).
     from ..dialogs.bulk_edit_dialog import BulkEditDialog
     from ..dialogs.arrange_group_dialog import ArrangeGroupDialog
-    # v1.9.3 (ROADMAP task 3): the CORE-owned command question — asked by PluginMixin through
+    # v1.9.3: the CORE-owned command question — asked by PluginMixin through
     # host_attr (the MW.ask_plugin_command test seam).
     from ..dialogs.plugin_command_dialog import ask_plugin_command
 except ImportError:
@@ -42,7 +42,7 @@ except ImportError:
     from dialogs.arrange_group_dialog import ArrangeGroupDialog
     from dialogs.plugin_command_dialog import ask_plugin_command
 
-try:  # v1.6.5 (ROADMAP tasks 4/5): the ONE gate of an unmanaged card (the menu rows ask it)
+try:  # v1.6.5: the ONE gate of an unmanaged card (the menu rows ask it)
     from ..ui import unmanaged as _unmanaged_gate
 except ImportError:  # flat launch from the project root
     try:
@@ -97,9 +97,9 @@ try:  # v0.9.9.4: sidebar cluster (tree, tag filter, status markers, context men
 except ImportError:
     from sidebar import SidebarPanel
 
-try:  # v1.5rc3 (ROADMAP task 2): the status bar that can offer an Undo
+try:  # v1.5rc3: the status bar that can offer an Undo
     from .status_bar import UndoStatusBar
-    # v1.5rc4 (ROADMAP task 1): the status-bar overflow policy — the ONE pure decision
+    # v1.5rc4: the status-bar overflow policy — the ONE pure decision
     # plus the measured width the bar asks for
     from .status_bar import is_compact as status_bar_is_compact
     from .status_bar import status_bar_needed_width
@@ -116,7 +116,7 @@ except ImportError:  # flat layout: the ui/ directory itself is on sys.path
 try:  # v1.1.2RC3 (AUDIT U2): window sizes — saveGeometry()/saveState() into config.json
     from ..modules.window_geometry import (
         save_window_geometry, restore_window_geometry,
-        # v1.3.3.6 (ROADMAP task 4): the panel widths — base64 QSplitter.saveState()
+        # v1.3.3.6: the panel widths — base64 QSplitter.saveState()
         save_splitter_state, restore_splitter_state,
     )
 except ImportError:
@@ -125,7 +125,7 @@ except ImportError:
         save_splitter_state, restore_splitter_state,
     )
 
-try:  # v1.2.3 (ROADMAP v1.2.3): multi-input — hub broadcasting input to all sessions
+try:  # v1.2.3: multi-input — hub broadcasting input to all sessions
     from ..modules import multi_input as _multi_input_mod
 except ImportError:
     from modules import multi_input as _multi_input_mod
@@ -143,7 +143,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
 
-try:  # v1.4.3 (ROADMAP task 4): the Qt half of the theme — the QSS/palette + the live switch
+try:  # v1.4.3: the Qt half of the theme — the QSS/palette + the live switch
     from . import theme_qss
 except ImportError:
     try:
@@ -168,7 +168,7 @@ from PySide6.QtWidgets import (
     QApplication, QToolButton,  # QToolButton — exit button on the multi-input plaque (v1.2.3)
 )
 
-# v1.1.4 (ROADMAP): the window is a FACADE — 22 clusters live in `ui/main_window_*.py` mixins (the
+# v1.1.4: the window is a FACADE — 22 clusters live in `ui/main_window_*.py` mixins (the
 # project I/O, the node/connection ops, the SSH/terminals, the statuses, the plugins, the settings,
 # the scene commands, the exports, the floating panels, the minimap, the legend, the activity and
 # bookmarks panels, the sidebar, the menubar, the toolbar, the status bar, the panels, the view,
@@ -314,7 +314,7 @@ def _dropped_local_paths(mime_data) -> list:
 def _project_drop_candidate(mime_data) -> str:
     """The ONE project file a drop carries — '' when the drop must be refused.
 
-    Strict on purpose (ROADMAP task 2): exactly one path, it must be an existing
+    Strict on purpose: exactly one path, it must be an existing
     FILE (a directory is refused) and carry a `.json`/`.sshmap` suffix (case
     insensitive — Windows hands out `MyMap.JSON`).
     """
@@ -364,11 +364,11 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                     _saved_theme = load_theme_settings()
                     theme_qss.apply_theme(theme_from_settings(_saved_theme),
                                           refresh_windows=False)
-                    # v1.5rc1 (ROADMAP task 6): the motion flag of the SAME key —
+                    # v1.5rc1: the motion flag of the SAME key —
                     # installed here as well, because a MainWindow built directly
                     # (a test, an embedder) never goes through main.py.
                     apply_motion_setting(_saved_theme)
-                    # v1.6 (ROADMAP task 2): the card density of the same key — a window
+                    # v1.6: the card density of the same key — a window
                     # built directly must come up in the user's card mode too.
                     if apply_density_setting is not None:
                         apply_density_setting(_saved_theme)
@@ -376,7 +376,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                     _log = _bootstrap_log()
                     if _log is not None:
                         _log.warning(f"The saved theme was not applied: {e}")
-        # v1.5rc1 (ROADMAP task 6): in the "Auto (system)" mode the window follows
+        # v1.5rc1: in the "Auto (system)" mode the window follows
         # the platform's colour scheme live. Installed once, guarded — a platform
         # without `QStyleHints.colorScheme` simply never emits.
         self._install_color_scheme_watch()
@@ -410,26 +410,26 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         # the default 1200×850 above; the geometry must not break startup.
         try:
             restore_window_geometry("ui_window_geometry_main", self)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — best effort (declared): the default geometry stands
             pass
 
         self._project_file: Optional[str] = None
-        # v1.5rc3 (ROADMAP task 1): is the map on screen the DEMO project? Set by
+        # v1.5rc3: is the map on screen the DEMO project? Set by
         # `_load_project_at(..., example=True)`, cleared by a new project, a file load
         # and the first save; it is what the title marker reads (`_update_window_title`).
         self._example_project: bool = False
-        # v1.5 (ROADMAP): the node ids whose status is EMULATED by the demo map
+        # v1.5: the node ids whose status is EMULATED by the demo map
         # (`storage/example_project.DEMO_STATUSES`), i.e. the set `StatusChecker` must
         # never probe. Empty for every ordinary project — the demo's emulation never
         # outlives it (`_set_emulated_statuses()` is the ONE writer).
         self._emulated_statuses: dict = {}
         self._dirty = False  # Unsaved-changes flag (the " [*]" marker in the title)
-        # v1.2 (ROADMAP task 4): registry of open terminal SESSIONS
+        # v1.2: registry of open terminal SESSIONS
         # (modules/terminal_page.TerminalSessionPage), not windows — the node's green dot
         # goes out only when ALL of the node's sessions are closed; the "4 own
         # terminals" limit (v1.1.1) is counted per session. Name kept (v1.1.x API).
         self._terminal_windows: List = []
-        # v1.2.3 (ROADMAP v1.2.3): multi-input — the mode state lives in the hub
+        # v1.2.3: multi-input — the mode state lives in the hub
         # (modules/multi_input.py, a process singleton), held by the window as
         # self._multi_hub; TerminalWidget picks up the same hub by default. The provider —
         # the session registry (the same one as the green dot/limit); UI reaction — the
@@ -445,7 +445,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         self._ssh_connected_nodes: set = set()
         self._ping_thread = None   # v0.7.3: ping thread (AUDIT v0.7.2 #8: guard against clobbering)
         self._dns_thread = None    # AUDIT v0.7.2 (#6): reverse-DNS thread for copy-hostname
-        # v1.5.3 (ROADMAP tasks 2/3): the two new background registries of the release.
+        # v1.5.3: the two new background registries of the release.
         # `_info_collectors` (created lazily by SshMixin._track_info_collector) is the ONE
         # per-node guard of the info family; `_info_batch` is the bounded queue behind
         # "gather information for the selection / all"; `_diagnose_threads` holds the live
@@ -549,15 +549,15 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         self._setup_ui()
         self._setup_toolbar()
         self._setup_menubar()
-        # v1.5.2 (ROADMAP task 3): the activity panel + the status-bar tap. AFTER the
+        # v1.5.2: the activity panel + the status-bar tap. AFTER the
         # menubar (the View item owns its visibility) and BEFORE the first
         # `_apply_ui_translations()` below, so the startup messages are already history.
         self._setup_activity_panel()
-        # v1.8.3 (ROADMAP task 1): the Plugins window + the two taps of its session ring — the
+        # v1.8.3: the Plugins window + the two taps of its session ring — the
         # drained discovery events and the per-node answers of a plugin's run. AFTER the menubar
         # (the Plugins-menu item owns its visibility) and BEFORE `_apply_ui_translations()` below.
         self._setup_plugins_panel()
-        # v1.3.2 (task 3): the hotkeys — applied at startup, AFTER the whole UI
+        # v1.3.2: the hotkeys — applied at startup, AFTER the whole UI
         # (menus/toolbar/palette) exists; the same method runs after the dialog's OK.
         self._apply_hotkeys()
         self._update_window_title()
@@ -579,7 +579,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             if self.log:
                 self.log.warning(f"Apply UI options at startup failed: {e}")
 
-        # ── v1.3.3.6 (ROADMAP task 4): the panel widths — the LAST piece of window
+        # ── v1.3.3.6: the panel widths — the LAST piece of window
         #    state, applied AFTER restore_window_geometry()/restoreState() above and
         #    AFTER the collapsed-panel states of _apply_ui_options_from_config(). ──
         try:
@@ -610,7 +610,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             # the plugin's detail (a tooltip line) on its own signal. With no plugin
             # implementing the hook the provider returns None and nothing changes.
             self._status_checker.status_detail.connect(self._on_node_status_detail)
-            # v1.6.6 (ROADMAP task 2): the checker is told the CADENCE the config declares
+            # v1.6.6: the checker is told the CADENCE the config declares
             # before anything can arm a round — `status_interval_sec = 0` is the manual-only
             # sentinel, and the mode has to be in place before `start_status_checks()` and
             # before any project load could start a round of its own.
@@ -684,7 +684,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         title = f"{base} [{lang_code}]" if lang_code else base
         if self._project_file:
             title += f" — {os.path.basename(self._project_file)}"
-        # v1.5rc3 (ROADMAP task 1): the demo map says so. It has no file name, so the
+        # v1.5rc3: the demo map says so. It has no file name, so the
         # marker is what keeps it from being mistaken for a document of the user's; it
         # disappears with the first save (which makes the project their own) or with the
         # next new/open.
@@ -701,13 +701,13 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 act.setEnabled(bool(self._project_file))
 
 
-    # ── v1.3.2 (ROADMAP v1.3.2): configurable hotkeys — the action registry ──────
+    # ── v1.3.2: configurable hotkeys — the action registry ───────────────────────
     # ui/hotkey_registry.py is the single source of truth for the global shortcuts:
     # no literal "Ctrl+…" lives in this module any more. The methods below only
     # collect the targets and (re)install the effective sequences from config.json.
 
     def _register_hotkey_target(self, action_id: str, target) -> None:
-        """v1.3.2 (task 1): bind a QAction/QShortcut to a registry action_id.
+        """v1.3.2: bind a QAction/QShortcut to a registry action_id.
 
         Several targets per id are allowed and expected: undo/redo exist twice
         (the toolbar button + the Edit menu item) and both must follow the
@@ -716,7 +716,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         self._hotkey_targets.setdefault(action_id, []).append(target)
 
     def _apply_hotkeys(self) -> None:
-        """v1.3.2 (task 3): install the configured sequences — at startup and live.
+        """v1.3.2: install the configured sequences — at startup and live.
 
         The source is ``hotkeys`` in ~/.sshmap/config.json (merge-write; a missing /
         broken value → the registry default, an empty string → the hotkey is
@@ -758,7 +758,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             try:
                 from modules.logger import get_logger as _get
                 self._log = _get(__name__)
-            except Exception:
+            except Exception:  # noqa: BLE001 — optional import: the logger may be unavailable
                 pass
         return self._log
 
@@ -775,7 +775,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
     def _push_command(self, command):
         """Single entry point: push a command onto the stack (redo runs itself).
 
-        v1.5rc3 (ROADMAP task 2): this is ALSO the one place that offers an "Undo"
+        v1.5rc3: this is ALSO the one place that offers an "Undo"
         back. The stack is the only thing that knows a command really landed, so the
         decision lives here and nowhere else: a DESTRUCTIVE change (a command whose
         `offers_undo()` is true — a removed node/connection/note, a detached note, a
@@ -828,19 +828,19 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         the status-check plan and every `Servers` list the map feeds (`N105`)."""
         try:
             self.refresh_sidebar()
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the sidebar refresh
             pass
         try:
             self._update_counts_label()
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the counts label
             pass
         try:
             self._sync_status_targets()
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the status plan
             pass
         try:
             self._refresh_server_lists()
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the Servers lists
             pass
 
     def _refresh_server_lists(self):
@@ -887,7 +887,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         for note in self.scene.notes():
             self._note_committed[note.note_id] = note.text()
         self._undo_baseline_dirty = False
-        # v1.5rc3 (ROADMAP task 2): the stack this offer pointed at is gone (a save, a
+        # v1.5rc3: the stack this offer pointed at is gone (a save, a
         # load, a new project) — a visible "Undo" button must not survive it.
         try:
             drop = getattr(self.statusBar(), "clear_offer", None)
@@ -921,7 +921,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
 
     def closeEvent(self, event):
         """Ask to save on exit if there are unsaved changes."""
-        # v1.3.3.1 (ROADMAP task 6): flush the pending note-text debounce BEFORE the
+        # v1.3.3.1: flush the pending note-text debounce BEFORE the
         # "unsaved changes" question and before the autosave timer stops. Otherwise a
         # note typed in the last 600 ms is not yet in the undo stack: the question
         # would be asked on a stale dirty state, and on "Discard" the debounce timer
@@ -939,7 +939,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         except Exception:  # noqa: BLE001 — geometry must not block closing
             pass
 
-        # v1.3.3.6 (ROADMAP task 4): the panel widths — written right next to the
+        # v1.3.3.6: the panel widths — written right next to the
         # geometry and with the same "before everything" rule. `saveState()` covers the
         # dock/toolbar layout only, so the [sidebar | map] divider needs its own key
         # (`ui_splitter_state`) or it starts at the default 250/950 on every start.
@@ -948,7 +948,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         except Exception:  # noqa: BLE001 — the widths must not block closing
             pass
 
-        # v1.7.3 (ROADMAP v1.7.3, task 2): the per-server directory memory of EVERY live Files
+        # v1.7.3: the per-server directory memory of EVERY live Files
         # container — the terminal windows and the dock alike — goes out in ONE merged write here,
         # because the map is application-level and the close is the one moment every session is
         # still alive. Same rule as the geometry above: it must never block the close.
@@ -1038,7 +1038,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         except Exception:  # noqa: BLE001 — the close path must not be broken by a probe round
             pass
 
-        # v1.2.3 (ROADMAP v1.2.3): multi-input — the mode is turned off and the provider
+        # v1.2.3: multi-input — the mode is turned off and the provider
         # unhooked BEFORE the sessions' teardown (highlight/plaque reset while
         # the containers are alive; a dangling callable does not hold a dead window).
         try:
@@ -1049,7 +1049,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         threads = []
 
         # Automatic system-info collection (SystemInfoCollector)
-        # v1.5.3 (ROADMAP task 2): the BATCH first — it cancels everything not yet started
+        # v1.5.3: the BATCH first — it cancels everything not yet started
         # and waits (bounded) for the collectors it owns; the loop below then waits for the
         # survivors through the same `_info_collectors` registry it always used.
         try:
@@ -1061,7 +1061,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             if callable(stop):
                 try:
                     stop()
-                except Exception:
+                except Exception:  # noqa: BLE001 — best effort (declared): a collector that already stopped
                     pass
             if hasattr(coll, "isRunning"):
                 threads.append(coll)
@@ -1078,7 +1078,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 if callable(stop):
                     try:
                         stop()
-                    except Exception:
+                    except Exception:  # noqa: BLE001 — best effort (declared): a thread that already stopped
                         pass
                 threads.append(th)
         for th in list(getattr(self, "_diagnose_threads", {}).values()):
@@ -1106,7 +1106,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 th = getattr(s, "terminal_thread", None)
                 if th is not None and hasattr(th, "isRunning") and th.isRunning():
                     terminal_waits.append(th)
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): a session mid-close
                 pass
 
         total_wait_ms = 2000
@@ -1116,7 +1116,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             remaining = int(max(deadline - __import__("time").monotonic(), 0.05) * 1000)
             try:
                 th.wait(min(per_thread, remaining))
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): the exit gate rejoins the survivor
                 pass
 
         # ping/DNS/import-resolve threads that outlive the wait budget (`getaddrinfo`/ping with an
@@ -1173,7 +1173,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 return True
         return super().eventFilter(source, event)
 
-    # ── v1.3.3.6 (ROADMAP task 2): dropping a project onto the window ────────
+    # ── v1.3.3.6: dropping a project onto the window ─────────────────────────
     # `setAcceptDrops(True)` is called in `_setup_ui`. Nothing else in the main window
     # accepts drops (the SFTP tab of the "tabs"-mode dock does, natively takes
     # precedence and keeps working), so a local-file drag lands here.
@@ -1212,7 +1212,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             from command_palette import CommandPalette
         self._command_palette = CommandPalette(self, self)
 
-        # v1.3.2 (task 1): the sequence comes from the hotkey registry ("palette.open",
+        # v1.3.2: the sequence comes from the hotkey registry ("palette.open",
         # Ctrl+K by default) — the QShortcut is created empty and registered as a target.
         from PySide6.QtGui import QShortcut, QKeySequence
         self._palette_shortcut = QShortcut(QKeySequence(), self)
@@ -1224,7 +1224,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
             self._command_palette.open_palette()
 
 
-    # ── v1.1: the settings dialog (hub) — ROADMAP v1.1, tasks 1–7 ────────────────
+    # ── v1.1: the settings dialog (hub) ──────────────────────────────────────────
 
     def _open_settings_dialog(self):
         """v1.1: open the settings dialog (the QTabWidget hub) — the "Settings" menu and the ⚙ button."""
@@ -1238,7 +1238,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         # path as the "Help -> Language" item (set_language + a full UI retranslate).
         dlg.applied.connect(self._apply_settings_from_dialog)
         dlg.language_changed.connect(self._switch_language)
-        # v1.4.3 (ROADMAP task 6): the "Appearance" tab applies the theme LIVE —
+        # v1.4.3: the "Appearance" tab applies the theme LIVE —
         # the dialog emits the chosen Theme instance and the window owns the switch
         # (Cancel re-emits the theme the dialog opened with, so a rejected dialog
         # changes nothing).
@@ -1309,10 +1309,10 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 if item.data(0, Qt.UserRole) == selected_id:
                     self.tree.setCurrentItem(item)
                     break
-            # v1.6 (ROADMAP tasks 1/6): the two selection-driven Edit items follow what is
+            # v1.6: the two selection-driven Edit items follow what is
             # selected — "Bulk edit" needs a card, "Arrange group members" needs a group.
             self._sync_bulk_actions()
-            # v1.6.5 (ROADMAP task 4): and so do the permanent Edit items of the SSH
+            # v1.6.5: and so do the permanent Edit items of the SSH
             # family — an unmanaged card disables them in place.
             self._sync_gated_actions()
         except RuntimeError:
@@ -1425,14 +1425,14 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
     # `_apply_map_dimming()` merges them into ONE highlight decision.
 
     def _hover_focus(self):
-        """v1.4.4 (ROADMAP task 4): the arrow under the cursor (the scene's focus), or None."""
+        """v1.4.4: the arrow under the cursor (the scene's focus), or None."""
         try:
             getter = getattr(self.scene, "hover_focus_arrow", None)
             return getter() if callable(getter) else None
         except (AttributeError, RuntimeError):
             return None
 
-    # ── v1.8.4 (ROADMAP task 2): the DEPENDENCY focus — the reverse traversal ──────
+    # ── v1.8.4: the DEPENDENCY focus — the reverse traversal ───────────────────────
     # The second channel of the dim state below: the ROOT is ONE node id and the closure of the
     # arrows that point AT it (`MapScene.dependency_closure()`) is recomputed on every dim pass
     # from the LIVE scene, so a deleted node or a loaded project drops the highlight by itself.
@@ -1528,17 +1528,17 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         - the v0.9.4 tag filter: nodes without the selected tag are dimmed;
         - the v0.9.8 map search (Ctrl+F): non-matches are dimmed,
           matches get the accent frame (ServerNode.set_search_match);
-        - the v1.5.4 "problems only" LENS (ROADMAP task 2): everything that is not
+        - the v1.5.4 "problems only" LENS: everything that is not
           `warn` / `offline` / stale is dimmed — the lens COMPOSES with the two above
           instead of replacing them (one `and`, one owner);
-        - the v1.4.4 arrow hover focus (ROADMAP task 4): hovering a connection highlights
+        - the v1.4.4 arrow hover focus: hovering a connection highlights
           its TWO ends and dims everything else. It is merged HERE on purpose — this method
           is the single owner of the dim state, so the hover, the tag filter, the search and
-          the lens cannot stack into a "stuck" opacity (the ROADMAP's "one owner" rule);
-        - the v1.8.4 DEPENDENCY focus (ROADMAP task 2): the same merge for the reverse
+          the lens cannot stack into a "stuck" opacity (the ONE owner of `AGENTS.md` §4.11);
+        - the v1.8.4 DEPENDENCY focus: the same merge for the reverse
           traversal — the closure of a Ctrl+clicked card is read back and the rest recedes.
         The arrows are not touched: connections between dimmed nodes are read from context.
-        The floating filter plaque (v1.5.4, task 3) is re-synced from the SAME place: this
+        The floating filter plaque (v1.5.4) is re-synced from the SAME place: this
         is the one call every filter change already passes through.
         """
         active = self._active_tag_filter()
@@ -1663,7 +1663,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
 
 
     def _open_hotkey_sheet(self):
-        """v1.5rc3 (ROADMAP task 4): the keyboard cheat-sheet window.
+        """v1.5rc3: the keyboard cheat-sheet window.
 
         Help → Keyboard shortcuts (F1) and the `?` key of the map both land here. The
         text is NOT built here: `ui/hotkey_sheet_dialog.py` renders the registry through
@@ -1688,7 +1688,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
                 self.log.warning(f"Hotkey sheet failed: {e}")
 
     def keyPressEvent(self, event):
-        """v1.5rc3 (ROADMAP task 4): `?` opens the cheat-sheet.
+        """v1.5rc3: `?` opens the cheat-sheet.
 
         A bare printable key must NOT be a window QShortcut: it would steal "?" from
         every text field of the application (the map search, a note, the filter).
@@ -1708,7 +1708,7 @@ class MainWindow(ProjectIOMixin, NodeOpsMixin, SshMixin, StatusMixin, PluginMixi
         super().keyPressEvent(event)
 
     def _open_about_dialog(self):
-        """v1.3.3.3 (task 6): Help → About — the version, the license, the paths, the
+        """v1.3.3.3: Help → About — the version, the license, the paths, the
         config-folder button and the hotkey cheat-sheet built FROM the registry.
 
         A modal dialog (like the settings hub); the dialog is self-contained and

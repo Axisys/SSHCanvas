@@ -477,7 +477,7 @@ check_release_state(ROOT)
 _langs = load_i18n_langs(ROOT)
 check_i18n_parity(_langs)
 check_i18n_format(_langs)
-check("the patch adds exactly ONE dialog key (the identity sentence of task 2)",
+check("the patch adds exactly ONE dialog key (the identity sentence)",
       all("sftp.send.same_host_user_note" in _langs[code] for code in _langs))
 check("this is the release the file describes and the project format did NOT move",
       releases_at_least(EXPECTED_APP_VERSION, "1.8.1.1")

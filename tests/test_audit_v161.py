@@ -202,7 +202,7 @@ def _string_annotation_names(node):
 def unresolved_annotation_names(source):
     """The names a module's annotations refer to but the module never BINDS (pure AST).
 
-    v1.6.1 (ROADMAP task 3): a string annotation naming a type the module does not import
+    v1.6.1: a string annotation naming a type the module does not import
     fails nothing at runtime (a string annotation is never evaluated) and fails
     `typing.get_type_hints()`, a doc generator or a stricter linter tomorrow. The gate is
     hermetic — the `ast` module of the stdlib — so it runs everywhere; `pyflakes` is run

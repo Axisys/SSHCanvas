@@ -187,7 +187,7 @@ def _blank_row_icon() -> QIcon:
 
 
 def secret_row_icon() -> QIcon:
-    """The row marker of a MARKED entry: a PADLOCK silhouette (v1.6.4, ROADMAP task 2).
+    """The row marker of a MARKED entry: a PADLOCK silhouette (v1.6.4).
 
     A SHAPE, not a colour alone (the §4.6 / `tests/test_encoding.py` rule) — the tone is the
     theme's existing warning one (`status_warn`: exactly the tone the SFTP tab already uses for
@@ -349,7 +349,7 @@ def normalize_entry(entry):
     record without a command, with a non-string command or with a command over the cap is
     unusable and is dropped one by one, like a broken `commands.json` entry.
 
-    v1.6.4 (ROADMAP task 2): `secret` is the additive MARK of an entry that looks like it
+    v1.6.4: `secret` is the additive MARK of an entry that looks like it
     carries a secret (`SECRET_FIELD`). A record without it — every entry of an older file, and
     every imported one — is simply unmarked; a foreign/truthy value is read as a real bool, so a
     hand-edited `"secret": "yes"` can never crash the panel.
@@ -391,7 +391,7 @@ def merge_entries(base, incoming):
     latest timestamp and the SUM of its repeats. The result is capped (FIFO eviction by the
     least recently used).
 
-    v1.6.4 (ROADMAP task 2): **the secret mark SURVIVES the fold** — a pair keeps `secret`
+    v1.6.4: **the secret mark SURVIVES the fold** — a pair keeps `secret`
     when EITHER side carries it (`True` wins over an unmarked twin). The fold is exactly where
     a flag dies: the timestamp and the count are merged arithmetically, so a name that is
     merely copied from the first record would silently unmark a command that the application
@@ -608,7 +608,7 @@ class CommandHistoryStore:
     def _write(self, entries) -> bool:
         """Write the whole document; False on an I/O error (the file is left untouched).
 
-        v1.6.4 (ROADMAP task 2): the `secret` mark is written ONLY on a marked entry, so the
+        v1.6.4: the `secret` mark is written ONLY on a marked entry, so the
         document of an ordinary history stays byte-identical to the one the earlier releases
         wrote (`{"cmd", "last", "count"}`); the mark is additive in exactly one direction.
         """
@@ -644,7 +644,7 @@ class CommandHistoryStore:
         timestamp is `now` by default. An empty or over-long command is ignored: it is not an
         entry of a command history.
 
-        v1.6.4 (ROADMAP task 2): this is the SINGLE write path of what the application sends,
+        v1.6.4: this is the SINGLE write path of what the application sends,
         so it is where the DECLARED pattern list is evaluated ONCE (`looks_like_secret()`): the
         entry is written AND marked, never dropped — the store keeps the one fact it exists for
         (what really went on the wire) and tells the user the row is sensitive.
@@ -759,7 +759,7 @@ class CommandHistoryPanel(QWidget):
         header.sectionClicked.connect(self.on_section_clicked)
         layout.addWidget(self.tree, 1)
 
-        # v1.6.2 (ROADMAP task 3): the Command column's width. The ORDER is the deliverable:
+        # v1.6.2: the Command column's width. The ORDER is the deliverable:
         # the stored (or declared) width is applied BEFORE `reload()` at the end of __init__,
         # so the first paint already has it, and the construction call goes through
         # `set_command_width()`, whose guard stops Qt's own `sectionResized` from being read
@@ -784,7 +784,7 @@ class CommandHistoryPanel(QWidget):
     def refresh_theme(self):
         """Re-apply the theme: the info label's colour is a VALUE (the §4.6 rule).
 
-        v1.6.4 (ROADMAP task 2): the secret marker's pixmap is a value too — the cache is
+        v1.6.4: the secret marker's pixmap is a value too — the cache is
         dropped here and the rows are rebuilt, so the padlock of a marked row is repainted in
         the new theme's warning tone instead of keeping the old one.
         """
@@ -833,7 +833,7 @@ class CommandHistoryPanel(QWidget):
         """The owning session (the terminal page)."""
         self._session = session
 
-    # ── v1.6.2 (ROADMAP task 3): the Command column width ───────────────────
+    # ── v1.6.2: the Command column width ────────────────────────────────────
 
     def command_width(self) -> int:
         """The LIVE width of the Command section (the topical test's read seam)."""
@@ -905,7 +905,7 @@ class CommandHistoryPanel(QWidget):
             item = QTreeWidgetItem([entry["cmd"],
                                     format_last_used(entry["last"], t),
                                     str(entry["count"])])
-            # The table elides, the tooltip is full. v1.6.4 (ROADMAP task 2): the MARKED entry
+            # The table elides, the tooltip is full. v1.6.4: the MARKED entry
             # carries its own sentence under the full command — the tooltip is the mark's
             # SECOND channel, so the meaning never lives in the picture alone.
             if entry.get(SECRET_FIELD):
@@ -1060,14 +1060,14 @@ class CommandHistoryPanel(QWidget):
         self.status_message.emit(get_translator()("terminal.history.copied"), 3000)
         return True
 
-    # ── the door into the command library (ROADMAP v1.8.2) ──────────────────
+    # ── the door into the command library (v1.8.2) ──────────────────────────
 
     def library_panel(self):
         """The ONE command library of this tab's container (None — no container answers)."""
         return container_library(self)
 
     def send_to_library(self, entry) -> bool:
-        """Hand ONE row to the command library of this container — the door of ROADMAP v1.8.2.
+        """Hand ONE row to the command library of this container — the door of the library file.
 
         **ONE row** — never the whole list and never a batch: the menu item is built for the row the
         user right-clicked, and this method takes exactly that entry. A row that carries a secret is
@@ -1205,7 +1205,7 @@ class CommandHistoryPanel(QWidget):
                              (worker.task_error, self._on_server_error)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
+            except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                 pass  # not connected / the C++ object is gone
 
     def _on_server_read(self, task_id: int, remote_path: str, data: bytes):

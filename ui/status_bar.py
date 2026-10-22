@@ -221,7 +221,7 @@ class UndoStatusBar(QStatusBar):
             # v1.5.2: the activity panel's tap — emitted AFTER the offer is up, so a
             # listener that reads the bar sees the state the message describes.
             self.offer_shown.emit(str(text))
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — best effort (declared): the offer is already shown
             pass  # Qt teardown / a dead receiver — the offer itself is already shown
 
     def _hide_offer(self) -> None:

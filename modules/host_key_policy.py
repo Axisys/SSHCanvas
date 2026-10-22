@@ -153,12 +153,14 @@ def read_server_host_key(host: str, port, timeout=PROBE_HOST_KEY_TIMEOUT_S):
     except Exception as e:  # noqa: BLE001 — every failure is data for the dialog
         return None, str(e)
     finally:
+        logger = _log()
         for closer in (transport, sock):
             if closer is not None:
                 try:
                     closer.close()
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as e:  # noqa: BLE001 — the key is read; the close is best effort
+                    if logger is not None:
+                        logger.debug("Closing the host-key probe connection failed: %s", e)
 
 
 class KnownHostsStore:

@@ -28,13 +28,13 @@ class OverlaysMixin:
     # ── the floating-panel priority rule ──
 
     def _sync_overlay_priority(self):
-        """Resolve the floating panels from the live geometry (v1.5rc4, task 7)."""
+        """Resolve the floating panels from the live geometry (v1.5rc4)."""
         self._sync_legend_suppression()
         # The minimap's own rule lives with its placement (`_position_minimap`), and the
         # diamond is placed by `_position_map_collapse_btn` — both are re-run here so ONE
         # call site keeps the panels consistent after any geometry change.
         self._position_minimap()
-        # v1.5.4 (ROADMAP task 3): the filter plaque yields to an OPEN search bar (it steps
+        # v1.5.4: the filter plaque yields to an OPEN search bar (it steps
         # below it) — its placement is part of the same ONE resolution, so the bar opening
         # and closing move it without a second call site.
         self._position_filter_plaque()
@@ -225,7 +225,7 @@ class OverlaysMixin:
         self.map_search.show()
         self.map_search.raise_()
         self._position_map_search_bar()
-        # v1.4.2: the minimap steps BELOW the search bar; v1.5rc4 (task 7): the ONE place
+        # v1.4.2: the minimap steps BELOW the search bar; v1.5rc4: the ONE place
         # that resolves the floating panels also moves the collapse diamond out of the way.
         self._sync_overlay_priority()
         if self.map_search.query.strip():
@@ -241,7 +241,7 @@ class OverlaysMixin:
         """
         if getattr(self, "map_search", None) is not None:
             self.map_search.hide()
-        # v1.4.2: the minimap returns to the top-right corner; v1.5rc4 (task 7): the same
+        # v1.4.2: the minimap returns to the top-right corner; v1.5rc4: the same
         # ONE resolver re-places the diamond now that the bar is gone.
         self._sync_overlay_priority()
         self._map_search_query = ""
@@ -285,7 +285,7 @@ class OverlaysMixin:
         """v0.9.8: the query text changed — recompute the matches and the dimming.
 
         The counter points at the FIRST result (the browser-search pattern);
-        centering/selection — only on Enter (ROADMAP #2).
+        centering/selection — only on Enter.
         """
         self._map_search_query = query or ""
         matches = self._map_search_nodes(query)
@@ -334,7 +334,7 @@ class OverlaysMixin:
     # ── the first-run hint ──
 
     def _connect_hint_text(self) -> str:
-        """The "how do I draw a connection?" sentence (v1.6.8, ROADMAP task 2).
+        """The "how do I draw a connection?" sentence (v1.6.8).
 
         The connection gesture shipped in v0.7 and nobody found it, so the FIRST screen
         names it AND the "Add Connection" action carries the same words as its tooltip.
@@ -370,14 +370,14 @@ class OverlaysMixin:
 
         self.empty_state = EmptyStateOverlay(self.view)
         self.empty_state.add_server_requested.connect(self._add_server)
-        # v1.9.7 (ROADMAP task 6): the TXT import is a DOOR of the first screen now. The widget
+        # v1.9.7: the TXT import is a DOOR of the first screen now. The widget
         # only emits; the file dialog and the import belong to the window, and the door is the
         # ORDINARY File → Import Servers from TXT… path, so every downstream rule is shared.
         try:
             self.empty_state.import_requested.connect(self._import_servers_from_txt)
         except (RuntimeError, AttributeError):
             pass  # a stripped build without the signal — the other doors still work
-        # v1.5.6 (ROADMAP task 2): the THIRD door of the first screen — an existing
+        # v1.5.6: the THIRD door of the first screen — an existing
         # project file. The widget only emits; the dialog and the load belong to the
         # window, and the door is the ORDINARY project-open path (the same one File → Open
         # and a dropped project use), so every downstream rule is shared.
@@ -385,7 +385,7 @@ class OverlaysMixin:
             self.empty_state.open_map_requested.connect(self._open_project)
         except (RuntimeError, AttributeError):
             pass  # a stripped build without the signal — the other two doors still work
-        # v1.5rc3 (ROADMAP task 1): the second button — the demo map. The SAME method the
+        # v1.5rc3: the second button — the demo map. The SAME method the
         # Help item calls, so the two entry points cannot diverge (and both go through
         # the ordinary project load path).
         try:
@@ -422,7 +422,7 @@ class OverlaysMixin:
             return  # Qt teardown — the widget is already destroyed
         if empty:
             self._position_empty_state()
-        # v1.5rc4 (ROADMAP task 7): the first-run hint is the reason the legend yields —
+        # v1.5rc4: the first-run hint is the reason the legend yields —
         # its appearance/disappearance is exactly where the priority must be re-resolved.
         self._sync_overlay_priority()
 
@@ -443,7 +443,7 @@ class OverlaysMixin:
     # ── the map collapse diamond ──
 
     def _position_map_collapse_btn(self):
-        """v1.2.4.1 (task 2): the map collapse button — the right BOTTOM corner of the MapView.
+        """v1.2.4.1: the map collapse button — the right BOTTOM corner of the MapView.
 
         The bottom corner, never the top (the diamond reads "at the bottom" in both
         states); the top is reserved for the minimap. Repositioned on resizeEvent
@@ -451,7 +451,7 @@ class OverlaysMixin:
         a "Terminals" dock size change) and whenever a scrollbar appears or disappears
         (their `rangeChanged` — the viewPORT is what the corner is measured against).
 
-        v1.5rc4 (ROADMAP task 7): the third rule of the floating-panel priority — the
+        v1.5rc4: the third rule of the floating-panel priority — the
         diamond is NEVER covered by a panel. The corner is where the legend (bottom-left,
         draggable) and the minimap (right, draggable, free position) can land on a narrow
         window; the button therefore probes a few candidate spots around the panel that
@@ -490,7 +490,7 @@ class OverlaysMixin:
             pass  # Qt teardown — the widget is already destroyed
 
     def _overlay_panel_rects(self, view) -> list:
-        """The live rectangles of the VISIBLE floating panels (v1.5rc4, task 7).
+        """The live rectangles of the VISIBLE floating panels (v1.5rc4).
 
         The view's own coordinates (every panel is a child of `MapView`), in the order the
         priority rule cares about: the first-run hint first (it is the temporary one), then

@@ -77,7 +77,7 @@ def wheel(w, dy, mod=Qt.KeyboardModifier.NoModifier):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the thread names (task 1) ==")
+print("== §1 the thread names ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 from modules.ssh_worker import SSHWorker
@@ -101,7 +101,7 @@ check("§1 the names are non-empty and distinct (a journal line identifies the w
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 the marked secret (task 2) ==")
+print("== §2 the marked secret ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _SHAPES = (
@@ -207,7 +207,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 Ctrl+wheel = the font zoom (task 3) ==")
+print("== §3 Ctrl+wheel = the font zoom ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 CTRL = Qt.KeyboardModifier.ControlModifier
@@ -295,7 +295,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the activity mark of an inactive session (task 4) ==")
+print("== §4 the activity mark of an inactive session ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _node_a = ServerData(id="erg-a", alias="alpha", host="10.98.1.1", user="root")
@@ -361,7 +361,7 @@ app.processEvents()
 check("§4 output on the VISIBLE session never marks it (the rule's other half)",
       _pa.has_activity is False and session_tab_icon(_pa) is not activity_tab_icon(True))
 
-# v1.9.8 (task 3): the STATE a tab shows — the card's own declaration, so a dead channel is a
+# v1.9.8: the STATE a tab shows — the card's own declaration, so a dead channel is a
 # triangle (the offline shape) and a failure the session survived is the warn ring.
 _pa._session_ended = True
 render_session_activity(_win.session_tabs, _pa, i18n.t)

@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 
 from PySide6.QtCore import QThread, Signal
 
-try:  # v1.5.2: the DNS stage of the import reaches the activity history (task 2)
+try:  # v1.5.2: the DNS stage of the import reaches the activity history
     from modules.logger import get_logger
 except ImportError:  # pragma: no cover — the package layout (sshmap.services.*)
     from ..modules.logger import get_logger
@@ -29,7 +29,7 @@ log = get_logger(__name__)
 def parse_hosts_file(text: str) -> List[str]:
     """Parse the file text: EVERY whitespace-separated word of every data line.
 
-    v1.4.1 (ROADMAP task 4): the parser takes EVERY whitespace-separated word, never ``entry.split()[0]``, so a
+    v1.4.1: the parser takes EVERY whitespace-separated word, never ``entry.split()[0]``, so a
     line like ``web-1 web-2 db-master`` imported ONLY ``web-1`` — the remaining
     words were neither imported nor counted in the "skipped" report (a silent
     loss; the v1.3.3 audit, confirmed by the third-party review). The pinned
@@ -126,7 +126,7 @@ class HostResolverThread(QThread):
             except Exception:
                 result[name] = None  # a resolution failure must not kill the thread
             self.progress.emit(i, total)
-        # v1.5.2 (ROADMAP task 2): ONE record for the DNS stage of the import — the
+        # v1.5.2: ONE record for the DNS stage of the import — the
         # hostnames and the counts, never a credential (there is none here).
         try:
             resolved = sum(1 for value in result.values() if value)

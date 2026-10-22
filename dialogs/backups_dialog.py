@@ -5,7 +5,7 @@ Data-driven: the caller (MainWindow) passes a list of items
 ``[{label, path, mtime, size}, ...]`` (newest first — see
 storage/autosave.py) and receives the ``restore_requested(path, label)`` signal.
 All decisions (confirming a dirty change, overwriting the file, reloading the scene)
-stay in MainWindow — a single restore path (ROADMAP v0.9.7 #2).
+stay in MainWindow — a single restore path.
 """
 from datetime import datetime
 

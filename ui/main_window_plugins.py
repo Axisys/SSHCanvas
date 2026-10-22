@@ -42,10 +42,10 @@ class PluginMixin:
     def start_plugin_discovery(self):
         """Discover the plugins — called ONCE from main.py, after show(), before app.exec().
 
-        The ROADMAP places the discovery exactly there: the window exists (so a load
+        The discovery belongs exactly there (`AGENTS.md` §4.10.1): the window exists (so a load
         error can be reported in its status bar) while the event loop has not started
         yet (so the registry is complete before the first frame the user sees). Never
-        raises: a plugin must not be able to break the startup (ROADMAP rc1 task 1).
+        raises: a plugin must not be able to break the startup.
         """
         try:
             self._plugin_manager.discover()
@@ -204,7 +204,7 @@ class PluginMixin:
             return []
 
     def _extend_node_context_menu(self, menu, node=None):
-        """v1.4rc3 (ROADMAP task 7): let every plugin add rows to a node context menu.
+        """v1.4rc3: let every plugin add rows to a node context menu.
 
         The ONE entry point behind both surfaces of the contract ("the node context menu
         of the map or of the sidebar", PLUGINS.md §3): the caller passes the live QMenu
@@ -242,7 +242,7 @@ class PluginMixin:
         return asked
 
     def _run_plugins_on_nodes(self):
-        """v1.4rc3 (task 8): "Run on selected servers" — the `run_on_nodes` hook.
+        """v1.4rc3: "Run on selected servers" — the `run_on_nodes` hook.
 
         Scope: the CURRENT selection; with nothing selected the whole map is the target
         (the action stays useful, and the status line says which scope was used). The
@@ -283,7 +283,7 @@ class PluginMixin:
                 self.log.warning(f"Plugin run_on_nodes failed: {e}")
 
     def _open_plugin_command_dialog(self) -> bool:
-        """The CORE-owned command door (ROADMAP v1.9.3, task 3): ONE dialog → `plugin_run_command()`.
+        """The CORE-owned command door (v1.9.3): ONE dialog → `plugin_run_command()`.
 
         The targets come from the Plugins window's `resolve_targets()` — the CHECKED rows, the
         refusal of a selection that left the map included — so the scope and the wording are the
@@ -387,7 +387,7 @@ class PluginMixin:
             return
         self._report_plugin_events()
 
-    # ── the Plugins window (v1.8.3, ROADMAP task 1) ───────────────────────────
+    # ── the Plugins window (v1.8.3) ───────────────────────────────────────────
     # The panel is a SESSION surface: it is built once, it lives until the process exits and it owns
     # the bounded event ring, so closing the window never loses the history. This mixin is the ONE
     # place that touches it — the construction, the visibility key and the two taps of the ring.
@@ -416,7 +416,7 @@ class PluginMixin:
             pass
 
     def _setup_plugins_panel(self):
-        """Create the Plugins window and install its TWO taps (v1.8.3, ROADMAP tasks 1–3).
+        """Create the Plugins window and install its TWO taps (v1.8.3).
 
         (a) the drained discovery events — `_report_plugin_events()` is their ONE consumer and
         copies every event into the panel's ring; (b) the per-node answers — `command_result` is
@@ -458,7 +458,7 @@ class PluginMixin:
             # asked the interface to show — a window that ran a plugin must show both, or a run
             # reads as a bare `exit 0`.
             self._plugin_manager.plugin_message.connect(self._on_plugin_message)
-        except (RuntimeError, AttributeError, TypeError):
+        except (RuntimeError, AttributeError, TypeError):  # noqa: BLE001 — best effort (declared): an older manager without the signals
             pass  # an older manager without those signals is still a working registry
 
     def _refresh_plugins_window_nodes(self):
@@ -493,7 +493,7 @@ class PluginMixin:
         """Put a sentence of the Plugins window on the status bar (the panel owns no widget)."""
         try:
             self.statusBar().showMessage(str(text), max(0, int(timeout_ms)))
-        except (RuntimeError, TypeError, ValueError):
+        except (RuntimeError, TypeError, ValueError):  # noqa: BLE001 — best effort (declared): a status line is cosmetic
             pass  # Qt teardown / a broken timeout — a status line is cosmetic
 
     def _on_plugin_command_result(self, plugin_id: str, node_id: str, payload: dict):
@@ -519,7 +519,7 @@ class PluginMixin:
             return
         try:
             panel.record_run_finished(plugin_id, len(payloads or []))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — best effort (declared): the panel's counter is cosmetic
             pass
 
     def _on_plugin_command_refused(self, plugin_id: str, token: str, count: int):
@@ -665,7 +665,7 @@ class PluginMixin:
             rec = self._plugin_manager.get(plugin_id)
             if rec is not None:
                 return rec.label()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — the caller owns the fallback: the id answers below
             pass
         return plugin_id or "?"
 
@@ -696,7 +696,7 @@ class PluginMixin:
             self.statusBar().showMessage(message, max(0, int(timeout_ms)))
             if int(timeout_ms) > 0:
                 QTimer.singleShot(int(timeout_ms), lambda tk=token: self._expire_plugin_status(tk))
-        except (RuntimeError, TypeError, ValueError):
+        except (RuntimeError, TypeError, ValueError):  # noqa: BLE001 — best effort (declared): a plugin line must not break the UI
             pass  # Qt teardown / a broken timeout — a plugin line must never break the UI
 
     def _expire_plugin_status(self, token):

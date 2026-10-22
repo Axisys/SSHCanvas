@@ -83,7 +83,7 @@ def source(rel):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The pure unit layout (task 1)
+# 1. The pure unit layout
 # ════════════════════════════════════════════════════════════
 print("== §1 the pure unit layout ==")
 
@@ -159,7 +159,7 @@ check("§1 two items of ONE unit move by the SAME delta (the unit id is the key)
 
 
 # ════════════════════════════════════════════════════════════
-# 2. The window's whole-map arrangement (task 1)
+# 2. The window's whole-map arrangement
 # ════════════════════════════════════════════════════════════
 print("== §2 the whole-map arrangement ==")
 
@@ -329,7 +329,7 @@ close_window(_win2)
 
 
 # ════════════════════════════════════════════════════════════
-# 3. The reverse traversal over the connections (task 2)
+# 3. The reverse traversal over the connections
 # ════════════════════════════════════════════════════════════
 print("== §3 the reverse traversal ==")
 
@@ -379,7 +379,7 @@ check("§3 the scene's own reader is the PURE one over its live pairs",
 
 
 # ════════════════════════════════════════════════════════════
-# 4. The traversal is the SECOND CHANNEL of the one dim owner (task 2)
+# 4. The traversal is the SECOND CHANNEL of the one dim owner
 # ════════════════════════════════════════════════════════════
 print("== §4 the dependency highlight ==")
 
@@ -477,7 +477,7 @@ close_window(_win4)
 
 
 # ════════════════════════════════════════════════════════════
-# 5. The inode fact (task 3)
+# 5. The inode fact
 # ════════════════════════════════════════════════════════════
 print("== §5 the inode fact ==")
 

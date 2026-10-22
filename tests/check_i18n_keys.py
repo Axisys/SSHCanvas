@@ -60,7 +60,7 @@ def _source_files(root):
             yield p, os.path.relpath(p, root).replace("\\", "/")
 
 
-# ── 4. v1.6.1 (ROADMAP task 2): the no-i18n fallback literals vs en ───────────
+# ── 4. v1.6.1: the no-i18n fallback literals vs en ────────────────────────────
 
 # The DECLARED availability flag (§4.5). Only a ternary whose TEST mentions this
 # name is a fallback candidate — a value-carrying ternary never is.
@@ -286,7 +286,7 @@ def main(root=None):
         missing_total += len(missing)
 
     problems_total = len(problems) + missing_total + format_total
-    # ── 4. v1.6.1 (ROADMAP task 2): the no-i18n fallback literals vs en ──
+    # ── 4. v1.6.1: the no-i18n fallback literals vs en ──
     en = {k: v for k, v in (langs.get(I18N_REFERENCE) or {}).items()
           if k not in I18N_META_KEYS and isinstance(v, str)}
     fallback_problems = collect_fallback_problems(root, en)

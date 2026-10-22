@@ -113,7 +113,7 @@ def restore_window_geometry(key: str, window) -> bool:
         try:
             window.restoreState(state)
             restored = True
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — best effort (declared): the default geometry stands
             pass
     return restored
 

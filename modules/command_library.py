@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-try:  # v1.9.8 (task 3): the vector icon set of the header's icon-only buttons
+try:  # v1.9.8: the vector icon set of the header's icon-only buttons
     from ..ui.icons import refresh_button_icon
 except ImportError:
     try:
@@ -217,7 +217,7 @@ def _atomic_write_json(path: str, doc) -> bool:
 def _seed_entries() -> list:
     """The first-run seed: 5 examples (v1.3.3.4: the NAMES are i18n keys).
 
-    v1.3.3.4 (ROADMAP task 4): the five names were the only user-visible English
+    v1.3.3.4: the five names were the only user-visible English
     literals of the application that were not i18n keys — and they land in
     `~/.sshmap/commands.json`, i.e. in the user's own content file, on the very
     first run of a ru/zh/de user. The names now come from `terminal.cmdlib.seed.*`
@@ -227,10 +227,10 @@ def _seed_entries() -> list:
     The seeding happens ONLY when the file does not exist (see load()): the stored
     library is the user's own text and is NEVER re-translated — switching the
     language afterwards leaves an existing `commands.json` exactly as it is
-    (the ROADMAP requirement of task 4). The CATEGORIES stay plain literals on
+    (the rule of `AGENTS.md` §4.5). The CATEGORIES stay plain literals on
     purpose: they are content of a user-editable file (like the commands
-    themselves — "df -h" is not translated either), and the ROADMAP fixes the key
-    set of this version at the five NAMES.
+    themselves — "df -h" is not translated either), and the key set is exactly
+    the five NAMES below.
 
     The last entry — a multi-line script (awk with a line continuation): a live example
     of the macros going to the PTY as a bracketed-paste block, not as line-by-line input."""
@@ -353,7 +353,7 @@ def entries_from_document(data) -> list:
     return out
 
 
-# ── the library FILE: the backup ring and the import/export pair (ROADMAP v1.8.2) ────────────
+# ── the library FILE: the backup ring and the import/export pair (v1.8.2) ────────────────────
 # `~/.sshmap/commands.json` is a user file like the project file, so it gets the project file's ring
 # (`storage/autosave.py` is the pattern: slot 1 is the version the last write replaced, every older
 # slot moves +1, the overflow is deleted) plus the import/export pair the language files have. The
@@ -421,7 +421,7 @@ def rotate_library_backups(path, count: int = COMMANDS_BACKUP_COUNT) -> list:
             if os.path.isfile(extra):
                 try:
                     os.remove(extra)
-                except OSError:
+                except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
                     pass
         _atomic_copy(path, library_backup_path(path, 1))
         return list_library_backups(path, count)
@@ -830,7 +830,7 @@ class CommandLibraryDialog(QDialog):
 # ── the library panel ───────────────────────────────────────────────────────
 
 class CommandLibraryPanel(QWidget):
-    """v1.3 (ROADMAP v1.3): the "Terminal macros" panel — the command/script library.
+    """v1.3: the "Terminal macros" panel — the command/script library.
 
     The left part of the QSplitter in both containers (SSHTerminalWindow / TerminalDockContent):
     the header + the collapse button, the search, the "category → command" tree
@@ -838,7 +838,7 @@ class CommandLibraryPanel(QWidget):
     the Add/Edit/Delete buttons. A double click or Enter on a command — the send
     to the ACTIVE session (session_tabs.currentWidget() → page.widget.send_macro):
     a direct terminal_thread.send_data(), NOT via MultiInputHub.broadcast
-    (the pre-approved ROADMAP v1.3 decision). The action summary — the status_message
+    (one of the FOUR bypasses of `AGENTS.md` §4.3.4). The action summary — the status_message
     (str, int) signal into the containers' existing bridges (_on_page_status_message).
 
     Collapsing: the _CollapseStrip strip (the v1.2.4.1 technique), the state — a single
@@ -861,7 +861,7 @@ class CommandLibraryPanel(QWidget):
         t = get_translator()
         self._store = store if store is not None else CommandLibraryStore()
         self.session_tabs = session_tabs   # duck-typed QTabWidget (set_session_tabs)
-        # v1.3.3.5 (ROADMAP task 6): the container may host MORE than the tabs (the
+        # v1.3.3.5: the container may host MORE than the tabs (the
         # terminal window's split pane) and knows which session the user is in — it
         # installs a callable here (SSHTerminalWindow.active_session); without one the
         # active session stays session_tabs.currentWidget() (the v1.3 behaviour).
@@ -946,7 +946,7 @@ class CommandLibraryPanel(QWidget):
         # (Qt gotcha #9). The button's own label is a glyph — nothing to translate. v1.11: it acts on
         # `commands.json`, so it belongs to the `Commands` head and follows its visibility.
         self._file_btn = QToolButton()
-        # v1.9.8 (task 3): the icon-only buttons of this header carry a GLYPH and a tooltip — the
+        # v1.9.8: the icon-only buttons of this header carry a GLYPH and a tooltip — the
         # shipped "…" was a text character no icon walk could re-theme.
         refresh_button_icon(self._file_btn, "menu_dots")
         self._file_btn.setToolTip(t("terminal.cmdlib.file_menu_tooltip"))
@@ -1088,10 +1088,10 @@ class CommandLibraryPanel(QWidget):
         self.set_collapsed(_load_collapse_state(), persist=False)
         self._apply_head()
 
-    # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
+    # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to the panel.
+        """v1.4.3: re-apply the theme to the panel.
 
         The info label's colour is re-read (a QSS string is a value) and the two
         hand-painted widgets — the collapse strip and the collapse button — are
@@ -1111,7 +1111,7 @@ class CommandLibraryPanel(QWidget):
                 widget.update()
             except RuntimeError:
                 continue
-        # v1.9.8 (task 3): the header's two painted ICONS follow the theme too — a pixmap is a
+        # v1.9.8: the header's two painted ICONS follow the theme too — a pixmap is a
         # value, so the tone has to be re-applied, not only the widget repainted.
         try:
             self._collapse_btn.setIcon(QIcon())
@@ -1200,7 +1200,7 @@ class CommandLibraryPanel(QWidget):
         self.session_tabs = tabs
 
     def set_active_session_provider(self, provider):
-        """v1.3.3.5 (ROADMAP task 6): the container's "what is the active session" callable.
+        """v1.3.3.5: the container's "what is the active session" callable.
 
         A container with a SPLIT pane (the terminal window) has more than the tabs and
         owns the focus rule, so it passes `active_session` here; the panel stays
@@ -1568,7 +1568,7 @@ class CommandLibraryPanel(QWidget):
             for e in by_cat[cat]:
                 child = QTreeWidgetItem([e["name"], e["command"]])
                 child.setData(0, Qt.ItemDataRole.UserRole, e["id"])
-                # v1.9.8 (task 3): the row's FULL text travels as its tooltip — an elided name was
+                # v1.9.8: the row's FULL text travels as its tooltip — an elided name was
                 # unreadable without opening Edit (the command is the second half of the same fact).
                 child.setToolTip(0, str(e["name"]))
                 child.setToolTip(1, str(e["command"]))
@@ -1687,7 +1687,7 @@ class CommandLibraryPanel(QWidget):
         The door is `_run_ssh_connect()` (`ui/main_window_ssh.py`), so the unmanaged gate, the
         `terminal_max_open` limit, the node's indicator, the window reuse and the info collection are
         all asked exactly as they are from the map — and the SAME `SSHConnectDialog` is shown on
-        every surface (`ROADMAP` v1.11: one path, one wording). The node is re-checked against the
+        every surface (one path, one wording — `AGENTS.md` §4.3.8). The node is re-checked against the
         provider's LIVE answer by `_server_for_item()` before the dialog is built, so a card that has
         left the map (or whose id moved to another row) is a quiet no-op; a row with no door behind it
         reports the same inline sentence the head does. Nothing here raises.
@@ -1925,12 +1925,12 @@ class CommandLibraryPanel(QWidget):
             self.send_entry(entry)
 
     def send_entry(self, entry: dict):
-        """Send the command to the ACTIVE session (ROADMAP v1.3) — ONE question first when the
+        """Send the command to the ACTIVE session (v1.3) — ONE question first when the
         record asks for it.
 
         The active session — the container's `active_session` if it installed one
         (v1.3.3.5: the terminal window's SPLIT pane, i.e. the pane the user clicked —
-        ROADMAP task 6), otherwise `session_tabs.currentWidget()` (the v1.3 rule); the
+        the split pane wins), otherwise `session_tabs.currentWidget()` (the v1.3 rule); the
         send — a dynamic call of page.widget.send_macro(text) (a direct
         terminal_thread.send_data(), NOT the multi-input broadcast). A disabled entry —
         a quiet no-op. No active / a dead session — a status message, no exceptions.
@@ -2077,7 +2077,7 @@ class CommandLibraryPanel(QWidget):
             return
         try:
             self._entries.remove(e)
-        except ValueError:
+        except ValueError:  # noqa: BLE001 — best effort (declared): a double removal
             pass  # already removed (a double call)
         self._commit()
 

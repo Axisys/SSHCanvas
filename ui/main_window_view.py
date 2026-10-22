@@ -20,14 +20,14 @@ except ImportError:
 class ViewMixin:
     """The map view's own commands: the camera, the zoom, the focus domains and the selection (AGENTS.md §4.1)."""
 
-    # ── v1.5rc4 (ROADMAP task 5/6): the keyboard domains ───────────────────────
+    # ── v1.5rc4: the keyboard domains ──────────────────────────────────────────
     # The window has three of them — the map, the sidebar and (in `terminal_mode =
     # "tabs"`) the terminal dock — and each shows the SAME focus ring. "Focus the map"
     # (the ONE new registry action of the release) hands the keyboard to the canvas, and
     # `_focus_domain_step()` is what Ctrl+Tab calls to walk between the domains.
 
     def _focus_map(self):
-        """View → Focus the map: hand the keyboard to the canvas (v1.5rc4, task 6)."""
+        """View → Focus the map: hand the keyboard to the canvas (v1.5rc4)."""
         view = getattr(self, "view", None)
         if view is None:
             return
@@ -35,7 +35,7 @@ class ViewMixin:
             return  # a collapsed map has no surface to focus (the View-action rule)
         try:
             view.setFocus(Qt.FocusReason.ShortcutFocusReason)
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: nothing to focus
             pass  # Qt teardown — nothing to focus
 
     def _focus_domain_step(self, step: int = 1):
@@ -139,11 +139,11 @@ class ViewMixin:
         finally:
             self._selection_syncing = False
         self._sync_selection_state()
-        # v1.2.4.1 (task 5): the map is collapsed — centering is skipped (selection
+        # v1.2.4.1: the map is collapsed — centering is skipped (selection
         # and the accent still work; no exceptions and no auto-show of the map). All paths
         # are covered: "Show on map" (_reveal_node_on_map) and the search navigation Enter/Shift+Enter.
         if center and not getattr(self, "_map_collapsed", False):
-            # v1.4.4 (ROADMAP task 2): `smooth=True` is the "Show on map" reveal — the camera
+            # v1.4.4: `smooth=True` is the "Show on map" reveal — the camera
             # FLIES (ui/motion.py) instead of jumping; every other caller keeps the instant
             # centering (a search step and the palette want the result NOW, and their tests
             # compare the scroll state with a direct centerOn).
@@ -152,7 +152,7 @@ class ViewMixin:
             self.view.stop_camera_flight()  # v1.4.4: an instant move cancels a running flight
             self.view.centerOn(node)
 
-    # ── v1.4.4 (ROADMAP task 2): the camera flights ─────────────────────
+    # ── v1.4.4: the camera flights ──────────────────────────────────────
 
     def _fly_camera_to_node(self, node: "ServerNode") -> bool:
         """Fly the camera to a node's CARD centre, keeping the current zoom (True — flying).
@@ -176,7 +176,7 @@ class ViewMixin:
         return fly_camera(self.view, self.view.zoom, rect.center()) is not None
 
     def _on_hover_focus_changed(self, _arrow=None):
-        """v1.4.4 (ROADMAP task 4): the arrow hover focus moved — recompute the ONE dim state.
+        """v1.4.4: the arrow hover focus moved — recompute the ONE dim state.
 
         The arrow's hover is a REASON to re-evaluate the map, never a second writer of the
         dim: `_apply_map_dimming` merges the hover focus with the tag filter and the search.
@@ -188,12 +188,12 @@ class ViewMixin:
 
         Before, centerOn(0, 0) — with nodes at negative coordinates the view went to
         an empty corner of the scene (a v0.8 review bug).
-        v1.2.4.1 (task 5): the map is collapsed — a no-op (no exceptions, no auto-show).
+        v1.2.4.1: the map is collapsed — a no-op (no exceptions, no auto-show).
         """
         if self._map_collapsed:
             return
         rect = self.view.content_bounding_rect()
-        # v1.4.4 (ROADMAP task 1): "center the map" is an instant move — cancel a flight
+        # v1.4.4: "center the map" is an instant move — cancel a flight
         self.view.stop_camera_flight()
         if rect is None or rect.isEmpty():
             self.view.centerOn(0, 0)
@@ -203,11 +203,11 @@ class ViewMixin:
     def _fit_to_content(self):
         """UI polish: "Fit map" — all nodes and notes inside the visible area.
 
-        v1.4.4 (ROADMAP task 2): the ACTION flies to the fit target (ui/motion.py — 250 ms,
+        v1.4.4: the ACTION flies to the fit target (ui/motion.py — 250 ms,
         OutQuad, interruptible) instead of snapping; `MapView.fit_to_content()` stays the
         instant primitive for tools/tests and is the fallback when there is nothing to
         frame (an empty map → the same "nothing to fit" line) or the view has no geometry yet.
-        v1.2.4.1 (task 5): the map is collapsed — a no-op (no exceptions, no auto-show).
+        v1.2.4.1: the map is collapsed — a no-op (no exceptions, no auto-show).
         """
         if self._map_collapsed:
             return
@@ -225,10 +225,10 @@ class ViewMixin:
         # AUDIT v0.7.2 (low #19): the public MapView method instead of poking view._zoom
         self.view.reset_zoom()
 
-    # ── v1.3.3.3 (ROADMAP task 2): the zoom actions of the View menu ──────────────
+    # ── v1.3.3.3: the zoom actions of the View menu ───────────────────────────────
     # The step API lives on MapView (zoom_in/zoom_out/_zoom_by); these two slots only
     # add the "the map is collapsed" guard that every view action of the window has
-    # (v1.2.4.1 task 5: a view action on a collapsed map is a silent no-op).
+    #.
 
     def _zoom_in(self):
         """View → Zoom In (Ctrl+=): one step in, anchored on the view centre."""

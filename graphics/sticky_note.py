@@ -54,7 +54,7 @@ class StickyNote(QGraphicsProxyWidget):
 
     # a muted palette on tester feedback (the classic
     # #fef08a/#ca8a04 is too bright); it reads on the dark map but does not "cut in".
-    # v1.4.3 (ROADMAP task 5): LIVE module constants — the note palette is the
+    # v1.4.3: LIVE module constants — the note palette is the
     # same in DARK and LIGHT (a yellow sticky fits both), but the reads go
     # through the module so a future theme that changes it needs no edit here.
     BG_COLOR = theme.ThemeValue(lambda: theme.NOTE_BG)
@@ -101,7 +101,7 @@ class StickyNote(QGraphicsProxyWidget):
         editor.setAcceptRichText(False)
         editor.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         editor.setFont(QFont(theme.FONT_UI, 10))
-        # v1.4.3 (ROADMAP task 4): the editor's stylesheet comes from the ONE
+        # v1.4.3: the editor's stylesheet comes from the ONE
         # registry (ui/theme_qss.py) and is re-applied by refresh_theme() — the
         # object name is what the registry rule targets.
         editor.setObjectName("StickyNoteEditor")
@@ -328,7 +328,7 @@ class StickyNote(QGraphicsProxyWidget):
         super().paint(painter, option, widget)
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 5): re-apply the theme to the note.
+        """v1.4.3: re-apply the theme to the note.
 
         `paint()` already reads the live palette; the EDITOR is a real QWidget
         with a QSS string, so its stylesheet has to be rebuilt from the registry

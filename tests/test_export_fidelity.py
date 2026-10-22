@@ -268,7 +268,7 @@ win.close()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 the fate of load_drawio_structure: DELETED (ROADMAP task 4) ==")
+print("== §5 the fate of load_drawio_structure: DELETED ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("the helper is gone from the module",

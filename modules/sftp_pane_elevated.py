@@ -259,13 +259,13 @@ class SftpPaneElevatedMixin:
         # that has already left the elevation. The pane's pending calls go with the handshake.
         try:
             QCoreApplication.removePostedEvents(self, QEvent.Type.MetaCall)
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: no event loop yet
             pass  # no event loop yet (a bare construction) — nothing is queued anyway
         for signal, slot in ((handshake.ready, self._on_elevation_ready),
                              (handshake.failed, self._on_elevation_failed)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
+            except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                 pass   # the slot was never connected / the object is already gone
         try:
             handshake.close()

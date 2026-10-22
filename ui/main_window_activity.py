@@ -6,7 +6,7 @@ window module (a cycle) — it duck-types the instance.
 Owned here: the `ui_activity_panel` visibility (default OFF), the panel's construction, the TWO taps of the
 history ring of `modules/activity_log.py` (the status-bar messages and the Undo offer), the toggle and the
 close that mirrors itself back into the View item. Mechanism — `DOCUMENTATION.md` §45."""
-try:  # v1.5.2 (ROADMAP task 1): the in-memory activity ring the panel renders
+try:  # v1.5.2: the in-memory activity ring the panel renders
     from ..modules import activity_log as _activity_mod
 except ImportError:
     try:
@@ -47,7 +47,7 @@ class ActivityMixin:
             pass
 
     def _setup_activity_panel(self):
-        """Create the panel and install the TWO taps of the history (v1.5.2, task 1).
+        """Create the panel and install the TWO taps of the history (v1.5.2).
 
         (a) the logging tap is installed by `modules/logger.py` (beside the file
         handler) and needs nothing here; (b) the status-bar tap is this connection:
@@ -83,7 +83,7 @@ class ActivityMixin:
             offer = getattr(bar, "offer_shown", None)
             if offer is not None:
                 offer.connect(self._record_activity_message)
-        except (RuntimeError, AttributeError, TypeError):
+        except (RuntimeError, AttributeError, TypeError):  # noqa: BLE001 — best effort (declared): a status bar without the signal works
             pass  # a status bar without the signal is still a working status bar
 
     def _record_activity_message(self, text):

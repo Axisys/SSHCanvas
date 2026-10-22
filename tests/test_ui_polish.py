@@ -113,7 +113,7 @@ check("unknown icon name -> empty QIcon", _gi_up("no_such_icon").isNull())
 from graphics.connection_arrow import build_curve as _bc73, curve_midpoint as _cm73, edge_point as _ep73
 _arrow_hit = win.scene.add_connection(d_a.id, d_b.id, "up-hit", "ssh")
 if _arrow_hit is not None:
-    # v1.4.2 (ROADMAP task 4): the arrow geometry is anchored on the CARD rect —
+    # v1.4.2: the arrow geometry is anchored on the CARD rect —
     # the probe rebuilds the same curve from `card_rect_scene()`.
     _s_r = _arrow_hit.source.card_rect_scene()
     _t_r = _arrow_hit.target.card_rect_scene()

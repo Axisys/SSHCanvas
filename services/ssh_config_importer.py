@@ -18,7 +18,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-try:  # v1.5.2: the import record of the activity history (ROADMAP task 2)
+try:  # v1.5.2: the import record of the activity history
     from modules.logger import get_logger
 except ImportError:  # pragma: no cover — the package layout (sshmap.services.*)
     from ..modules.logger import get_logger
@@ -438,7 +438,7 @@ def load_ssh_config(path: Optional[str] = None, *, home: Optional[str] = None,
     there is nothing to show in that case. A broken ``Include`` is a skip
     record inside the result, never an exception.
 
-    v1.5.2 (ROADMAP task 2): the ONE record of this import reaches the log (and the
+    v1.5.2: the ONE record of this import reaches the log (and the
     activity panel) — the summary on success, the reason on the two failure paths. The
     detail carries the PATH (never a credential: the config holds none of the app's
     secrets).

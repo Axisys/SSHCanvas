@@ -24,7 +24,7 @@ except ImportError:
     from services.system_info_collector import (disk_refusal_text, inode_alert,
                                                 inode_percent, resolve_disk_mount)
 
-try:  # v1.5rc2 (ROADMAP task 2): the DECLARED status shapes — the mark beside the colour
+try:  # v1.5rc2: the DECLARED status shapes — the mark beside the colour
     from ..ui import status_shape
 except ImportError:
     try:
@@ -160,7 +160,7 @@ class ServerNode(QGraphicsItemGroup):
 
     MIN_NODE_WIDTH = 180
     MIN_NODE_HEIGHT = 130
-    #: v1.9.7 (ROADMAP task 1): the COMPACT density's OWN floor. `MIN_NODE_HEIGHT` is the
+    #: v1.9.7: the COMPACT density's OWN floor. `MIN_NODE_HEIGHT` is the
     #: info plaque's floor and never the compact card's; this is the expanded formula with the
     #: plaque gone (`58 + 12`), and it stays above what the compact layout really paints (the
     #: host block ends at ≈57). A badge never enters either floor — the FREE BAND rule.
@@ -193,7 +193,7 @@ class ServerNode(QGraphicsItemGroup):
     COLLAPSED_DOT_DX = -21.0  # leftward shift of the dots relative to the expanded position
     # Collapsed line: the icon is raised to visually center with the text.
     COLLAPSED_ICON_DY = -8.0
-    # v1.5rc2 (ROADMAP task 2): the box of the availability MARK — the shape is
+    # v1.5rc2: the box of the availability MARK — the shape is
     # `theme.STATUS_SHAPES[status]` (a filled dot / a ring / a triangle), drawn in the
     # status colour, and this box is the size the v1.4.x round dot already had.
     STATUS_DOT_SIZE = 14
@@ -208,7 +208,7 @@ class ServerNode(QGraphicsItemGroup):
     SHADOW_DY = SHADOW_DY
     SHADOW_BOTTOM = 2 * SHADOW_BLUR + SHADOW_DY
 
-    # v1.4.3 (ROADMAP task 5): the colours are LIVE descriptors, not values
+    # v1.4.3: the colours are LIVE descriptors, not values
     # captured at import time — a class attribute read (`node.COLOR_BG`,
     # `ServerNode.STATUS_COLORS["online"]`) resolves the ACTIVE theme on every
     # access, so `set_theme()` + a repaint is all the switch needs. Everything
@@ -258,7 +258,7 @@ class ServerNode(QGraphicsItemGroup):
     # channel (and it works in the collapsed layout too, whose marks are raised to y = 16..30).
     # `_apply_badges()` places this badge FIRST and the environment chip elides into the room that is left.
     DEMO_BADGE_FONT_SIZE = 6
-    # v1.6.5 (ROADMAP task 2): the "NO SSH" chip of an UNMANAGED card. It is the SAME
+    # v1.6.5: the "NO SSH" chip of an UNMANAGED card. It is the SAME
     # channel as the emulated marker — WORDS on a neutral `dot_idle` frame — because a card
     # nobody administers must say so in a colour-blind print, a greyscale screenshot and a
     # spoken tooltip alike; the size matches the marker for the same reason (the two are the
@@ -310,7 +310,7 @@ class ServerNode(QGraphicsItemGroup):
         self.data = data
         self._current_width = self.MIN_NODE_WIDTH
         self._current_height = self.MIN_NODE_HEIGHT  
-        # v1.6 (ROADMAP task 2): the card density this card was laid out with — the
+        # v1.6: the card density this card was laid out with — the
         # LIVE value of `ui/theme.py`, kept per item so `refresh_theme()` can see that
         # the switch moved and re-lay the card out (a value captured once is a bug in
         # this system; the re-read in `sync_density()` is the fix).
@@ -323,14 +323,14 @@ class ServerNode(QGraphicsItemGroup):
         # v1.4rc2 (plugin foundation, rc2): the plugin detail merged into the status
         # tooltip ("" — the status-only tooltip of v0.7.1)
         self._status_detail = ""
-        # v1.5rc3 (ROADMAP task 3): WHEN the status was determined (epoch seconds; 0.0
+        # v1.5rc3: WHEN the status was determined (epoch seconds; 0.0
         # — never) and how old it may get before the mark is painted as stale. The
         # window feeds both (StatusChecker.last_checked_at / stale_threshold_s); the
         # card only ever reads them — freshness is a LABEL, never a status change.
         self._checked_at = 0.0
         self._stale_after = 0.0
         self._stale = False
-        # v1.5 (ROADMAP): is the shown status EMULATED (the demo map)? An emulated status
+        # v1.5: is the shown status EMULATED (the demo map)? An emulated status
         # is always MARKED as emulated, never carries a freshness line (it is not the
         # result of a probe) and can only be produced by the demo's own declaration.
         self._status_emulated = False
@@ -342,7 +342,7 @@ class ServerNode(QGraphicsItemGroup):
         self._info_at = 0.0
         self._info_stale = False
         self._info_tip_full = ""
-        # v1.5.3 (ROADMAP task 3): the "why" of the shown status — the sentence of the last
+        # v1.5.3: the "why" of the shown status — the sentence of the last
         # on-demand reachability report ("" — none was asked). It refines the status
         # tooltip; a NEW status from a probe clears it (fresh evidence replaces the old
         # explanation), a repeated one keeps it.
@@ -353,11 +353,11 @@ class ServerNode(QGraphicsItemGroup):
         self._env_badge = None
         self._demo_chip = None
         self._demo_badge = None
-        # v1.6.5 (ROADMAP task 2): the third optional mark — the "NO SSH" chip of an
+        # v1.6.5: the third optional mark — the "NO SSH" chip of an
         # unmanaged card, built on first use like its two neighbours.
         self._no_ssh_chip = None
         self._no_ssh_badge = None
-        # v1.6.5 (ROADMAP task 5): the line of the last ON-DEMAND reachability check — a
+        # v1.6.5: the line of the last ON-DEMAND reachability check — a
         # result the USER asked for, marked as manual, never a status.
         self._manual_report = ""
         # v0.9.8: map search (Ctrl+F) — True if the node matches the active query
@@ -379,7 +379,7 @@ class ServerNode(QGraphicsItemGroup):
         self._build_appearance()
 
     def _build_appearance(self):
-        # v1.4.2 (ROADMAP task 3): the drop-shadow — a cached PIXMAP HALO, not a path item
+        # v1.4.2: the drop-shadow — a cached PIXMAP HALO, not a path item
         # and not a QGraphicsDropShadowEffect (one render layer per item at 500 cards was
         # the v1.2.10 pain). The pixmap comes from the shared per-SIZE cache; the item is
         # mouse-transparent (a halo is not a hit zone) and sits under the card.
@@ -436,7 +436,7 @@ class ServerNode(QGraphicsItemGroup):
 
         # Availability status dot (UI polish): left of the SSH dot — in the collapsed view
         # and at a small zoom it reads faster than the 2px frame. Gray — until checked.
-        # v1.5rc2 (ROADMAP task 2): the mark is a QGraphicsPathItem, because a status is
+        # v1.5rc2: the mark is a QGraphicsPathItem, because a status is
         # a SHAPE now (filled dot / ring / triangle — `theme.STATUS_SHAPES`); the brush
         # still carries the status COLOUR, so every consumer of `.brush()` is unchanged.
         self._status_dot = QGraphicsPathItem(self)
@@ -525,7 +525,7 @@ class ServerNode(QGraphicsItemGroup):
         # Pulse follows the background (v0.7.1) — the same rounded frame
         self._pulse.setPath(self._rounded(0, 0, width, height, r))
 
-    # ── v1.5.6 (ROADMAP task 3): the ENVIRONMENT is a TONE on the card's ICON ─────────
+    # ── v1.5.6: the ENVIRONMENT is a TONE on the card's ICON ──────────────────────────
 
     def env_icon_color(self) -> QColor:
         """The brush tone of the card's icon: the primary tag's colour, or the neutral one.
@@ -550,7 +550,7 @@ class ServerNode(QGraphicsItemGroup):
     def refresh_tags(self):
         """v0.9.4: public hook to update the environment marks after editing data.tags.
 
-        v1.5.6 (ROADMAP task 3): the tags reach the card through TWO channels — the ICON's
+        v1.5.6: the tags reach the card through TWO channels — the ICON's
         tone and the chip's TEXT — so this hook re-applies both (the tag filter's own
         dimming is not part of the card).
         """
@@ -558,7 +558,7 @@ class ServerNode(QGraphicsItemGroup):
         self._apply_badges()
         self.update()
 
-    # ── v1.5 (ROADMAP): the ENVIRONMENT badge and the EMULATED marker ──────────────
+    # ── v1.5: the ENVIRONMENT badge and the EMULATED marker ────────────────────────
 
     def _ensure_badge_items(self):
         """Build the optional badge items the first time a card needs one.
@@ -586,7 +586,7 @@ class ServerNode(QGraphicsItemGroup):
         self._demo_badge.setFont(QFont(theme.FONT_MONO, self.DEMO_BADGE_FONT_SIZE))
         self._demo_badge.setZValue(4.9)
         self._demo_badge.hide()
-        # v1.6.5 (ROADMAP task 2): the "NO SSH" chip of an unmanaged card
+        # v1.6.5: the "NO SSH" chip of an unmanaged card
         self._no_ssh_chip = QGraphicsPathItem(self)
         self._no_ssh_chip.setPen(QPen(Qt.PenStyle.NoPen))
         self._no_ssh_chip.setZValue(4.8)
@@ -674,7 +674,7 @@ class ServerNode(QGraphicsItemGroup):
         return right
 
     def _apply_env_badge(self, width: float, reserved: float = 0.0):
-        """The primary tag as TEXT in the free band ABOVE the alias (v1.5, ROADMAP task 3).
+        """The primary tag as TEXT in the free band ABOVE the alias (v1.5).
 
         The chip is the second channel of the tag: the card's ICON carries the TONE and the
         WORDS sit in the measured band over the alias, which leaves the alias row itself to
@@ -723,7 +723,7 @@ class ServerNode(QGraphicsItemGroup):
                                  theme.DOT_IDLE, self.ENV_BADGE_Y,
                                  self._band_right(reserved))
 
-    # ── v1.6.5 (ROADMAP task 2): the "NO SSH" mark of an UNMANAGED card ─────────────
+    # ── v1.6.5: the "NO SSH" mark of an UNMANAGED card ──────────────────────────────
 
     @property
     def unmanaged(self) -> bool:
@@ -781,7 +781,7 @@ class ServerNode(QGraphicsItemGroup):
         return bool(self._status_emulated)
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 5): re-apply every theme-dependent brush/pen.
+        """v1.4.3: re-apply every theme-dependent brush/pen.
 
         The colours this card paints with are read live (`ThemeColor` /
         `ThemeMap` descriptors), but a QBrush/QPen handed to a child item is a
@@ -791,7 +791,7 @@ class ServerNode(QGraphicsItemGroup):
         through the scene. The status/SSH dots return to their current STATE
         (idle grey, or the status colour that is showing), never to a stale one.
 
-        v1.6 (ROADMAP task 2): the CARD DENSITY rides the same walk — `sync_density()`
+        v1.6: the CARD DENSITY rides the same walk — `sync_density()`
         re-lays the card out when the mode moved, before the brushes are re-applied
         (so a card switched to `compact` repaints in one pass).
         """
@@ -799,14 +799,14 @@ class ServerNode(QGraphicsItemGroup):
         self._bg.setBrush(QBrush(self.COLOR_BG))
         self._pulse.setPen(QPen(self.STATUS_COLORS.get("offline", self.COLOR_BORDER), 3))
         self._icon.setPen(QPen(self.COLOR_BORDER, 2))
-        # v1.5.6 (ROADMAP task 3): the icon's BRUSH is the environment tone — a value like
+        # v1.5.6: the icon's BRUSH is the environment tone — a value like
         # every other brush, so the switch re-resolves it (and the tag's own tone with it).
         self._apply_env_icon()
         _glyph_pen = QPen(self.COLOR_TEXT, 1.6)
         _glyph_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         self._glyph.setPen(_glyph_pen)
         self._alias.setDefaultTextColor(self.COLOR_TEXT)
-        # v1.5.3 (ROADMAP task 1): the info plaque's tone is the card's STATE (the idle tone
+        # v1.5.3: the info plaque's tone is the card's STATE (the idle tone
         # once the facts are old) — a switch re-reads it through the same helper.
         self._apply_info_tone()
         self._host_label.setDefaultTextColor(QColor(theme.DOT_IDLE))
@@ -861,7 +861,7 @@ class ServerNode(QGraphicsItemGroup):
     def _apply_visual_state(self):
         self._bg.setPen(self._state_pen())
 
-    # ── v1.5rc2 (ROADMAP task 2): the availability mark is a SHAPE ────────────────
+    # ── v1.5rc2: the availability mark is a SHAPE ─────────────────────────────────
 
     def _status_dot_path(self) -> QPainterPath:
         """The path of the availability mark for the CURRENT status.
@@ -884,7 +884,7 @@ class ServerNode(QGraphicsItemGroup):
     def _apply_status_dot(self):
         """Rebuild the mark: its SHAPE follows the status, its brush keeps the status colour.
 
-        v1.5rc3 (ROADMAP task 3): a STALE datum keeps the DECLARED SHAPE of its status but
+        v1.5rc3: a STALE datum keeps the DECLARED SHAPE of its status but
         is painted in the idle tone — the mark that means "no fresh information" (the same
         tone an unchecked card carries). The status itself is untouched, so the frame of
         the card keeps the online/warn/offline colour: the user sees WHAT was measured and
@@ -900,7 +900,7 @@ class ServerNode(QGraphicsItemGroup):
             self._status_dot.setBrush(
                 QBrush(self.STATUS_COLORS.get(self._status, self.COLOR_DOT_IDLE)))
 
-    # ── v1.5rc3 (ROADMAP task 3): how old the datum is ───────────────────────────
+    # ── v1.5rc3: how old the datum is ────────────────────────────────────────────
 
     def set_checked_at(self, timestamp: float, stale_after: float = 0.0) -> None:
         """Record WHEN this card's status was determined (epoch seconds) + the threshold.
@@ -910,7 +910,7 @@ class ServerNode(QGraphicsItemGroup):
         again from its freshness tick. `timestamp <= 0` means "never checked" (the idle
         card). Never raises — a repaint is cosmetic.
 
-        v1.5 (ROADMAP): an EMULATED status is not the result of a probe, so it can never
+        v1.5: an EMULATED status is not the result of a probe, so it can never
         carry an age — the timestamp is refused here (ONE place) and the freshness line
         stays empty, which is what keeps the demo from claiming a measurement.
         """
@@ -963,7 +963,7 @@ class ServerNode(QGraphicsItemGroup):
         Built here — not by the window — because it describes THIS card's datum; the
         i18n keys are `node.status.checked_now` / `node.status.checked_ago` ({minutes}).
 
-        v1.5 (ROADMAP): an EMULATED status answers "" — an age would be a lie about a
+        v1.5: an EMULATED status answers "" — an age would be a lie about a
         probe that never happened (the demo map's RFC 5737 addresses are never probed).
         """
         if self._checked_at <= 0.0 or self._status_emulated:
@@ -975,7 +975,7 @@ class ServerNode(QGraphicsItemGroup):
             return _t("node.status.checked_now")
         return _t("node.status.checked_ago", minutes=minutes)
 
-    # ── v1.5.3 (ROADMAP task 1): how old the COLLECTED FACTS are ─────────────────
+    # ── v1.5.3: how old the COLLECTED FACTS are ──────────────────────────────────
 
     def set_info_collected_at(self, timestamp) -> bool:
         """Record WHEN this card's collected facts were measured (epoch seconds).
@@ -1054,7 +1054,7 @@ class ServerNode(QGraphicsItemGroup):
         except RuntimeError:
             pass  # Qt teardown — the item is already destroyed
 
-    # ── v1.6.6 (ROADMAP task 7): the DATA mount of the collected facts ───────────
+    # ── v1.6.6: the DATA mount of the collected facts ────────────────────────────
 
     def _info_lines(self) -> list:
         """The info plaque's lines for the CURRENT data — the ONE builder both densities measure.
@@ -1218,7 +1218,7 @@ class ServerNode(QGraphicsItemGroup):
         except RuntimeError:
             pass  # Qt teardown — see _apply_info_tone
 
-    # ── v1.5.3 (ROADMAP task 3): why the status is what it is ────────────────────
+    # ── v1.5.3: why the status is what it is ─────────────────────────────────────
 
     def set_status_report(self, text: str) -> None:
         """Attach the sentence of the last on-demand reachability report to the card.
@@ -1235,7 +1235,7 @@ class ServerNode(QGraphicsItemGroup):
         """v1.5.3: the last reachability report of this card ("" — none was asked)."""
         return self._status_report
 
-    # ── v1.6.5 (ROADMAP task 5): the MANUAL result of an opt-in reachability check ────
+    # ── v1.6.5: the MANUAL result of an opt-in reachability check ─────────────────────
 
     def set_manual_report(self, text: str) -> None:
         """Attach the line of the last ON-DEMAND check the user asked for (v1.6.5).
@@ -1305,7 +1305,7 @@ class ServerNode(QGraphicsItemGroup):
         if getattr(self.data, "collapsed", False):
             self._update_appearance_collapsed()
             return
-        # v1.6 (ROADMAP task 2): the compact density — the alias, the host and the marks,
+        # v1.6: the compact density — the alias, the host and the marks,
         # no info plaque and no tag chip. A per-node COLLAPSE wins over the density: it is
         # the user's own single-card choice (a view state, §4.2).
         if self._is_compact():
@@ -1363,7 +1363,7 @@ class ServerNode(QGraphicsItemGroup):
 
         # Info block (line by line); full multi-line text — in the tooltip, if anything was shortened.
         # Under the MAX cap, short lines stay full — only overflow is cut.
-        # v1.5.3 (ROADMAP task 1): the tooltip is COMPOSED in ONE place (_apply_info_tooltip) —
+        # v1.5.3: the tooltip is COMPOSED in ONE place (_apply_info_tooltip) —
         # the full text when it was elided, plus the age of the datum.
         if info_lines:
             elided = []
@@ -1454,7 +1454,7 @@ class ServerNode(QGraphicsItemGroup):
         if hasattr(self, "_alias_font_expanded"):
             self._alias.setFont(QFont(self._alias_font_expanded))
 
-    # ── v1.6 (ROADMAP task 2): the CARD DENSITY ─────────────────────────────────
+    # ── v1.6: the CARD DENSITY ──────────────────────────────────────────────────
 
     def _is_compact(self) -> bool:
         """Is the ACTIVE card density the compact one? (read live, never cached)"""
@@ -1468,7 +1468,7 @@ class ServerNode(QGraphicsItemGroup):
         return self._density
 
     def sync_density(self) -> bool:
-        """Re-lay the card out when the ACTIVE density changed (v1.6, task 2).
+        """Re-lay the card out when the ACTIVE density changed (v1.6).
 
         Returns True when it really rebuilt. Called from `refresh_theme()` — the ONE walk
         a density switch travels (`MainWindow.apply_theme()` → `MapScene.refresh_theme()`
@@ -1511,7 +1511,7 @@ class ServerNode(QGraphicsItemGroup):
             self._alias.setFont(QFont(self._alias_font_expanded))
 
     def _update_appearance_compact(self):
-        """The COMPACT card: alias, host and the status marks — no info plaque (v1.6, task 2).
+        """The COMPACT card: alias, host and the status marks — no info plaque (v1.6).
 
         The plaque leaves the PAINT but never the MEASUREMENT: the width comes from the SAME
         content as the ordinary layout (`_info_lines()`), so this mode may not elide an
@@ -1674,7 +1674,7 @@ class ServerNode(QGraphicsItemGroup):
         is protected by prepareGeometryChange() in update_appearance().
 
         This rect IS "everything the item paints" (fit/zoom, the rubber band, the export).
-        The ANCHORS are `card_rect_scene()` (v1.4.2, task 4) — they must not move when
+        The ANCHORS are `card_rect_scene()` (v1.4.2) — they must not move when
         the shadow's blur changes.
         """
         return QRectF(-SHADOW_BLUR, -SHADOW_BLUR,
@@ -1682,7 +1682,7 @@ class ServerNode(QGraphicsItemGroup):
                       self._current_height + 2 * SHADOW_BLUR + SHADOW_DY)
 
     def card_rect(self) -> QRectF:
-        """v1.4.2 (ROADMAP task 4): the card WITHOUT the shadow halo — the anchor rect.
+        """v1.4.2: the card WITHOUT the shadow halo — the anchor rect.
 
         Until v1.4.1 the shadow was a 3 px strip below the card, so the boundingRect
         could double as the anchor of the arrows and of the pinned notes. With the halo
@@ -1781,7 +1781,7 @@ class ServerNode(QGraphicsItemGroup):
         status, so a changed detail updates the tooltip without restarting the pulse;
         an empty detail keeps the status-only tooltip of v0.7.1.
 
-        v1.5 (ROADMAP): `emulated` marks a status the DEMO MAP declared instead of
+        v1.5: `emulated` marks a status the DEMO MAP declared instead of
         measuring (`storage/example_project.DEMO_STATUSES`). An emulated status is drawn
         exactly like a real one — the same colour, the same declared shape — and is
         MARKED as emulated (the badge, the tooltip) and stripped of any age. ANY ordinary
@@ -1810,7 +1810,7 @@ class ServerNode(QGraphicsItemGroup):
         # timestamp altogether (`set_checked_at`).
         self._checked_at = 0.0
         self._stale = False
-        # v1.5.3 (ROADMAP task 3): a NEW status invalidates the old explanation — the
+        # v1.5.3: a NEW status invalidates the old explanation — the
         # on-demand report described the state that just changed ("why is it red?" answered
         # for a card that is now green would be a stale claim about the present).
         self._status_report = ""
@@ -1831,7 +1831,7 @@ class ServerNode(QGraphicsItemGroup):
         self._notify_group_aggregate()
 
     def _notify_group_aggregate(self) -> None:
-        """v1.5.4 (ROADMAP task 1): tell the MAP that this card's status changed.
+        """v1.5.4: tell the MAP that this card's status changed.
 
         A group paints an AGGREGATE of its members (the worst status + the counts) and
         reads the values LIVE at paint time, so the only thing a status change needs is a
@@ -1876,7 +1876,7 @@ class ServerNode(QGraphicsItemGroup):
             age = self.freshness_text()
             if age:
                 lines.append(age)
-        # v1.5.3 (ROADMAP task 3): the "why" of this status — the last on-demand
+        # v1.5.3: the "why" of this status — the last on-demand
         # reachability report. It joins the tooltip the status already owns (ONE home per
         # fact) and is dropped by the next probe result, which speaks about a NEW state.
         if self._status_report:
@@ -1955,10 +1955,10 @@ class ServerNode(QGraphicsItemGroup):
         self._stale = False
         # v1.5: and the EMULATED marker — the emulation is a property of the status
         self._status_emulated = False
-        # v1.5.3 (ROADMAP task 3): the reachability report explained THIS status — it goes
+        # v1.5.3: the reachability report explained THIS status — it goes
         # with it (a new host/port has never been diagnosed).
         self._status_report = ""
-        # v1.6.5 (ROADMAP task 5): and so does the manual check's line — it described the
+        # v1.6.5: and so does the manual check's line — it described the
         # state of a card that has just been re-defined.
         self._manual_report = ""
         self._apply_card_tooltip()
@@ -1968,7 +1968,7 @@ class ServerNode(QGraphicsItemGroup):
         self._apply_content_opacity()
         self._apply_badges()
         self._apply_visual_state()
-        # v1.5.4 (ROADMAP task 1): the card left every aggregate it belonged to
+        # v1.5.4: the card left every aggregate it belonged to
         self._notify_group_aggregate()
 
     def itemChange(self, change, value):

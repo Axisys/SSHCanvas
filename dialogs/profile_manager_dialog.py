@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 
-#: The FIXED mask of a stored password in the profile table (v1.6.1, ROADMAP task 6).
+#: The FIXED mask of a stored password in the profile table (v1.6.1).
 #: The cell still answers "a password is stored"; it deliberately does NOT answer HOW
 #: LONG it is — `"•" * len(password)` put the length of a keyring secret on the screen
 #: (and into every screenshot of the dialog), which the value mask alone cannot undo.
@@ -119,7 +119,7 @@ class ProfileManagerDialog(QDialog):
             try:
                 from i18n import t as __t
                 self.table.setHorizontalHeaderLabels([__t("profile.name"), __t("server.user"), __t("server.password")])
-            except Exception:
+            except Exception:  # noqa: BLE001 — optional import: a build without i18n keeps the headers
                 pass
         
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -170,7 +170,7 @@ class ProfileManagerDialog(QDialog):
             name_item = QTableWidgetItem(p.name)
             user_item = QTableWidgetItem(p.user)
             # The password lives in the keyring — loaded for display only (masked).
-            # v1.6.1 (task 6): a FIXED mask — the cell never reports the length.
+            # v1.6.1: a FIXED mask — the cell never reports the length.
             pw = get_profile_password(p.id) or ""
             pw_display = password_cell_text(pw, self.t)
             password_item = QTableWidgetItem(pw_display)

@@ -488,6 +488,7 @@
   "sftp.archive.extract_bomb": "Das Entpacken wurde vor dem ersten Byte gestoppt: das Archiv entfaltet sich zu {size} in {count} Einträgen — geschrieben werden bis zu {limit}",
   "sftp.archive.merge_facts": "Der Ordner wird zusammengeführt: eine gleichnamige Datei wird ersetzt, alle anderen bleiben erhalten",
   "sftp.search.row": "Text suchen…",
+  "sftp.search.tooltip": "Text in den Dateien dieses Ordners suchen",
   "sftp.search.title": "Text suchen",
   "sftp.search.needle": "Suchtext",
   "sftp.search.subfolders": "Unterordner einschließen",

@@ -160,7 +160,7 @@ def register_orphan_handshake(handshake) -> None:
     def _drop(_=None, h=handshake):
         try:
             _orphan_handshakes.remove(h)
-        except ValueError:
+        except ValueError:  # noqa: BLE001 — best effort (declared): a double finished
             pass  # already removed
     handshake.finished.connect(_drop)
 

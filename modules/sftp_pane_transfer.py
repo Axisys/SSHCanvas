@@ -129,7 +129,7 @@ class SftpPaneTransferMixin:
             # directory vanished / no permission) — the batch is dropped, the pane
             # reports the reason instead of uploading into nowhere.
             failed_dir = self._pending_lists.pop(task_id, None)
-            # v1.7.3 (task 2): the REMEMBERED directory may be the one that is gone — a restored
+            # v1.7.3: the REMEMBERED directory may be the one that is gone — a restored
             # path is a hint, so the pane says so and opens the shipped starting directory.
             if failed_dir and failed_dir == self._restore_dir:
                 self._restore_dir = ""
@@ -241,7 +241,7 @@ class SftpPaneTransferMixin:
             except (RuntimeError, AttributeError):
                 pass   # Qt teardown — the provider is already gone
 
-    # ── v1.3.3.2: the batch + the overwrite conflict (ROADMAP task 2) ────
+    # ── v1.3.3.2: the batch + the overwrite conflict ─────────────────────
 
     def _names_in_current_dir(self) -> set:
         """The names the CURRENT listing shows.
@@ -535,7 +535,7 @@ class SftpPaneTransferMixin:
         self._staged_deliveries.clear()
         return removed
 
-    # ── v1.7rc2: the remote copy / move of a batch (ROADMAP v1.7rc2) ─────
+    # ── v1.7rc2: the remote copy / move of a batch (v1.7rc2) ─────────────
 
     def _rows_for_batch(self) -> list:
         """The rows a copy/move batch acts on (v1.7rc2).

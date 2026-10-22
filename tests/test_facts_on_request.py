@@ -69,11 +69,11 @@ DEVICE_KEYS = (
     "node.disk_devices", "status.disk_device_missing",
 )
 
-# The colleagues' two measured hosts (the ROADMAP's own numbers): the root is 9.8 G on BOTH,
+# The colleagues' two measured hosts (their real numbers): the root is 9.8 G on BOTH,
 # while `/opt` (an LVM logical volume, `/dev/mapper/optvg-optlv`, ext4) carries 59 G with 48 G
 # free on one and 79 G with 45 G free on the other.
 _DF_HEADER = "Filesystem Type 1B-blocks Avail Mounted on"
-# 9.8 G of capacity and 4.5 G free — the ROADMAP's own root figure (bytes_to_gb → "9.8 gb").
+# 9.8 G of capacity and 4.5 G free — the measured root figure (bytes_to_gb → "9.8 gb").
 _ROOT_ROW = "/dev/mapper/rootvg-rootlv ext4 10522669875 4831838208 /"
 _HOST_A_ROW = "/dev/mapper/optvg-optlv ext4 63350767616 51539607552 /opt"
 _HOST_B_ROW = "/dev/mapper/optvg-optlv ext4 84825604096 48318382080 /opt"
@@ -113,7 +113,7 @@ class RoundRecorder(StatusChecker):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the sentinel and its reader (task 1) ==")
+print("== §1 the sentinel and its reader ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§1 the sentinel is the DECLARED zero (one setting keeps one home, no second key)",
@@ -167,7 +167,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 the checker's live switch (task 2) ==")
+print("== §2 the checker's live switch ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 chk = StatusChecker(interval_ms=30_000, probe_timeout=0.2)
@@ -255,7 +255,7 @@ chk4.shutdown()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 the doors and the words (task 3) ==")
+print("== §3 the doors and the words ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _rec = RoundRecorder()
@@ -350,7 +350,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the two-mount read (task 4) ==")
+print("== §4 the two-mount read ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§4 the request has ONE home and a DECLARED default",
@@ -501,7 +501,7 @@ check("§4 the collector names the refusal in its own report (the activity histo
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 the model (task 5) ==")
+print("== §5 the model ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§5 the four optional strings exist with the declared defaults",
@@ -606,7 +606,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the dialog (task 6) ==")
+print("== §6 the dialog ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 dlg4 = AddServerDialog()
@@ -659,7 +659,7 @@ dlg6.close()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §7 the card and the table (task 7) ==")
+print("== §7 the card and the table ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 from graphics.server_node import ServerNode  # noqa: E402
@@ -1035,7 +1035,7 @@ check("§9 the i18n pin counts the SHIPPED release (811 + 17 of v1.6.7 + 13 of v
       " delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of"
       " a move that would cross the two sources, and v1.8 adds TWENTY: the elevated pane and the"
       " 41 of v1.8.1: the trust surface; v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check("§9 the ELEVEN new keys are present and non-empty in every language",

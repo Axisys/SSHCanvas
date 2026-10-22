@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Bidirectional arrows (v1.2.6, ROADMAP task 1).
+"""Bidirectional arrows (v1.2.6).
 
 The geometry: arrowheads on BOTH ends of the curve, with the tips exactly on the borders of the nodes and
 each arrowhead pointing AT ITS node (←——→), while in standard mode the second path stays empty (the item
@@ -64,7 +64,7 @@ bi = sc.add_connection("bc03", "bd04", "two-way", "vpn", bidirectional=True)
 check("scene.add_connection(bidirectional=True) sets the flag",
       bi is not None and bi.bidirectional is True)
 
-# v1.4.2 (ROADMAP task 4): the arrow heads sit on the CARD rect (`card_rect_scene()`),
+# v1.4.2: the arrow heads sit on the CARD rect (`card_rect_scene()`),
 # not on the shadow halo-inflated boundingRect.
 rect_c, rect_d = nc.card_rect_scene(), nd.card_rect_scene()
 src_head = bi._arrow_head_src.path()

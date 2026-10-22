@@ -16,7 +16,7 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.6.5 (ROADMAP task 4): the ONE gate of an unmanaged card
+try:  # v1.6.5: the ONE gate of an unmanaged card
     from ..ui.unmanaged import refusal_text as _refusal_text
 except ImportError:
     try:
@@ -85,12 +85,12 @@ class AddServerDialog(QDialog):
         # of the server would reset the configured entries (ServerData.quick_launch).
         self._quick_launch_entries = [dict(e) for e in sanitize_quick_launch(
             getattr(edit_data, "quick_launch", None))] if edit_data is not None else []
-        # v1.6.5 (ROADMAP task 1): the KNOB of the unmanaged card. The checkbox owns the
+        # v1.6.5: the KNOB of the unmanaged card. The checkbox owns the
         # visible state; `_credential_stash` keeps what the disabled credential fields held
         # so that unchecking the box really gives them BACK (clearing without a stash would
         # silently destroy what the user had already typed).
         self._credential_stash: Optional[dict] = None
-        # v1.6.5 (ROADMAP task 5): the OPT-IN ICMP check of an unmanaged card — it is only
+        # v1.6.5: the OPT-IN ICMP check of an unmanaged card — it is only
         # meaningful while the box above is ticked, and it is OFF for a new card.
         self._unmanaged_ping_enabled = False
         
@@ -157,7 +157,7 @@ class AddServerDialog(QDialog):
                 from i18n import t as __t2
                 self.profile_label = QLabel(__t2("profile.selector_label"))
                 profile_section.addRow("", self.profile_label)
-            except Exception:
+            except Exception:  # noqa: BLE001 — optional import: a build without i18n keeps the field
                 pass
         profile_section.addRow("", combo_hbox)
 
@@ -178,7 +178,7 @@ class AddServerDialog(QDialog):
         main_layout.addWidget(sep)
         main_layout.addSpacing(6)
 
-        # ── Server properties: FOUR declared sections (v1.9.7, ROADMAP task 4) ──
+        # ── Server properties: FOUR declared sections (v1.9.7) ──
         # Sixteen flat rows became four named groups, so the critical path (who the card is, then
         # the connection it needs) is reachable in one pass. The order is the reading order: the
         # form is grouped, never re-ordered, and the profile block above keeps its place.
@@ -202,7 +202,7 @@ class AddServerDialog(QDialog):
             self.t("server.user_hint") if self._i18n_available else "e.g. root")
         self.password = QLineEdit()
         # The password field deliberately carries NO placeholder: a hint that vanishes on focus,
-        # inside a masked field, reads worse than no hint at all (ROADMAP task 3).
+        # inside a masked field, reads worse than no hint at all.
         self.password.setEchoMode(QLineEdit.Password)
         self.key_path = QLineEdit()
         self.key_path.setPlaceholderText(
@@ -210,7 +210,7 @@ class AddServerDialog(QDialog):
         self.port = QSpinBox()
         self.port.setValue(22)
         self.port.setRange(1, 65535)
-        # v1.12.3 (ROADMAP task 2): the JUMP HOST — the `-J` value the EXTERNAL terminal uses
+        # v1.12.3: the JUMP HOST — the `-J` value the EXTERNAL terminal uses
         # (`AGENTS.md` §4.4.2). One optional field of the credential family: it is disabled and
         # cleared for an unmanaged card, exactly like the login beside it.
         self.jump_host = QLineEdit()
@@ -218,7 +218,7 @@ class AddServerDialog(QDialog):
             self.t("server.jump_hint") if self._i18n_available else "e.g. user@bastion:22")
 
         # The two fields that identify the card carry the REQUIRED marker; the placeholder is a
-        # hint, never a substitute for the label (ROADMAP task 3).
+        # hint, never a substitute for the label.
         self.identity_form.addRow(self._required_label("server.alias"), self.alias)
         self.identity_form.addRow(self._required_label("server.host"), self.host)
 
@@ -265,7 +265,7 @@ class AddServerDialog(QDialog):
         # from (`ProxyJump`), so the value that arrives from `~/.ssh/config` is recognisable here.
         self.connection_form.addRow(self.t("server.jump_label"), self.jump_host)
 
-        # v1.9.7 (ROADMAP task 4): the footer says what its buttons DO — `Save` closes and writes,
+        # v1.9.7: the footer says what its buttons DO — `Save` closes and writes,
         # `Save & connect` names the second action's promise in its tooltip.
         self.ssh_connect_btn = QPushButton(
             self.t("ssh.connect") if self._i18n_available else "Connect via SSH")
@@ -401,7 +401,7 @@ class AddServerDialog(QDialog):
         btn_row.addWidget(btns)
         main_layout.addLayout(btn_row)
 
-        # v1.6.5 (ROADMAP tasks 1/5): the FORM opens in the state the two checkboxes say —
+        # v1.6.5: the FORM opens in the state the two checkboxes say —
         # a NEW card is managed, so the credential family is editable and the opt-in ping is
         # disabled (it only means something for an unmanaged card). Applied ONCE here, after
         # every widget the state touches exists; `_load_data()` re-applies it for an edit.
@@ -441,7 +441,7 @@ class AddServerDialog(QDialog):
         return self.t("btn.save_and_connect") if self._i18n_available else "Save & connect"
 
     def _on_unmanaged_toggled(self, checked: bool) -> None:
-        """v1.6.5 (ROADMAP task 1): the kind of the card changed.
+        """v1.6.5: the kind of the card changed.
 
         Ticking the box TAKES the credentials away — the four fields are cleared (they
         would otherwise be written to the keyring by the save path) and kept in
@@ -543,7 +543,7 @@ class AddServerDialog(QDialog):
         """When user selects a profile from the combo → auto-fill user + password."""
         if index <= 0 or not self._profiles:
             return  # manual-input item selected, keep current values
-        # v1.6.5 (ROADMAP task 1): an unmanaged card has no credentials to fill in — the
+        # v1.6.5: an unmanaged card has no credentials to fill in — the
         # selector is disabled for it, and this guard keeps a programmatic setCurrentIndex
         # from sneaking a login into the two fields.
         if self.unmanaged.isChecked():
@@ -621,21 +621,21 @@ class AddServerDialog(QDialog):
         self.ip.setText(d.ip)
         self.comment.setText(d.comment)
         self.tags_edit.setText(", ".join(getattr(d, "tags", None) or []))  # v0.9.4
-        # v1.6.6 (ROADMAP task 6): the data mount — the REQUEST and the measured ANSWER, each in
+        # v1.6.6: the data mount — the REQUEST and the measured ANSWER, each in
         # its own field (a refused mount left the three answers empty in the model, so the dialog
         # shows exactly what was measured and nothing that was declined).
         self.disk_mount.setText(getattr(d, "disk_mount", "") or "")
         self.disk_path.setText(getattr(d, "disk_path", "") or "")
         self.disk_free.setText(getattr(d, "disk_free", "") or "")
         self.disk_size.setText(getattr(d, "disk_size", "") or "")
-        # v1.7.1.2 (ROADMAP task 4): the device row — the LIST the last collection read becomes the
+        # v1.7.1.2: the device row — the LIST the last collection read becomes the
         # combo's items and the stored REQUEST its text (an unmatched name is typed, not invented).
         self.disk_device.clear()
         for _label in (getattr(d, "disk_devices", None) or []):
             self.disk_device.addItem(str(_label))
         self.disk_device.setCurrentText(getattr(d, "disk_device", "") or "")
 
-        # v1.6.5 (ROADMAP tasks 1/5): the kind of the card. The box is set BEFORE the state
+        # v1.6.5: the kind of the card. The box is set BEFORE the state
         # is applied (a programmatic setChecked fires `toggled`, which would stash and clear
         # the credentials that `_load_data` has just put in — so the stash is discarded and
         # the state applied ONCE, explicitly, after the two flags are in).
@@ -654,7 +654,7 @@ class AddServerDialog(QDialog):
 
     def get_data(self) -> ServerData:
         sid = self._data.id if self._data else str(uuid.uuid4())[:8]
-        # v1.6.5 (ROADMAP tasks 1/5): an UNMANAGED card carries NO credentials and NO port
+        # v1.6.5: an UNMANAGED card carries NO credentials and NO port
         # of its own, whatever the widgets happen to hold (they are disabled and cleared,
         # but a programmatic path must not be able to sneak a login into the model — the
         # save path writes `node.data.password` into the keyring). The opt-in ICMP flag is
@@ -671,7 +671,7 @@ class AddServerDialog(QDialog):
             password="" if unmanaged else self.password.text(),  # plaintext from UI (server credentials are per-server)
             key_path="" if unmanaged else self.key_path.text(),
             ssh_port=22 if unmanaged else self.port.value(),
-            # v1.12.3 (ROADMAP task 2): a card with no SSH access carries no jump host either — the
+            # v1.12.3: a card with no SSH access carries no jump host either — the
             # same rule the login beside it obeys.
             jump_host="" if unmanaged else self.jump_host.text().strip(),
             x=self._data.x if self._data else 0,
@@ -685,7 +685,7 @@ class AddServerDialog(QDialog):
             cpu=self.cpu.text(),
             ram=self.ram.text(),
             disk=self.disk.text(),
-            # v1.6.6 (ROADMAP task 5/6): the DATA-mount family. The REQUEST and the ANSWER are
+            # v1.6.6: the DATA-mount family. The REQUEST and the ANSWER are
             # separate fields on purpose — what the user asked to measure beside what `df`
             # really answered — and they stay user-editable like the rest of the collected
             # fields (`ram` / `disk`).
@@ -693,7 +693,7 @@ class AddServerDialog(QDialog):
             disk_path=self.disk_path.text().strip(),
             disk_free=self.disk_free.text().strip(),
             disk_size=self.disk_size.text().strip(),
-            # v1.7.1.2 (ROADMAP task 4/6): the device REQUEST and the LIST the collection read.
+            # v1.7.1.2: the device REQUEST and the LIST the collection read.
             # The choice is the NAME alone — a combo row reads "sdb 100 gb", and the first word of
             # a device label is the name, so the figure the user sees never enters the model.
             disk_device=self._device_name(),

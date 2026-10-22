@@ -33,7 +33,7 @@ try:  # the export header names the product — the name has ONE home (version.p
 except ImportError:
     from version import APP_NAME
 
-try:  # v1.4.4 (ROADMAP task 3): the motion standards — the node scale-in
+try:  # v1.4.4: the motion standards — the node scale-in
     from ..ui import motion
 except ImportError:
     try:
@@ -91,7 +91,7 @@ def dependency_ids(pairs, start) -> List[str]:
 class MapScene(QGraphicsScene):
     """The main map scene."""
 
-    # v1.4.4 (ROADMAP task 4): the HOVER FOCUS of a connection arrow.
+    # v1.4.4: the HOVER FOCUS of a connection arrow.
     # The scene owns the STATE (the arrows live here, and only the scene knows when one
     # dies while it is hovered — `remove_connection`/`remove_server` clear it), while
     # `MainWindow` stays the ONE owner of the resulting dim (`_apply_map_dimming` merges
@@ -99,7 +99,7 @@ class MapScene(QGraphicsScene):
     hover_focus_changed = Signal(object)
 
     # v1.2.4: anchor attachment of a note — the note's top-left corner = the node's
-    # top-right corner + an offset (ROADMAP "top-right corner + 12px")
+    # top-right corner + an offset (`NOTE_ANCHOR_OFFSET_*`, declared once)
     NOTE_ANCHOR_OFFSET_X = 12.0
     NOTE_ANCHOR_OFFSET_Y = 12.0
 
@@ -138,7 +138,7 @@ class MapScene(QGraphicsScene):
         self._grid_min_screen_px = float(self._grid_size) * 0.8   # 16 px
         self._grid_major_every = 5
 
-    # ── The grid colours (v1.4.3, ROADMAP task 5) ────────────────────────────
+    # ── The grid colours (v1.4.3) ────────────────────────────
     # Properties, not `__init__` attributes: the pre-v1.4.3 scene cached two
     # QColor objects at construction time, so a theme switch could never reach
     # them. `drawBackground` reads them on every repaint, which is exactly the
@@ -250,7 +250,7 @@ class MapScene(QGraphicsScene):
         return list(self._groups)
 
     def refresh_group_aggregates(self, node=None) -> int:
-        """v1.5.4 (ROADMAP task 1): repaint the groups whose aggregate just changed.
+        """v1.5.4: repaint the groups whose aggregate just changed.
 
         The aggregate itself is read LIVE from the members at paint time (no cache to
         invalidate), so the ONE thing a status change needs is a repaint — otherwise a
@@ -334,7 +334,7 @@ class MapScene(QGraphicsScene):
         # (the geometric invariant — see resync_group_members). Cheap: only when groups exist.
         if self._groups:
             self.resync_group_members()
-        # v1.4.4 (ROADMAP task 3): the node APPEARS — a 200 ms scale-in (scale 0.9 → 1.0 +
+        # v1.4.4: the node APPEARS — a 200 ms scale-in (scale 0.9 → 1.0 +
         # a fade) driven by `ui/motion.py` on the item's OWN properties. Only the ADD paths
         # ask for it (`CmdAddRemoveNode`/`CmdAddRemoveNodeBatch`); a project load, an
         # import of a saved map and a test fixture stay instant.
@@ -362,7 +362,7 @@ class MapScene(QGraphicsScene):
                 getattr(a, 'deleteLater', lambda: None)()  # v0.9.3 fix: we drop the C++ object (otherwise a leak until the end of the session)
                 self._arrows.remove(a)
             if arrows_to_remove:
-                # v1.6 (ROADMAP task 3): the pairs that lost a link renumber (the fan
+                # v1.6: the pairs that lost a link renumber (the fan
                 # follows, exactly as in remove_connection()).
                 self.refresh_connection_offsets()
             # v1.2.4 (D7): a safety net — the attached notes are detached, the lines are removed
@@ -383,7 +383,7 @@ class MapScene(QGraphicsScene):
         v1.2.6: bidirectional — arrowheads on both ends (optional; the default
         False — a standard one-way arrow, as before v1.2.6).
 
-        **v1.6 (ROADMAP task 3): a SECOND link between the same pair is CREATED, not
+        **v1.6: a SECOND link between the same pair is CREATED, not
         refused.** The old guard (`has_connection` per direction) dropped it in silence:
         the caller saw no arrow and no error, and the same gesture in the reverse
         direction worked — the colleagues' "between some servers it connects, between
@@ -409,7 +409,7 @@ class MapScene(QGraphicsScene):
                 return True
         return False
 
-    # ── v1.6 (ROADMAP task 3): the parallel links of ONE endpoint pair ──────────
+    # ── v1.6: the parallel links of ONE endpoint pair ──────────
 
     @staticmethod
     def connection_pair_key(source_id, target_id) -> tuple:
@@ -422,7 +422,7 @@ class MapScene(QGraphicsScene):
         return (first, second) if first <= second else (second, first)
 
     def refresh_connection_offsets(self) -> int:
-        """Give every arrow its index inside its endpoint pair (v1.6, task 3).
+        """Give every arrow its index inside its endpoint pair (v1.6).
 
         The ONE owner of the numbering: called whenever the set of links changes (a link
         added or removed, a card removed with its links), so an application path can
@@ -450,7 +450,7 @@ class MapScene(QGraphicsScene):
         return moved
 
     def pair_arrows(self, source_id, target_id) -> List[ConnectionArrow]:
-        """Every link between this endpoint pair, in the offset order (v1.6, task 3)."""
+        """Every link between this endpoint pair, in the offset order (v1.6)."""
         key = self.connection_pair_key(source_id, target_id)
         return [a for a in self._arrows
                 if self.connection_pair_key(a.source.data.id, a.target.data.id) == key]
@@ -467,13 +467,13 @@ class MapScene(QGraphicsScene):
             self.removeItem(arrow)
             getattr(arrow, 'deleteLater', lambda: None)()  # v0.9.3 fix: the C++ object must not live until the scene's death (deleteLater is available on QObject subclasses)
             self._arrows.remove(arrow)
-            # v1.6 (ROADMAP task 3): the surviving links of the pair close the gap the
+            # v1.6: the surviving links of the pair close the gap the
             # removed one leaves (the fan is renumbered in ONE place).
             self.refresh_connection_offsets()
             return True
         return False
 
-    # ── v1.4.4 (ROADMAP task 4): the arrow hover focus ─────────────────────
+    # ── v1.4.4: the arrow hover focus ─────────────────────
 
     def hover_focus_arrow(self) -> Optional[ConnectionArrow]:
         """The arrow under the cursor (the hover focus), or None."""
@@ -584,7 +584,7 @@ class MapScene(QGraphicsScene):
         does not jump into the corner (an attached note can be moved).
         Idempotent by id match; False — if the arguments are not on this scene.
 
-        v1.4.2 (ROADMAP task 4): the anchor is the node's CARD rect
+        v1.4.2: the anchor is the node's CARD rect
         (`card_rect_scene()`), not the painted boundingRect — otherwise the note would
         hang 9 px off the card now that the drop-shadow is a halo on all four sides.
         """
@@ -618,7 +618,7 @@ class MapScene(QGraphicsScene):
         """the note is moved/resized with the mouse (dragUpdated) — an attached
         one stays attached: the offset from the anchor is recomputed, the anchor line
         follows live. A free note / no living node — a no-op.
-        v1.4.2: the anchor rect is the node's CARD (`card_rect_scene()` — task 4)."""
+        v1.4.2: the anchor rect is the node's CARD (`card_rect_scene()`)."""
         if note is None or not getattr(note, "server_id", None):
             return
         node = self._nodes.get(note.server_id)
@@ -649,7 +649,7 @@ class MapScene(QGraphicsScene):
     def _place_note_at_anchor(self, note, node):
         """The note position = the node anchor (the card's top-right corner + a 12 px
         offset, D2) + the note's anchor_offset (it can be moved — the
-        offset is kept). v1.4.2: the anchor rect is `card_rect_scene()` (task 4)."""
+        offset is kept). v1.4.2: the anchor rect is `card_rect_scene()`."""
         r = node.card_rect_scene()
         ox, oy = getattr(note, "anchor_offset", (0.0, 0.0))
         note.prepareGeometryChange()  # QGraphicsProxyWidget — without this there are artifacts
@@ -672,7 +672,7 @@ class MapScene(QGraphicsScene):
     def _update_note_anchor_line(self, note, node):
         """A straight path from the note edge to the node edge via two edge_point calls (D3).
         v1.4.2: the node end uses the CARD rect (`card_rect_scene()`) — the anchor line
-        ends on the card, not on its shadow halo (ROADMAP task 4)."""
+        ends on the card, not on its shadow halo."""
         line = self._note_anchor_lines.get(getattr(note, "note_id", None))
         if line is None:
             return
@@ -702,7 +702,7 @@ class MapScene(QGraphicsScene):
         The nodes already lying under the frame automatically become members (resync).
         An id collision — regenerate (the add_server/add_note pattern), the entry is not lost.
 
-        v1.4.2 (ROADMAP task 5): `collapsed` + the pre-fold frame size are the FOLD state
+        v1.4.2: `collapsed` + the pre-fold frame size are the FOLD state
         (`NodeGroup.__init__`); a folded group is created with the flag only — its member
         badges arrive from the file with their own saved positions, so nothing is re-laid out.
         """
@@ -722,7 +722,7 @@ class MapScene(QGraphicsScene):
             expanded_width=expanded_width, expanded_height=expanded_height)
         self.addItem(grp)
         self._groups.append(grp)
-        self.resync_group_members()  # auto-capture of the nodes under the frame (task v0.8.1 #2)
+        self.resync_group_members()  # auto-capture of the nodes under the frame
         return grp
 
     def remove_group(self, group: NodeGroup) -> bool:
@@ -794,7 +794,7 @@ class MapScene(QGraphicsScene):
 
         desired = {}  # node_id -> NodeGroup | None (one per node — the topmost group)
         for nid, node in list(self._nodes.items()):
-            # v1.4.2 (ROADMAP task 4): the membership test uses the CARD rect
+            # v1.4.2: the membership test uses the CARD rect
             # (card_rect_scene()) — the shadow halo must not count as the card, and the
             # halo-inflated rect would also shift the centre by SHADOW_DY/2.
             r = QRectF(node_overrides[nid]) if (node_overrides and nid in node_overrides) \
@@ -893,7 +893,7 @@ class MapScene(QGraphicsScene):
         are drawn via drawBackground (CANVAS_BG + the lines) — QGraphicsScene.render calls it,
         so the export looks like the interactive view (behavior since v0.9.1).
 
-        **v1.5rc2 (ROADMAP task 3): `palette` decides the LOOK of the export and
+        **v1.5rc2: `palette` decides the LOOK of the export and
         defaults to `theme.PALETTE_PRINT`** — an export must not print a dark page, so
         a DARK window exports the LIGHT page with the high-contrast lines by default;
         `theme.PALETTE_THEME` keeps the current look (the opt-out of the export
@@ -919,7 +919,7 @@ class MapScene(QGraphicsScene):
             painter.end()
             return pixmap
 
-    # ── v1.5.1 (ROADMAP task 2): the fixed-frame documentation poster ────────────
+    # ── v1.5.1: the fixed-frame documentation poster ────────────
 
     def render_frame_to_pixmap(self, scale: float = None, padding: float = None,
                                frame_w: float = None, frame_h: float = None,
@@ -949,8 +949,7 @@ class MapScene(QGraphicsScene):
         available for a caller that wants a printable one. The caller's palette is handed
         to the scoped `export_palette()` swap exactly like in `render_to_pixmap`, so an
         empty map, a DARK window and a palette override all go down the same path. The
-        size is DETERMINISTIC: the same scene renders the same pixel size twice (the
-        acceptance of the ROADMAP task).
+        size is DETERMINISTIC: the same scene renders the same pixel size twice.
         """
         from PySide6.QtGui import QPixmap, QColor
 
@@ -1012,7 +1011,7 @@ class MapScene(QGraphicsScene):
         center = box.center()
         return QRectF(center.x() - vis_w / 2.0, center.y() - vis_h / 2.0, vis_w, vis_h)
 
-    # ── v1.5rc2 (ROADMAP task 3): the PRINT-FRIENDLY export palette ──────────────
+    # ── v1.5rc2: the PRINT-FRIENDLY export palette ──────────────
 
     @contextmanager
     def export_palette(self, palette=theme.PALETTE_PRINT):
@@ -1043,7 +1042,7 @@ class MapScene(QGraphicsScene):
             theme.set_theme(previous)
             self._refresh_items_theme()
 
-    # ── v1.4.2 (ROADMAP task 3): the shadow halos of the cards ────────────────────
+    # ── v1.4.2: the shadow halos of the cards ────────────────────
 
     def set_shadows_visible(self, visible: bool):
         """Show/hide every card's shadow halo (v1.4.2) — the vector export needs it OFF.
@@ -1081,12 +1080,12 @@ class MapScene(QGraphicsScene):
         Returns the file size in bytes. Raises OSError if the paint device did not
         start or the file was not created (the render_to_pdf error contract).
 
-        v1.4.2 (ROADMAP task 3): the cards' shadow halos are HIDDEN while the scene is
+        v1.4.2: the cards' shadow halos are HIDDEN while the scene is
         rendered — they are cached pixmaps, and `QSvgGenerator` would embed them as
         base64 PNGs, i.e. the "vector" member of the format set would stop being vector.
         PNG/PDF keep the halo (raster formats).
 
-        v1.5rc2 (ROADMAP task 3): `palette` decides the look and defaults to the
+        v1.5rc2: `palette` decides the look and defaults to the
         PRINT-FRIENDLY one (the LIGHT page with the high-contrast lines); a PNG/PDF/SVG
         export of a DARK window therefore leaves a light page, and `PALETTE_THEME` is
         the opt-out the export dialog offers. The swap is scoped (`export_palette`).
@@ -1152,7 +1151,7 @@ class MapScene(QGraphicsScene):
         whose long side is `PDF_PAGE_LONG_SIDE_PT` (1200 pt ≈ 42 cm) and whose short side
         follows the map's proportions — so the map fills the page, without A4 "stripes".
 
-        **v1.5rc2 (ROADMAP task 3):** `palette` is handed straight to `render_to_pixmap`,
+        **v1.5rc2:** `palette` is handed straight to `render_to_pixmap`,
         so the page is PRINT-FRIENDLY by default (a DARK window prints the LIGHT page
         with the high-contrast lines) and `theme.PALETTE_THEME` keeps the current look.
 
@@ -1192,7 +1191,7 @@ class MapScene(QGraphicsScene):
         try:  # Qt 6.11+ (PySide6 6.11): QPdfPrinter was replaced by QPdfWriter
             from PySide6.QtGui import QPdfWriter as _PdfDevice
             device = _PdfDevice(path)
-        except ImportError:  # older Qt 6.x — the original ROADMAP v0.9.9.7 plan
+        except ImportError:  # older Qt 6.x — no QPdfWriter
             from PySide6.QtGui import QPdfPrinter as _PdfDevice
             device = _PdfDevice()
             device.setOutputFileName(path)

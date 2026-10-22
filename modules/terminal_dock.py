@@ -22,15 +22,15 @@ try:
 except ImportError:
     from modules.terminal_page import TerminalSessionPage
 
-# v1.7rc1 (ROADMAP v1.7rc1, task 3): the Files Commander control of the tab-bar corner —
-# the SAME widget the standalone terminal window uses. v1.7.2 (task 2): the corner also
+# v1.7rc1: the Files Commander control of the tab-bar corner —
+# the SAME widget the standalone terminal window uses. v1.7.2: the corner also
 # carries the SPLIT button, because the dock is a container too.
 try:
     from .sftp_tab import CommanderCorner
 except ImportError:
     from modules.sftp_tab import CommanderCorner
 
-# v1.6.4 (ROADMAP task 4): the ACTIVITY mark of an inactive session — the SAME renderer the
+# v1.6.4: the ACTIVITY mark of an inactive session — the SAME renderer the
 # terminal window uses (the page module owns it, both containers call it). v1.9.1: the session
 # rows (Reconnect / Attach tmux) are shared the same way — ONE state rule, two surfaces.
 try:
@@ -40,14 +40,14 @@ except ImportError:
     from modules.terminal_page import (add_session_actions, ask_tmux_name,
                                        refresh_session_activity, render_session_activity)
 
-# v1.7.2 (ROADMAP v1.7.2, task 2): the SPLIT — ONE controller for both containers, and the
+# v1.7.2: the SPLIT — ONE controller for both containers, and the
 # parent-chain hook lookup that reaches `MainWindow._adopt_split_session` through the dock.
 try:
     from .terminal_split import TerminalSplit, find_host_hook, CONTAINER_DOCK
 except ImportError:
     from terminal_split import TerminalSplit, find_host_hook, CONTAINER_DOCK
 
-# v1.3 (ROADMAP v1.3): the "Terminal Macros" panel — the same one as in
+# v1.3: the "Terminal Macros" panel — the same one as in
 # SSHTerminalWindow (a single config key ui_cmdlib_collapsed for both containers).
 try:
     from .command_library import CommandLibraryPanel
@@ -59,7 +59,7 @@ try:  # v1.2.5: central theme (status labels — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from ..ui import theme_qss
 except ImportError:
     try:
@@ -86,7 +86,7 @@ class TerminalDockContent(QWidget):
     """v1.2.2: session container for the "Terminals" dock (a QTabWidget of pages).
 
     Composition: the vertical `QSplitter [session_tabs | split_host]` of the SAME controller the
-     standalone window builds (v1.7.2, task 2) + a status line (`status_label` + `sftp_progress`).
+     standalone window builds (v1.7.2) + a status line (`status_label` + `sftp_progress`).
      Pages are created with parent=session_tabs (destroyed together with the container) and bound to
      the content via set_host_window(self) — the page's close_terminal() calls close_page(self), i.e.
      the same path as in SSHTerminalWindow (v1.2.1). The split PANE is an ordinary page built
@@ -113,7 +113,7 @@ class TerminalDockContent(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # v1.2.2 (task 2): a QTabWidget of TerminalSessionPage — each tab = one
+        # v1.2.2: a QTabWidget of TerminalSessionPage — each tab = one
         # SSH session; tabs are closable: closing a tab = cleanup of the LOCAL page.
         self.session_tabs = QTabWidget()
         self.session_tabs.setTabsClosable(True)
@@ -125,7 +125,7 @@ class TerminalDockContent(QWidget):
         self.session_tabs.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.session_tabs.tabBar().customContextMenuRequested.connect(self._on_tab_context_menu)
 
-        # v1.7.2 (task 2): the DOCK's split — the SAME construct as the window's, so the session
+        # v1.7.2: the DOCK's split — the SAME construct as the window's, so the session
         # area is `V[session_tabs | split_host]` here too. The dock has no close of its own, so the
         # controller writes the two shared keys on the gesture (the `ui_cmdlib_collapsed` rule).
         self.split = TerminalSplit(self, persist_toggle=True)
@@ -133,8 +133,8 @@ class TerminalDockContent(QWidget):
         self._v_splitter = self.split.splitter
         self.act_split, self.btn_split = self.split.build_action()
 
-        # v1.7rc1 (ROADMAP v1.7rc1, task 3): the Files Commander control in the corner of the
-        # dock's tab bar, with the split BUTTON beside it (v1.7.2, task 2: the dock is a
+        # v1.7rc1: the Files Commander control in the corner of the
+        # dock's tab bar, with the split BUTTON beside it (v1.7.2: the dock is a
         # container too). The mode a session shows is the SESSION's (`SftpTab.commander`), kept
         # in step by `_sync_commander()`.
         self.commander = CommanderCorner(self, split_button=self.btn_split)
@@ -168,7 +168,7 @@ class TerminalDockContent(QWidget):
         # progress on the right (hidden when there are no transfers).
         row = QHBoxLayout()
         self.status_label = QLabel("")
-        # v1.4.3 (ROADMAP task 4): the style comes from the ONE registry
+        # v1.4.3: the style comes from the ONE registry
         # (ui/theme_qss.py) — the constructor and refresh_theme() share it.
         if theme_qss is not None:
             self.status_label.setStyleSheet(theme_qss.style("status.sftp_row"))
@@ -186,10 +186,10 @@ class TerminalDockContent(QWidget):
         self._status_tokens = itertools.count()   # token-guard for label auto-clear
         self._status_token = None
 
-    # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
+    # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to the dock content.
+        """v1.4.3: re-apply the theme to the dock content.
 
         The container's own status label plus every session it holds (the pages
         own their canvases, status lines, SFTP tabs and find bars). Never raises.
@@ -209,10 +209,10 @@ class TerminalDockContent(QWidget):
                 continue
             except Exception:  # noqa: BLE001 — one session must not stop the rest
                 continue
-        # v1.6.4 (ROADMAP task 4): the activity mark is a PIXMAP — a VALUE (§4.6): re-render it
+        # v1.6.4: the activity mark is a PIXMAP — a VALUE (§4.6): re-render it
         # in the new theme tone instead of keeping the old colour on the tab.
         refresh_session_activity(self)
-        # v1.9.8 (task 3): the corner's two controls (the split button and the Files Commander).
+        # v1.9.8: the corner's two controls (the split button and the Files Commander).
         for corner in (getattr(self, "split", None), getattr(self, "commander", None)):
             hook = getattr(corner, "refresh_theme", None)
             if callable(hook):
@@ -242,14 +242,14 @@ class TerminalDockContent(QWidget):
                 page.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the page is already destroyed
-        # v1.6.4 (ROADMAP task 4): the activity mark's TOOLTIP is translated text — re-render
+        # v1.6.4: the activity mark's TOOLTIP is translated text — re-render
         # the tabs so an inactive session's sentence follows the language switch.
         refresh_session_activity(self)
         # v1.7rc1: the Files Commander control of the corner (its label and its tooltip).
         commander = getattr(self, "commander", None)
         if commander is not None:
             commander.retranslate()
-        # v1.7.2 (task 2): the dock's own split action and its corner button.
+        # v1.7.2: the dock's own split action and its corner button.
         self.split.retranslate()
         # v1.3.3.1: the "Terminal macros" panel belongs to the CONTAINER (the dock
         # owns one, the window owns another), so it is re-texted here.
@@ -283,7 +283,7 @@ class TerminalDockContent(QWidget):
         The new tab is activated explicitly (Qt: addTab makes only the FIRST
         tab current).
 
-        `split=True` (v1.7.2, task 2) — the SPLIT PANE instead of a tab: the SAME page the window's
+        `split=True` (v1.7.2) — the SPLIT PANE instead of a tab: the SAME page the window's
         pane is (no SFTP tab, no status line, the `_is_split_pane` marker), created in `split_host`
         and NOT activated as a tab. The caller — the ONE split action — shows the host.
         """
@@ -308,13 +308,13 @@ class TerminalDockContent(QWidget):
         self._wire_page(page)
         idx = self.session_tabs.addTab(page, server_data.alias)
         self.session_tabs.setCurrentIndex(idx)
-        # v1.6.4 (ROADMAP task 4): the FIXED icon slot (a transparent mark) + the ordinary close
+        # v1.6.4: the FIXED icon slot (a transparent mark) + the ordinary close
         # tooltip of a fresh tab, through the ONE renderer both containers share.
         render_session_activity(self.session_tabs, page, t)
         return page
 
     def _wire_page(self, page):
-        """v1.7.2 (task 2): let the container follow the FOCUS of a canvas (the window's rule).
+        """v1.7.2: let the container follow the FOCUS of a canvas (the window's rule).
 
         `focusChanged` is the application-level signal the window already uses — here it is the
         dock's own slot, so a pane that holds the keyboard keeps the bridge (and the corner
@@ -337,7 +337,7 @@ class TerminalDockContent(QWidget):
         LAST tab does NOT destroy the container: the last_tab_closed signal
         (TerminalsDock hides the dock; the next session in "tabs" mode will show it).
 
-        v1.7.2 (task 2): the SPLIT PANE has no tab, so its own close paths (a session error →
+        v1.7.2: the SPLIT PANE has no tab, so its own close paths (a session error →
         `page.close_terminal()` → here) are routed to the ONE split teardown through the action.
         """
         idx = self.session_tabs.indexOf(page)
@@ -359,7 +359,7 @@ class TerminalDockContent(QWidget):
         if self.session_tabs.count() == 0 and self.split.pane is None:
             self.last_tab_closed.emit()
 
-    # ── v1.7.2 (task 2): the dock's SPLIT — the same controller as the window's ──
+    # ── v1.7.2: the dock's SPLIT — the same controller as the window's ──
 
     def active_session(self):
         """The session the USER is in — the FOCUSED split pane, otherwise the current tab.
@@ -460,7 +460,7 @@ class TerminalDockContent(QWidget):
         """The pane is closing — its status connection leaves with it (idempotent)."""
         try:
             pane.status_message.disconnect(self._on_page_status_message)
-        except (TypeError, RuntimeError):
+        except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
             pass  # not connected / the C++ object was already destroyed
         return True
 
@@ -476,7 +476,7 @@ class TerminalDockContent(QWidget):
             cur = None
         self._set_bridged_page(cur)
 
-    # ── v1.7rc1 (ROADMAP v1.7rc1, task 3): the Files Commander of the ACTIVE session ──
+    # ── v1.7rc1: the Files Commander of the ACTIVE session ──
 
     def _commander_tab(self):
         """The Files tab of the VISIBLE session (None — no session on screen / a split pane)."""
@@ -529,14 +529,14 @@ class TerminalDockContent(QWidget):
         if page is not None:
             self.close_page(page)
 
-    # ── v1.9.1 (ROADMAP v1.9.1): the session rows — Reconnect and the `tmux attach` ──
+    # ── v1.9.1: the session rows — Reconnect and the `tmux attach` ──
 
     def _tab_page(self, index):
         """The session of ONE tab index (None for a stale index) — the tab menu's target."""
         try:
             if 0 <= int(index) < self.session_tabs.count():
                 return self.session_tabs.widget(int(index))
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: a destroyed tab strip
             pass  # a destroyed tab strip / an unusable index: no target
         return None
 
@@ -651,11 +651,11 @@ class TerminalDockContent(QWidget):
                     if 0 <= index < self.session_tabs.count() else None)
         except RuntimeError:
             page = None  # C++ object already deleted (close race)
-        # v1.7.2 (task 3): the split action mirrors the ACTIVE session — re-read on every switch,
+        # v1.7.2: the split action mirrors the ACTIVE session — re-read on every switch,
         # before the focused-pane branch returns (the pane keeps its owner's answer).
         self.split.sync_owner()
         self._set_bridged_page(page)
-        # v1.6.1 (ROADMAP task 8): the tab the user just switched TO owns the keyboard —
+        # v1.6.1: the tab the user just switched TO owns the keyboard —
         # a fresh session is usable without a click on the canvas. Duck-typed hook: a page
         # that cannot take the focus (a split pane) answers False and is left alone.
         claim = getattr(page, "claim_focus", None)
@@ -670,7 +670,7 @@ class TerminalDockContent(QWidget):
         switch — reconnection (inactive tabs' messages do not arrive). SFTP
         progress is synchronized with the active tab's state.
 
-        v1.6.4 (ROADMAP task 4): the bridged page IS the visible session, so the activity mark
+        v1.6.4: the bridged page IS the visible session, so the activity mark
         of an inactive tab is cleared here — one place for the tab switch (idempotent).
         """
         old = self._bridged_page
@@ -680,13 +680,13 @@ class TerminalDockContent(QWidget):
                 old.progress_busy.disconnect(self._on_page_progress_busy)
                 old.progress_update.disconnect(self._on_page_progress_update)
                 old.progress_hidden.disconnect(self.sftp_progress.hide)
-            except (TypeError, RuntimeError):
+            except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                 pass  # the slot was not connected / the C++ object deleted — nothing to do
         self._bridged_page = page
         if page is None:
             self._sync_commander()
             return
-        # v1.6.4 (ROADMAP task 4): the visible session has no "new output" to announce.
+        # v1.6.4: the visible session has no "new output" to announce.
         clear = getattr(page, "set_activity", None)
         if callable(clear):
             try:
@@ -713,12 +713,12 @@ class TerminalDockContent(QWidget):
         # v1.7rc1: the corner control follows the visible session (its own mode, its label).
         self._sync_commander()
 
-    # ── v1.6.4 (ROADMAP task 4): the activity mark of an inactive session ────
+    # ── v1.6.4: the activity mark of an inactive session ─────────────────────
 
     def session_is_visible(self, page) -> bool:
         """The container's answer to "is `page` the session on screen?" — the mark's ONE rule.
 
-        v1.7.2 (task 2): the dock has a split pane now, so the rule is the window's — the FOCUSED
+        v1.7.2: the dock has a split pane now, so the rule is the window's — the FOCUSED
         pane wins over the current tab. Never raises.
         """
         pane = self.focused_split_pane()
@@ -789,7 +789,7 @@ class TerminalDockContent(QWidget):
 
 
 class TerminalsDock(QDockWidget):
-    """v1.2.2 (task 2): the "Terminals" dock in MainWindow (terminal.mode = "tabs").
+    """v1.2.2: the "Terminals" dock in MainWindow (terminal.mode = "tabs").
 
     Detachable (default QDockWidget flags: Movable|Closable|Floatable): float →
     a separate window with tabs, back → back on the map — from a single
@@ -810,7 +810,7 @@ class TerminalsDock(QDockWidget):
         self.content = TerminalDockContent(self)
         self.setWidget(self.content)
         self.setMinimumWidth(300)
-        # v1.2.2 (task 3): the last tab was closed — the sessions were already
+        # v1.2.2: the last tab was closed — the sessions were already
         # cleaned up page by page, the container is empty: hide the dock (do not
         # destroy it — see the docstring).
         self.content.last_tab_closed.connect(self.hide)
@@ -827,7 +827,7 @@ class TerminalsDock(QDockWidget):
             pass  # Qt teardown — the content is already destroyed
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): pass the theme switch down to the dock content."""
+        """v1.4.3: pass the theme switch down to the dock content."""
         try:
             self.content.refresh_theme()
         except RuntimeError:

@@ -95,7 +95,7 @@ def main():
           n_plain._icon.brush().color().name() == QColor(theme.NODE_ICON_BG).name(),
           n_plain._icon.brush().color().name())
 
-    # ── #3b v1.5 (ROADMAP): the ENVIRONMENT badge — the tag's TEXT on the alias row ──
+    # ── #3b v1.5: the ENVIRONMENT badge — the tag's TEXT on the alias row ──
     from graphics.server_node import ENV_TAGS, env_tag
     check("v1.5 env_tag: the vocabulary is DECLARED and its order IS the precedence",
           ENV_TAGS == ("prod", "staging", "stage", "dev", "test"))

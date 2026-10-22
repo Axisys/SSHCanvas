@@ -83,7 +83,7 @@ def setup_logging(level: int = logging.DEBUG) -> logging.Logger:
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 
-    # ── v1.5.2 (ROADMAP task 1): the activity tap ─────────────
+    # ── v1.5.2: the activity tap ──────────────────────────────
     # The panel's history is fed from the SAME records the file gets — no emitter is
     # rewired, and the ring is bounded/memory-only (`modules/activity_log.py`). A
     # failure here costs the panel, never the logging: setup_logging() still returns.

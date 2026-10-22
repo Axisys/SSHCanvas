@@ -126,7 +126,7 @@ check("§1 the scale-in standard is 200 ms from 0.9",
       f"{motion.SCALE_IN_MS} ms / {motion.SCALE_IN_FROM}")
 
 _fly_sig = inspect.signature(motion.fly_camera)
-check("§1 fly_camera(view, target_scale, target_center, ms=250) — the ROADMAP signature",
+check("§1 fly_camera(view, target_scale, target_center, ms=250) — the DECLARED signature",
       list(_fly_sig.parameters) == ["view", "target_scale", "target_center", "ms"]
       and _fly_sig.parameters["ms"].default == motion.DURATION_NORMAL,
       str(_fly_sig))

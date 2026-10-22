@@ -173,7 +173,7 @@ check("✕: the mode is off, the checkmark is removed, the plaque is hidden",
 mw._terminal_windows.clear()
 
 # ════════════════════════════════════════════════════════════
-# 5. v1.3.3.3 (task 2): the zoom menu items — a real click moves the view scale
+# 5. v1.3.3.3: the zoom menu items — a real click moves the view scale
 # ════════════════════════════════════════════════════════════
 print("== 5. View → Zoom In / Zoom Out / Reset zoom (v1.3.3.3) ==")
 
@@ -227,7 +227,7 @@ check("menu: the zoom items carry the vector icons",
       not act_zoom_in.icon().isNull() and not act_zoom_out.icon().isNull())
 
 # ════════════════════════════════════════════════════════════
-# 6. v1.3.3.3 (task 5): "Check statuses now" — exactly ONE round for the selection
+# 6. v1.3.3.3: "Check statuses now" — exactly ONE round for the selection
 # ════════════════════════════════════════════════════════════
 print("== 6. Check statuses now (v1.3.3.3) ==")
 

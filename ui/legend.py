@@ -24,7 +24,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
 
-try:  # v1.5rc2 (ROADMAP task 4): the declared status shapes — the row's shape sample
+try:  # v1.5rc2: the declared status shapes — the row's shape sample
     from . import status_shape
 except ImportError:
     try:
@@ -62,7 +62,7 @@ class LegendWidget(QWidget):
     SWATCH = 9               # the colour square of a row (the fallback sample)
     SWATCH_GAP = 8           # the gap between the swatch and its label
     SECTION_GAP = 3          # the extra space above a section caption
-    # v1.5rc2 (ROADMAP task 4): the row's SAMPLE — the panel explains the second
+    # v1.5rc2: the row's SAMPLE — the panel explains the second
     # channel too. The sample box is a fixed slot (a 26 px line / a mark inside it),
     # so the labels of both sections stay aligned.
     SAMPLE_W = 26
@@ -96,7 +96,7 @@ class LegendWidget(QWidget):
         font = QFont(self.font())
         try:
             font.setPointSizeF(max(font.pointSizeF() + delta, 7.0))
-        except (TypeError, ValueError):  # pragma: no cover - a font without a point size
+        except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
             pass
         font.setBold(bool(bold))
         return font
@@ -123,7 +123,7 @@ class LegendWidget(QWidget):
             self._labels[key] = _t(key)
 
     def row_sample(self, kind: str, key: str, color):
-        """The SAMPLE a row draws beside its label (v1.5rc2, ROADMAP task 4).
+        """The SAMPLE a row draws beside its label (v1.5rc2).
 
         Read from the SAME declaration the map paints from — `theme.ARROW_TYPE_STYLES`
         for a connection type, `theme.STATUS_SHAPES` for a status — so the panel
@@ -307,7 +307,7 @@ class LegendWidget(QWidget):
             painter.end()
 
     def _paint_sample(self, painter, kind: str, key: str, color, y: float):
-        """Draw the sample of one row (v1.5rc2, ROADMAP task 4) — never a copy of the map.
+        """Draw the sample of one row (v1.5rc2) — never a copy of the map.
 
         A connection type draws its DECLARED stroke (the dash pattern, the width and
         the double rail — the casing uses the panel's own card colour, exactly as the

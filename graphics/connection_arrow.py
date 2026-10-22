@@ -3,7 +3,7 @@
 Bezier curves from the edge of a node to the edge of a node + typed connections
 with a color code: SSH / VPN / HTTP / Database / NFS / Kubernetes.
 
-**v1.5rc2 (ROADMAP task 1): a type is no longer a colour alone.** Every type also
+**v1.5rc2: a type is no longer a colour alone.** Every type also
 carries a declared PEN style (`theme.ARROW_TYPE_STYLES`: a dash pattern, a width and
 a "double rail" flag), and this item paints from that declaration — so the six types
 stay apart in greyscale, in print and for a colour-vision deficiency. The style is
@@ -43,7 +43,7 @@ def _t(key: str, **kwargs) -> str:
 
 
 def _show_type_on_label() -> bool:
-    """v1.1.1 (ROADMAP item 6): the "always show the type on the connection label" option.
+    """v1.1.1: the "always show the type on the connection label" option.
 
     The ui_show_connection_type key from ~/.sshmap/config.json (default False —
     the v1.1 behavior: only the label on the plate, the type is carried by the
@@ -123,7 +123,7 @@ DEFAULT_CONNECTION_TYPE = "ssh"
 
 
 def type_style(ctype: str):
-    """The DECLARED pen style of a connection type (v1.5rc2, ROADMAP task 1).
+    """The DECLARED pen style of a connection type (v1.5rc2).
 
     Read from the ACTIVE theme on every call (`theme.ARROW_TYPE_STYLES` — the
     declaration next to `arrow_type_colors`), with the default type's style for an
@@ -138,7 +138,7 @@ def type_color(ctype: str) -> QColor:
 
 
 def _anchor_rect(node) -> QRectF:
-    """v1.4.2 (ROADMAP task 4): the node's CARD rect in scene coordinates.
+    """v1.4.2: the node's CARD rect in scene coordinates.
 
     The single anchor of an arrow end. `card_rect_scene()` is the v1.4.2 API of
     ServerNode (the card without the shadow halo); the fallback covers a duck-typed
@@ -206,7 +206,7 @@ def build_curve(p0: QPointF, p3: QPointF, extra_bend: float = 0.0):
     the direction is chosen perpendicular to the p0→p3 segment, so A→B and B→A
     bend to opposite sides — bidirectional connections do not overlap.
 
-    ``extra_bend`` (v1.6, ROADMAP task 3) is the displacement of ONE parallel link of
+    ``extra_bend`` (v1.6) is the displacement of ONE parallel link of
     the same endpoint pair: a signed value in scene px added to the natural bend. The
     default 0.0 reproduces the historical curve exactly.
     """
@@ -241,7 +241,7 @@ def curve_midpoint(p0: QPointF, c1: QPointF, c2: QPointF, p3: QPointF) -> QPoint
 class ConnectionArrow(QGraphicsPathItem):
     """A curved arrow (cubic Bezier) from the edge of one node to the edge of another."""
 
-    # v1.4.3 (ROADMAP task 5): live colours — a class read resolves the ACTIVE
+    # v1.4.3: live colours — a class read resolves the ACTIVE
     # theme, and `refresh_theme()` re-applies the pens/brushes of the live item.
     # COLOR_IDLE is the default type's colour (computed lazily, so the descriptor
     # may sit above `type_color`); COLOR_HOVER keeps the v0.6 compatibility tone.
@@ -260,14 +260,14 @@ class ConnectionArrow(QGraphicsPathItem):
             ctype = DEFAULT_CONNECTION_TYPE
         self.connection_type = ctype
         self._base_color = type_color(ctype)
-        # v1.5rc2 (ROADMAP task 1): the DECLARED pen style of this type — the dash
+        # v1.5rc2: the DECLARED pen style of this type — the dash
         # pattern, the stroke width and the "double rail" flag, re-read by
         # refresh_theme() like every other theme-derived value of this item.
         self._style = type_style(ctype)
         # v1.2.6: bidirectional connection — arrowheads on BOTH ends of the curve
         # (two-way data exchange); standard mode — the target end only.
         self.bidirectional = bool(bidirectional)
-        # v1.6 (ROADMAP task 3): the INDEX of this link inside its endpoint pair — a
+        # v1.6: the INDEX of this link inside its endpoint pair — a
         # second relation between the same two cards bends aside instead of hiding under
         # the first one. The scene owns the numbering (`refresh_connection_offsets()`);
         # the arrow only reads it when it computes its path, so `contains()` follows.
@@ -306,7 +306,7 @@ class ConnectionArrow(QGraphicsPathItem):
         self.update_position()
 
     def _apply_visual_state(self):
-        """v1.5rc2 (ROADMAP task 1): the stroke is built from the DECLARED style.
+        """v1.5rc2: the stroke is built from the DECLARED style.
 
         The COLOUR comes from the type (the hover lightens it, as since v0.7); the
         GEOMETRY — the dash pattern, the width and the double rail — comes from
@@ -358,7 +358,7 @@ class ConnectionArrow(QGraphicsPathItem):
         self._label_bg.setBrush(QBrush(color))
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 5): re-read the theme for this arrow.
+        """v1.4.3: re-read the theme for this arrow.
 
         The type colour of this arrow is a VALUE taken when the type was set, so
         a theme switch has to hand it the new one; the label plaque, the DECLARED
@@ -380,7 +380,7 @@ class ConnectionArrow(QGraphicsPathItem):
 
     # ── Geometry (v0.7): Bezier + edge-to-edge ───────────────────
 
-    # ── v1.6 (ROADMAP task 3): the parallel-link offset ───────────────────
+    # ── v1.6: the parallel-link offset ────────────────────────────────────
 
     def offset_steps(self) -> float:
         """The SIGNED steps of this link along the normal (`pair_offset_steps`)."""
@@ -411,7 +411,7 @@ class ConnectionArrow(QGraphicsPathItem):
     def _compute_geometry(self):
         """Returns (path, p0, p3, c1, c2), or None in the degenerate case.
 
-        v1.4.2 (ROADMAP task 4): the ends are computed from the node's CARD rect
+        v1.4.2: the ends are computed from the node's CARD rect
         (`card_rect_scene()`), not from its painted boundingRect — since the drop-shadow
         became a halo on all four sides, the boundingRect is `SHADOW_BLUR` bigger than
         the card and the arrow tips would stop short of it. The fallback keeps a
@@ -594,17 +594,17 @@ class ConnectionArrow(QGraphicsPathItem):
     def hoverEnterEvent(self, event):
         self._hover = True
         self._apply_visual_state()
-        self._report_hover_focus(True)   # v1.4.4 (ROADMAP task 4)
+        self._report_hover_focus(True)   # v1.4.4
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
         self._hover = False
         self._apply_visual_state()
-        self._report_hover_focus(False)  # v1.4.4 (ROADMAP task 4)
+        self._report_hover_focus(False)  # v1.4.4
         super().hoverLeaveEvent(event)
 
     def _report_hover_focus(self, focused: bool):
-        """v1.4.4 (ROADMAP task 4): report the hover to the SCENE, which owns the focus state.
+        """v1.4.4: report the hover to the SCENE, which owns the focus state.
 
         The arrow only REPORTS (the `MapSearchBar` split: a widget emits, the window decides).
         `MapScene.set_hover_focus_arrow()`/`clear_hover_focus()` are idempotent and the scene

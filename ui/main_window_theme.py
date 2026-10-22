@@ -29,7 +29,7 @@ class ThemeMixin:
     """The live theme switch: the repaint walk, the icon ink and the "Auto" follow (AGENTS.md §4.6)."""
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4/5): re-apply the theme to everything this window owns.
+        """v1.4.3: re-apply the theme to everything this window owns.
 
         Called by `ui/theme_qss.apply_theme()` (and safe to call directly). The
         window is the only object that can reach all the pieces, so it walks what
@@ -56,7 +56,7 @@ class ThemeMixin:
                                 (getattr(self, "zoom_label", None), "status.bar_zoom")):
                 if widget is not None:
                     theme_qss.refresh(widget, key)
-        # v1.5rc3 (ROADMAP task 2): the status bar owns the Undo affordance — a QSS
+        # v1.5rc3: the status bar owns the Undo affordance — a QSS
         # string and a text are VALUES, so its own refresh re-applies both.
         try:
             _bar = self.statusBar()
@@ -65,9 +65,9 @@ class ThemeMixin:
                 hook()
         except RuntimeError:
             pass  # Qt teardown — the status bar is already destroyed
-        # v1.4.5 (ROADMAP task 3): the clickable status counters (their ACTIVE styling
+        # v1.4.5: the clickable status counters (their ACTIVE styling
         # is the widget's own state — `refresh_theme()` picks the right registry entry).
-        # v1.5.4 (ROADMAP task 2): the "problems only" chip belongs to the same family
+        # v1.5.4: the "problems only" chip belongs to the same family
         # (its QSS is a VALUE too, and `set_active` only re-applies it on a real change).
         for counter in list((getattr(self, "status_filter_labels", {}) or {}).values()) \
                 + [getattr(self, "problems_chip", None)]:
@@ -125,7 +125,7 @@ class ThemeMixin:
                     hook()
             except RuntimeError:
                 pass
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — teardown of a dead object
                 pass
         # The floating panels are children of the view but owned here: the map search
         # bar (v0.9.8), the minimap (v1.4.2), the legend (v1.4.5), the first-run
@@ -141,10 +141,10 @@ class ThemeMixin:
                     hook()
                 except RuntimeError:
                     pass  # Qt teardown — the panel is already destroyed
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001 — teardown of a dead object
                     pass
 
-    # ── v1.4.3 (ROADMAP task 6): the theme of the settings hub ────────────────────
+    # ── v1.4.3: the theme of the settings hub ─────────────────────────────────────
 
     def apply_theme(self, instance=None):
         """Make `instance` (or the saved theme) ACTIVE and repaint the application.
@@ -161,7 +161,7 @@ class ThemeMixin:
             theme.set_theme(instance)
         return theme.THEME
 
-    # ── v1.5rc1 (ROADMAP task 6): "Auto (system)" follows the platform live ──────
+    # ── v1.5rc1: "Auto (system)" follows the platform live ───────────────────────
 
     def _install_color_scheme_watch(self) -> bool:
         """Listen to the platform's colour scheme (v1.5rc1) — True when installed.
@@ -269,7 +269,7 @@ class ThemeMixin:
                 continue
             try:
                 btn.setIcon(host_attr(self, "_diamond_icon")())
-                # v1.5.6 (ROADMAP task 4): the FRAME is a QSS VALUE of the same kind —
+                # v1.5.6: the FRAME is a QSS VALUE of the same kind —
                 # the `collapse.button` entry is re-applied with the icon ink.
                 self._style_collapse_btn(btn)
             except RuntimeError:

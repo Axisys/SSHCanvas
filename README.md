@@ -25,7 +25,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Density Switch:** Toggle between **Comfortable** and **Compact** modes. Compact mode shortens cards and hides info blocks while maintaining consistent text eliding.
 *   **Navigation Aids:** A minimap mirrors the whole map, and a legend displays all connection styles and status shapes.
 *   **Export & Documentation:** Export to PNG, JPEG, PDF, SVG, or `.drawio`. It is print-friendly by default, with a one-click option to use the current theme. Includes a "Save Documentation Image" option for a fixed 1600×900 @2× poster.
-*   **Shared Bookmarks:** Access a dedicated bookmarks panel (wiki, dashboards, etc.). Filter by typing and manage in place. Bookmarks are stored globally in `~/.sshmap/bookmarks.json` to keep project maps clean.
+*   **Shared Bookmarks:** Access a dedicated bookmarks panel (wiki, dashboards, etc.). Filter by typing (`Esc` or the clear button empties the filter) and manage in place. Bookmarks are stored globally in `~/.sshmap/bookmarks.json` to keep project maps clean.
 
 ### Statuses, Facts & Diagnostics
 *   **Status Monitoring:** Parallel SSH probes (TCP + banner) gather `online` / `warn` / `offline` statuses off the GUI thread. Statuses include an age and turn grey when stale.
@@ -67,7 +67,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Row Verbs:** Right-click a row to **Download** (file or folder) or **Upload** into the current directory.
     *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete).
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort. Folders and `..` remain grouped at the top.
-    *   **Content Search:** Right-click to **Find text…** — search the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
+    *   **Content Search:** Right-click to **Find text…** — or click **Find text** in the button row — to search the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
     *   **Preview Limits:** Reads 1 MB by default (up to 250 MB in Settings). Larger files open with a header indicating the first megabyte.
     *   **Encodings:** Supports eight encodings (automatic, UTF-8, CP1251, etc.). The choice is per-pane and is remembered per session, so a CP1251 pane and a Latin-1 pane come back as you left them.
     *   **Archive Viewer:** Right-click archives (`zip`, `tar`, `jar`, etc.) to **Open Archive**, viewing contents in the other pane. Members open in the read-only preview. **Extract** unpacks the archive into the destination folder (merging files on overwrite). Encrypted archives are listed but not read or extracted.
@@ -234,7 +234,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 173 test files and the parallel runner |
+| `tests/` | 178 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

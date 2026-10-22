@@ -22,7 +22,7 @@ class I18nMixin:
     def _apply_ui_translations(self):
         """Translate the menus, toolbar, and service labels to the current language.
 
-        v1.3.3.1 (ROADMAP task 1): every stage is individually fault-isolated. The
+        v1.3.3.1: every stage is individually fault-isolated. The
         re-text is a CROSS-CUTTING walk over widgets that may die at any moment (a
         terminal window closing mid-switch, a torn-down container) — before, one
         broken widget aborted the whole method, so the terminal containers stayed in
@@ -38,7 +38,7 @@ class I18nMixin:
                     widget.setText(self.t(key))
             except RuntimeError:
                 pass  # Qt teardown — one menu/action is already destroyed
-        # v1.5rc4 (ROADMAP task 2): the toolbar's "»" overflow button keeps its glyph and
+        # v1.5rc4: the toolbar's "»" overflow button keeps its glyph and
         # only its TOOLTIP is translated (it is not in `_menu_i18n`, which re-texts).
         if self._i18n_available:
             for _widget in (getattr(self, "_toolbar_overflow_action", None),
@@ -120,7 +120,7 @@ class I18nMixin:
                     _widget.setToolTip(self.t(_key))
                 except RuntimeError:
                     pass  # Qt teardown — the widget is already destroyed
-        # v1.5rc3 (ROADMAP task 2): the Undo button of the status bar is re-texted by its
+        # v1.5rc3: the Undo button of the status bar is re-texted by its
         # own refresh (it also re-applies the registry QSS — the v1.4.3 rule).
         try:
             _bar = self.statusBar()
@@ -129,14 +129,14 @@ class I18nMixin:
                 _hook()
         except RuntimeError:
             pass  # Qt teardown — the status bar is already destroyed
-        # v1.4.5 (ROADMAP task 4): the legend paints its rows from a label cache.
+        # v1.4.5: the legend paints its rows from a label cache.
         _legend = getattr(self, "legend", None)
         if _legend is not None:
             try:
                 _legend.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the panel is already destroyed
-        # v1.6.7 (ROADMAP task 4): the bookmarks panel (its title band, the filter's
+        # v1.6.7: the bookmarks panel (its title band, the filter's
         # placeholder, the button and the two sentences of an empty / filtered list).
         _bookmarks = getattr(self, "bookmark_panel", None)
         if _bookmarks is not None:
@@ -145,7 +145,7 @@ class I18nMixin:
                 self._position_bookmarks_panel()   # the captions changed width — re-place it
             except RuntimeError:
                 pass  # Qt teardown — the panel is already destroyed
-        # v1.5.4 (ROADMAP task 3): the active-filter plaque — it BUILDS its captions from
+        # v1.5.4: the active-filter plaque — it BUILDS its captions from
         # the live filter state, so a re-text is one call (the values never move).
         _plaque = getattr(self, "filter_plaque", None)
         if _plaque is not None:
@@ -154,7 +154,7 @@ class I18nMixin:
                 self._position_filter_plaque()  # the captions changed width — re-place it
             except RuntimeError:
                 pass  # Qt teardown — the panel is already destroyed
-        # v1.5.2 (ROADMAP task 3): the activity panel — the CHROME only (its title, the
+        # v1.5.2: the activity panel — the CHROME only (its title, the
         # level captions, the column headers, Clear). The event LINES are logging lines
         # and stay English: one key per event kind would be an i18n cost with no reader.
         _activity = getattr(self, "activity_panel", None)
@@ -163,7 +163,7 @@ class I18nMixin:
                 _activity.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the panel is already destroyed
-        # v1.8.3 (ROADMAP task 1): the Plugins window — the CHROME only (its title, the column
+        # v1.8.3: the Plugins window — the CHROME only (its title, the column
         # captions, the three buttons and the headers). The event LINES are logging lines and stay
         # English: one key per event kind would be an i18n cost with no reader (§4.10).
         _plugins_window = getattr(self, "plugins_panel", None)
@@ -172,7 +172,7 @@ class I18nMixin:
                 _plugins_window.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the window is already destroyed
-        # v1.4.5 (ROADMAP task 2): the first-run hint (its button text + the paint).
+        # v1.4.5: the first-run hint (its button text + the paint).
         _empty = getattr(self, "empty_state", None)
         if _empty is not None:
             try:
@@ -180,13 +180,13 @@ class I18nMixin:
                 self._position_empty_state()   # the sentence changed width — re-place it
             except RuntimeError:
                 pass  # Qt teardown — the hint is already destroyed
-        # v1.4.5 (ROADMAP task 3): the counters (their labels + tooltips) and, with them,
+        # v1.4.5: the counters (their labels + tooltips) and, with them,
         # the empty state / the status markers of the composition.
         try:
             self._update_counts_label()
         except RuntimeError:
             pass  # Qt teardown — the status bar is already gone
-        # v1.4.5 (ROADMAP task 5): the divider's tooltip.
+        # v1.4.5: the divider's tooltip.
         try:
             _handle = self._splitter.handle(0)
             if _handle is not None:

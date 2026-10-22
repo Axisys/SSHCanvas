@@ -113,7 +113,7 @@ class MinimapWidget(QWidget):
         font = QFont(self.font())
         try:
             font.setPointSizeF(max(font.pointSizeF() + delta, 7.0))
-        except (TypeError, ValueError):  # pragma: no cover — a font without a point size
+        except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
             pass
         font.setBold(bool(bold))
         return font
@@ -313,7 +313,7 @@ class MinimapWidget(QWidget):
         return QRectF(self._content)
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 5): re-read the theme for the panel.
+        """v1.4.3: re-read the theme for the panel.
 
         The widget paints from the live theme (the panel card, the viewport
         frame), but the CACHED LAYER holds resolved QColor objects — one per node

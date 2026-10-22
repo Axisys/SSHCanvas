@@ -463,7 +463,7 @@ check("§4 the panel is still a WIDGET over the scene, never a scene item",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# §5 The print-friendly export (ROADMAP task 3)
+# §5 The print-friendly export
 # ════════════════════════════════════════════════════════════════════════════
 print("== §5 the print-friendly export (PNG / SVG / PDF / drawio) ==")
 

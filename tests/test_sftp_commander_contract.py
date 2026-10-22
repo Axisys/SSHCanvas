@@ -471,7 +471,7 @@ if docs_mode():
 check_release_state(ROOT)
 check("§8 the version pin is the release this file describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7"), EXPECTED_APP_VERSION)
-check("§8 ...and the line's release model is the ROADMAP one: a BASE release plus a follow-up",
+check("§8 ...and the line's release model: a BASE release plus a follow-up",
       releases_at_least("1.7.0.1", "1.7") and releases_at_least("1.7.1", "1.7")
       and releases_at_least(EXPECTED_APP_VERSION, "1.7"),
       EXPECTED_APP_VERSION)

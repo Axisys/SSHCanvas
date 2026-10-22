@@ -69,7 +69,7 @@ SCROLLBACK = [
 def feed_scrollback(tscreen):
     """26 lines on a 6-line grid with a 50-line history: 20 in the history + 6 live.
 
-    The marker sits in BOTH halves on purpose — the acceptance of task 1 asks for
+    The marker sits in BOTH halves on purpose — the contract asks for
     matches in the history AND on the live screen."""
     for line in SCROLLBACK:
         tscreen.feed((line + "\r\n").encode("utf-8"))
@@ -84,7 +84,7 @@ def make_widget(hub=None, columns=40, lines=6, history=50):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 1. the find bar over a synthetic scrollback (task 1) ==")
+print("== 1. the find bar over a synthetic scrollback ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 hub_iso = MultiInputHub()          # an isolated hub: the app singleton stays untouched
@@ -234,7 +234,7 @@ finally:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 2. clear the scrollback / reset the screen (task 2) ==")
+print("== 2. clear the scrollback / reset the screen ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 w2, scr2, th2 = make_widget(hub=hub_iso)
@@ -273,7 +273,7 @@ check("reset screen: the canvas repaints the empty grid (a real paint, no glyphs
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 3. save transcript… (task 3) ==")
+print("== 3. save transcript… ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 ST.SSHTerminalThread = _FakeThread   # the pages of this file — on the fake
@@ -376,7 +376,7 @@ TW.QFileDialog = _orig_file_dialog
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 4. the command-library seed names are i18n keys (task 4) ==")
+print("== 4. the command-library seed names are i18n keys ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 SEED_KEYS = ("terminal.cmdlib.seed.tail_nginx", "terminal.cmdlib.seed.restart_docker",
@@ -427,7 +427,7 @@ check("the stored file is left byte-equivalent (no re-seed, no rewrite)",
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 5. excluding a session from multi-input (task 5) ==")
+print("== 5. excluding a session from multi-input ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -667,7 +667,7 @@ with open(config_path(), "w", encoding="utf-8") as f:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-print("== 6. the transfer rate / ETA of the progress line (task 6) ==")
+print("== 6. the transfer rate / ETA of the progress line ==")
 # ══════════════════════════════════════════════════════════════════════════════
 
 check("format_duration: seconds → M:SS", format_duration(0) == "0:00"

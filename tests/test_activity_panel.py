@@ -89,7 +89,7 @@ print("== §1 the ring: bounded, newest-first, memory only ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 buffer = AL.reset_activity_buffer()
-check("§1 the bound is DECLARED once (the ROADMAP acceptance names 200)",
+check("§1 the bound is DECLARED once (200 events)",
       AL.MAX_EVENTS == 200 and buffer.max_events == 200, str(buffer.max_events))
 check("§1 a fresh ring is empty", len(buffer) == 0 and buffer.events() == []
       and buffer.newest_first() == [] and buffer.last() is None)
@@ -429,7 +429,7 @@ check("§4 ...so it never joins the floating-panel priority resolver (only the V
       in _resolver and panel.parent() is not win.view)
 check("§4 it owns retranslate() (the v1.3.3.1 container invariant)",
       callable(getattr(panel, "retranslate", None)))
-check("§4 the activity switch JOINS the toolbar's view cluster (v1.6, ROADMAP task 7: the "
+check("§4 the activity switch JOINS the toolbar's view cluster (v1.6: the "
       "cluster is the deliverable, and every panel toggle is a member of it)",
       MW._VIEW_TOOLBAR_ACTIONS.get("view.toggle_activity") == "act_show_activity"
       and "view.toggle_activity" in win._view_toolbar_buttons)

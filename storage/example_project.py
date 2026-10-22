@@ -30,7 +30,7 @@ WEB1 = "e0000002"
 WEB2 = "e0000003"
 DB1 = "e0000004"
 K8S1 = "e0000005"
-# v1.6.5 (ROADMAP task 6): the ONE UNMANAGED card of the demo — a neighbour this operator
+# v1.6.5: the ONE UNMANAGED card of the demo — a neighbour this operator
 # does NOT administer. It is the live sample of the release: it carries `unmanaged: True`,
 # so no round ever probes it (the checker's skip set), it has no credentials, its menu has
 # no SSH verbs and its band says so in words; the COMMENT is the only information such a
@@ -146,7 +146,7 @@ def build_example_project() -> dict:
          "ip": "192.0.2.30", "x": 420.0, "y": -170.0,
          "os_name": "Flatcar Container Linux", "cpu": "8 cores", "ram": "16 GB",
          "disk": "120 GB", "tags": ["k8s"]},
-        # ── v1.6.5 (ROADMAP task 6): the NEIGHBOUR — documented, not administered ──
+        # ── v1.6.5: the NEIGHBOUR — documented, not administered ──
         # NO `user`, NO hardware and NO status: `unmanaged` closes the credential family,
         # the probe plan and the SSH verbs, and the card paints what it has (the address,
         # the comment and its tag chip) beside the "NO SSH" mark. `unmanaged_ping` stays

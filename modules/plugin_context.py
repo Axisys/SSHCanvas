@@ -232,7 +232,7 @@ class PluginContext:
         try:  # no adapter (or a broken one) — the module logger still records it
             from modules.logger import get_logger
             get_logger("modules.plugin_context").info(f"[plugin {self._plugin_id}] {message}")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — optional import
             pass
 
     def status(self, text, timeout_ms: int = DEFAULT_STATUS_TIMEOUT_MS) -> bool:

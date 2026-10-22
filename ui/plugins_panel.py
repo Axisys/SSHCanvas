@@ -570,7 +570,7 @@ class PluginsPanel(QDialog):
             label = _record_label(record)
             if label:
                 return label
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — the caller owns the fallback: the id answers below
             pass
         return str(plugin_id or "?")
 

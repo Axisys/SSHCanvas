@@ -34,7 +34,7 @@ class SceneCommandMixin:
                 lambda node, n=note: self._attach_note_to_node(n, node))
             note.detachRequested.connect(
                 lambda *_a, n=note: self._detach_note(n))
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): a note that is wired twice
             pass  # re-wiring the same note — not critical
 
     def _on_note_text_edited(self, note):
@@ -157,7 +157,7 @@ class SceneCommandMixin:
             # Double click on the title -> QInputDialog (the g closure — the source group)
             group.renameRequested.connect(
                 lambda *_a, g=group: self._rename_group(g))
-            # v1.4.2 (ROADMAP task 5): the fold chevron asks; the window pushes the
+            # v1.4.2: the fold chevron asks; the window pushes the
             # command (the group must not mutate itself — the renameRequested contract).
             group.collapseRequested.connect(
                 lambda *_a, g=group: self._toggle_group_collapsed(g))
@@ -182,7 +182,7 @@ class SceneCommandMixin:
         return True
 
     def _connect_background_signals(self, bg):
-        """Wire the background's signals: the dirty marker + the undo commands (v1.6, task 4).
+        """Wire the background's signals: the dirty marker + the undo commands (v1.6).
 
         The incremental `moved`/`resized` signals keep the project dirty during the
         gesture; the COMPLETED `moveCommitted`/`resizeCommitted` ones push the ONE command
@@ -196,17 +196,17 @@ class SceneCommandMixin:
                 lambda op, np, b=bg: self._commit_background_move(b, op, np))
             bg.resizeCommitted.connect(
                 lambda w0, h0, w1, h1, b=bg: self._commit_background_resize(b, w0, h0, w1, h1))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — best effort (declared): a background that is wired twice
             pass
 
     def _commit_background_move(self, background, old_pos, new_pos):
-        """v1.6 (ROADMAP task 4): a background-move gesture finished -> CmdMoveBackground."""
+        """v1.6: a background-move gesture finished -> CmdMoveBackground."""
         from modules.undo_commands import CmdMoveBackground
         self._push_command(CmdMoveBackground(self, background, old_pos, new_pos))
         self._mark_dirty()
 
     def _commit_background_resize(self, background, w0, h0, w1, h1):
-        """v1.6 (ROADMAP task 4): a background resize finished -> CmdResizeBackground."""
+        """v1.6: a background resize finished -> CmdResizeBackground."""
         from modules.undo_commands import CmdResizeBackground
         self._push_command(CmdResizeBackground(self, background, (w0, h0), (w1, h1)))
         self._mark_dirty()

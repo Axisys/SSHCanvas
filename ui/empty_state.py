@@ -24,7 +24,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from . import theme_qss
 except ImportError:
     try:
@@ -52,7 +52,7 @@ def _t(key: str, **kw) -> str:
 
 
 def palette_hotkey() -> str:
-    """The effective Ctrl+K sequence of the command palette (v1.5rc3, ROADMAP task 4).
+    """The effective Ctrl+K sequence of the command palette (v1.5rc3).
 
     Read LIVE from the action registry, so the hint on the first screen names the key
     the user would really press (a rebound palette is named by its new key).
@@ -77,7 +77,7 @@ def palette_hotkey() -> str:
 
 
 def connect_hint_text() -> str:
-    """The "how do I draw a connection?" sentence (v1.6.8, ROADMAP task 2) — ONE composer.
+    """The "how do I draw a connection?" sentence (v1.6.8) — ONE composer.
 
     The gesture (`Shift`+drag from a card) shipped long ago and opens the connection
     dialog PRE-FILLED, yet the colleagues who asked for "drawing connections" never
@@ -108,12 +108,12 @@ class EmptyStateOverlay(QWidget):
     """
 
     add_server_requested = Signal()
-    #: v1.9.7 (ROADMAP task 6): the TXT import — a DOOR of its own, never a phrase inside
+    #: v1.9.7: the TXT import — a DOOR of its own, never a phrase inside
     #: `empty.state.import_hint` that the user has to find in a paragraph.
     import_requested = Signal()
-    #: v1.5.6 (ROADMAP task 2): the third door — an existing project file on disk.
+    #: v1.5.6: the third door — an existing project file on disk.
     open_map_requested = Signal()
-    #: v1.5rc3 (ROADMAP task 1): the second way out of an empty map — the demo project.
+    #: v1.5rc3: the second way out of an empty map — the demo project.
     example_requested = Signal()
 
     ICON = 44                # the hint glyph
@@ -148,7 +148,7 @@ class EmptyStateOverlay(QWidget):
             theme_qss.refresh(self.btn_add_first, "empty_state.button")
         self.btn_add_first.hide()
 
-        # v1.9.7 (ROADMAP task 6): "Import Servers from TXT…" is a BUTTON beside the others — the
+        # v1.9.7: "Import Servers from TXT…" is a BUTTON beside the others — the
         # same door the File menu opens, and its label IS that menu item's live string (never a
         # copy), so the first screen cannot offer an action as a phrase the user has to find.
         self.btn_import = QPushButton(_t("file.import_servers"), self._view)
@@ -158,7 +158,7 @@ class EmptyStateOverlay(QWidget):
         self.btn_import.clicked.connect(self.import_requested)
         self.btn_import.hide()
 
-        # v1.5.6 (ROADMAP task 2): "Open an existing map" — the door BETWEEN the two:
+        # v1.5.6: "Open an existing map" — the door BETWEEN the two:
         # a user who already saved a project must not travel through File → Open to find
         # it, and the demo is not what they came for either. It shares the neutral look of
         # the example button (the accent fill belongs to the ONE primary action) and is
@@ -170,7 +170,7 @@ class EmptyStateOverlay(QWidget):
         self.btn_open_map.clicked.connect(self.open_map_requested)
         self.btn_open_map.hide()
 
-        # v1.5rc3 (ROADMAP task 1): "Open the example map" — the neutral secondary
+        # v1.5rc3: "Open the example map" — the neutral secondary
         # action (the accent fill belongs to the ONE primary action above), and the
         # second entry point of the same project as Help → Open the example map.
         self.btn_example = QPushButton(_t("example.open"), self._view)
@@ -190,7 +190,7 @@ class EmptyStateOverlay(QWidget):
         font = QFont(self.font())
         try:
             font.setPointSizeF(max(font.pointSizeF() + delta, 7.0))
-        except (TypeError, ValueError):  # pragma: no cover - a font without a point size
+        except (TypeError, ValueError):  # pragma: no cover — noqa: BLE001 — best effort (declared): a font without a point size
             pass
         font.setBold(bool(bold))
         return font
@@ -201,13 +201,13 @@ class EmptyStateOverlay(QWidget):
     def hint_text(self) -> str:
         """The import line — built from the REAL File-menu label (never a copy).
 
-        v1.9.7 (ROADMAP task 6): the TXT half left the sentence for a button of its own; what
+        v1.9.7: the TXT half left the sentence for a button of its own; what
         remains names the SSH-config import, whose menu label fills `{import_ssh}`.
         """
         return _t("empty.state.import_hint", import_ssh=_t("file.import_ssh_config"))
 
     def palette_text(self) -> str:
-        """v1.5rc3 (ROADMAP task 4): the palette and the cheat-sheet line.
+        """v1.5rc3: the palette and the cheat-sheet line.
 
         The key is read from the action registry at call time (`palette_hotkey()`), so
         a rebound palette is named by its real sequence; the `?` half is the map's own
@@ -216,7 +216,7 @@ class EmptyStateOverlay(QWidget):
         return _t("empty.state.palette_hint", hotkey=palette_hotkey())
 
     def connect_text(self) -> str:
-        """v1.6.8 (ROADMAP task 2): the connection gesture, named where it is discovered.
+        """v1.6.8: the connection gesture, named where it is discovered.
 
         The SAME composer the Edit-menu action's tooltip uses (`connect_hint_text()`), so
         the first screen and the menu cannot tell the gesture two ways. It is NOT a

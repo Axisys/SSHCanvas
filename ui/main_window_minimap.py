@@ -47,7 +47,7 @@ class MinimapMixin:
         self._position_minimap()
 
     def _minimap_wanted(self) -> bool:
-        """The panel's visibility asks TWO questions (v1.9.7, ROADMAP task 6).
+        """The panel's visibility asks TWO questions (v1.9.7).
 
         The user's key AND "the map holds at least one card": a minimap of nothing navigates
         nowhere, so an empty canvas hides the panel WITHOUT touching the saved preference —
@@ -120,7 +120,7 @@ class MinimapMixin:
         corner across restarts (and what switches `_position_minimap()` from the default
         corner to the saved spot).
 
-        v1.5 (ROADMAP): a drop within `SNAP_PX` of an anchored edge (RIGHT|TOP) instead
+        v1.5: a drop within `SNAP_PX` of an anchored edge (RIGHT|TOP) instead
         RE-ANCHORS the panel — the saved position is cleared and the ordinary rules (the
         corner, the fold and the "below an open search bar" step) come back by themselves.
         """
@@ -148,7 +148,7 @@ class MinimapMixin:
     def _toggle_minimap(self, checked: bool):
         """v1.4.2: show/hide the minimap + persist `ui_minimap` (a merge write).
 
-        v1.9.7 (ROADMAP task 6): the item writes the PREFERENCE; what is on screen is the two
+        v1.9.7: the item writes the PREFERENCE; what is on screen is the two
         questions of `_minimap_wanted()` — so a user on an empty map is not shown a panel with
         nothing in it, and the choice they made is waiting for the first card.
         """
@@ -234,7 +234,7 @@ class MinimapMixin:
             rect = self.scene.sceneRect()
             x = min(max(x, rect.left()), rect.right())
             y = min(max(y, rect.top()), rect.bottom())
-            # v1.4.4 (ROADMAP task 1): dragging the minimap is manual control — a running
+            # v1.4.4: dragging the minimap is manual control — a running
             # camera flight is cancelled (it would otherwise keep overriding the frame).
             self.view.stop_camera_flight()
             self.view.centerOn(x, y)

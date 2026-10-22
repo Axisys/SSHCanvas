@@ -102,12 +102,12 @@ try:
     # (`EXPECTED_I18N_KEYS` in tests/_common.py) — never enumerated here.
     check_i18n_parity(langs)
     _sidebar_keys = ["ctx.ssh_connect", "ctx.ssh_external",
-                     # v1.6.8 (ROADMAP task 1): "Connect to…" — the row of the drawing gesture,
+                     # v1.6.8: "Connect to…" — the row of the drawing gesture,
                      # in the SSH group (all three answer "connect this server to something").
                      "ctx.connect_to",
                      "ctx.copy_ip", "ctx.copy_hostname",
                      "ctx.edit_server",
-                     # v1.9.8 (task 2): the diagnostic verbs are ONE `Diagnostics ▸` submenu on both
+                     # v1.9.8: the diagnostic verbs are ONE `Diagnostics ▸` submenu on both
                      # surfaces — the table (`ui/server_menu.py`) owns their order.
                      "ctx.diagnostics",
                      "ctx.reveal_on_map", "ctx.delete_server"]
@@ -118,7 +118,7 @@ try:
                                                      "ctx.diagnose_offline", "ctx.collect_info"],
           str(SM.DIAGNOSTIC_ITEMS))
 
-    # ══ #1. The menu composition and order (ROADMAP v0.9.6, item 1; v1.0RC4: +Quick launch) ══
+    # ══ #1. The menu composition and order (v0.9.6; v1.0RC4: +Quick launch) ══
     print("== menu composition ==")
     menu = _ctx_row(item1)
     check("context menu captured on right-click of a tree row", menu is not None)
@@ -182,7 +182,7 @@ try:
         check("reveal accent flash is visible right after the action",
               n1._pulse.isVisible() and abs(n1._pulse.opacity() - 1.0) < 1e-6,
               f"visible={n1._pulse.isVisible()} opacity={n1._pulse.opacity()}")
-        # v1.4.4 (ROADMAP task 2): "Show on map" is a smooth camera FLIGHT (ui/motion.py) —
+        # v1.4.4: "Show on map" is a smooth camera FLIGHT (ui/motion.py) —
         # the centering is asserted once it lands (the flight is interruptible and takes 250 ms).
         import ui.motion as _motion
         check("reveal flies the camera (v1.4.4 motion)",

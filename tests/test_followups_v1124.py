@@ -198,7 +198,7 @@ check("§4 `_panel_server_nodes` declares the LIST the surface answers (None = n
       and "`None` while no project is open" not in _standalone)
 
 for _rel in ("storage/export_drawio.py", "pyproject.toml"):
-    check(f"§4 {_rel} carries no pointer into the plan (`ROADMAP`)",
+    check(f"§4 {_rel} carries no `ROADMAP` pointer",
           "ROADMAP" not in _read(*_rel.split("/")), _rel)
 
 _narrative = CB.measure(ROOT)
@@ -212,7 +212,7 @@ print("== §5 the i18n and the release state ==")
 
 check_i18n_parity(LANGS)
 check("§5 the polish adds no key to ANY language (the pin stays where v1.12.3 left it)",
-      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1
+      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1
       and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS),
       f"{EXPECTED_I18N_KEYS} / " + str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
 

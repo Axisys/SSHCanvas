@@ -16,7 +16,7 @@ except Exception:  # noqa: BLE001 — a build without i18n keeps the keys, not a
     def _t(key, **kwargs):  # type: ignore
         return key
 
-try:  # v1.9.8 (task 3): the vector glyph of the corner control
+try:  # v1.9.8: the vector glyph of the corner control
     from ..ui.icons import get_icon
 except ImportError:
     try:
@@ -25,7 +25,7 @@ except ImportError:
         def get_icon(name):
             return QIcon()
 
-try:  # v1.9.8 (task 3): the shared corner-button stylesheet of the split controller
+try:  # v1.9.8: the shared corner-button stylesheet of the split controller
     from .terminal_split import apply_corner_style
 except ImportError:  # flat launch from the project root
     try:
@@ -60,7 +60,7 @@ class CommanderCorner(QWidget):
         self.btn = QPushButton(_t("sftp.commander"))
         self.btn.setCheckable(True)
         self.btn.setToolTip(_t("sftp.commander_tooltip"))
-        # v1.9.8 (task 3): the second corner control of the session tab bar — its own GLYPH (two
+        # v1.9.8: the second corner control of the session tab bar — its own GLYPH (two
         # listings) and the SAME checkable feedback as the split button (`corner.button`).
         self.refresh_theme()
         self.btn.clicked.connect(self._on_button_clicked)

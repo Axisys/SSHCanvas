@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.1.4: main_window.py hygiene — split into mixins (ROADMAP v1.1.4; the v1.8rc1/rc2/rc3 waves add nineteen).
+"""v1.1.4: main_window.py hygiene — split into mixins (the v1.8rc1/rc2/rc3 waves add nineteen).
 
 The thematic test of the split, offscreen, running each cluster through a real `MainWindow`. The
 STRUCTURE: every method of the plan is defined in its own mixin (and NOT in the window's own dict), the
@@ -89,7 +89,7 @@ check("MRO: MainWindow → ProjectIOMixin → NodeOpsMixin → SshMixin → the 
                     "ThemeMixin", "I18nMixin", "LayoutMixin", "QMainWindow"],
       str(_mro[:25]))
 
-# The full list of the plan methods (ROADMAP v1.1.4, tasks 1–3; quick launch — in the SSH cluster;
+# The full list of the methods (v1.1.4; quick launch — in the SSH cluster;
 # the 1.8rc1/rc2/rc3 waves — the five wave-1 clusters, the six floating-panel/panel clusters and the
 # EIGHT wave-3 clusters — while `_snap_panel` / `_saved_position` / `SNAP_PX` STAY in the facade)
 PLAN = {

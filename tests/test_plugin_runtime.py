@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """v1.4rc2 — Plugin foundation, part 2: `PluginContext` and Main Thread isolation
-(ROADMAP v1.4rc2, tasks 5–6; the contract is the frozen `PLUGINS.md`).
+(the contract is the frozen `PLUGINS.md`).
 
 rc1 discovered the plugins and rendered the menu; rc2 makes the core CALL into them — the hard part of a
 Qt plugin system — and this file is the executable specification of that half.
@@ -83,7 +83,7 @@ def collect(signal):
 
 
 def log_records(logger_name="sshmap.modules.plugin_manager"):
-    """Capture the application log lines (the ROADMAP "a record in modules/logger.py")."""
+    """Capture the application log lines (ONE record — `modules/logger.py`)."""
     lines = []
 
     class _Handler(logging.Handler):
@@ -306,7 +306,7 @@ check("the runner is a one-shot: is_done() is True after run()", _runner.is_done
 check("the runner exposes its plan (nodes/command) without leaking a secret",
       [n.id for n in _runner.nodes()] == ["d1", "d2"] and _runner.command() == "echo hi")
 
-# A transport that hangs → the wait budget (the ROADMAP acceptance).
+# A transport that hangs → the wait budget (the DECLARED budget).
 def hang_transport(node, command, timeout, credentials):
     time.sleep(0.9)
     return PC.PluginRunResult(node=node, exit_code=0, output="late")

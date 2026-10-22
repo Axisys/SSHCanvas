@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""The two waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over six pane mixins.
+"""The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over seven pane mixins.
 
-Wave 1 (`1.8rc4`) moved 76 methods into `modules/sftp_pane_walk.py` (the pane-scoped keys and the
-mc/far walk), `modules/sftp_pane_listing.py` (the listing, its navigation and its address bar) and
-`modules/sftp_pane_viewer.py` (the read-only preview); wave 2 (`1.8rc5`) moved the transfer family
-into `modules/sftp_pane_transfer.py`, the drag & drop with the row context menu into
-`modules/sftp_pane_dnd.py` and the pure readers into `modules/sftp_pane_helpers.py`. Both waves kept
-the same bodies, public names and facade seams. This file pins the STRUCTURE: the family, the MRO,
-the one-owner rule, the cycle, the headers, the re-exported facts — and the two defects wave 1
-carried (`N46` the cut character, `N57` the ceiling's measured GUI cost).
+Wave 1 moved the walk, the listing and the preview into `modules/sftp_pane_walk.py` /
+`..._listing.py` / `..._viewer.py`, wave 2 the transfers and the drag & drop into `..._transfer.py` /
+`..._dnd.py` with the pure readers in `modules/sftp_pane_helpers.py`, the third (v1.14rc3) the
+four WIDGETS into `modules/sftp_pane_widgets.py` together with the dialects, the row readers and the
+vocabulary the helpers now own, and the fourth (v1.14rc4) the pane's ASSEMBLY into
+`modules/sftp_pane_assembly.py` AND the three CONTAINER mixins `SftpTab` is now a facade over. Every
+wave kept the same bodies, public names and facade seams; this file pins the STRUCTURE: the family,
+the MRO, the one-owner rule, the cycle, the headers, the re-exported facts — and the two defects wave
+1 carried (`N46` the cut, `N57` the GUI cost).
 """
 import ast
 import os
@@ -26,12 +27,17 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 app = QApplication.instance() or QApplication([])
 
 import modules.sftp_tab as ST  # noqa: E402
+import modules.sftp_pane_assembly as PASM  # noqa: E402
+import modules.sftp_container_panes as SCP  # noqa: E402
+import modules.sftp_container_session as SCS  # noqa: E402
+import modules.sftp_container_viewer as SCV  # noqa: E402
 import modules.sftp_pane_walk as PWT  # noqa: E402
 import modules.sftp_pane_listing as PLS  # noqa: E402
 import modules.sftp_pane_viewer as PVW  # noqa: E402
 import modules.sftp_pane_transfer as PTR  # noqa: E402
 import modules.sftp_pane_dnd as PDND  # noqa: E402
 import modules.sftp_pane_helpers as PH  # noqa: E402
+import modules.sftp_pane_widgets as PWD  # noqa: E402
 import modules.syntax_highlight as SH  # noqa: E402
 from modules.sftp_worker import READ_ERROR_TOO_LARGE  # noqa: E402
 from ui.mixin_support import host_attr  # noqa: E402
@@ -92,9 +98,29 @@ WAVE2 = {
         "dropEvent", "_drop_is_move", "_on_pane_drop", "_item_under", "_drop_target_dir",
         "_on_drop"]),
 }
-# The PURE helpers of the family: no class, five readers the facade re-exports.
+# The PURE helpers of the family: the five readers, and (v1.14rc3) the two path DIALECTS, the row
+# readers, the per-server memory and the Commander's own settings — the facade re-exports them all.
 HELPERS = ("modules/sftp_pane_helpers.py",
            ["format_size", "format_mtime", "decode_text", "preview_block_reason", "ask_conflict"])
+HELPER_MOVED = ("PathDialect", "dialect_for", "_win_standard_path", "local_error_text",
+                "name_refusal_text", "load_remembered_dirs", "sanitize_dirs", "remember_dir",
+                "remembered_dir_for", "read_was_truncated", "row_path", "row_name", "local_files",
+                "pane_payload", "load_commander_settings")
+# The FOURTH pane file (v1.14rc3): the widgets of ONE pane — four classes and the two functions
+# beside them. It is NOT a mixin: the MRO is unchanged and the wave tables above stay.
+WIDGETS = ("modules/sftp_pane_widgets.py",
+           ("_SftpRowItem", "_SftpTree", "_ButtonRow", "_SourceSwitch"),
+           ("_sync_source_switch", "_apply_status_style"))
+# The SEVENTH pane mixin (v1.14rc4): the state and the widgets of ONE pane — ONE method, because the
+# whole 313-line construction body is the ONE job this cluster has.
+ASSEMBLY = {"modules/sftp_pane_assembly.py": ("SftpPaneAssemblyMixin", PASM.SftpPaneAssemblyMixin,
+                                              ["_build_pane_ui"])}
+# The CONTAINER's three mixins (v1.14rc4): `SftpTab` is a facade over them, with the same seam rule.
+CONTAINER = {
+    "modules/sftp_container_panes.py": ("SftpContainerPanesMixin", SCP.SftpContainerPanesMixin),
+    "modules/sftp_container_session.py": ("SftpContainerSessionMixin", SCS.SftpContainerSessionMixin),
+    "modules/sftp_container_viewer.py": ("SftpContainerViewerMixin", SCV.SftpContainerViewerMixin),
+}
 # The SIXTH mixin, added by the release's own feature (`ELEVATED_PANE.md` §1): the two waves did not
 # move it, so it carries no method table of its own — the family count below is what it moves.
 ELEVATED = "modules/sftp_pane_elevated.py"
@@ -107,8 +133,14 @@ FACADE_METHODS = [
     "_sync_transfer_availability", "release", "refresh_theme", "retranslate",
     "_op_new_folder", "_op_rename", "_op_delete", "_op_copy_path", "_queue_op",
 ]
-PLANNED_MRO = ["_SftpPane", "SftpPaneWalkMixin", "SftpPaneListingMixin", "SftpPaneViewerMixin",
-               "SftpPaneTransferMixin", "SftpPaneDndMixin", "SftpPaneElevatedMixin", "QWidget"]
+PLANNED_MRO = ["_SftpPane", "SftpPaneAssemblyMixin", "SftpPaneWalkMixin", "SftpPaneListingMixin",
+               "SftpPaneViewerMixin", "SftpPaneTransferMixin", "SftpPaneDndMixin",
+               "SftpPaneElevatedMixin", "QWidget"]
+#: the assembly is a pane mixin: it joins the wave tables for every one-owner question
+WAVES_ALL = {**WAVE, **WAVE2, **ASSEMBLY}
+#: the CONTAINER's MRO — the facade, its three mixins, `QWidget` and the extract family
+PLANNED_CONTAINER_MRO = ["SftpTab", "SftpContainerPanesMixin", "SftpContainerSessionMixin",
+                         "SftpContainerViewerMixin", "QWidget"]
 
 
 def _owner_of(obj):
@@ -131,27 +163,50 @@ print("== §1 the family and the MRO ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _family = pane_family_files(ROOT)
-check("§1 the family is the facade, its six pane mixins and the helpers (ONE glob, so a new "
-      "mixin joins by itself)",
-      _family[0] == "modules/sftp_tab.py" and len(_family) == 8
-      and set(WAVE) | set(WAVE2) | {HELPERS[0], ELEVATED, "modules/sftp_tab.py"} == set(_family),
+check("§1 the family is the facade, its SEVEN pane mixins, the helpers, the widgets and the "
+      "container's three (TWO globs, so a new pane or container file joins by itself)",
+      _family[0] == "modules/sftp_tab.py" and len(_family) == 13
+      and set(WAVE) | set(WAVE2) | set(ASSEMBLY) | set(CONTAINER) | {
+          HELPERS[0], ELEVATED, WIDGETS[0], "modules/sftp_tab.py"} == set(_family),
       str(_family))
 check("§1 the five wave files exist, one class each, named as the plan says",
       all(os.path.isfile(os.path.join(ROOT, rel)) for rel in list(WAVE) + list(WAVE2))
       and all(cls.__name__ == name
               for rel, (name, cls, _m) in {**WAVE, **WAVE2}.items()),
       str([(rel, name, cls.__name__) for rel, (name, cls, _m) in WAVE.items()]))
-check("§1 the helpers module is a module of five PURE readers (no class of its own)",
+check("§1 the SEVENTH pane mixin and the container's three are one class each, named as planned",
+      all(cls.__name__ == name for rel, (name, cls, _m) in ASSEMBLY.items())
+      and all(issubclass(ST._SftpPane, cls) for _r, (_n, cls, _m) in ASSEMBLY.items())
+      and all(isinstance(pair[1], type) and pair[1].__name__ == pair[0]
+              for pair in CONTAINER.values())
+      and all(issubclass(ST.SftpTab, pair[1]) for pair in CONTAINER.values()),
+      str(sorted(ASSEMBLY) + sorted(CONTAINER)))
+check("§1 the helpers module is the PURE half: its five readers and the one value class "
+      "(`PathDialect`), never a mixin",
       all(callable(getattr(PH, name, None)) for name in HELPERS[1])
-      and not [n for n in ast.parse(pane_family_sources(ROOT)[HELPERS[0]]).body
-               if isinstance(n, ast.ClassDef)],
-      str(HELPERS[1]))
-check("§1 the MRO is the planned one (the facade, the six mixins, QWidget)",
-      [c.__name__ for c in ST._SftpPane.__mro__][:8] == PLANNED_MRO,
-      str([c.__name__ for c in ST._SftpPane.__mro__][:9]))
+      and [n.name for n in ast.parse(pane_family_sources(ROOT)[HELPERS[0]]).body
+           if isinstance(n, ast.ClassDef)] == ["PathDialect"],
+      str([n.name for n in ast.parse(pane_family_sources(ROOT)[HELPERS[0]]).body
+           if isinstance(n, ast.ClassDef)]))
+check("§1 the widget module defines the FOUR widgets and their two helpers — no mixin, no facade",
+      all(isinstance(getattr(PWD, name, None), type) for name in WIDGETS[1])
+      and all(callable(getattr(PWD, name, None)) for name in WIDGETS[2])
+      and [n.name for n in ast.parse(pane_family_sources(ROOT)[WIDGETS[0]]).body
+           if isinstance(n, ast.ClassDef)] == list(WIDGETS[1]),
+      str([n.name for n in ast.parse(pane_family_sources(ROOT)[WIDGETS[0]]).body
+           if isinstance(n, ast.ClassDef)]))
+check("§1 the MRO is the planned one (the facade, the SEVEN mixins, QWidget)",
+      [c.__name__ for c in ST._SftpPane.__mro__][:9] == PLANNED_MRO,
+      str([c.__name__ for c in ST._SftpPane.__mro__][:10]))
+check("§1 the CONTAINER's MRO is the planned one (the facade, its three mixins, QWidget)",
+      [c.__name__ for c in ST.SftpTab.__mro__][:5] == PLANNED_CONTAINER_MRO
+      and "SftpExtractMixin" in [c.__name__ for c in ST.SftpTab.__mro__],
+      str([c.__name__ for c in ST.SftpTab.__mro__]))
 check("§1 `_SftpPane` itself defines no wave method (the facade half of the one-owner rule)",
       not any(m in ST._SftpPane.__dict__ for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items()
-              for m in methods))
+              for m in methods)
+      and not any(m in ST._SftpPane.__dict__ for _r, (_n, _c, methods) in ASSEMBLY.items()
+                  for m in methods))
 check("§1 the five classes are the SHIPPED objects the pane resolves (not a private copy)",
       all(isinstance(cls, type) and issubclass(ST._SftpPane, cls)
           for _rel, (_n, cls, _m) in {**WAVE, **WAVE2}.items()))
@@ -167,7 +222,7 @@ print("== §2 the one-owner rule, method by method ==")
 
 _family_src = pane_family_sources(ROOT)
 _owner_problems = []
-for rel, (name, cls, methods) in {**WAVE, **WAVE2}.items():
+for rel, (name, cls, methods) in WAVES_ALL.items():
     for method in methods:
         fn = getattr(ST._SftpPane, method, None)
         if fn is None:
@@ -178,27 +233,45 @@ for rel, (name, cls, methods) in {**WAVE, **WAVE2}.items():
             _owner_problems.append(f"{method}: owner {_owner_of(fn)}")
         elif method not in _class_method_names(rel, name):
             _owner_problems.append(f"{method}: {rel} does not define it on {name}")
-check(f"§2 every one of the {sum(len(m) for _r, (_n, _c, m) in {**WAVE, **WAVE2}.items())} "
+check(f"§2 every one of the {sum(len(m) for _r, (_n, _c, m) in WAVES_ALL.items())} "
       f"moved methods has ONE owner", not _owner_problems, "; ".join(_owner_problems[:6]))
 check("§2 the AST reader of the family still finds EVERY wave method (its pins travel with the code)",
-      all(pane_func_owner(m, ROOT) for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items()
+      all(pane_func_owner(m, ROOT) for _rel, (_n, _c, methods) in WAVES_ALL.items()
           for m in methods))
+_container_methods = {rel: _class_method_names(rel, name)
+                      for rel, (name, _cls) in CONTAINER.items()}
+_container_problems = []
+for rel, (name, cls) in CONTAINER.items():
+    for method in _container_methods[rel]:
+        fn = getattr(ST.SftpTab, method, None)
+        if fn is None:
+            _container_problems.append(f"{method}: missing on the container")
+        elif method in ST.SftpTab.__dict__:
+            _container_problems.append(f"{method}: ALSO on the facade")
+        elif method not in cls.__dict__:
+            _container_problems.append(f"{method}: not defined in {name}")
+        elif _owner_of(fn).split(".")[0] != name:
+            _container_problems.append(f"{method}: owner {_owner_of(fn)}")
+check(f"§2 every one of the {sum(len(v) for v in _container_methods.values())} CONTAINER methods "
+      f"has ONE owner (its mixin, never the facade)", not _container_problems,
+      "; ".join(_container_problems[:6]))
 check("§2 the method counts are the plan's (23 + 25 + 28 in wave 1 — v1.9.3 adds the reader's "
       "encoding four, v1.13 the archive's sixteen, v1.13.1.1 the member path one, v1.13.1.2 the "
-      "delivery's report one, 30 + 15 in wave 2, 25 kept)",
+      "delivery's report one, 30 + 15 in wave 2, 25 kept, 1 assembly)",
       [len(m) for _rel, (_n, _c, m) in WAVE.items()] == [23, 25, 49]
       and [len(m) for _rel, (_n, _c, m) in WAVE2.items()] == [30, 15]
+      and [len(m) for _rel, (_n, _c, m) in ASSEMBLY.items()] == [1]
       and len(_class_method_names("modules/sftp_tab.py", "_SftpPane")) == len(FACADE_METHODS),
       str({rel: len(m) for rel, (_n, _c, m) in WAVE2.items()}))
 check("§2 the facade keeps the wave's OWNER list and nothing of it moved (the shared machinery)",
       all(m in _class_method_names("modules/sftp_tab.py", "_SftpPane") for m in FACADE_METHODS)
-      and not any(f"def {m}" in _family_src[rel] for rel in {**WAVE, **WAVE2}
+      and not any(f"def {m}" in _family_src[rel] for rel in WAVES_ALL
                   for m in ("bind_worker", "_op_delete", "_queue_op", "retranslate",
                             "set_source", "shutdown_provider")),
       str([m for m in FACADE_METHODS
            if m not in _class_method_names("modules/sftp_tab.py", "_SftpPane")]))
-_dupes = sorted({m for m in FACADE_METHODS for rel in {**WAVE, **WAVE2}
-                 if m in _class_method_names(rel, {**WAVE, **WAVE2}[rel][0])})
+_dupes = sorted({m for m in FACADE_METHODS for rel in WAVES_ALL
+                 if m in _class_method_names(rel, WAVES_ALL[rel][0])})
 check("§2 no name is defined by BOTH the facade and a mixin (a second truth is a defect)",
       not _dupes, str(_dupes))
 _facade_src = _family_src["modules/sftp_tab.py"]
@@ -217,6 +290,19 @@ _moved_module_names = {
                                     "VIEWER_FREEZE_MS_PER_MB = "),
     "modules/sftp_pane_transfer.py": ("class SftpPaneTransferMixin:",),
     "modules/sftp_pane_dnd.py": ("class SftpPaneDndMixin:",),
+    # v1.14rc3: the widgets and everything the pure half now owns
+    "modules/sftp_pane_widgets.py": ("class _SftpRowItem(", "class _SftpTree(",
+                                     "class _ButtonRow(", "class _SourceSwitch(",
+                                     "BUTTONS_BAR_MIN_WIDTH = 0",
+                                     'ELEVATED_SOURCE_LABEL = "sftp.elevated.button"'),
+    "modules/sftp_pane_helpers.py": ("class PathDialect:", 'PANE_DRAG_MIME = "',
+                                     'SOURCE_REMOTE = "', 'DIRS_CONFIG = "',
+                                     "MAX_REMEMBERED_DIRS = 32", "def row_name("),
+    # v1.14rc4: the assembly (the pane's ONE construction body) and the container's three mixins
+    "modules/sftp_pane_assembly.py": ("class SftpPaneAssemblyMixin:", "def _build_pane_ui(self)"),
+    "modules/sftp_container_panes.py": ("class SftpContainerPanesMixin:",),
+    "modules/sftp_container_session.py": ("class SftpContainerSessionMixin:",),
+    "modules/sftp_container_viewer.py": ("class SftpContainerViewerMixin:",),
 }
 check("§2 the module-level tables moved with their cluster, not copied",
       all(marker in _family_src[rel]
@@ -224,6 +310,24 @@ check("§2 the module-level tables moved with their cluster, not copied",
       and all(marker not in _facade_src
               for markers in _moved_module_names.values() for marker in markers),
       str(sorted(_moved_module_names)))
+check("§2 every name the third wave MOVED is re-exported HERE, from the module that DEFINES it",
+      all(getattr(ST, name) is owner for name, owner in ST.MOVED_NAMES.items())
+      and all(hasattr(ST, name) for name in HELPER_MOVED)
+      and all(hasattr(ST, name) for name in WIDGETS[1] + WIDGETS[2])
+      and ST.PathDialect is PH.PathDialect and ST.dialect_for is PH.dialect_for
+      and ST.read_was_truncated is PH.read_was_truncated and ST.row_name is PH.row_name
+      and ST._SftpRowItem is PWD._SftpRowItem and ST._SourceSwitch is PWD._SourceSwitch
+      and ST._apply_status_style is PWD._apply_status_style
+      and ST.SOURCE_LOCAL is PH.SOURCE_LOCAL and ST.PANE_DRAG_MIME is PH.PANE_DRAG_MIME,
+      str([n for n, owner in ST.MOVED_NAMES.items() if getattr(ST, n, None) is not owner]))
+# A TOP-LEVEL definition only: the container's own `SftpTab.remember_dir()` METHOD shares the name
+# of the helpers' pure reader and calls it through the module global (the shipped shape).
+_facade_top = {n.name for n in ast.parse(_facade_src).body
+               if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+check("§2 the facade DEFINES none of the moved names (a re-export, never a second copy)",
+      not [n for n in list(HELPER_MOVED) + list(WIDGETS[1]) + list(WIDGETS[2]) if n in _facade_top]
+      and "MOVED_NAMES = {" in _facade_src,
+      str([n for n in list(HELPER_MOVED) + list(WIDGETS[1]) if n in _facade_top]))
 check("§2 ...and the facade RE-EXPORTS the facts the suite reads on `modules.sftp_tab`",
       all(hasattr(ST, n) for n in ("PANE_SHORTCUTS", "PANE_HINTS", "HINT_SEPARATOR",
                                    "SORT_DEFAULT_COLUMN", "SORT_COLUMNS",
@@ -253,21 +357,21 @@ _cycles = [f"{rel}:{i}" for rel, src in _family_src.items()
 check("§3 no mixin imports the facade (the gate is blind to a sibling mixin, and §1 of the "
       "split test proves it is RED on the real shape)", not _cycles, ", ".join(_cycles))
 _headers = {}
-for rel in list(WAVE) + list(WAVE2) + [HELPERS[0]]:
+for rel in list(WAVES_ALL) + list(CONTAINER) + [HELPERS[0], WIDGETS[0]]:
     doc = ast.parse(_family_src[rel]).body[0]
     _headers[rel] = (doc.value.end_lineno - doc.value.lineno + 1
                      if isinstance(doc, ast.Expr) else 0)
 check("§3 every wave module carries a header inside the 12-line budget (AGENTS.md §12)",
       _headers and all(1 <= n <= 12 for n in _headers.values()), str(_headers))
-_WAVE_ALL = list(WAVE) + list(WAVE2) + [HELPERS[0]]
+_WAVE_ALL = list(WAVES_ALL) + list(CONTAINER) + [HELPERS[0], WIDGETS[0]]
 check("§3 every wave module that resolves a facade global carries the ONE seam import, and none "
       "of them imports the facade's names",
       all(("from ..ui.mixin_support import host_attr" in _family_src[rel]
            or "from ui.mixin_support import host_attr" in _family_src[rel])
-          for rel in WAVE if "host_attr(self," in _family_src[rel])
+          for rel in _WAVE_ALL if "host_attr(self," in _family_src[rel])
       and all("sftp_tab import" not in _family_src[rel]
               and "import sftp_tab" not in _family_src[rel] for rel in _WAVE_ALL),
-      str([rel for rel in WAVE if "host_attr(self," in _family_src[rel]
+      str([rel for rel in _WAVE_ALL if "host_attr(self," in _family_src[rel]
            and "mixin_support import host_attr" not in _family_src[rel]]))
 check("§3 the wave-2 mixin that needs a facade name WITHOUT a `self` uses the module reader "
       "(the `@staticmethod` half of the same seam)",
@@ -283,23 +387,25 @@ check("§3 the declared seams name every facade global the mixins resolve at cal
                                     ST.SOURCE_LOCAL, ST.SOURCE_REMOTE, ST._SftpRowItem,
                                     READ_ERROR_TOO_LARGE, ST.dialect_for, ST.local_error_text,
                                     ST.name_refusal_text, ST.local_files, ST.pane_payload,
-                                    ST.QFileDialog, ST.QInputDialog, ST.QMenu)),
+                                    ST._apply_status_style, ST.QFileDialog, ST.QInputDialog,
+                                    ST.QMenu)),
       str([n for n in ("format_size", "ask_conflict", "read_was_truncated", "QMenu")
            if not any(getattr(x, "__name__", x) == n for x in _seams_raw)]))
 check("§3 every declared seam is REALLY resolved through `host_attr` at a call site",
       all(f'host_attr(self, "{name}")' in "".join(_family_src[rel] for rel in _WAVE_ALL)
           for name in ("format_size", "preview_block_reason", "decode_text",
                        "read_was_truncated", "clamp_viewer_max_bytes", "save_viewer_wrap",
-                       "SOURCE_LOCAL", "SOURCE_REMOTE", "_SftpRowItem", "ask_conflict",
-                       "dialect_for", "local_error_text", "name_refusal_text", "local_files",
-                       "pane_payload", "QFileDialog", "QMenu")),
+                       "SOURCE_LOCAL", "SOURCE_REMOTE", "_SftpRowItem", "_apply_status_style",
+                       "ask_conflict", "dialect_for", "local_error_text", "name_refusal_text",
+                       "local_files", "pane_payload", "QFileDialog", "QMenu")),
       str([n for n in ("format_size", "preview_block_reason", "ask_conflict", "QMenu",
                        "pane_payload")
            if f'host_attr(self, "{n}")' not in "".join(_family_src[r] for r in _WAVE_ALL)]))
 check("§3 the pane-scoped shortcut actions still resolve their slots through `getattr` "
       "(the walk may not import the methods it fires)",
       "getattr(self, slot_name, None)" in _family_src["modules/sftp_pane_walk.py"]
-      and 'self.tree.pane_key = self._on_pane_key' in _facade_src)
+      and 'self.tree.pane_key = self._on_pane_key'
+      in _family_src["modules/sftp_pane_assembly.py"])
 
 _sentinel = type("_Sentinel", (), {})
 _orig = ST.format_size
@@ -313,7 +419,10 @@ finally:
 check("§3 every wave method is reachable on the INSTANCE, not only on the class",
       all(callable(getattr(ST._SftpPane, m, None))
           or isinstance(getattr(ST._SftpPane, m, None), property)
-          for _rel, (_n, _c, methods) in {**WAVE, **WAVE2}.items() for m in methods))
+          for _rel, (_n, _c, methods) in WAVES_ALL.items() for m in methods)
+      and all(callable(getattr(ST.SftpTab, m, None))
+              or isinstance(getattr(ST.SftpTab, m, None), property)
+              for methods in _container_methods.values() for m in methods))
 
 # ════════════════════════════════════════════════════════════════════════════
 print("== §4 the structural pins (a body is read WHEREVER the family defines it) ==")
@@ -336,6 +445,14 @@ check("§4 ...and it still finds the methods the facade kept",
       pane_func_owner("_popup_open", ROOT) == "modules/sftp_pane_dnd.py"
       and pane_func_owner("bind_worker", ROOT) == "modules/sftp_tab.py"
       and pane_func_owner("_op_delete", ROOT) == "modules/sftp_tab.py")
+check("§4 ...and it finds the assembly and the container's clusters where they MOVED to",
+      pane_func_owner("_build_pane_ui", ROOT) == "modules/sftp_pane_assembly.py"
+      and "QCompleter(" in pane_func_body("_build_pane_ui", ROOT)
+      and pane_func_owner("set_commander", ROOT) == "modules/sftp_container_panes.py"
+      and pane_func_owner("merge_dirs_into", ROOT) == "modules/sftp_container_session.py"
+      and pane_func_owner("present_viewer", ROOT) == "modules/sftp_container_viewer.py",
+      str((pane_func_owner("_build_pane_ui", ROOT), pane_func_owner("set_commander", ROOT),
+           pane_func_owner("merge_dirs_into", ROOT), pane_func_owner("present_viewer", ROOT))))
 try:
     pane_func_body("_no_such_method_8rc5", ROOT)
     _missing_raised = False
@@ -454,12 +571,12 @@ check("§7 the waves add NO i18n key and NO schema move (the release's OWN featu
       "`ELEVATED_PANE.md`; v1.8.1 adds its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair"
       " — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its"
       " export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 and VERSION_FORMAT == "0.9",
+      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 and VERSION_FORMAT == "0.9",
       f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
 check("§7 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)
 check("§7 the shipped version is the one the pin names", APP_VERSION == EXPECTED_APP_VERSION,
       f"{APP_VERSION} / {EXPECTED_APP_VERSION}")
-check("§7 the pane facade is under 3 000 lines after both waves",
-      len(_facade_src.splitlines()) < 3000, f"{len(_facade_src.splitlines())} lines")
+check("§7 the pane facade is under 2 400 lines after the third wave (it was 2 938 after the two)",
+      len(_facade_src.splitlines()) < 2400, f"{len(_facade_src.splitlines())} lines")
 finish()

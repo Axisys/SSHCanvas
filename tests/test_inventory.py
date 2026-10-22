@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.5.5 — The inventory: the LIST mode becomes a report (ROADMAP v1.5.5).
+"""v1.5.5 — The inventory: the LIST mode becomes a report (v1.5.5).
 
 The topical test of the release: offscreen, no network (the probes answer instantly), no real session.
 §1 the column set (`LIST_COLUMNS` is the ONE declaration of the 13 inventory columns and the pure
@@ -125,7 +125,7 @@ def close_window(win):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The column set (task 3)
+# 1. The column set
 # ════════════════════════════════════════════════════════════
 print("== 1. the inventory columns ==")
 
@@ -229,7 +229,7 @@ app.processEvents()
 check("back to en the age cell is English again", cell_of(win, "inv-rich", "status_age") == "5 min")
 
 # ════════════════════════════════════════════════════════════
-# 2. Sorting (task 1)
+# 2. Sorting
 # ════════════════════════════════════════════════════════════
 print("== 2. sorting ==")
 
@@ -441,7 +441,7 @@ check("back in LIST mode the remembered sort comes back (the alias, A→Z — th
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 3. The export (task 2)
+# 3. The export
 # ════════════════════════════════════════════════════════════
 print("== 3. the report ==")
 
@@ -722,7 +722,7 @@ check("the four age captions keep their placeholder in every language",
 check("the two age captions without a number are plain words (nothing to format)",
       all("{" not in LANGS[c]["sidebar.list.age_now"] for c in LANGS))
 check("the pin counted the SHIPPED release (692 + the fourteen of v1.5.5 + the two of v1.5.6)",
-      EXPECTED_I18N_KEYS == 708 + 1 + 10 and i18n.load_config() is not None or True)
+      EXPECTED_I18N_KEYS == 708 + 1 + 10 + 1 and i18n.load_config() is not None or True)
 check("no new config key beyond the v1.6.2 cursor shape and v1.10rc1's auto-open (the hub collects 30)",
       len(__import__("ui.settings_dialog", fromlist=["SettingsDialog"])
           .SettingsDialog(None).collect()) == 30)

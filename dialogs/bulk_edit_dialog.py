@@ -128,7 +128,7 @@ def changes_for(data, changes):
 # ── the dialog ───────────────────────────────────────────────────────────────────
 
 class BulkEditDialog(QDialog):
-    """Edit tags / comment / quick launch for the whole selection (v1.6, task 1).
+    """Edit tags / comment / quick launch for the whole selection (v1.6).
 
     The tri-state widget of a field is ONE combo (unchanged / replace / clear) plus the
     editor of the value, which is enabled only in the "replace" state — so the dialog

@@ -48,7 +48,7 @@ class ServerData:
     # touches it, and it is painted with an honest "not monitored" mark instead of a status. Written
     # through `asdict()` like `collapsed`, so an older project loads as fully managed (`AGENTS.md` §4.21).
     unmanaged: bool = False
-    # v1.6.5 (ROADMAP task 5): the OPT-IN reachability check of such a card — one ICMP
+    # v1.6.5: the OPT-IN reachability check of such a card — one ICMP
     # ping, on request, never a TCP/SSH probe. DEFAULT OFF: with it off no network call is
     # ever made for the card. Per-NODE data (the `collapsed` precedent) — deliberately NOT
     # a `config.json` key, so the settings hub's `collect()` does not move.
@@ -62,7 +62,7 @@ class ServerData:
     disk_path: str = ""
     disk_free: str = ""
     disk_size: str = ""
-    # v1.8.4 (ROADMAP task 3): the INODE fact of that same filesystem — the machine's own
+    # v1.8.4: the INODE fact of that same filesystem — the machine's own
     # `IUse%` token (`"100%"`), an OPTIONAL measured string like the two figures above. A
     # filesystem can sit at 40 % free SPACE and 100 % used INODES, so this is the second
     # answer the mount line would otherwise hide. Additive: a foreign value loads as "" and
@@ -82,7 +82,7 @@ class ServerData:
     # the inventory's sort key parses that field WHOLE. Additive: a foreign value loads as "" / [].
     disk_device: str = ""
     disk_devices: "list | None" = None
-    # v1.12.3 (ROADMAP task 2): the JUMP HOST of the EXTERNAL terminal — the value the OS ssh client
+    # v1.12.3: the JUMP HOST of the EXTERNAL terminal — the value the OS ssh client
     # takes after `-J` (`[user@]host[:port]`, a comma-separated chain). REQUEST-like and additive: a
     # project without the key loads as "" ("no jump") and an older version ignores it, so
     # `VERSION_FORMAT` stays "0.9". `modules/external_terminal.py` is the ONLY consumer — the INTERNAL
@@ -101,7 +101,7 @@ class ServerData:
 def is_unmanaged(target) -> bool:
     """Is this card an UNMANAGED one — a server this user does not administer? (v1.6.5)
 
-    The ONE predicate of the release (ROADMAP task 4): every SSH verb, the info
+    The ONE predicate of the release: every SSH verb, the info
     collection, the status round, the reachability report and the quick-launch
     `command` entries ask THIS question, so a single flag can never be honoured in one
     place and forgotten in another. PURE and duck-typed: a `ServerNode` (which carries
@@ -111,7 +111,7 @@ def is_unmanaged(target) -> bool:
 
 
 def unmanaged_ping_allowed(target) -> bool:
-    """May an unmanaged card be pinged on request? (v1.6.5, ROADMAP task 5)
+    """May an unmanaged card be pinged on request? (v1.6.5)
 
     The OPT-IN half of the flag, and the SECOND question of the gate: `is_unmanaged()`
     refuses an action, this one asks whether the ONE exception the release grants — a
@@ -122,7 +122,7 @@ def unmanaged_ping_allowed(target) -> bool:
 
 
 def info_collected_epoch(value) -> float:
-    """Coerce a raw "info_collected_at" value into epoch seconds (v1.5.3, ROADMAP task 1).
+    """Coerce a raw "info_collected_at" value into epoch seconds (v1.5.3).
 
     PURE, and the ONE place that decides what a usable timestamp is: a missing key, an
     explicit null, a non-numeric string, a NaN / infinite number and a NEGATIVE epoch all
@@ -140,7 +140,7 @@ def info_collected_epoch(value) -> float:
 
 
 def optional_text(value) -> str:
-    """Coerce a raw optional STRING field into its usable value (v1.6.6, ROADMAP task 5).
+    """Coerce a raw optional STRING field into its usable value (v1.6.6).
 
     PURE, and the ONE rule of the REQUEST/ANSWER families (`disk_mount` / `disk_path` /
     `disk_free` / `disk_size` and the device REQUEST `disk_device`): a string is taken
@@ -273,7 +273,7 @@ def server_data_from_dict(raw: dict) -> ServerData:
                              ('comment', ''), ('os_name', ''), ('cpu_model', '')):
         if data.get(_field) is None:
             data[_field] = _default
-    # v1.6.6 (ROADMAP task 5): the DATA-mount strings, the device REQUEST (v1.7.1.2) and the jump
+    # v1.6.6: the DATA-mount strings, the device REQUEST (v1.7.1.2) and the jump
     # host (v1.12.3) are coerced by ONE rule — the `disk_mount` precedent (`optional_text()`): a
     # missing key, an explicit null, a number, a list or any other foreign value all degrade to ""
     # ("never measured" / "no jump"), so a hand-edited project file can never put a non-string into a
@@ -294,7 +294,7 @@ def server_data_from_dict(raw: dict) -> ServerData:
     # v0.8.4 (former DESIGN.md §D): missing key → expanded node; coercion to bool
     # in case of a corrupted value (0/1/strings from external JSON edits).
     data['collapsed'] = bool(data.get('collapsed') or False)
-    # v1.6.5 (ROADMAP tasks 1/5): the two additive flags of the UNMANAGED card. A project
+    # v1.6.5: the two additive flags of the UNMANAGED card. A project
     # written before the release carries neither key, so it loads as a fully MANAGED map;
     # a hand-edited junk value is coerced by the same bool() rule as `collapsed`.
     data['unmanaged'] = bool(data.get('unmanaged') or False)
@@ -307,7 +307,7 @@ def server_data_from_dict(raw: dict) -> ServerData:
     # v1.0RC4: Quick launch — missing in old JSON → empty list;
     # corrupt records are dropped (sanitize_quick_launch)
     data['quick_launch'] = sanitize_quick_launch(data.get('quick_launch'))
-    # v1.5.3 (ROADMAP task 1): the age of the collected facts — missing in old JSON (and in
+    # v1.5.3: the age of the collected facts — missing in old JSON (and in
     # a hand-edited file with junk) → 0.0 = "not dated": the card stays unmarked and the
     # project loads unchanged. The ONE coercion lives in info_collected_epoch().
     data['info_collected_at'] = info_collected_epoch(data.get('info_collected_at'))
@@ -317,13 +317,13 @@ def server_data_from_dict(raw: dict) -> ServerData:
 def server_data_to_dict(data: ServerData) -> dict:
     serialized = asdict(data)
     serialized.pop('password', None)  # the password is not stored in JSON
-    # v1.5.3 (ROADMAP task 1): the collection date is written ONLY when the node really has
+    # v1.5.3: the collection date is written ONLY when the node really has
     # one ("write only when set, absent means default" — the project-format invariant), so a
     # map whose data was never collected keeps the byte-for-byte file it had before this
     # release and an undated card stays unmarked on the next load.
     if not info_collected_epoch(serialized.get('info_collected_at')):
         serialized.pop('info_collected_at', None)
-    # v1.6.6 (ROADMAP task 5): the REQUEST is written like the collected fields it sits beside (an
+    # v1.6.6: the REQUEST is written like the collected fields it sits beside (an
     # empty `disk_mount` means "use the declared default"), while the three ANSWERS are MEASUREMENTS —
     # nothing was measured ⇒ the key is ABSENT, so an ordinary map keeps the file it had and a project
     # written before the release is never "measured" by a later save. v1.7.1.2: the device REQUEST

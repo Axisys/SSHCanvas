@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v1.8.2 — the command library as a first-class FILE: the door, the ring and the import/export pair.
 
-ROADMAP v1.8.2: the History tab's door (`send_to_library()` — ONE row, never a batch, a secret row
+The contract — the History tab's door (`send_to_library()` — ONE row, never a batch, a secret row
 REFUSED), the container accessor that resolves the library of the session's container, the backup ring
 of `~/.sshmap/commands.json` (rotated by every write, restored through the shipped backup dialog) and
 the passwordless import/export pair (`read_library_file()` / `export_library_file()`).

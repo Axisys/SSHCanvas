@@ -64,7 +64,7 @@ class SSHWorker(QThread):
                  passphrase: str = "", verification_code: str = "",
                  parent=None):
         super().__init__(parent)
-        # v1.6.4 (ROADMAP task 1): the MANAGED worker names itself. Qt's abort —
+        # v1.6.4: the MANAGED worker names itself. Qt's abort —
         # "QThread: Destroyed while thread '' is still running" — names NOTHING on an
         # unnamed thread, in a codebase whose orphan registry below exists to prevent
         # exactly that abort; the journal names the worker by this string. No behaviour.
@@ -204,7 +204,7 @@ class SSHWorker(QThread):
             try:
                 from modules.logger import get_logger as _gl
                 _gl("modules.ssh_worker").warning(f"Host key mismatch for {self.host}: {e}")
-            except Exception:
+            except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the failure
                 pass
             msg = t("ssh.host_key_changed", host=self.host) + "\n" + str(e)
             self._emit_error(msg if not msg.startswith("[") else f"Host key changed for {self.host}: {e}")

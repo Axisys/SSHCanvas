@@ -169,7 +169,7 @@ class ActivityBuffer:
 
     @property
     def max_events(self) -> int:
-        """The bound — the ring never holds more than this (the ROADMAP acceptance)."""
+        """The bound — the ring never holds more than this."""
         return self._max
 
     def events(self) -> list:
@@ -263,7 +263,7 @@ class ActivityBuffer:
 
 
 # ── The process-wide ring ─────────────────────────────────────────────────────
-# ONE buffer per process (the ROADMAP task 1: "the SAME buffer"). The handler resolves
+# ONE buffer per process (every tap writes into the SAME buffer). The handler resolves
 # it at EMIT time instead of holding a reference, so `reset_activity_buffer()` (the
 # suite's seam) really swaps what the taps write into.
 

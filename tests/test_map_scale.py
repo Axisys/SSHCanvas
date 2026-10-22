@@ -69,7 +69,7 @@ def node_data(node):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The bulk edit: the tri-state, ONE command, a byte-equal undo (task 1)
+# 1. The bulk edit: the tri-state, ONE command, a byte-equal undo
 # ════════════════════════════════════════════════════════════
 print("== §1 the bulk edit of the selection ==")
 
@@ -162,7 +162,7 @@ check("bulk: the map's multi-selection context menu carries the row",
 
 
 # ════════════════════════════════════════════════════════════
-# 2. The card density (task 2)
+# 2. The card density
 # ════════════════════════════════════════════════════════════
 print("== §2 the card density ==")
 
@@ -238,7 +238,7 @@ close_window(_win2)
 
 
 # ════════════════════════════════════════════════════════════
-# 3. The parallel links of one endpoint pair (task 3)
+# 3. The parallel links of one endpoint pair
 # ════════════════════════════════════════════════════════════
 print("== §3 the parallel links ==")
 
@@ -304,7 +304,7 @@ close_window(_win3)
 
 
 # ════════════════════════════════════════════════════════════
-# 4. The background image joins the undo stack (task 4)
+# 4. The background image joins the undo stack
 # ════════════════════════════════════════════════════════════
 print("== §4 the background commands ==")
 
@@ -351,7 +351,7 @@ close_window(_win4)
 
 
 # ════════════════════════════════════════════════════════════
-# 5. The connection report (task 5)
+# 5. The connection report
 # ════════════════════════════════════════════════════════════
 print("== §5 the connection report ==")
 
@@ -399,7 +399,7 @@ close_window(_win5)
 
 
 # ════════════════════════════════════════════════════════════
-# 6. The auto-arrangement of a group (task 6)
+# 6. The auto-arrangement of a group
 # ════════════════════════════════════════════════════════════
 print("== §6 the group arrangement ==")
 
@@ -488,7 +488,7 @@ close_window(_win6)
 
 
 # ════════════════════════════════════════════════════════════
-# 7. The activity panel's toolbar mirror (task 7)
+# 7. The activity panel's toolbar mirror
 # ════════════════════════════════════════════════════════════
 print("== §7 the panel cluster of the toolbar ==")
 

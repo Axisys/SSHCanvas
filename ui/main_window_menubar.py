@@ -25,13 +25,13 @@ class MenubarMixin:
     def _add_menu_action(self, menu, key: str, slot, action_id: str = "", icon_name: str = ""):
         """Add a translated menu item and register it for re-translation.
 
-        v1.3.2 (ROADMAP v1.3.2, task 1): the shortcut is NOT a literal any more.
+        v1.3.2: the shortcut is NOT a literal any more.
         With an ``action_id`` the QAction becomes a hotkey target of the action
         registry (``ui/hotkey_registry.py``) and receives its sequence from there in
         ``_apply_hotkeys()`` — at startup and live after the settings dialog's OK.
         Without an action_id the item has no hotkey at all.
 
-        v1.3.3.3 (task 2): an optional vector ``icon_name`` (``ui/icons.py``) — the
+        v1.3.3.3: an optional vector ``icon_name`` (``ui/icons.py``) — the
         zoom items of the View menu carry one, like the toolbar buttons do. Unknown
         name / a missing ui.icons → the item simply stays text-only.
         """
@@ -53,7 +53,7 @@ class MenubarMixin:
         # v1.3.2: the Ctrl+N/O/S hints come from the hotkey registry (action_ids below).
         file_menu = menubar.addMenu(self.t("menu.file") if self._i18n_available else "File")
         self._register_i18n(file_menu, "menu.file")
-        # v1.3.3.6 (ROADMAP task 1): "Recent" — the FIRST item of the File menu (the
+        # v1.3.3.6: "Recent" — the FIRST item of the File menu (the
         # gesture it replaces is the top of the menu: File → Open → dialog). Rebuilt
         # from `recent_projects` on every aboutToShow (the v1.3.3.1 language-submenu
         # pattern); the rebuild re-registers its QActions in `_qaction_guard`
@@ -68,9 +68,9 @@ class MenubarMixin:
         self._add_menu_action(file_menu, "file.new_project", self._new_project, "file.new")
         self._add_menu_action(file_menu, "file.open", self._open_project, "file.open")
         self._add_menu_action(file_menu, "file.save", self._save_project, "file.save")
-        # v1.3.3.3 (task 1): "Save As…" gets a home in the registry (Ctrl+Shift+S).
+        # v1.3.3.3: "Save As…" gets a home in the registry (Ctrl+Shift+S).
         self._add_menu_action(file_menu, "file.save_as", self._save_project_as, "file.save_as")
-        # v0.9.7: autosave + a ring buffer of backups (ROADMAP v0.9.7 #2/#3) —
+        # v0.9.7: autosave + a ring buffer of backups —
         # enabled state driven by _update_window_title (an open project file is required).
         self.act_restore_autosave = self._add_menu_action(
             file_menu, "file.restore_autosave", self._restore_from_autosave, "file.restore_autosave")
@@ -98,7 +98,7 @@ class MenubarMixin:
         self._add_menu_action(edit_menu, "edit.add_group", self._add_group_at, "edit.add_group")  # v0.8.1: node groups
         self.act_add_connection = self._add_menu_action(
             edit_menu, "edit.add_connection", self._add_connection, "edit.add_connection")
-        # v1.6.8 (ROADMAP task 2): the action NAMES the gesture. The tooltip carries the
+        # v1.6.8: the action NAMES the gesture. The tooltip carries the
         # SAME sentence the first screen's hint shows — ONE key, ONE composer
         # (`empty_state.connect_hint_text()`), so the two surfaces cannot drift apart.
         self.act_add_connection.setToolTip(self._connect_hint_text())
@@ -113,14 +113,14 @@ class MenubarMixin:
         edit_menu.addSeparator()
         self._add_menu_action(edit_menu, "edit.connect_selected", self._connect_selected_nodes,
                               "edit.connect_selected")
-        # v1.6 (ROADMAP task 1): the BULK EDIT of the selection — tags / comment / quick
+        # v1.6: the BULK EDIT of the selection — tags / comment / quick
         # launch in ONE undo step. A permanent Edit-menu item, like the multi-selection
         # pair above: a context menu is rebuilt on every right click, so its QAction
         # cannot carry a configurable sequence. Enabled by `_sync_selection_state()`.
         self.act_bulk_edit = self._add_menu_action(
             edit_menu, "edit.bulk_edit", self._bulk_edit_selection, "edit.selected")
         self.act_bulk_edit.setEnabled(False)   # nothing is selected at construction time
-        # v1.6 (ROADMAP task 6): the auto-arrangement of a GROUP's members. It sits next
+        # v1.6: the auto-arrangement of a GROUP's members. It sits next
         # to the group verbs of the context menu; the id keeps the `edit.` prefix so
         # `action_family()` files it under Edit in the "Hotkeys" tab (a `group.…` prefix
         # would fall back instead of joining the table).
@@ -129,7 +129,7 @@ class MenubarMixin:
         self.act_arrange_group.setEnabled(False)   # no group is selected at construction
         self._add_menu_action(edit_menu, "edit.delete_selected", self._delete_selected_nodes,
                               "edit.delete_selected")
-        # v1.3.3.3 (task 5): the on-demand status round — a permanent Edit-menu item
+        # v1.3.3.3: the on-demand status round — a permanent Edit-menu item
         # (the same method the map/sidebar context menus call), which is also what makes
         # the action a real hotkey target: a context menu is rebuilt on every right
         # click, so its QAction cannot carry a configurable sequence.
@@ -164,7 +164,7 @@ class MenubarMixin:
         # v1.3.3.7: export the map to SVG (QSvgGenerator — the vector member of the set)
         self._add_menu_action(export_menu, "file.export_svg", self._export_map_svg,
                               "file.export_svg")
-        # v1.5.1 (ROADMAP tasks 1/2): the two IMAGE paths of the same machinery — the 2×
+        # v1.5.1: the two IMAGE paths of the same machinery — the 2×
         # render straight to the clipboard (the CURRENT theme, NO palette question) and the
         # fixed 1600×900 @2× poster of the documentation. Both are registry actions with an
         # EMPTY default, so the keyboard can reach them through the Hotkeys tab.
@@ -172,7 +172,7 @@ class MenubarMixin:
         self._add_menu_action(export_menu, "file.copy_map", self._copy_map_image, "file.copy_map")
         self._add_menu_action(export_menu, "file.docs_frame", self._export_docs_frame,
                               "file.docs_frame")
-        # v1.5.5 (ROADMAP tasks 2/3): the INVENTORY family — the server table of the LIST
+        # v1.5.5: the INVENTORY family — the server table of the LIST
         # mode leaves the application: the visible table to the clipboard as TSV (one paste
         # into a spreadsheet) and to a file as CSV or TSV. A different SUBJECT from the map
         # exports above (a report of the DATA, not a picture of the map), which is why the
@@ -182,7 +182,7 @@ class MenubarMixin:
             export_menu, "file.copy_list", self._copy_list_table, "file.copy_list")
         self.act_export_list = self._add_menu_action(
             export_menu, "file.export_list", self._export_list_table, "file.export_list")
-        # v1.6 (ROADMAP task 5): the SECOND report of the DATA family — "who talks to
+        # v1.6: the SECOND report of the DATA family — "who talks to
         # whom" as a table (one row per arrow: two endpoints, the declared type, the
         # direction and the bidirectional flag). It rides the SAME pure RFC-4180 writer
         # the inventory report uses (`ui/sidebar.list_table_text`), so a label carrying a
@@ -204,7 +204,7 @@ class MenubarMixin:
         self._register_i18n(profile_menu, "menu.profile")
         self._add_menu_action(profile_menu, "profile.manage", self._open_profile_manager,
                               "profile.manage")
-        # v1.8.1 (ROADMAP v1.8.1): the known-hosts surface — the readable view of what the TOFU
+        # v1.8.1: the known-hosts surface — the readable view of what the TOFU
         # policy recorded, with "delete this fingerprint" and "replace it with the server's".
         self._add_menu_action(profile_menu, "hostkey.manage", self._open_known_hosts_manager,
                               "hostkey.manage")
@@ -213,12 +213,12 @@ class MenubarMixin:
         view_menu = menubar.addMenu(self.t("menu.view") if self._i18n_available else "View")
         self._register_i18n(view_menu, "menu.view")
         self._add_menu_action(view_menu, "view.center_map", self._center_view, "view.center_map")
-        # v1.5rc4 (ROADMAP task 6): "Focus the map" — the ONE new registry action of the
+        # v1.5rc4: "Focus the map" — the ONE new registry action of the
         # release ("at most ONE"): it hands the keyboard to the canvas, which then walks
-        # its cards with Tab/arrows/Enter/Esc and shows the visible focus ring (task 5).
+        # its cards with Tab/arrows/Enter/Esc and shows the visible focus ring.
         # An EMPTY registry default: assignable, no key taken from anyone.
         self._add_menu_action(view_menu, "view.focus_map", self._focus_map, "view.focus_map")
-        # v1.3.3.3 (task 2): the whole zoom family — a menu item + a vector icon + a
+        # v1.3.3.3: the whole zoom family — a menu item + a vector icon + a
         # registry entry each (Reset zoom Ctrl+0 has NO use for an icon: reset is a
         # state, not a direction). The step API lives on MapView.
         self._add_menu_action(view_menu, "view.reset_zoom", self._reset_zoom, "view.reset_zoom")
@@ -245,7 +245,7 @@ class MenubarMixin:
         # v1.4.6: the toolbar MIRROR of the same toggle (created in _setup_toolbar, which
         # runs BEFORE this method — the pair is wired here, like the v1.4.5 legend one).
         self._wire_view_toolbar_button("view.toggle_sidebar", self.act_show_sidebar)
-        # v1.2.4.1 (task 3): the map — the same pattern (created manually, the pair's icon).
+        # v1.2.4.1: the map — the same pattern (created manually, the pair's icon).
         self.act_show_map = view_menu.addAction(
             self.t("view.toggle_map") if self._i18n_available else "Map / List")
         self.act_show_map.setCheckable(True)
@@ -254,7 +254,7 @@ class MenubarMixin:
         self.act_show_map.toggled.connect(self._on_map_toggled)
         self._register_i18n(self.act_show_map, "view.toggle_map")
         self._wire_view_toolbar_button("view.toggle_map", self.act_show_map)   # v1.4.6
-        # v1.4.2 (ROADMAP task 2): the minimap — a checkable item next to the panel
+        # v1.4.2: the minimap — a checkable item next to the panel
         # toggles with the same "created manually + toggled(bool)" pattern. It is a
         # REGISTRY action with an EMPTY default (no hotkey out of the box, assignable in
         # "Settings → Hotkeys"); checked = the panel is shown (the config default is on).
@@ -269,7 +269,7 @@ class MenubarMixin:
         # v1.4.6: the minimap's own toolbar button (the user asked for a switch of the
         # panel next to the legend's — the View menu is not the only way any more).
         self._wire_view_toolbar_button("view.toggle_minimap", self.act_show_minimap)
-        # v1.4.5 (ROADMAP task 4): the legend panel — the same "created manually +
+        # v1.4.5: the legend panel — the same "created manually +
         # toggled(bool)" pattern, the same registry rule (an EMPTY default: assignable,
         # no key out of the box) and a toolbar MIRROR created in _setup_toolbar (which
         # runs before this method — the pair is wired here, exactly like the two panel
@@ -283,7 +283,7 @@ class MenubarMixin:
         self._register_i18n(self.act_show_legend, "view.toggle_legend")
         self._register_hotkey_target("view.toggle_legend", self.act_show_legend)
         self._wire_view_toolbar_button("view.toggle_legend", self.act_show_legend)
-        # v1.6.7 (ROADMAP task 4): the BOOKMARKS panel — the same "created manually +
+        # v1.6.7: the BOOKMARKS panel — the same "created manually +
         # toggled(bool)" pattern and the same registry rule (an EMPTY default: assignable,
         # no key taken from anyone). The panel is already built by `_setup_ui` (which runs
         # BEFORE this method) and its saved visibility was read in the constructor, so the
@@ -311,12 +311,12 @@ class MenubarMixin:
         self._register_i18n(self.act_show_activity, "view.toggle_activity")
         self._register_hotkey_target("view.toggle_activity", self.act_show_activity)
         self._wire_view_toolbar_button("view.toggle_activity", self.act_show_activity)
-        # v1.2.4.1 (task 2): corner collapse buttons — the same QAction (toggle()).
+        # v1.2.4.1: corner collapse buttons — the same QAction (toggle()).
         # the icon — a "◇" diamond on both panels, both
         # at the bottom right (the sidebar's bottom row / the map's right BOTTOM corner — the top is
         # reserved for the minimap per the new discussions).
         self.sidebar.collapse_btn.setIcon(host_attr(self, "_diamond_icon")())
-        self._style_collapse_btn(self.sidebar.collapse_btn)   # v1.5.6: the FRAME (task 4)
+        self._style_collapse_btn(self.sidebar.collapse_btn)   # v1.5.6: the FRAME
         if self._i18n_available:
             self.sidebar.collapse_btn.setToolTip(self.t("view.toggle_sidebar"))
         self.sidebar.collapse_clicked.connect(lambda: self.act_show_sidebar.toggle())
@@ -325,7 +325,7 @@ class MenubarMixin:
         if self._i18n_available:
             self._map_collapse_btn.setToolTip(self.t("view.toggle_map"))
         self._map_collapse_btn.clicked.connect(lambda: self.act_show_map.toggle())
-        # v1.2.4.1 (task 1): tooltips of the collapsed-panel strips.
+        # v1.2.4.1: tooltips of the collapsed-panel strips.
         if self._i18n_available:
             self._sidebar_strip.setToolTip(self.t("view.strip_sidebar_tooltip"))
             self._map_strip.setToolTip(self.t("view.strip_map_tooltip"))
@@ -359,7 +359,7 @@ class MenubarMixin:
         self.act_multi_input.setCheckable(True)
         self.act_multi_input.setChecked(False)
         self.act_multi_input.toggled.connect(self._toggle_multi_input)
-        # v1.3.2 (task 4): the sequence is configurable, the RULE is not — the key is
+        # v1.3.2: the sequence is configurable, the RULE is not — the key is
         # installed ONLY while the mode is on (QAction has no setShortcutEnabled; an
         # empty QKeySequence = no shortcut). The registry marks this action "dynamic":
         # apply_to() skips it and _sync_multi_shortcut() owns it (mode state included).
@@ -367,7 +367,7 @@ class MenubarMixin:
         self.act_multi_input.setShortcut(QKeySequence())
         self.act_multi_input.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
 
-        # v1.1 (ROADMAP task 2): the settings dialog (hub) — the "Settings" item BETWEEN
+        # v1.1: the settings dialog (hub) — the "Settings" item BETWEEN
         # "View" and "Help". The item — a QAction INSIDE the menu (not a bare menubar action):
         # the command palette (Ctrl+K) walks all menu QActions and will pick it up automatically.
         settings_menu = menubar.addMenu(
@@ -386,7 +386,7 @@ class MenubarMixin:
         self._register_i18n(self._plugin_menu, "menu.plugins")
         self.act_plugins_reload = self._add_menu_action(
             self._plugin_menu, "plugins.reload", self._reload_plugins, "plugins.reload")
-        # v1.4rc3 (task 8): "Run on selected servers" — the entry point of the headless
+        # v1.4rc3: "Run on selected servers" — the entry point of the headless
         # `run_on_nodes` hook (rc2 machinery) for the CURRENT selection. A registry
         # action like every other global action (an EMPTY default: assignable in
         # "Settings → Hotkeys"), enabled only while a loaded plugin really implements
@@ -399,7 +399,7 @@ class MenubarMixin:
         # destroy either of them (the language menu rebuilds its own children —
         # here the permanent pieces must survive `_populate_plugin_items`).
         self._plugin_sep = self._plugin_menu.insertSeparator(self.act_plugins_reload)
-        # v1.8.3 (ROADMAP task 1): the Plugins WINDOW — the door to the window, in the permanent
+        # v1.8.3: the Plugins WINDOW — the door to the window, in the permanent
         # group (below the separator) and the checkable OWNER of its `ui_plugins_panel` visibility
         # (the `view.toggle_activity` rule: the item owns the state, the panel follows it). Built
         # manually with an explicit toggled(bool): an auto-connected QMenu slot fires WITHOUT
@@ -417,7 +417,7 @@ class MenubarMixin:
         # method, so the button already exists): the item stays the OWNER of the state and the
         # button mirrors it, exactly like the six view toggles above.
         self._wire_view_toolbar_button("plugins.window.open", self.act_plugins_window)
-        # v1.9.3 (ROADMAP task 3): the CORE-owned command — a command of the USER's own, sent to the
+        # v1.9.3: the CORE-owned command — a command of the USER's own, sent to the
         # servers the window targets. It needs NO plugin (the runner is the core's own), so the
         # registry alone enables it, and it is built MANUALLY like the window item above: a new
         # surface costs no shortcut and no registry row (gotcha #10 — the QAction is built and its
@@ -433,18 +433,18 @@ class MenubarMixin:
         # Help menu
         help_menu = menubar.addMenu(self.t("menu.help") if self._i18n_available else "Help")
         self._register_i18n(help_menu, "menu.help")
-        # v1.5rc3 (ROADMAP task 1): the demo map. The SECOND entry point of the same
+        # v1.5rc3: the demo map. The SECOND entry point of the same
         # project — the empty state's button is the first — and both call ONE method
         # (`_open_example_map`), which loads it through the ordinary project load path.
         self.act_example_map = self._add_menu_action(
             help_menu, "example.open", self._open_example_map, "help.example")
-        # v1.5rc3 (ROADMAP task 4): the keyboard cheat-sheet — the SAME registry-derived
+        # v1.5rc3: the keyboard cheat-sheet — the SAME registry-derived
         # text Help → About renders (`ui/hotkey_sheet_dialog.py` reuses
         # `about_dialog.cheatsheet()`), reachable by F1 and, on the map, by `?`.
         self.act_cheatsheet = self._add_menu_action(
             help_menu, "help.cheatsheet", self._open_hotkey_sheet, "help.cheatsheet")
         self._add_menu_action(help_menu, "help.open_logs", self._open_log_file, "help.open_logs")
-        # v1.3.3.3 (task 6): the About window — the version, the license, the paths and
+        # v1.3.3.3: the About window — the version, the license, the paths and
         # the hotkey cheat-sheet generated FROM the registry. Registered in the action
         # registry as well (an empty default: assignable, no hotkey out of the box).
         self.act_about = self._add_menu_action(help_menu, "about.open", self._open_about_dialog,
@@ -518,7 +518,7 @@ class MenubarMixin:
         except RuntimeError:
             pass  # Qt teardown — nothing to guard
 
-    # ── v1.3.3.1 (ROADMAP task 3): the language list without a restart ───────
+    # ── v1.3.3.1: the language list without a restart ────────────────────────
 
     def _populate_language_menu(self, menu):
         """(Re)build the `Help → Language` submenu from the DISCOVERED files.
@@ -562,7 +562,7 @@ class MenubarMixin:
         self._rebuild_qaction_guard()
 
     def _reload_languages(self):
-        """"Rescan the language files" (v1.3.3.1, ROADMAP task 3).
+        """"Rescan the language files" (v1.3.3.1).
 
         Re-reads the ACTIVE language file (so an edited `i18n/<code>.json` is picked
         up without a restart) and re-texts the UI — an action switcher that did not

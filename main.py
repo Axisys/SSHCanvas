@@ -5,7 +5,7 @@ import sys
 # mode's own contract ("the standalone builds NO map … its IMPORTS are the enforcement",
 # `AGENTS.md` §4.3.9) holds at the ENTRY POINT and not only inside the surface.
 
-# v1.4.3 (ROADMAP task 4): the saved theme is applied through the ONE builder
+# v1.4.3: the saved theme is applied through the ONE builder
 # (ui/theme_qss.py) before the window is built — the `theme` module itself is no
 # longer read here, because the palette and the QSS are both the builder's job.
 try:
@@ -101,7 +101,7 @@ def main(argv=None):
         # the system size however correct `app.font()` is afterwards (N89).
         apply_saved_ui_font(app)
 
-        # v1.8.1 (ROADMAP v1.8.1): the interactive TRUST SURFACE. A host key is verified and a private
+        # v1.8.1: the interactive TRUST SURFACE. A host key is verified and a private
         # key is unlocked on the CONNECT thread, so those questions are answered from a window here
         # (`ui/trust_surface.py` + `modules/interactive_ask.py`). Without this install the shipped TOFU
         # fallback applies — which is exactly what a headless run and the suite rely on.
@@ -123,14 +123,14 @@ def main(argv=None):
         _saved_theme = load_theme_settings()
         theme_qss.apply_theme(theme_from_settings(_saved_theme), app=app,
                               refresh_windows=False)
-        # v1.5rc1 (ROADMAP task 6): the "Reduce motion" flag of the same key,
+        # v1.5rc1: the "Reduce motion" flag of the same key,
         # installed BEFORE the window exists so no gesture can start un-flagged.
         apply_motion_setting(_saved_theme)
-        # v1.6 (ROADMAP task 2): the card density of the same nested key — installed
+        # v1.6: the card density of the same nested key — installed
         # before the first card is built, so no card is ever born in the other mode.
         apply_density_setting(_saved_theme)
 
-        # v1.7.3 (ROADMAP v1.7.3, task 1): the cross-session relay spools ONE file under the OS
+        # v1.7.3: the cross-session relay spools ONE file under the OS
         # temp — a crash must not leave a copy of a remote file behind, so the stale spools of a
         # previous run are swept BEFORE the first window exists (a spool that outlives its run is
         # swept here). v1.13.1: the same rule for the tree an archive extraction stages. Never fatal.
@@ -172,8 +172,8 @@ def main(argv=None):
             win.show()
 
             # v1.4rc1 (plugin foundation, rc series): the plugin discovery — after the
-            # window exists and BEFORE the event loop (ROADMAP rc1: "after MainWindow
-            # creation, before app.exec()"). A broken plugin is reported in the status bar
+            # window exists and BEFORE the event loop (the startup order of
+            # `AGENTS.md` §4.10.1). A broken plugin is reported in the status bar
             # and in the log; it can never stop the application (the call itself is
             # defensive as well — a plugin must not be able to break the startup).
             try:

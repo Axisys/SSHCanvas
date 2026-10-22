@@ -22,11 +22,11 @@ DURATION_SLOW = 300     # ms — the longest gesture
 
 EASING = QEasingCurve.Type.OutQuad
 
-# The node scale-in (v1.4.4, ROADMAP task 3): 200 ms, scale 0.9 -> 1.0 plus a fade-in.
+# The node scale-in (v1.4.4): 200 ms, scale 0.9 -> 1.0 plus a fade-in.
 SCALE_IN_MS = 200
 SCALE_IN_FROM = 0.9
 
-# ── The motion switch (v1.5rc1, ROADMAP task 6) ───────────────────────────────────
+# ── The motion switch (v1.5rc1) ───────────────────────────────────────────────────
 # "Reduce motion": with it OFF a gesture applies its FINAL state at once. The default
 # is ON — the behaviour of every release before this one — and a broken config value
 # falls back to it (`set_motion_enabled` accepts nothing but a real False as "off").
@@ -342,7 +342,7 @@ def settle_scale_in(item, origin=None):
     if callable(updater):
         try:
             updater(item)   # the arrows + the pinned notes of this card
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: a card mid-settle
             pass
 
 

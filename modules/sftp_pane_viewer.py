@@ -23,7 +23,7 @@ except Exception:  # noqa: BLE001 — import outside the project tree (flat run)
     def _t(key, **kwargs):  # type: ignore
         return key
 
-try:  # v1.4.7 (ROADMAP task 4): detection + tokenizers + the ONE highlighter
+try:  # v1.4.7: detection + tokenizers + the ONE highlighter
     from . import syntax_highlight as syntax
 except ImportError:
     import syntax_highlight as syntax
@@ -236,11 +236,11 @@ class SftpPaneViewerMixin:
                 item = self.tree.topLevelItem(index)
                 if item is not None and item.data(0, self.PATH_ROLE) == path:
                     return int(item.data(0, self.SIZE_ROLE) or 0)
-        except (RuntimeError, TypeError, ValueError):
+        except (RuntimeError, TypeError, ValueError):  # noqa: BLE001 — best effort (declared): 0 means the path is not on screen
             pass
         return 0
 
-    # ── v1.3.1: the preview panel (ROADMAP task 1) ───────────────────────
+    # ── v1.3.1: the preview panel ────────────────────────────────────────
 
     def _open_viewer(self, item: QTreeWidgetItem):
         """A double click on a file → read it through the worker queue and show it.
@@ -797,7 +797,7 @@ class SftpPaneViewerMixin:
         self.splitter.addWidget(panel)
         try:
             self.splitter.setCollapsible(self.splitter.indexOf(panel), True)
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: the splitter is already gone
             pass   # Qt teardown — the splitter is already gone
         return panel
 
@@ -895,7 +895,7 @@ class SftpPaneViewerMixin:
                 continue
             try:
                 signal.connect(slot)
-            except (RuntimeError, TypeError):
+            except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: a stub without the signals
                 pass   # a dead provider / a stub without the shipped signals
 
     def _release_leg_owner(self, provider):
@@ -910,7 +910,7 @@ class SftpPaneViewerMixin:
                 continue
             try:
                 signal.disconnect(slot)
-            except (RuntimeError, TypeError):
+            except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: the C++ object is already gone
                 pass   # never connected / the C++ object is already gone
 
     def _on_leg_done(self, task_id, _detail=""):
@@ -1033,7 +1033,7 @@ class SftpPaneViewerMixin:
         self._show_viewer(entry["name"], len(data), text, encoding, total=int(entry["size"] or 0))
         return True
 
-    # ── v1.4.7 (ROADMAP task 3/4): the lazy syntax highlighting ─────────────
+    # ── v1.4.7: the lazy syntax highlighting ────────────────────────────────
 
     def _ensure_highlighter(self):
         """The pane's ONE highlighter (built on the first preview, reused after).
@@ -1050,7 +1050,7 @@ class SftpPaneViewerMixin:
                 self._highlighter = None
         return self._highlighter
 
-    # ── v1.7.3 (task 4): the reader's word wrap ─────────────────────────────
+    # ── v1.7.3: the reader's word wrap ──────────────────────────────────────
 
     def _build_viewer_menu(self):
         """The reader's menu: Qt's OWN standard one PLUS the TWO app rows (wrap, encoding).
@@ -1235,7 +1235,7 @@ class SftpPaneViewerMixin:
             return None   # the C++ object was already destroyed (a close race)
 
     def _highlight_visible(self, force: bool = False) -> int:
-        """Format the blocks around the viewport (v1.4.7 task 4 — the lazy half).
+        """Format the blocks around the viewport.
 
         A 1 MB file is ~20 000 blocks and `setPlainText()` marks every one of
         them dirty, so the EXPENSIVE half (turning spans into text formats) is
@@ -1672,7 +1672,7 @@ class SftpPaneViewerMixin:
         self.splitter.addWidget(panel)
         try:
             self.splitter.setCollapsible(self.splitter.indexOf(panel), True)
-        except (RuntimeError, TypeError):
+        except (RuntimeError, TypeError):  # noqa: BLE001 — teardown of a dead object: the splitter is already gone
             pass   # Qt teardown — the splitter is already gone
         return panel
 

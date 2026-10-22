@@ -127,13 +127,13 @@ class TerminalInputMixin:
 
     # ── the keyboard: the full table v1.0RC2 ──────────────
     def keyPressEvent(self, event):
-        """The full keyboard table (v1.0RC2, ROADMAP task 4; v1.0RC3 — the scrollback).
+        """The full keyboard table (v1.0RC2; v1.0RC3 — the scrollback).
 
         * F1–F12 — the xterm sequences (_F_KEY_SEQUENCES);
         * Ctrl+Shift+PageUp/PageDown → SCROLLBACK (DOCUMENTATION.md §14a): the
           interception sits BEFORE the bare PageUp/PageDown check — otherwise the
           fall-through from the Ctrl branch sends \\x1b[5~/\\x1b[6~ to the shell
-          (the trap from ROADMAP v1.0RC3 task 7);
+          (the trap of v1.0RC3);
           v1.2.12: on the alternate screen (in_alt_screen) — a no-op;
         * the bare PageUp/PageDown → \\x1b[5~/\\x1b[6~ — a forward to the shell (the
           v1.0RC2 semantics preserved: the less/man paging works, the Windows
@@ -155,7 +155,7 @@ class TerminalInputMixin:
           \\t never reached the shell);
         * the AltGr guard (DOCUMENTATION.md §14a): the Ctrl+Alt combinations (on Windows
           AltGr = Ctrl+Alt) do NOT go out as control codes — ignored;
-        * F12 in multi-input mode (v1.2.3, ROADMAP task 3) — the EXIT from the mode,
+        * F12 in multi-input mode (v1.2.3) — the EXIT from the mode,
           not a shell key: the RC2 mapping F12→\\x1b[24~ is suspended (the key does
           not reach the shell); the mode is off → F12 works as before (\\x1b[24~).
         """
@@ -184,7 +184,7 @@ class TerminalInputMixin:
                 return
             # v1.0RC3: Ctrl+Shift+PageUp/PageDown → the scrollback (DOCUMENTATION.md §14a).
             # The interception BEFORE the bare PageUp/PageDown below — without it the
-            # fall-through sends \x1b[5~/\x1b[6~ to the shell (the ROADMAP v1.0RC3 task 7 trap).
+            # fall-through sends \x1b[5~/\x1b[6~ to the shell.
             if key in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown) \
                     and mod & Qt.KeyboardModifier.ShiftModifier:
                 # v1.2.12: the alt screen (a TUI owns the grid) — a no-op; the wheel in a TUI
@@ -196,7 +196,7 @@ class TerminalInputMixin:
                 else:
                     self.scroll_page_down()
                 return
-            # v1.3.3.4 (ROADMAP task 1): Ctrl+Shift+F — the find bar. The key belongs to
+            # v1.3.3.4: Ctrl+Shift+F — the find bar. The key belongs to
             # the CANVAS (§14a scope boundary): the terminal's own keys are the xterm
             # protocol and are NOT in the hotkey registry, so a plain Ctrl+F keeps going
             # to the shell as \x06 (the readline forward-char) exactly as before.
@@ -222,7 +222,7 @@ class TerminalInputMixin:
                 self._send(b"\x1a")
                 return
 
-        # v1.2.3 (ROADMAP task 3): multi-input — F12 = the EXIT from the mode, not Esc
+        # v1.2.3: multi-input — F12 = the EXIT from the mode, not Esc
         # (Esc goes to the shell as \x1b!). When the mode is on the RC2 mapping
         # F12→\x1b[24~ is suspended: the key does not reach the shell, the mode
         # is switched off. The mode is off → a fall-through to the F1–F12 table as in v1.0RC2.
@@ -342,7 +342,7 @@ class TerminalInputMixin:
             hub = self._resolve_multi_hub()
             if hub is not None:
                 hub.set_active(False)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the key skips the broadcast
             pass  # the hub is mid-teardown — the key simply does not go to the shell
 
     # ── v1.9.6: the forward-only line buffer and the SUBMISSION guard (AGENTS.md §4.30) ──
@@ -406,7 +406,7 @@ class TerminalInputMixin:
             return False
 
     def _send(self, data: bytes):
-        """The SINGLE point where the user input is sent (v1.2.3, ROADMAP task 1).
+        """The SINGLE point where the user input is sent (v1.2.3).
 
         The bytes go to send_data() of THIS session; when the multi-input mode is on —
         the same bytes are duplicated to ALL the other open sessions of the registry
@@ -415,7 +415,7 @@ class TerminalInputMixin:
         (Return/Backspace/Esc/the arrows), and the Ctrl+V bracketed paste — in the multi
         mode everything typed is duplicated.
 
-        v1.6.4 (ROADMAP task 5): typing (and pasting) is USER INTENT — under
+        v1.6.4: typing (and pasting) is USER INTENT — under
         `terminal_scroll = "pin"` the view returns to the live line here, because the user is
         asking the shell for an answer. Output never does this; that is the whole point of the
         pin. The release happens before the transport guard, so it is the user's keystroke that
@@ -426,7 +426,7 @@ class TerminalInputMixin:
             return
         try:
             self.terminal_thread.send_data(data)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): a dead channel mid-teardown
             pass
         hub = self._resolve_multi_hub()
         if hub is not None and hub.active:
@@ -439,7 +439,7 @@ class TerminalInputMixin:
                 if _log is not None:
                     _log.debug(
                         f"multi-input broadcast: {len(data)}B -> {sent} session(s)")
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): the active session keeps its input
                 pass  # a broadcast failure must not break the input of the active session
 
     def _bracketed_paste(self):
@@ -471,7 +471,7 @@ class TerminalInputMixin:
             if self._paste_mode_enabled():
                 data = b"\x1b[200~" + data + b"\x1b[201~"
             self._send(data)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): a dead channel mid-teardown
             pass
 
     def _guard_allows(self, lines: int) -> bool:
@@ -505,11 +505,11 @@ class TerminalInputMixin:
             return False
 
     def send_macro(self, text) -> bool:
-        """v1.3 (ROADMAP v1.3): send a command library macro to the PTY of THIS session.
+        """v1.3: send a command library macro to the PTY of THIS session.
 
         The sending — DIRECTLY to terminal_thread.send_data(), NOT through _send(): the
-        macro is addressed ONLY to the active session (the pre-approved ROADMAP v1.3
-        decision) — the multi-input broadcast would have duplicated it to all the open
+        macro is addressed ONLY to the active session (the DECIDED bypass of
+        `AGENTS.md` §4.3.4) — the multi-input broadcast would have duplicated it to all the open
         sessions (the precedent: the wheel passthrough of v1.2.13). The payload is built
         by build_macro_payload() (single-line — raw + \\n; multi-line — the bracketed
         paste). Never raises; False — an empty payload, no thread, or a dead/closed channel.
@@ -540,7 +540,7 @@ class TerminalInputMixin:
                 pass
         return True
 
-    # ── v1.3.3.4 (ROADMAP task 5): the multi-input exclusion (in memory, per session) ──
+    # ── v1.3.3.4: the multi-input exclusion (in memory, per session) ──
     @property
     def multi_excluded(self) -> bool:
         """Is this session excluded from the multi-input broadcast? (read by the hub)"""
@@ -549,7 +549,7 @@ class TerminalInputMixin:
     def set_multi_excluded(self, excluded: bool):
         """Exclude/include THIS session; the mode UI is refreshed without a state change.
 
-        The flag is per session and in memory (the ROADMAP decision — not persisted);
+        The flag is per session and in memory (VIEW state — not persisted);
         MultiInputHub.broadcast() reads it through getattr() and skips the session,
         and hub.refresh() makes the plaque counter and the tab badges follow (the mode
         is off — refresh() re-renders the hidden UI, which is a harmless no-op).

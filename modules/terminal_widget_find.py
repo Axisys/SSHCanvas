@@ -26,7 +26,7 @@ except ImportError:
 class TerminalFindMixin:
     """The find panel, its matches and its own scrollback bookkeeping (mixed into `TerminalWidget`)."""
     # ══════════════════════════════════════════════════════════════════════════
-    # v1.3.3.4 (ROADMAP task 1): the find bar — search in the visible grid AND
+    # v1.3.3.4: the find bar — search in the visible grid AND
     # the history. The panel is only the input surface; the search, the counter
     # and the viewport movement are HERE (a single source of truth).
     # ══════════════════════════════════════════════════════════════════════════
@@ -51,7 +51,7 @@ class TerminalFindMixin:
         ALREADY CAPTURED position (the second Ctrl+Shift+F must not overwrite the
         origin with wherever the first search navigated to).
 
-        v1.6.4 (ROADMAP task 5): the origin is captured TWICE — as pyte's position and as the
+        v1.6.4: the origin is captured TWICE — as pyte's position and as the
         CONTENT offset of the top visible line. Under `terminal_scroll = "pin"` the position
         drifts while output arrives (the pin holds the lines, the distance to the live end
         grows), so the offset is what Esc restores with; in the "live" mode the position is.
@@ -80,7 +80,7 @@ class TerminalFindMixin:
         search", not a pixel-exact restore). Never raises: a dead C++ object or a
         screen under teardown must not break the close path.
 
-        v1.6.4 (ROADMAP task 5): under the pin the captured CONTENT offset is restored instead
+        v1.6.4: under the pin the captured CONTENT offset is restored instead
         (`scroll_to_offset()`), so Esc lands on the same LINES it captured — the position
         arithmetic would land somewhere else after the output the pin let through.
         """
@@ -211,7 +211,7 @@ class TerminalFindMixin:
         return self._step_find(-1)
 
     def _step_find(self, delta: int) -> bool:
-        """Move by delta through the matches with WRAPAROUND (the acceptance of task 1)."""
+        """Move by delta through the matches with WRAPAROUND."""
         total = len(self._find_matches)
         if total <= 0:
             self._update_find_counter()

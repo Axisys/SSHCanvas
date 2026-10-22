@@ -47,7 +47,7 @@ def register_orphan_thread(thread: "QThread"):
         def _drop(_=None, t=thread):
             try:
                 _orphan_threads.remove(t)
-            except ValueError:
+            except ValueError:  # noqa: BLE001 — best effort (declared): a double finished
                 pass  # already removed (a double finished — does not happen in practice)
         thread.finished.connect(_drop)
 
@@ -175,7 +175,7 @@ REPORT_KINDS = (KIND_OK, KIND_DNS_FAILED, KIND_DNS_TIMEOUT, KIND_TCP_REFUSED,
 
 @dataclass(frozen=True)
 class ReachabilityReport:
-    """The FACTS of one on-demand reachability report (v1.5.3, ROADMAP task 3).
+    """The FACTS of one on-demand reachability report (v1.5.3).
 
     Frozen and language-free: the harness asserts the four acceptance scenarios on it
     without a window, and the text lives in the i18n keys `report_parts()` names.
@@ -412,7 +412,7 @@ def report_parts(report: ReachabilityReport) -> list:
 
 
 class ReachabilityThread(QThread):
-    """One reachability report on a worker thread (v1.5.3, ROADMAP task 3).
+    """One reachability report on a worker thread (v1.5.3).
 
     The report blocks on DNS/TCP/banner and may launch a `ping` process, so it never runs
     on the GUI thread (§4.8). One thread per request, owned by the window's registry (the

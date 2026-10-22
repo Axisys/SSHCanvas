@@ -44,7 +44,7 @@ class LayoutMixin:
         layout = QHBoxLayout(central)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # v1.5rc3 (ROADMAP task 2): the window's status bar is installed BEFORE anything
+        # v1.5rc3: the window's status bar is installed BEFORE anything
         # can post a message to it — the Undo affordance is a property of that bar (it
         # consumes the first message after `_push_command()` armed it), so every later
         # `self.statusBar()` call reaches the subclass. The callback is the window's own
@@ -58,7 +58,7 @@ class LayoutMixin:
                 if self.log:
                     self.log.warning(f"Undo status bar unavailable: {e}")
 
-        # v1.3.3.6 (ROADMAP task 2): the window accepts a dropped project file
+        # v1.3.3.6: the window accepts a dropped project file
         # (dragEnterEvent/dragMoveEvent/dropEvent below). Until now only the SFTP tab
         # had this — dragging a .json onto the window did nothing at all.
         self.setAcceptDrops(True)
@@ -80,11 +80,11 @@ class LayoutMixin:
         self.sidebar = sidebar_cls(
             translate_fn=self.t if self._i18n_available else None,
             actions={
-                # Row context menu (ROADMAP v0.9.6): "select first,
+                # Row context menu (v0.9.6): "select first,
                 # then act" — as in the original _on_sidebar_context_menu closures.
                 "ssh": lambda n: (self._select_node(n), self._connect_ssh_to_selected()),
                 "external": lambda n: (self._select_node(n), self._connect_ssh_external(n)),
-                # v1.6.8 (ROADMAP task 1): "Connect to…" — the row's own node is the
+                # v1.6.8: "Connect to…" — the row's own node is the
                 # SOURCE of the connection the dialog will create, and the dialog is the
                 # SAME one the Shift+drag gesture opens (`_add_connection`, pre-filled).
                 "connect_to": lambda n: (self._select_node(n),
@@ -93,13 +93,13 @@ class LayoutMixin:
                 "copy_ip": lambda n: self._copy_node_info(n, "ip"),
                 "copy_hostname": lambda n: self._copy_node_info(n, "hostname"),
                 "ping": lambda n: self._ping_node(n),
-                # v1.5.3 (ROADMAP task 2): "Gather information" — the row's node, or the
+                # v1.5.3: "Gather information" — the row's node, or the
                 # whole selection when several rows are selected (the batch path).
                 "collect_info": lambda n: self._collect_info_many(node=n),
-                # v1.3.3.3 (task 5): one round for the selection (the row's node when
+                # v1.3.3.3: one round for the selection (the row's node when
                 # nothing is selected) — the map's context menu calls the same method.
                 "check_status": lambda n: self._check_statuses_now(n),
-                # v1.5.3 (task 3): the reachability report of the row's node.
+                # v1.5.3: the reachability report of the row's node.
                 "diagnose": lambda n: self._diagnose_node(n),
                 "reveal": lambda n: self._reveal_node_on_map(n),
                 "delete": lambda n: self._remove_node_guarded(n),
@@ -141,7 +141,7 @@ class LayoutMixin:
         # v1.1: the ⚙ "Settings" button at the bottom of the sidebar -> the settings dialog (hub)
         self.sidebar.settings_clicked.connect(self._open_settings_dialog)
 
-        # v1.2.4.1 (task 1): the sidebar container [sidebar | strip]. The strip — at
+        # v1.2.4.1: the sidebar container [sidebar | strip]. The strip — at
         # the right edge (splitter-handle side); hidden in the expanded state.
         self._sidebar_container = QWidget()
         _sb_lay = QHBoxLayout(self._sidebar_container)
@@ -158,7 +158,7 @@ class LayoutMixin:
         # v0.9.9.1: reentry guard for selection sync (instead of blockSignals — see _select_node)
         self._selection_syncing = False
         self.scene.selectionChanged.connect(self._sync_selection_state)
-        # v1.4.4 (ROADMAP task 4): the scene reports the hover focus of an ARROW; the
+        # v1.4.4: the scene reports the hover focus of an ARROW; the
         # window stays the ONE owner of the resulting dim (`_apply_map_dimming`).
         self.scene.hover_focus_changed.connect(self._on_hover_focus_changed)
         self.view = view_cls(self.scene, self)
@@ -181,7 +181,7 @@ class LayoutMixin:
             lambda: self.statusBar().showMessage(self.t("hint.connect_drag")))
         self.view.connect_drag_finished.connect(self._show_ready_status)
 
-        # v1.2.4.1 (task 1): the map container [strip | view]. The strip — at the left
+        # v1.2.4.1: the map container [strip | view]. The strip — at the left
         # edge (splitter-handle side: target state [sidebar | map-strip]);
         # hidden in the expanded state. The "Terminals" dock — the window's QDockWidget,
         # unrelated to the splitter mechanics (assembled natively).
@@ -196,7 +196,7 @@ class LayoutMixin:
         splitter.addWidget(self._map_container)
         splitter.setSizes([250, 950])
 
-        # v1.2.4.1 (task 6): the handle cannot be dragged to zero manually — the
+        # v1.2.4.1: the handle cannot be dragged to zero manually — the
         # collapsed state is driven by buttons/menus; the containers' minimumWidth is
         # the lower bound of manual dragging (a collapsed container shrinks to 18px in _set_panel_collapsed).
         splitter.setCollapsible(0, False)
@@ -213,7 +213,7 @@ class LayoutMixin:
         self._sidebar_container.setMinimumWidth(self.SIDEBAR_MIN_WIDTH)
         self._map_container.setMinimumWidth(self.MAP_MIN_WIDTH)
 
-        # v1.2.4.1 (task 2): the map collapse corner button — an overlay QToolButton
+        # v1.2.4.1: the map collapse corner button — an overlay QToolButton
         # on the MapView (the map_search pattern: a child of view, outside the layout),
         # repositioned on resizeEvent via the MapView.resized signal. The SIDEBAR
         # collapse button lives in the SidebarPanel's bottom row (self.sidebar.collapse_btn);
@@ -231,50 +231,50 @@ class LayoutMixin:
         # v0.9.8: map search (Ctrl+F) — a floating bar over the canvas
         self._setup_map_search()
 
-        # v1.4.2 (ROADMAP task 2): the minimap — a floating panel in the top-right corner
+        # v1.4.2: the minimap — a floating panel in the top-right corner
         self._setup_minimap()
 
-        # v1.4.5 (ROADMAP task 2): the first-run empty state — a hint over the canvas
+        # v1.4.5: the first-run empty state — a hint over the canvas
         # while the map has no servers (the card is mouse-transparent; the ONE button is
         # its own child of the view).
         self._setup_empty_state()
 
-        # v1.4.5 (ROADMAP task 4): the legend — the 6 connection types + the 3 statuses.
+        # v1.4.5: the legend — the 6 connection types + the 3 statuses.
         # Created BEFORE _setup_menubar (which owns the checkable View item and the
         # toolbar mirror): the panel is built here, its visibility/config applied here,
         # and the menu item simply joins the same state.
         self._setup_legend()
 
-        # v1.5.4 (ROADMAP task 3): the active-filter plaque — the panel that NAMES the
+        # v1.5.4: the active-filter plaque — the panel that NAMES the
         # filters which dim the map (the v1.4.5 panel pattern: a child of the view, out of
         # the exports). Created after the legend, because it yields its corner to no one
         # and simply joins the floating-panel priority resolver below.
         self._setup_filter_plaque()
 
-        # v1.6.7 (ROADMAP task 4): the BOOKMARKS panel — the fourth floating panel of the
+        # v1.6.7: the BOOKMARKS panel — the fourth floating panel of the
         # same family (a child of the view, out of the exports). Created AFTER the plaque,
         # because its default corner (LEFT|TOP) yields to the plaque by stepping below it.
         self._setup_bookmarks_panel()
 
-        # Status bar — v1.9.7 (ROADMAP task 6): the idle sentence comes from ONE composer and is
+        # Status bar — v1.9.7: the idle sentence comes from ONE composer and is
         # EMPTY while the map holds no card (the first screen owns that moment).
         self._show_ready_status()
 
         # UI polish: permanent indicators on the right of the status bar — node/
         # connection/status counters and the zoom percentage (updated from MapView.zoomChanged).
         self.counts_label = QLabel("")
-        # v1.5rc4 (ROADMAP task 1): the totals sentence is ~346 px and a QLabel's
+        # v1.5rc4: the totals sentence is ~346 px and a QLabel's
         # `minimumSizeHint()` IS its size hint, so on its own it asks the bar for a very
         # wide window. An explicit 0 minimum lets the BAR shrink (the appended text is
         # then clipped rather than the bar refusing the size) — and the overflow policy
         # hides the label in exactly that band, so the clipped state is never on screen.
         self.counts_label.setMinimumWidth(0)
-        # v1.4.3 (ROADMAP task 4): the status-bar styles come from the ONE QSS
+        # v1.4.3: the status-bar styles come from the ONE QSS
         # registry (ui/theme_qss.py) and are re-applied by apply_theme()
         theme_qss.refresh(self.counts_label, "status.bar_counts")
         self.statusBar().addPermanentWidget(self.counts_label)
 
-        # v1.4.5 (ROADMAP task 3): the status counters are LIVE — a click filters the
+        # v1.4.5: the status counters are LIVE — a click filters the
         # sidebar by that status, a second click resets it. The state is transient UI
         # (never persisted) and the counters always show the TOTALS: a filter is a view,
         # not a fact. The servers/connections pair stays in `counts_label` above.
@@ -287,12 +287,12 @@ class LayoutMixin:
             self.statusBar().addPermanentWidget(_counter)
             self.status_filter_labels[_status] = _counter
 
-        # v1.5.4 (ROADMAP task 2): the "problems only" lens — ONE transient toggle beside
+        # v1.5.4: the "problems only" lens — ONE transient toggle beside
         # the status counters whose click DIMS everything that is not warn/offline/stale.
         # It is UI state (memory only, never a config key) and it never changes the
         # counters: a lens is a view, not a fact.
         self._problems_only = False
-        # v1.8.4 (ROADMAP task 2): the DEPENDENCY focus of the map — the node id a Ctrl+click
+        # v1.8.4: the DEPENDENCY focus of the map — the node id a Ctrl+click
         # asked about ("" = no highlight), memory only, read back by `_apply_map_dimming()`
         # through `_dependency_ids()`. UI state like the lens above, never a config key.
         self._dependency_focus = ""
@@ -307,7 +307,7 @@ class LayoutMixin:
         theme_qss.refresh(self.zoom_label, "status.bar_zoom")
         self.statusBar().addPermanentWidget(self.zoom_label)
 
-        # v1.2.3 (ROADMAP task 3): the multi-input mode plaque "MULTI: N sessions" +
+        # v1.2.3: the multi-input mode plaque "MULTI: N sessions" +
         # an exit button — a permanent widget on the right of the status bar; hidden
         # while the mode is off (_on_multi_changed/_multi_refresh_ui control visibility).
         self._multi_plaque = QWidget()
@@ -333,7 +333,7 @@ class LayoutMixin:
             pass
         self._update_counts_label()
 
-        # v1.5rc4 (ROADMAP tasks 1/2/7): the chrome policies get their first pass HERE —
+        # v1.5rc4: the chrome policies get their first pass HERE —
         # the widgets exist, the panels are placed and the saved visibility is applied, so
         # a window opened at a narrow width already shows the compact toolbar and status
         # bar and resolves the floating panels (every resize does the same from now on).
@@ -345,10 +345,10 @@ class LayoutMixin:
             self.log.info("MainWindow UI initialized")
 
     def resizeEvent(self, event):
-        """v1.5rc4 (ROADMAP tasks 1/2/7): a resize drives the THREE chrome policies.
+        """v1.5rc4: a resize drives the THREE chrome policies.
 
-        One entry point for the window's own geometry: the toolbar overflow (task 2), the
-        status-bar overflow (task 1) and the floating-panel priority (task 7). Each of them
+        One entry point for the window's own geometry: the toolbar overflow, the
+        status-bar overflow and the floating-panel priority. Each of them
         is idempotent and decides from the live width, so a resize storm costs three
         comparisons and no rebuild. A resize that arrives before the widgets exist (the
         constructor applies the saved geometry early) is a no-op for each of them.

@@ -124,7 +124,7 @@ def set_sort(pane, column, descending):
     app.processEvents()
 
 
-print("== 1. the listing SORTS (ROADMAP v1.7.5, task 1) ==")
+print("== 1. the listing SORTS (v1.7.5) ==")
 
 build_tree()
 _fs = FakeSftpFS()
@@ -153,9 +153,9 @@ check("§1 ...and the comparison reads the ROLES (never the widget text)",
       and row_path(item_named(_lpane, "a.txt")) == os.path.join(TREE, "a.txt")
       and int(item_named(_lpane, "a.txt").data(0, _lpane.ISDIR_ROLE)) == 0
       and {"ISDIR_ROLE", "SIZE_ROLE", "MTIME_ROLE", "PATH_ROLE"} <= set(dir(_lpane))
-      and all(fragment in PANE_SRC for fragment in ("_SftpPane.ISDIR_ROLE", "pane.SIZE_ROLE",
-                                                    "pane.MTIME_ROLE", "row_name(self)",
-                                                    "row_path(self)")))
+      and all(fragment in PANE_SRC for fragment in ("self.data(0, ISDIR_ROLE)",
+                                                    "{1: SIZE_ROLE, 2: MTIME_ROLE}",
+                                                    "row_name(self)", "row_path(self)")))
 check("§1 the PROVIDER's own order is the default: directories first, then the name",
       names(_lpane) == ["..", "adir", "zdir", "a.txt", "b.txt", "c.txt"], str(names(_lpane)))
 check("§1 Qt's own automatic sorting stays OFF — the pane drives `sortItems()` itself",
@@ -257,7 +257,7 @@ check("§1 ...and `Insert` toggles the mark and steps DOWN the sorted order",
       f"current={_lpane.tree.currentItem().text(0) if _lpane.tree.currentItem() else None}")
 
 
-print("== 2. the preview CEILING (ROADMAP v1.7.5, task 2) ==")
+print("== 2. the preview CEILING (v1.7.5) ==")
 
 check("§2 the ceiling is ONE config key with a DECLARED default (the shipped read policy)",
       STAB.VIEWER_MAX_BYTES_CONFIG == "ui_viewer_max_bytes"
@@ -516,7 +516,7 @@ check("§2 VERSION_FORMAT stays `0.9` (a ceiling is a value, not a schema)",
               for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
 
 
-print("== 3. the pane's SOURCE HEADER LINE (ROADMAP v1.7.5, task 3) ==")
+print("== 3. the pane's SOURCE HEADER LINE (v1.7.5) ==")
 
 check("§3 the header line is the pane's FIRST row, above the address bar",
       _lpane.layout().itemAt(0).widget() is _lpane.header_label
@@ -592,6 +592,6 @@ check("the follow-up's four keys exist in EVERY language",
                     "settings.files.max_bytes_warning", "sftp.viewer.truncated")))
 check("the i18n pin counts the slot's four keys (the v1.8 elevated pane's 20, the v1.8.1 trust "
       "surface's 41 and the ONE of v1.8.1.1) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 915 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 and releases_at_least(EXPECTED_APP_VERSION, "1.7.5"),
+      EXPECTED_I18N_KEYS == 915 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 and releases_at_least(EXPECTED_APP_VERSION, "1.7.5"),
       f"{EXPECTED_I18N_KEYS} / {EXPECTED_APP_VERSION}")
 finish()

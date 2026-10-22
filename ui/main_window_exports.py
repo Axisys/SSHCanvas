@@ -21,12 +21,12 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
 
-try:  # v1.5.5 (ROADMAP task 2): the pure CSV/TSV writer of the inventory report
+try:  # v1.5.5: the pure CSV/TSV writer of the inventory report
     from .sidebar import list_delimiter, list_table_text
 except ImportError:
     from sidebar import list_delimiter, list_table_text
 
-try:  # v1.6 (ROADMAP task 5): the rows of the connection report
+try:  # v1.6: the rows of the connection report
     from ..storage.export_connections import connection_report_rows
 except ImportError:
     try:
@@ -34,7 +34,7 @@ except ImportError:
     except ImportError:  # a stripped build — the report says so instead of writing a file
         connection_report_rows = None
 
-try:  # v1.6.8 (ROADMAP task 4): the rows of the ATTENTION report
+try:  # v1.6.8: the rows of the ATTENTION report
     from ..storage.export_problems import problem_report_rows
 except ImportError:
     try:
@@ -51,7 +51,7 @@ except ImportError:
 class ExportMixin:
     """The map's exports (images and reports), the clipboard copy and the background image."""
 
-    # v1.5rc2 (ROADMAP task 3): the LAST export palette choice ("use the current
+    # v1.5rc2: the LAST export palette choice ("use the current
     # theme"), remembered for the SESSION only — the export palette is deliberately
     # NOT a config key (the hub's collect() contract stays 22 keys) and it is
     # read/written by `_ask_export_palette()`. False = the print-friendly default.
@@ -202,7 +202,7 @@ class ExportMixin:
                 self.t("msg.export_failed", error=str(e)))
 
     def _copy_map_image(self):
-        """Copy the map into the clipboard as an image (v1.5.1, ROADMAP task 1).
+        """Copy the map into the clipboard as an image (v1.5.1).
 
         The SAME 2× render as the PNG export, with `QApplication.clipboard()
         .setPixmap()` instead of the file dialog — and ONE deliberate difference: **the
@@ -230,7 +230,7 @@ class ExportMixin:
                 self.t("msg.export_failed", error=str(e)))
 
     def _export_docs_frame(self):
-        """Save the map as a FIXED-FRAME documentation image (v1.5.1, ROADMAP task 2).
+        """Save the map as a FIXED-FRAME documentation image (v1.5.1).
 
         The poster path: `MapScene.render_frame_to_pixmap()` renders the map inside a
         1600×900 LOGICAL frame at 2× (3200×1800 px), the content fitted and centred on
@@ -291,7 +291,7 @@ class ExportMixin:
             pass
 
     def _export_connections_table(self):
-        """Export the map's CONNECTIONS as CSV or TSV (v1.6, ROADMAP task 5).
+        """Export the map's CONNECTIONS as CSV or TSV (v1.6).
 
         The second DATA report, built on the SAME pure writer as the inventory export
         (`list_table_text()`): the rows come from `storage/export_connections.py`, the
@@ -338,7 +338,7 @@ class ExportMixin:
                 self.t("msg.export_failed", error=str(e)))
 
     def _export_problems_table(self):
-        """Export the servers that NEED ATTENTION as CSV or TSV (v1.6.8, ROADMAP task 5).
+        """Export the servers that NEED ATTENTION as CSV or TSV (v1.6.8).
 
         The THIRD DATA report, and the answer to a question the map can only dim: the
         "problems only" lens highlights the cards that need a look, but that set cannot
@@ -395,7 +395,7 @@ class ExportMixin:
                 self.t("msg.export_failed", error=str(e)))
 
     def _copy_list_table(self):
-        """Copy the VISIBLE server table to the clipboard as TSV (v1.5.5, ROADMAP task 2).
+        """Copy the VISIBLE server table to the clipboard as TSV (v1.5.5).
 
         TSV, not CSV, on purpose: the clipboard is for the next PASTE, and a spreadsheet
         splits tab-separated text into cells natively (a comma-separated paste lands in one
@@ -414,7 +414,7 @@ class ExportMixin:
                           extra={"rows": count, "columns": len(rows[0])})
 
     def _export_list_table(self):
-        """Export the VISIBLE server table as CSV or TSV (v1.5.5, ROADMAP task 2).
+        """Export the VISIBLE server table as CSV or TSV (v1.5.5).
 
         The ordinary save-dialog pattern of every export of this window (the extension from
         the chosen filter, the status bar on success, `msg.export_failed` on a failure), with

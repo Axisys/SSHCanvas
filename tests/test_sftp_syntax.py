@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4.7 — Syntax highlighting in the SFTP viewer (numbers, JSON/XML/YAML, ROADMAP v1.4.7).
+"""v1.4.7 — Syntax highlighting in the SFTP viewer (numbers, JSON/XML/YAML).
 
 The release theme: the read-only preview stops being monochrome — the release only PAINTS what is
 already in the widget (no new dependency: the stdlib for the grammars, `QSyntaxHighlighter` for the

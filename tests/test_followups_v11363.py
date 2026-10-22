@@ -31,6 +31,13 @@ from _fakes import EventLog, FakeSftpClient, FakeSftpFS, wire_worker  # noqa: E4
 
 LANGS = load_i18n_langs(ROOT)
 FACADE = os.path.join(ROOT, "modules", "sftp_tab.py")
+# v1.14rc3: the row, the tree, the button row and the source switch are their own module
+WIDGETS = os.path.join(ROOT, "modules", "sftp_pane_widgets.py")
+# v1.14rc4: the assembly and the container's three mixins are their own modules too — a docstring
+# budget has to read the file the method LIVES in, never one file name.
+CLUSTERS = [os.path.join(ROOT, "modules", name) for name in
+            ("sftp_pane_assembly.py", "sftp_container_panes.py", "sftp_container_session.py",
+             "sftp_container_viewer.py")]
 MIN_BYTES = STAB.VIEWER_MAX_BYTES_MIN
 MAX_BYTES = STAB.VIEWER_MAX_BYTES_MAX
 STEP = STAB.VIEWER_MAX_BYTES_STEP
@@ -138,43 +145,59 @@ print("== §2 the compression — the owners are POINTED at, the facade is under
 
 _TEXT = open(FACADE, encoding="utf-8").read()
 _LINES = _TEXT.splitlines()
-_DOCS = {}
-for _node in ast.walk(ast.parse(_TEXT)):
-    if not isinstance(_node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-        continue
-    _body = getattr(_node, "body", [])
-    if (_body and isinstance(_body[0], ast.Expr) and isinstance(_body[0].value, ast.Constant)
-            and isinstance(_body[0].value.value, str)):
-        _doc = _body[0].value
-        _DOCS[_node.name] = ((_doc.end_lineno or _doc.lineno) - _doc.lineno + 1, _doc.value)
+_WIDGET_TEXT = open(WIDGETS, encoding="utf-8").read()
+_WIDGET_LINES = _WIDGET_TEXT.splitlines()
 
-check("§2 no plan pointer survives in the facade (a plan section is DELETED on shipping)",
-      "ROADMAP" not in _TEXT, str(_TEXT.count("ROADMAP")))
+
+def _docstrings(source):
+    """{name: (lines, text)} of every class/function docstring of ONE module."""
+    out = {}
+    for _node in ast.walk(ast.parse(source)):
+        if not isinstance(_node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        _body = getattr(_node, "body", [])
+        if (_body and isinstance(_body[0], ast.Expr) and isinstance(_body[0].value, ast.Constant)
+                and isinstance(_body[0].value.value, str)):
+            _doc = _body[0].value
+            out[_node.name] = ((_doc.end_lineno or _doc.lineno) - _doc.lineno + 1, _doc.value)
+    return out
+
+
+_DOCS = _docstrings(_TEXT + "\n" + "\n".join(
+    open(path, encoding="utf-8").read() for path in CLUSTERS))
+_WIDGET_DOCS = _docstrings(_WIDGET_TEXT)
+
+check("§2 no plan pointer survives in the facade or the widgets (a plan section is DELETED "
+      "on shipping)",
+      "ROADMAP" not in _TEXT and "ROADMAP" not in _WIDGET_TEXT,
+      str((_TEXT.count("ROADMAP"), _WIDGET_TEXT.count("ROADMAP"))))
 HISTORY = ("before the wrapper existed", "the old QLabel", "EDITABLE QLineEdit now",
            "before the private type existed", "plain layout of the pane")
 check("§2 no per-line history phrase survives (the changelog family owns the story)",
       [phrase for phrase in HISTORY if phrase in _TEXT] == [],
       str([phrase for phrase in HISTORY if phrase in _TEXT]))
 check("§2 the GROUP rules point at their owner (`AGENTS.md` §4.3.6) instead of re-telling it",
-      "§4.3.6" in _DOCS.get("_SftpRowItem", (0, ""))[1]
-      and all(rule in _DOCS.get("_SftpRowItem", (0, ""))[1]
+      "§4.3.6" in _WIDGET_DOCS.get("_SftpRowItem", (0, ""))[1]
+      and all(rule in _WIDGET_DOCS.get("_SftpRowItem", (0, ""))[1]
               for rule in ('".." row', "DIRECTORIES", "COLUMN")),
-      _DOCS.get("_SftpRowItem", (0, ""))[1][:120])
+      _WIDGET_DOCS.get("_SftpRowItem", (0, ""))[1][:120])
 check("§2 the `_ButtonRow` story is told ONCE — the constant and `__init__` point at the class",
-      _TEXT.count("whole minimum") == 1
-      and "BUTTONS_BAR_MIN_WIDTH" in _DOCS.get("_ButtonRow", (0, ""))[1],
-      f"copies={_TEXT.count('whole minimum')}")
-_DECL = next(i for i, line in enumerate(_LINES) if line.startswith("BUTTONS_BAR_MIN_WIDTH = 0"))
+      _WIDGET_TEXT.count("whole minimum") == 1
+      and "BUTTONS_BAR_MIN_WIDTH" in _WIDGET_DOCS.get("_ButtonRow", (0, ""))[1],
+      f"copies={_WIDGET_TEXT.count('whole minimum')}")
+_DECL = next(i for i, line in enumerate(_WIDGET_LINES)
+             if line.startswith("BUTTONS_BAR_MIN_WIDTH = 0"))
 check("§2 ...and the constant's own pointer is ONE line above it",
-      _LINES[_DECL - 1].startswith("#:") and "docstring" in _LINES[_DECL - 1],
-      _LINES[_DECL - 1])
+      _WIDGET_LINES[_DECL - 1].startswith("#:") and "docstring" in _WIDGET_LINES[_DECL - 1],
+      _WIDGET_LINES[_DECL - 1])
 SIZES = ("_SftpRowItem", "preview_allowed", "present_viewer", "bind_worker", "set_source",
          "_disconnect_worker")
 BUDGETS = {"_SftpRowItem": 7, "preview_allowed": 6, "present_viewer": 6, "bind_worker": 7,
            "set_source": 7, "_disconnect_worker": 4}
+_ALL_DOCS = {**_DOCS, **_WIDGET_DOCS}
 check("§2 every compressed header is the declared size (a docstring, measured)",
-      all(_DOCS.get(name, (99, ""))[0] <= BUDGETS[name] for name in SIZES),
-      str({name: _DOCS.get(name, (None, ""))[0] for name in SIZES}))
+      all(_ALL_DOCS.get(name, (99, ""))[0] <= BUDGETS[name] for name in SIZES),
+      str({name: _ALL_DOCS.get(name, (None, ""))[0] for name in SIZES}))
 check("§2 the facade is under its band (≤ 2 940 lines — the release's own target)",
       len(_LINES) <= 2940, str(len(_LINES)))
 check("§2 the shipped surface survives the compression (the readers, the classes, the container)",
@@ -189,7 +212,7 @@ print("== §3 the release ==")
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§3 this patch adds NO translation key (the pin stays 1180)",
-      EXPECTED_I18N_KEYS == 1180, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1180 + 1, str(EXPECTED_I18N_KEYS))
 check("§3 the JSON schema did NOT move (`VERSION_FORMAT` stays 0.9)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§3 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.6.3"),

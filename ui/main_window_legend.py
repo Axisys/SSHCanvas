@@ -93,7 +93,7 @@ class LegendMixin:
     def _toggle_legend(self, checked: bool):
         """v1.4.5: show/hide the legend + persist `ui_legend` (a merge write).
 
-        v1.5rc4 (ROADMAP task 7): while the first-run hint is on screen the legend yields
+        v1.5rc4: while the first-run hint is on screen the legend yields
         to it — the user's choice is REMEMBERED (`_legend_enabled` + `ui_legend`) but the
         panel stays hidden until the hint goes away. A temporary suppression never
         overwrites a saved visibility.
@@ -115,7 +115,7 @@ class LegendMixin:
     def _on_legend_moved(self, position):
         """The user dragged the panel: remember where (a merge write of the position).
 
-        v1.5 (ROADMAP): a drop within `SNAP_PX` of an anchored edge (LEFT|BOTTOM) instead
+        v1.5: a drop within `SNAP_PX` of an anchored edge (LEFT|BOTTOM) instead
         RE-ANCHORS the panel — the saved position is cleared and the documented
         bottom-left corner (plus every rule that hangs off it) comes back by itself.
         """

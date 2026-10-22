@@ -123,7 +123,7 @@ def resolve_color(value, palette=None, default_hex=DEFAULT_FG_HEX):
         try:
             int(v, 16)
             return "#" + v
-        except ValueError:
+        except ValueError:  # noqa: BLE001 — the caller owns the fallback: a non-hex colour passes through
             pass
     name = v.lower()
     if name == "bfightmagenta":      # a pyte typo (SGR 4;105) → bright magenta
@@ -155,7 +155,7 @@ class SshmapHistoryScreen(pyte.HistoryScreen):
     no-ops, as in pyte."""
 
     def __init__(self, columns, lines, history=100, ratio=0.5):
-        # v1.6.4 (ROADMAP task 5): the PIN state. `scroll_pin` is the MODE (`terminal_scroll`),
+        # v1.6.4: the PIN state. `scroll_pin` is the MODE (`terminal_scroll`),
         # `_pin_anchor` is the content offset of the pinned viewport's first line, captured once
         # per fed chunk (None — nothing to re-anchor). Set BEFORE super().__init__() — pyte's
         # HistoryScreen builds self.history there and calls reset(), which never reads these.
@@ -185,7 +185,7 @@ class SshmapHistoryScreen(pyte.HistoryScreen):
         if text:
             self.pending_input.append(text)
 
-    # ── v1.6.4 (ROADMAP task 5): the pinned scrollback ───────────────────────────
+    # ── v1.6.4: the pinned scrollback ────────────────────────────────────────────
 
     def pin_begin(self) -> None:
         """Open a fed CHUNK (TerminalScreen.feed): the anchor is captured by the first event."""
@@ -317,7 +317,7 @@ class SshmapHistoryScreen(pyte.HistoryScreen):
     def before_event(self, event):
         """The auto-return to the live line batching (measurement D1, v1.2.12: 68–73 ms/chunk).
 
-        v1.6.4 (ROADMAP task 5): in the OPT-IN `"pin"` mode (terminal_scroll) the viewport is
+        v1.6.4: in the OPT-IN `"pin"` mode (terminal_scroll) the viewport is
         NOT left historical while the chunk runs — pyte applies an event to the LIVE screen, and
         `index()` on a scrolled-back buffer would append the viewport's top line instead of the
         live one (the document gains a phantom line in the middle). The pin therefore returns to
@@ -356,7 +356,7 @@ class TerminalScreen:
                  scroll_mode=SCROLL_MODE_DEFAULT):
         self.columns = columns
         self.lines = lines
-        # v1.6.4 (ROADMAP task 5): the `terminal_scroll` MODE — "live" (the default: new
+        # v1.6.4: the `terminal_scroll` MODE — "live" (the default: new
         # output pulls the view back to the live line) | "pin" (OPT-IN: the view keeps the
         # same lines while output arrives). An unknown value is the declared default.
         self.scroll_mode = resolve_scroll_mode(scroll_mode)
@@ -374,7 +374,7 @@ class TerminalScreen:
     def feed(self, data: bytes):
         """One chunk of the session's output → pyte (under the lock).
 
-        v1.6.4 (ROADMAP task 5): a CHUNK is the unit of the pinned scrollback. In the "pin"
+        v1.6.4: a CHUNK is the unit of the pinned scrollback. In the "pin"
         mode the view is restored to the live line once here (`before_event`) and put back on
         the very lines it showed once the chunk is done (`pin_end`) — both inside the lock, so
         the GUI never paints the intermediate state. The "live" mode (the default) is byte for
@@ -427,7 +427,7 @@ class TerminalScreen:
         except Exception:  # noqa: BLE001 — a title is cosmetic
             return ""
 
-    # ── v1.6.4 (ROADMAP task 5): the scrollback mode ───────────────────────────
+    # ── v1.6.4: the scrollback mode ────────────────────────────────────────────
 
     def scroll_mode_id(self) -> str:
         """The ACTIVE `terminal_scroll` mode — one of `SCROLL_MODES`."""
@@ -606,7 +606,7 @@ class TerminalScreen:
     def scroll_to_offset(self, index) -> int:
         """Put the document line `index` back at the TOP of the viewport. Returns the new top offset.
 
-        The v1.6.4 (ROADMAP task 5) twin of `scroll_to_position()` for the PINNED scrollback:
+        The v1.6.4 twin of `scroll_to_position()` for the PINNED scrollback:
         pyte's `position` counts the distance to the live end, so it DRIFTS while output keeps
         arriving under the pin (that is what the pin does), while the CONTENT offset of a line
         (`history_top_len()`) does not. The find bar captures the offset when it opens and hands
@@ -632,7 +632,7 @@ class TerminalScreen:
             scr.dirty = set(range(scr.lines))
             return len(scr.history.top)
 
-    # ── v1.3.3.4 (ROADMAP task 2): two LOCAL actions, no bytes to the PTY ────
+    # ── v1.3.3.4: two LOCAL actions, no bytes to the PTY ─────────────────────
 
     def clear_history(self) -> bool:
         """Drop the scrollback: the live grid is KEPT, the history (top+bottom) is emptied.
@@ -731,7 +731,7 @@ class TerminalScreen:
             enabled = any((n << 5) in mode for n in (1000, 1002, 1003))
             return enabled, (1006 << 5) in mode
 
-    # ── v1.6.3 (ROADMAP task 2): WHICH tracking mode is on ───────────────────
+    # ── v1.6.3: WHICH tracking mode is on ────────────────────────────────────
     def mouse_tracking_mode(self):
         """(mode, sgr) — the HIGHEST mouse tracking mode the application asked for.
 

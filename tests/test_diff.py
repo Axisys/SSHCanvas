@@ -512,7 +512,7 @@ check("§7 the EIGHTEEN keys of the release are non-empty in every language",
            for code in sorted(LANGS)}))
 check("§7 ...and the pin carries them (1144 + the release's 18 + the later four + the 13 of v1.13.6)",
       len(_NEW_KEYS) == 18
-      and EXPECTED_I18N_KEYS == 1144 + len(_NEW_KEYS) + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      and EXPECTED_I18N_KEYS == 1144 + len(_NEW_KEYS) + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§7 the keys are really TRANSLATED, not the English copy",
       len({LANGS[code].get("terminal.diff.tooltip") for code in LANGS}) > 1
       and len({LANGS[code].get("diff.same") for code in LANGS}) > 1)

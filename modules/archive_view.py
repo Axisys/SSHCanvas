@@ -295,7 +295,7 @@ def _bounded(stream, cap, size):
         try:
             if int(size or 0) > limit:
                 return b"", READ_ERROR_TOO_LARGE
-        except (TypeError, ValueError):
+        except (TypeError, ValueError):  # noqa: BLE001 — the caller owns the fallback: the read bound stands
             pass
     chunks, done = [], 0
     while True:

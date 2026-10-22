@@ -453,7 +453,7 @@ print("== §6 i18n and the release state ==")
 check_release_state(ROOT)
 check_i18n_parity(_LANGS)
 check("§6 the ONE key of the release is present and non-empty in every language",
-      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1
+      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1
       and all(str(data.get("sftp.opening") or "").strip() for data in _LANGS.values()),
       str({c: d.get("sftp.opening") for c, d in _LANGS.items()}))
 check("§6 the pin counts the SHIPPED release",

@@ -150,7 +150,7 @@ st = get_status_settings()
 check("the valid values are read (45 s / 2.5 s)",
       st == {"interval_sec": 45, "manual": False, "probe_timeout_sec": 2.5, "max_parallel": 16},
       str(st))
-# v1.6.6 (ROADMAP task 1): the DECLARED sentinel — 0 means "manual only", and it is the only
+# v1.6.6: the DECLARED sentinel — 0 means "manual only", and it is the only
 # value that selects it (the full rule is the topical tests/test_facts_on_request.py).
 write_cfg({"status_interval_sec": 0})
 st = get_status_settings()
@@ -302,7 +302,7 @@ got_tabs = [dlg.tabs.tabText(i) for i in range(dlg.tabs.count())]
 check("the tab order: General / Appearance / Terminal / Files / Status Checks / Autosave / Map / Hotkeys / Language",
       got_tabs == expected_tabs, str(got_tabs))
 
-# v1.3.3.3 (task 3/4): the "Hotkeys" tab grew to the FULL action registry (~40 rows, most
+# v1.3.3.3: the "Hotkeys" tab grew to the FULL action registry (~40 rows, most
 # of them with an empty default) and gained the "Reset to defaults" button.
 import ui.hotkey_registry as _HR
 

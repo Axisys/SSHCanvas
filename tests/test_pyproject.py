@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v0.9.9.6 — pyproject.toml: installable identity for 1.0 (ROADMAP).
+"""v0.9.9.6 — pyproject.toml: installable identity for 1.0.
 
 The cross-check `pyproject.toml` ↔ `version.py` ↔ `requirements.txt` WITHOUT installing anything: the file
 exists and parses (`tomllib` / `tomli`); `[project].name` matches `APP_NAME` after normalization (lower case
@@ -127,7 +127,7 @@ check("[project].dependencies match requirements.txt (the same set of name+pin)"
 
 # ── 4. the console scripts → the existing main() (the product name + the legacy alias) ─────
 scripts = project.get("scripts") or {}
-# The product command AND the alias ship together (ROADMAP v1.12.1): both answer the ONE main().
+# The product command AND the alias ship together (v1.12.1): both answer the ONE main().
 for _cmd in ("sshcanvas", "sshmap"):
     _ep = scripts.get(_cmd)
     check(f"entry point {_cmd} = main:main", _ep == "main:main", f"got {_ep!r}")

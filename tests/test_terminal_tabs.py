@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.2.1 — Multiple SSH sessions as tabs in one terminal window (ROADMAP v1.2.1).
+"""v1.2.1 — Multiple SSH sessions as tabs in one terminal window (v1.2.1).
 
 The topical test of the release: offscreen, no network (fake threads with the `ST.SSHTerminalThread` seam).
 §1 the window structure (`session_tabs`, the closable tabs, the alias as the title, the compat

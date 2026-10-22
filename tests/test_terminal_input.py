@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.0RC2 — keyboard + selection/copy (ROADMAP v1.0RC2).
+"""v1.0RC2 — keyboard + selection/copy (v1.0RC2).
 
 `selection_cells()` is pure (single-line, multi-line, inverted boundaries, one cell, the whole grid, the
 column clamp) and pins the (row, col) order — the pre-1.0 (col, row) mistake does not give the same cells.

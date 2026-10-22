@@ -39,7 +39,7 @@ except ImportError:
     from modules.sftp_tab import (SftpTab, format_size,
                                   name_refusal_text as sftp_name_refusal_text)
 
-try:  # v1.5.7 (ROADMAP task 1): the per-server COMMAND history (the third tab)
+try:  # v1.5.7: the per-server COMMAND history (the third tab)
     from .command_history import CommandHistoryPanel, CommandHistoryStore, history_key
 except ImportError:
     from modules.command_history import (CommandHistoryPanel, CommandHistoryStore,
@@ -61,7 +61,7 @@ try:  # v1.2.5: the central theme (status labels — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.4.3 (ROADMAP task 4): the ONE QSS registry
+try:  # v1.4.3: the ONE QSS registry
     from ..ui import theme_qss
 except ImportError:
     try:
@@ -69,7 +69,7 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         theme_qss = None
 
-try:  # v1.9.8 (task 3): the DECLARED status shapes — the session tab's state mark (the card's own)
+try:  # v1.9.8: the DECLARED status shapes — the session tab's state mark (the card's own)
     from ..ui import status_shape
 except ImportError:
     try:
@@ -77,7 +77,7 @@ except ImportError:
     except ImportError:  # flat layout without ui/status_shape — the transparent slot stands
         status_shape = None
 
-try:  # v1.9.8 (task 3): the vector icons (the tab's close glyph and the state mark's fallback)
+try:  # v1.9.8: the vector icons (the tab's close glyph and the state mark's fallback)
     from ..ui.icons import refresh_button_icon
 except ImportError:
     try:
@@ -135,11 +135,11 @@ def _log():
         return None
 
 
-# ── v1.3.3.4 (ROADMAP task 6): the transfer rate / ETA — the detachable task 7 of
-# v1.3.3.2, which its own changelog handed to this version. Two pure helpers ARE the
-# whole computation: the formatting of a duration and a sliding-window meter fed by
-# the progress signals of the SFTP worker (the sftp.progress line itself is unchanged
-# — the rate/ETA is appended to it, so a broken/absent measurement is invisible).
+# ── v1.3.3.4: the transfer rate / ETA — the meter of ONE transfer.
+# Two pure helpers ARE the whole computation: the formatting of a duration and a
+# sliding-window meter fed by the progress signals of the SFTP worker (the
+# sftp.progress line itself is unchanged — the rate/ETA is appended to it, so a
+# broken/absent measurement is invisible).
 
 # ── the Ctrl+wheel font zoom ───────────────────────
 # The GESTURE belongs to the canvas (`TerminalWidget.wheelEvent`), the CONSEQUENCE to the page: the PTY
@@ -164,7 +164,7 @@ ACTIVITY_ICON_PX = 10
 #: theme tone, so a theme switch repaints the mark instead of keeping the old colour.
 _activity_icon_cache = {}
 
-# ── the session's STATE and IDENTITY on its tab (v1.9.8, task 3) ─────────────
+# ── the session's STATE and IDENTITY on its tab (v1.9.8) ─────────────────────
 # The tab's fixed icon slot carries the session's STATE in the CARD's declaration
 # (`ui/status_shape.py` + the `status_colors` palette) while it sets no ACTIVITY mark, and the
 # shipped tooltip — the tab's second channel — names the identity `user@ip:port` beside the alias,
@@ -309,7 +309,7 @@ def session_tab_tooltip(page, t) -> str:
     The tooltip is the shipped SECOND channel of the tab (marked → "new output", otherwise "close
     session") and v1.7.2 added the title the remote program set over `OSC 0`/`OSC 2` as its own line:
     the tab TEXT stays the node alias, so this is where "which of my eight shells is this?" is
-    answered. v1.9.8 (task 3) adds the session's IDENTITY (`user@ip:port`) beside that alias — the
+    answered. v1.9.8 adds the session's IDENTITY (`user@ip:port`) beside that alias — the
     account and the endpoint are what tell two shells of one host apart. Every line is optional, so
     an unidentified page keeps the shipped sentence alone. Never raises.
     """
@@ -329,7 +329,7 @@ def session_tab_tooltip(page, t) -> str:
 
 
 def install_tab_close(tabs, index: int, page, t) -> bool:
-    """Give ONE tab the theme's own CLOSE mark (v1.9.8, task 3) — and keep `tabsClosable` intact.
+    """Give ONE tab the theme's own CLOSE mark (v1.9.8) — and keep `tabsClosable` intact.
 
     The style's stock tab-close glyph is a hard red cross: measured on this checkout it paints
     `rgb(215, 55, 39)`, which reads as an ALERT for a control a user presses all day. A QToolButton
@@ -415,7 +415,7 @@ def refresh_session_activity(container) -> int:
     return done
 
 
-# ── v1.9.1 (ROADMAP v1.9.1): the SESSION ROWS a container puts on its surfaces ──
+# ── v1.9.1: the SESSION ROWS a container puts on its surfaces ──
 # A session whose channel died is a page the user would otherwise close and open again;
 # `TerminalSessionPage.reconnect()` is the ONE re-arm path that brings it back. The row that fires
 # it belongs to the SESSION, so its label, tooltip and STATE RULE ("enabled iff the session can be
@@ -512,7 +512,7 @@ def format_duration(seconds) -> str:
 
 
 class TransferMeter:
-    """v1.3.3.4 (ROADMAP task 6): the throughput (bytes/s) and the ETA of one SFTP task.
+    """v1.3.3.4: the throughput (bytes/s) and the ETA of one SFTP task.
 
     A SLIDING WINDOW of (time, bytes-done) samples (default 4 s): the average since
     the start of a 100 MB transfer is useless after a stall, while the average over
@@ -618,7 +618,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # cleared by the close and by the re-arm). Without it a page that never connected wore the
         # dot of a live channel: the state has to mean what its name says (`session_mark_status()`).
         self._connected = False
-        # v1.9.8 (task 3): the session's last FAILURE ("" — none): the reader behind the tab's WARN
+        # v1.9.8: the session's last FAILURE ("" — none): the reader behind the tab's WARN
         # state, written by `_show_error()` and cleared by the connect that answers it.
         self._last_error = ""
         # The SPLIT marker — the page was created as the second pane of a terminal window
@@ -627,10 +627,10 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # `_find_terminal_window_for()` skip it: a pane is a session, not a reason to refuse a new
         # terminal. The flag is a CONSTRUCTOR argument — the page must know from birth that it is a pane.
         self._is_split_pane = bool(split)
-        # v1.6.1 (ROADMAP task 8): the keyboard claim — the session takes the focus once,
+        # v1.6.1: the keyboard claim — the session takes the focus once,
         # when it is really SHOWN (`claim_focus()`), never while it is still hidden.
         self._focus_claimed = False
-        # v1.6.4 (ROADMAP task 4): the ACTIVITY mark — "this session produced output while you
+        # v1.6.4: the ACTIVITY mark — "this session produced output while you
         # were looking at another one". The session owns the STATE, the host owns the tab strip
         # (`note_output()` asks the host what "visible" means and the host re-renders).
         self._activity = False
@@ -644,7 +644,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # HOST's status surface alone (the `status_message` bridge below).
         self._session_status = ""
         self._with_status_line = bool(with_status_line)
-        # v1.7.2 (task 6): the title the REMOTE program set (`OSC 0`/`OSC 2`, pyte's
+        # v1.7.2: the title the REMOTE program set (`OSC 0`/`OSC 2`, pyte's
         # `Screen.set_title`). Cached here because the host re-renders its surfaces only when it
         # really CHANGED; the reader is `TerminalScreen.title()` under the screen's lock.
         self._remote_title = ""
@@ -659,7 +659,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # window's compat property, `_split_min_height`) but is a HIDDEN child, never in the layout.
         self._session_status = t("terminal.initializing")
         self.status_label = QLabel(self._session_status, self)
-        # v1.4.3 (ROADMAP task 4): the style comes from the ONE registry
+        # v1.4.3: the style comes from the ONE registry
         # (ui/theme_qss.py); refresh_theme() re-applies the same key.
         if theme_qss is not None:
             self.status_label.setStyleSheet(theme_qss.style("status.terminal_row"))
@@ -686,15 +686,15 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # The SAME builder creates the thread of a re-arm — one constructor for the two lives.
         self.terminal_thread = self._build_thread()
 
-        # v1.0 final (ROADMAP task 9): terminal_* keys from ~/.sshmap/config.json —
+        # v1.0 final: terminal_* keys from ~/.sshmap/config.json —
         # all optional, defaults = the current behaviour (the RC4 look). UI — v1.1.
         term_cfg = _st_module().load_terminal_settings()
-        # v1.1 (ROADMAP task 3): the session close behaviour — used in confirm_close().
+        # v1.1: the session close behaviour — used in confirm_close().
         self._close_behavior = term_cfg["close_behavior"]
 
         # v0.8: the pyte screen — a 120x32 grid, the same geometry as invoke_shell;
         # the HistoryScreen scrollback depth — terminal_history_lines (default 1000).
-        # v1.6.4 (ROADMAP task 5): the `terminal_scroll` MODE — "live" (the default) | "pin"
+        # v1.6.4: the `terminal_scroll` MODE — "live" (the default) | "pin"
         # (the view keeps its lines while output arrives). It is read HERE, at session
         # creation, like the palette/font/cursor keys; the key is config-only.
         self.tscreen = TerminalScreen(columns=120, lines=32,
@@ -708,13 +708,13 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self.widget = TerminalWidget(self.tscreen, self.terminal_thread,
                                      wheel_mode=term_cfg["wheel"],
                                      cursor_style=term_cfg["cursor"],
-                                     # v1.13.2 (ROADMAP v1.13.2): the wallpaper is read HERE, when the
+                                     # v1.13.2: the wallpaper is read HERE, when the
                                      # session is created, exactly like the palette, the font and the
                                      # cursor — the hub re-applies it to the open sessions on OK.
                                      background_path=term_cfg["background"],
                                      background_mode=term_cfg["background_mode"],
                                      background_opacity=term_cfg["background_opacity"])
-        # v1.3.3.4 (ROADMAP task 3): the transcript's suggested file name carries the
+        # v1.3.3.4: the transcript's suggested file name carries the
         # host — the page owns the server data, the canvas owns the menu that asks.
         self.widget.set_transcript_host(getattr(server_data, "host", "") or "")
         # v1.9: the production-tag guard of a multi-line paste — the page owns the node's tags.
@@ -733,7 +733,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # `connected_signal`. `with_sftp=False` builds the page WITHOUT it: the split pane is a
         # command line, and a second channel, worker and tree in ~130 px are pure cost.
         self._with_sftp = bool(with_sftp)
-        # v1.7.1 (ROADMAP v1.7.1): the window may show this session's Files tree in a
+        # v1.7.1: the window may show this session's Files tree in a
         # right-hand panel instead of the Files TAB (`detach_files_tab()` /
         # `set_files_panel()`); the flag also decides the LAZY channel open, because the panel
         # mode has no tab switch to trigger it.
@@ -742,7 +742,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self.tabs.addTab(self.widget, t("sftp.tab_terminal"))
         self.sftp_tab = SftpTab() if self._with_sftp else None
         if self.sftp_tab is not None:
-            # v1.7.3 (ROADMAP v1.7.3, task 1/2): the container is TOLD who this session is — the
+            # v1.7.3: the container is TOLD who this session is — the
             # `history_key()` of the server (the per-server directory memory is filed under it) and
             # the `(host, ssh_port, user)` triple that decides the server-side send path.
             self.sftp_tab.set_session_info(key=history_key(getattr(server_data, "id", "")),
@@ -774,7 +774,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # it the same way. Typed input is deliberately NOT recorded (the canvas sees raw bytes and keys,
         # not the shell's line editing). Quick launch sends through `send_data()` and records itself.
         self.widget.command_sent_hook = self.record_sent_command
-        # v1.6.4 (ROADMAP task 3): the Ctrl+wheel font zoom — the canvas owns the gesture, the
+        # v1.6.4: the Ctrl+wheel font zoom — the canvas owns the gesture, the
         # PAGE owns the consequence (the PTY grid, the debounced `terminal_font_size` write and
         # the status line), the same split as the command-sent hook above.
         self.widget.font_zoom_hook = self._on_font_zoomed
@@ -797,7 +797,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._sftp_handshake = None
         self._sftp_tasks = {}      # task_id → (kind, label)
         self._sftp_busy = 0        # how many uploads/downloads are in flight
-        # v1.3.3.4 (ROADMAP task 6): task_id → TransferMeter (the rate/ETA of a transfer;
+        # v1.3.3.4: task_id → TransferMeter (the rate/ETA of a transfer;
         # dropped with the task — see _on_sftp_task_done/error/cancelled).
         self._transfer_meters = {}
         self.tabs.currentChanged.connect(self._on_tab_changed)
@@ -816,7 +816,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._pty_timer.timeout.connect(self._on_pty_debounce)
         self.widget.installEventFilter(self)
 
-        # v1.6.4 (ROADMAP task 3): the Ctrl+wheel zoom's ONE debounced config write — the
+        # v1.6.4: the Ctrl+wheel zoom's ONE debounced config write — the
         # `CmdEditTextNote` pattern of AGENTS.md §4.2, restarted by every wheel notch.
         self._font_size_pending = None
         self._font_timer = QTimer(self)
@@ -833,7 +833,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._initial_command = self._session_command
         self._initial_cmd_conn = None
 
-        # ── v1.6.3 (ROADMAP task 5): the cwd follow (OSC 7) ─────────────────
+        # ── v1.6.3: the cwd follow (OSC 7) ──────────────────────────────────
         # The state of THIS session: the hook goes out ONCE (nothing in the canvas shows
         # it — its echo is held back until the first report), the hold-back is released by
         # the first OSC 7 or by the deadline, and everything degrades to "no follow".
@@ -858,7 +858,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         if not self._is_split_pane:
             self.widget.setFocus()
 
-    # ── v1.9.1 (ROADMAP v1.9.1): the ONE re-arm path of a session ───────────
+    # ── v1.9.1: the ONE re-arm path of a session ────────────────────────────
 
     def _build_thread(self):
         """The session thread of THIS page — the ONE constructor of `terminal_thread`.
@@ -909,7 +909,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._initial_cmd_conn = None
         if self._initial_command:
             self._initial_cmd_conn = thread.connected_signal.connect(self._send_initial_command)
-        # v1.9.8 (task 3): a session that CONNECTED clears its last failure and re-renders its tab
+        # v1.9.8: a session that CONNECTED clears its last failure and re-renders its tab
         # (the state mark of the fixed icon slot).
         thread.connected_signal.connect(self._on_connected_state)
         thread.start()
@@ -1073,7 +1073,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             return False
         return bool(tab.load_side(side, entry))
 
-    # ── v1.3.3.1 (ROADMAP task 1): live i18n — re-text on a language switch ──
+    # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def retranslate(self):
         """v1.3.3.1: re-text the page's own strings in the current language.
@@ -1112,7 +1112,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 sftp_tab.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the tab is already destroyed
-        # v1.5.7 (ROADMAP task 4): the History panel — its headers, its placeholder and the
+        # v1.5.7: the History panel — its headers, its placeholder and the
         # `terminal.history.last_unknown` cells are all translated text.
         history_tab = getattr(self, "history_tab", None)
         if history_tab is not None:
@@ -1135,7 +1135,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 pass  # Qt teardown — the canvas is already destroyed
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to this session.
+        """v1.4.3: re-apply the theme to this session.
 
         The page's status label, the canvas (the find bar is its child), the SFTP tab and the
         History panel. The terminal's OUTPUT palette is deliberately out of the UI
@@ -1166,7 +1166,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 except RuntimeError:
                     pass
 
-    # ── v1.3.3.5 (ROADMAP task 6): the multi-input badge of a SPLIT PANE ─────
+    # ── v1.3.3.5: the multi-input badge of a SPLIT PANE ──────────────────────
 
     def set_session_badge(self, key=None, **kwargs):
         """v1.3.3.5: mark THIS session's inner `Terminal` tab with the i18n key `key`.
@@ -1211,19 +1211,19 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._host_window = window
 
     def send_macro(self, text) -> bool:
-        """v1.3 (ROADMAP v1.3): a command-library macro → the terminal canvas
+        """v1.3: a command-library macro → the terminal canvas
         (widget.send_macro: a direct send_data of its own session, not a broadcast).
         RuntimeError — a close race (the C++ object was destroyed) → False.
 
-        v1.5.7 (ROADMAP task 6): this is the send path the History tab's "Send to terminal"
+        v1.5.7: this is the send path the History tab's "Send to terminal"
         uses, and the canvas records it through `command_sent_hook` — the timestamp and the
-        count of the entry move as a result of the send, exactly as the ROADMAP requires."""
+        count of the entry move as a result of the send."""
         try:
             return self.widget.send_macro(text)
         except RuntimeError:
             return False
 
-    # ── v1.5.7 (ROADMAP task 7): the COMMAND history of this server ─────────
+    # ── v1.5.7: the COMMAND history of this server ──────────────────────────
 
     def record_sent_command(self, text) -> bool:
         """Append what the APPLICATION sent to this server's command history (v1.5.7).
@@ -1250,7 +1250,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 pass  # Qt teardown — the panel is already destroyed
         return True
 
-    # ── v1.6.4 (ROADMAP task 3): the Ctrl+wheel font zoom ───────────────────
+    # ── v1.6.4: the Ctrl+wheel font zoom ────────────────────────────────────
 
     def _on_font_zoomed(self, size: int):
         """The canvas zoomed its font: the grid, the config key and the status line follow.
@@ -1295,7 +1295,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         except Exception:  # noqa: BLE001 — a read-only HOME is not worth an error dialog
             return False
 
-    # ── v1.6.4 (ROADMAP task 4): the activity mark of an inactive session ───
+    # ── v1.6.4: the activity mark of an inactive session ────────────────────
 
     def note_output(self) -> bool:
         """Note that THIS session produced output → the mark of an INACTIVE session.
@@ -1345,7 +1345,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         """Is there output this session produced while it was not the visible one?"""
         return bool(self._activity)
 
-    # ── v1.7.2 (task 6): the title the REMOTE program set (OSC 0/OSC 2) ─────────
+    # ── v1.7.2: the title the REMOTE program set (OSC 0/OSC 2) ──────────────────
 
     @property
     def remote_title(self) -> str:
@@ -1409,7 +1409,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.2: teardown — one method for all paths ───────────────────────────
 
     def confirm_close(self) -> bool:
-        """The gate before teardown (v1.1, ROADMAP task 3): terminal_close_behavior.
+        """The gate before teardown (v1.1): terminal_close_behavior.
 
         "ask": an active session (the SSH thread is still running) → a
         confirmation; a cancel — False (the host must event.ignore() and keep
@@ -1463,7 +1463,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self.shutdown()
 
     def shutdown(self):
-        """The SINGLE teardown method (v1.2, ROADMAP task 3): every teardown path
+        """The SINGLE teardown method (v1.2): every teardown path
         (window close, session error, MainWindow shutdown, the limit path) goes
         through it. Idempotent (a repeated call — no-op).
 
@@ -1498,7 +1498,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         def _dissig(sig, slot):
             try:
                 sig.disconnect(slot)
-            except TypeError:
+            except TypeError:  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                 pass  # the slot was not connected — nothing to do
 
         # v1.12.4.1: the channel that is still OPENING dies with the session — the FIRST stage of
@@ -1540,7 +1540,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             if sftp_worker.isRunning():
                 register_orphan_sftp_worker(sftp_worker)
 
-        # v1.3.1 (ROADMAP task 4): the preview panel closes together with the session —
+        # v1.3.1: the preview panel closes together with the session —
         # BEFORE the worker/thread teardown (the panel never outlives the transport it
         # was read through). Idempotent; a destroyed C++ object must not block the close.
         # v1.3.3.5: a page without the SFTP tab (`with_sftp=False`) has no panel at all.
@@ -1552,9 +1552,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             except RuntimeError:
                 pass
 
-        # v1.3.3.4 (ROADMAP task 3): the transcript is a local file of the SESSION — it
+        # v1.3.3.4: the transcript is a local file of the SESSION — it
         # is closed here, on the single idempotent teardown path, so no tee survives a
-        # closed session (the ROADMAP requirement: it must never raise into the teardown,
+        # closed session (it must never raise into the teardown,
         # hence the broad guard: a full disk / a destroyed canvas must not block the close).
         try:
             self.widget.stop_transcript()
@@ -1563,7 +1563,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
 
         try:
             self._pty_timer.stop()
-        except Exception:
+        except Exception:  # noqa: BLE001 — teardown of a dead object: a C++ object RuntimeError
             pass  # a C++ object RuntimeError (teardown) — does not block the close
 
         thread = getattr(self, "terminal_thread", None)
@@ -1581,14 +1581,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             # v1.6.3: the cwd follow's hook — an orphan thread must not install it after
             # the page is gone (the same reason the Quick Launch connection is dropped).
             _dissig(thread.connected_signal, self._on_connected_for_follow)
-            # v1.9.8 (task 3): the state mark's own slot — an orphan thread must not re-render a
+            # v1.9.8: the state mark's own slot — an orphan thread must not re-render a
             # tab of a page that is gone.
             _dissig(thread.connected_signal, self._on_connected_state)
             # Quick Launch — only if the connection was made (the Connection object from __init__)
             if getattr(self, "_initial_cmd_conn", None) is not None:
                 try:
                     thread.connected_signal.disconnect(self._initial_cmd_conn)
-                except (TypeError, RuntimeError):
+                except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                     pass
             thread.stop()
             if thread.isRunning():
@@ -1607,7 +1607,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             # the rest of the teardown.
             _dissig(self.sftp_tab.follow_cwd_changed, self._on_follow_cwd_toggled)
 
-    # ── v1.0RC3: dirty rendering without a timer (ROADMAP task 8) ───────────
+    # ── v1.0RC3: dirty rendering without a timer ────────────────────────────
 
     def eventFilter(self, obj, event):
         """v1.2: a canvas resize (inside the tab) → a grid recompute. Before —
@@ -1622,7 +1622,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         return super().eventFilter(obj, event)
 
     def claim_focus(self) -> bool:
-        """v1.6.1 (ROADMAP task 8): give the keyboard to THIS session's canvas.
+        """v1.6.1: give the keyboard to THIS session's canvas.
 
         `setFocus()` called while the page is still HIDDEN never reaches the container —
         no `FocusIn` is delivered (the fact `modules/ssh_terminal.py` states at
@@ -1669,7 +1669,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         `invoke_shell`'s 120×32 as its only grid definition. Deferred with singleShot(0): at
         show time the layout has not run yet, and `_sync_grid` guards the not-laid-out case.
 
-        v1.6.1 (ROADMAP task 8): the FIRST show also claims the keyboard (`claim_focus()`),
+        v1.6.1: the FIRST show also claims the keyboard (`claim_focus()`),
         deferred the same way. A LATER show (a tab switched back, a window re-shown) does not
         re-claim it — the container's tab hook is the place for that, and a minimise/restore
         must not move the focus the user placed somewhere else.
@@ -1703,7 +1703,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         silence until the user types). The state is now whatever pyte managed to apply: it is
         repainted, and the failure is LOGGED instead of swallowed.
 
-        v1.6.3 (ROADMAP task 5): the OSC 7 SCAN runs on the RAW bytes FIRST — a directory
+        v1.6.3: the OSC 7 SCAN runs on the RAW bytes FIRST — a directory
         report is never delayed by the echo hold-back — and the hold-back itself follows:
         while the injected hook's echo is being suppressed the canvas, the transcript and
         pyte see NOTHING (the filtered stream); the first report drops the held bytes and a
@@ -1727,7 +1727,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             log = _log()
             if log is not None:
                 log.warning(f"terminal: feed failed ({exc!r}) — repainting the current state")
-        # v1.3.3.4 (ROADMAP task 3): the transcript tee. Inside the output path but
+        # v1.3.3.4: the transcript tee. Inside the output path but
         # deliberately OUTSIDE the pyte block above: a broken file must not stop the
         # rendering (write_transcript swallows everything and stops the tee itself).
         try:
@@ -1749,14 +1749,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 self.widget.clear_selection()
         except RuntimeError:
             pass  # the C++ object was already destroyed (a WA_DeleteOnClose close race)
-        # v1.6.4 (ROADMAP task 4): the ACTIVITY mark of an INACTIVE session — the last step of
+        # v1.6.4: the ACTIVITY mark of an INACTIVE session — the last step of
         # this path, after the canvas really has the new bytes (a page the user is not looking
         # at says so in its tab strip; the host decides what "visible" means).
         try:
             self.note_output()
         except RuntimeError:
             pass  # the C++ object was already destroyed (a WA_DeleteOnClose close race)
-        # v1.7.2 (task 6): the remote title (`OSC 0`/`OSC 2`) rides on the SAME path — pyte has
+        # v1.7.2: the remote title (`OSC 0`/`OSC 2`) rides on the SAME path — pyte has
         # just consumed the chunk, so a title it carried is one property read away, and the host
         # is told only when it really changed.
         try:
@@ -1792,7 +1792,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             return False
 
 
-    # ── v1.0RC3: resize PTY — a grid guard + debounce (ROADMAP task 6) ──────
+    # ── v1.0RC3: resize PTY — a grid guard + debounce ───────────────────────
 
     def _visible_grid(self):
         """(cols, rows) of the visible grid: the canvas size / the cell metrics."""
@@ -1934,7 +1934,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
 
     def _show_error(self, error: str):
         t = get_translator()
-        # v1.9.8 (task 3): the failure is the tab's WARN state — recorded (a reader) and announced.
+        # v1.9.8: the failure is the tab's WARN state — recorded (a reader) and announced.
         self._last_error = str(error or "")
         self._set_status_text(f"{t('terminal.error_prefix')} {error}")
         self._note_tab_state()
@@ -1955,11 +1955,11 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         # v1.4.7 follow-up: one write — `_set_status_text` IS the bridge now (the line
         # and the host's status surface were two writes of the same text before).
         self._set_status_text(get_translator()("terminal.session_closed"))
-        # v1.9.8 (task 3): the tab's STATE mark follows the same fact.
+        # v1.9.8: the tab's STATE mark follows the same fact.
         self._note_tab_state()
 
     def _note_tab_state(self) -> None:
-        """Tell the host to re-render this session's tab after a STATE change (v1.9.8, task 3).
+        """Tell the host to re-render this session's tab after a STATE change (v1.9.8).
 
         The shipped hook is the activity mark's own (`session_activity_changed`); a state change
         (connected / closed / an error) is the other half of what the tab's fixed icon slot shows.
@@ -1994,7 +1994,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 if channel is None or channel.closed:
                     return
                 thread.send_data((cmd + "\n").encode("utf-8"))
-                # v1.5.7 (ROADMAP task 7): quick launch is the second path the APPLICATION
+                # v1.5.7: quick launch is the second path the APPLICATION
                 # knows the exact command of — it does not go through send_macro(), so it
                 # records itself (the macro library and the History tab are covered by the
                 # canvas hook).

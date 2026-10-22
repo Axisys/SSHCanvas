@@ -63,7 +63,7 @@ MULTI_PANE_FRAME_OBJECT_NAME = "sshmap_multi_frame_pane"
 
 
 def _thread_alive(thread) -> bool:
-    """Is the terminal thread alive for broadcasting (ROADMAP v1.2.3, task 4).
+    """Is the terminal thread alive for broadcasting (v1.2.3).
 
     Alive — the channel is open (a real SSHTerminalThread during a session) OR the
     thread is still running (QThread.isRunning()). Dead: a closed channel
@@ -120,7 +120,7 @@ class MultiInputHub:
     def remove_listener(self, callback):
         try:
             self._listeners.remove(callback)
-        except ValueError:
+        except ValueError:  # noqa: BLE001 — best effort (declared): a listener that was never added
             pass  # was not connected — nothing to do
 
     def set_active(self, on: bool):
@@ -137,12 +137,12 @@ class MultiInputHub:
             from modules.logger import get_logger as _get_log
             _get_log("modules.multi_input").info(
                 f"Multi-input mode {'enabled' if on else 'disabled'}")
-        except Exception:
+        except Exception:  # noqa: BLE001 — optional import: the logger may be unavailable
             pass  # the logger is unavailable — the state change matters more than logging it
         self.refresh()
 
     def refresh(self):
-        """v1.3.3.4 (ROADMAP task 5): re-render the mode UI WITHOUT a state change.
+        """v1.3.3.4: re-render the mode UI WITHOUT a state change.
 
         The per-session exclusion toggle changes what the mode's UI must show (the
         "NO MULTI" badge, the participants count on the plaque) while the mode itself
@@ -153,7 +153,7 @@ class MultiInputHub:
         for cb in list(self._listeners):
             try:
                 cb(self._active)
-            except Exception:
+            except Exception:  # noqa: BLE001 — teardown of a dead object: a UI callback mid-teardown
                 pass  # a UI callback under teardown must not break the state change
 
     def toggle(self) -> bool:
@@ -172,7 +172,7 @@ class MultiInputHub:
         itself is updated by the standard teardown — destroyed →
         _forget_terminal_window), the other sessions keep receiving input.
 
-        v1.3.3.4 (ROADMAP task 5): a session EXCLUDED from the broadcast
+        v1.3.3.4: a session EXCLUDED from the broadcast
         (widget.multi_excluded — the per-session toggle of the terminal's context
         menu, in memory only) is skipped as well. The flag is read through
         getattr(): the hub knows nothing about TerminalWidget beyond the `.widget`
@@ -232,11 +232,11 @@ class MultiInputHub:
                 f"multi-input: active but 0 receivers "
                 f"(other sessions={others}, dead threads={dead}, excluded={excluded}) — "
                 f"input is NOT being duplicated")
-        except Exception:
+        except Exception:  # noqa: BLE001 — optional import: the logger may be unavailable
             pass  # the logger is unavailable — the broadcast matters more than logging it
 
     def participant_count(self, pages=None) -> int:
-        """v1.3.3.4 (ROADMAP task 5): how many sessions the broadcast would reach.
+        """v1.3.3.4: how many sessions the broadcast would reach.
 
         The plaque counter is `participant_count()`, never `len(registry)`, which would promise N sessions while
         an excluded one was silently skipped; the counter now counts the SESSIONS THAT
@@ -295,7 +295,7 @@ def apply_container_highlight(host, on: bool) -> bool:
     Idempotent; a RuntimeError of a dead C++ object does not propagate
     (teardown robustness). True — applied.
 
-    v1.3.3.4 (ROADMAP task 5): a session EXCLUDED from the broadcast carries the
+    v1.3.3.4: a session EXCLUDED from the broadcast carries the
     `terminal.multi_excluded_badge` instead of the plain "MULTI" badge — the tab
     itself says which sessions the typing will NOT reach. The flag lives on the
     session's canvas (`page.widget.multi_excluded`, in memory); reading it through
@@ -303,7 +303,7 @@ def apply_container_highlight(host, on: bool) -> bool:
     recomputed on every highlight pass, so `hub.refresh()` (the exclusion toggle)
     is enough to update it.
 
-    v1.3.3.5 (ROADMAP task 6): the container may own a SPLIT PANE — a session that has
+    v1.3.3.5: the container may own a SPLIT PANE — a session that has
     no tab in `session_tabs`. The highlight walks the tabs above and then reaches the
     pane through the container's duck-typed `split_pane` / `split_host`: the FRAME
     goes on the pane's own host (there is no tab strip to frame) and the badge goes on
@@ -359,7 +359,7 @@ def apply_container_highlight(host, on: bool) -> bool:
 
 
 def _highlight_split_pane(host, on: bool) -> None:
-    """v1.3.3.5 (ROADMAP task 6): mark the container's SPLIT PANE (if any).
+    """v1.3.3.5: mark the container's SPLIT PANE (if any).
 
     A pane is a session of the container (`host.split_pane` — duck-typed; the dock and
     older fakes simply do not have it) that owns no tab in `session_tabs`. Frame — on

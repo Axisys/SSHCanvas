@@ -20,7 +20,7 @@ from PySide6.QtGui import QUndoCommand
 class _MapCommand(QUndoCommand):
     """Base: holds a reference to the window (for the refresh hook and i18n)."""
 
-    # v1.5rc3 (ROADMAP task 2): the modes in which this command DESTROYS work the user
+    # v1.5rc3: the modes in which this command DESTROYS work the user
     # may want back. A command that ships no mode (a move, an edit, the group fold)
     # inherits the empty tuple and is never offered as an "Undo" in the status bar.
     DESTRUCTIVE_MODES: Tuple[str, ...] = ()
@@ -30,7 +30,7 @@ class _MapCommand(QUndoCommand):
         self._win = win
 
     def offers_undo(self) -> bool:
-        """v1.5rc3 (ROADMAP task 2): may the status bar offer "Undo" for this change?
+        """v1.5rc3: may the status bar offer "Undo" for this change?
 
         True only for a change that LOSES something the user can get back with one
         Ctrl+Z: a removed node / connection / note, a detached note, and a bulk import
@@ -202,7 +202,7 @@ class CmdResizeGroup(_MapCommand):
 # ── ToggleGroupCollapse: folding a group into badges (v1.4.2) ────
 
 class CmdToggleGroupCollapse(_MapCommand):
-    """v1.4.2 (ROADMAP task 5): fold a group's members into badges, or unfold them.
+    """v1.4.2: fold a group's members into badges, or unfold them.
 
     Why this IS an undo step while the v0.8.4 per-node collapse is not: the fold MOVES
     the member cards and re-fits the frame — it is a real geometry change, and a Ctrl+Z
@@ -276,7 +276,7 @@ class CmdAddRemoveNode(_MapCommand):
     references from other commands (arrows created after the addition) valid.
     """
 
-    # v1.5rc3 (ROADMAP task 2): deleting a card is a LOSS — the status bar offers the way back.
+    # v1.5rc3: deleting a card is a LOSS — the status bar offers the way back.
     DESTRUCTIVE_MODES = ("remove",)
 
     def __init__(self, win, scene, data, mode: str = "add",
@@ -307,7 +307,7 @@ class CmdAddRemoveNode(_MapCommand):
         try:
             from services.credential_manager import get_credential_manager
             get_credential_manager().delete_password(self._data.id)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the store is a side channel of the undo
             pass
 
     def _restore_keyring_password(self):
@@ -316,12 +316,12 @@ class CmdAddRemoveNode(_MapCommand):
                 from services.credential_manager import get_credential_manager
                 get_credential_manager().save_password(self._data.id, self._stashed_password,
                                                        scope=self._stashed_scope)
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): the store is a side channel of the undo
                 pass
 
     def redo(self):
         if self._mode == "add":
-            # v1.4.4 (ROADMAP task 3): the appearing node plays the 200 ms scale-in
+            # v1.4.4: the appearing node plays the 200 ms scale-in
             # (ui/motion.py — the item's OWN setScale/setOpacity, never an opacity effect).
             self._scene.add_server(self._data, animate=True)
             # v1.1.2RC1 (bonus-N11): restore the keyring password stashed when the
@@ -360,7 +360,7 @@ class CmdAddRemoveNodeBatch(_MapCommand):
     Ctrl+Z rolls back the entire imported batch at once.
     """
 
-    # v1.5rc3 (ROADMAP task 2): a bulk import is many cards in one gesture (and its
+    # v1.5rc3: a bulk import is many cards in one gesture (and its
     # removal the same) — the clearest case for "one click back".
     DESTRUCTIVE_MODES = ("add", "remove")
 
@@ -379,7 +379,7 @@ class CmdAddRemoveNodeBatch(_MapCommand):
                 for d in self._data_list:
                     self._stashed_passwords.append(
                         (d.id, cm.load_password(d.id, scope=node_scope(d)), node_scope(d)))
-            except Exception:
+            except Exception:  # noqa: BLE001 — best effort (declared): the store is a side channel of the undo
                 pass
 
     def _delete_passwords(self):
@@ -388,7 +388,7 @@ class CmdAddRemoveNodeBatch(_MapCommand):
             cm = get_credential_manager()
             for d in self._data_list:
                 cm.delete_password(d.id)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the store is a side channel of the undo
             pass
 
     def _restore_passwords(self):
@@ -398,14 +398,14 @@ class CmdAddRemoveNodeBatch(_MapCommand):
             for sid, pwd, scope in self._stashed_passwords:
                 if pwd:
                     cm.save_password(sid, pwd, scope=scope)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the store is a side channel of the undo
             pass
 
     def redo(self):
         for d in self._data_list:
             if self._mode == "add":
                 if not self._scene.has_node(d.id):
-                    # v1.4.4 (ROADMAP task 3): a bulk import is a row of appearing cards —
+                    # v1.4.4: a bulk import is a row of appearing cards —
                     # every node of the batch plays the same 200 ms scale-in as a single add.
                     self._scene.add_server(d, animate=True)
             else:
@@ -434,7 +434,7 @@ class CmdAddRemoveNodeBatch(_MapCommand):
 # ── AddRemoveConnection: connection create/remove ────────────────
 
 class CmdAddRemoveConnection(_MapCommand):
-    # v1.5rc3 (ROADMAP task 2): disconnecting loses the typed relation — offer the way back.
+    # v1.5rc3: disconnecting loses the typed relation — offer the way back.
     DESTRUCTIVE_MODES = ("remove",)
 
     def __init__(self, win, scene, source_id: str, target_id: str,
@@ -442,7 +442,7 @@ class CmdAddRemoveConnection(_MapCommand):
                  bidirectional: bool = False, arrow=None):
         # v1.2.6: bidirectional is at the tail of the signature (after mode)
         # so that old positional calls (mode as the 7th argument) don't break.
-        # v1.6 (ROADMAP task 3): `arrow` (optional, keyword-only in practice) pins the
+        # v1.6: `arrow` (optional, keyword-only in practice) pins the
         # EXACT link a "remove" command owns — a pair may carry several parallel links
         # now, so the direction alone no longer identifies one.
         super().__init__(win, "Add connection" if mode == "add" else "Delete connection")
@@ -456,7 +456,7 @@ class CmdAddRemoveConnection(_MapCommand):
         self._arrow = arrow
 
     def _find_arrow(self):
-        """The arrow this command owns — the pinned one, else the LAST match (v1.6, task 3).
+        """The arrow this command owns — the pinned one, else the LAST match (v1.6).
 
         A pair of cards may carry SEVERAL links now (the parallel-link offset of v1.6), so
         a forward scan would undo somebody else's arrow: a "remove" command pins the link
@@ -539,7 +539,7 @@ class CmdConnectSelected(_MapCommand):
 # ── AddRemoveNote: note create/remove ────────────────────────────
 
 class CmdAddRemoveNote(_MapCommand):
-    # v1.5rc3 (ROADMAP task 2): a deleted note is text the user wrote — offer the way back.
+    # v1.5rc3: a deleted note is text the user wrote — offer the way back.
     DESTRUCTIVE_MODES = ("remove",)
 
     def __init__(self, win, scene, raw: dict, mode: str = "add"):
@@ -566,7 +566,7 @@ class CmdAddRemoveNote(_MapCommand):
             self._note_id = note.note_id  # id may have been generated on the first redo
             try:
                 self._win._attach_note(note)  # signals + committed text
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — the caller owns the fallback: the next redo attaches the note
                 pass
         else:
             self._scene.remove_note(self._note_id)
@@ -587,7 +587,7 @@ class CmdAddRemoveNote(_MapCommand):
             self._note_id = note.note_id
             try:
                 self._win._attach_note(note)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — the caller owns the fallback: the next redo attaches the note
                 pass
         self._refresh()
 
@@ -662,7 +662,7 @@ class CmdAttachNote(_MapCommand):
     undo step; the LIFO chain "detach + server removal" rolls back completely.
     """
 
-    # v1.5rc3 (ROADMAP task 2): UNPINNING a note is a loss too (the note stops
+    # v1.5rc3: UNPINNING a note is a loss too (the note stops
     # following its server) — attaching it is not (it can be undone from the menu).
     DESTRUCTIVE_MODES = ("detach",)
 
@@ -798,7 +798,7 @@ class CmdEditNodeData(_MapCommand):
         self._refresh()
 
 
-# ── v1.6 (ROADMAP task 1): CmdEditSelected — ONE undo step for a whole selection ──
+# ── v1.6: CmdEditSelected — ONE undo step for a whole selection ──
 
 class CmdEditSelected(_MapCommand):
     """Bulk edit of the selection: tags / comment / quick launch in ONE command (v1.6).
@@ -861,10 +861,10 @@ def _values_copy(values) -> dict:
     }
 
 
-# ── v1.6 (ROADMAP task 4): the background image joins the undo stack ─────────────
+# ── v1.6: the background image joins the undo stack ──────────────────────────────
 
 class CmdMoveBackground(_MapCommand):
-    """A finished background MOVE gesture (v1.6, ROADMAP task 4).
+    """A finished background MOVE gesture (v1.6).
 
     The last mouse-driven object outside the stack: the image would only mark the
     project dirty, so Ctrl+Z after dragging a floor plan rolled back something else.
@@ -893,7 +893,7 @@ class CmdMoveBackground(_MapCommand):
 
 
 class CmdResizeBackground(_MapCommand):
-    """A finished background RESIZE gesture (v1.6, ROADMAP task 4) — the `CmdResizeGroup` pair."""
+    """A finished background RESIZE gesture (v1.6) — the `CmdResizeGroup` pair."""
 
     def __init__(self, win, background, old_size, new_size):
         super().__init__(win, "Resize background")
@@ -915,10 +915,10 @@ class CmdResizeBackground(_MapCommand):
         self._apply(self._old)
 
 
-# ── v1.6 (ROADMAP task 6): CmdArrangeGroup — a group's members in one gesture ────
+# ── v1.6: CmdArrangeGroup — a group's members in one gesture ─────────────────────
 
 class CmdArrangeGroup(CmdMoveNodes):
-    """The auto-arrangement of a group's members (v1.6, ROADMAP task 6).
+    """The auto-arrangement of a group's members (v1.6).
 
     The `CmdMoveNodes` pattern with its own name: the positions before/after of every
     member, ONE entry in the stack, so Ctrl+Z returns every card to where it was — the
@@ -934,10 +934,10 @@ class CmdArrangeGroup(CmdMoveNodes):
         self._group = group
 
 
-# ── v1.8.4 (ROADMAP task 1): CmdArrangeMap — the whole map in one gesture ────────
+# ── v1.8.4: CmdArrangeMap — the whole map in one gesture ─────────────────────────
 
 class CmdArrangeMap(CmdMoveNodes):
-    """The auto-arrangement of the WHOLE map (v1.8.4, ROADMAP task 1).
+    """The auto-arrangement of the WHOLE map (v1.8.4).
 
     The `CmdMoveNodes` body with the text that names THIS gesture: absolute positions, ONE
     stack entry, so Ctrl+Z returns every card byte for byte. The units are the map's TOP

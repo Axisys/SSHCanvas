@@ -528,7 +528,7 @@ check("§8 this release adds NO key — the patch moved predicates, not words",
       # the patch left the pin at 1114; the LATER follow-ups of the line add their own keys
       # (v1.12.3's THREE: the jump host's label, its hint and the import picker's column,
       # v1.13.2's EIGHT: the wallpaper row, v1.13.3's NINE: the row verbs and the Servers menu).
-      EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1
+      EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1
       and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS),
       str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
 check("§8 the sentences the patch re-uses are the SHIPPED ones",

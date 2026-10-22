@@ -36,7 +36,7 @@ except ImportError:
     from modules.window_geometry import restore_splitter_state
 
 
-# ── v1.2.4.1: collapsing the sidebar/map into a thin strip (ROADMAP v1.2.4.1) ──
+# ── v1.2.4.1: collapsing the sidebar/map into a thin strip (v1.2.4.1) ──
 
 def _diamond_icon():
     """Vector "◇" diamond on a 20×20 canvas (corner collapse buttons).
@@ -73,7 +73,7 @@ def _diamond_icon():
 
 
 class _CollapseStrip(QWidget):
-    """Thin clickable strip of a collapsed panel (~18 px; ROADMAP v1.2.4.1, task 1).
+    """Thin clickable strip of a collapsed panel (~18 px).
 
     A click ANYWHERE expands the panel (expand_requested); inside — the "◇" diamond
     at the bottom right (instead of the chevron, QA request) + a tooltip
@@ -141,7 +141,7 @@ class PanelsMixin:
     """The sidebar/map panel mechanism: the 18 px strip, the splitter and the LIST mode (AGENTS.md §4.1, §4.12)."""
 
     def _style_collapse_btn(self, btn) -> None:
-        """v1.5.6 (ROADMAP task 4): give a panel collapse button its FRAME.
+        """v1.5.6: give a panel collapse button its FRAME.
 
         The two "◇" corners are plain QToolButtons — no `setAutoRaise` — and their look
         comes from the ONE `collapse.button` entry of the QSS registry (a QSS string is a
@@ -155,7 +155,7 @@ class PanelsMixin:
         except RuntimeError:
             pass  # Qt teardown — the button is already destroyed
 
-    # ── v1.2.4.1 (ROADMAP v1.2.4.1): ONE "collapse into a thin strip" mechanism ──
+    # ── v1.2.4.1: ONE "collapse into a thin strip" mechanism ──
     # The three control points of each panel (corner button, strip click,
     # "View" menu item) all go through one checkable QAction: a Qt click inverts checked itself,
     # buttons/strips call action.toggle() — all paths emit toggled(bool) into the slots below.
@@ -207,7 +207,7 @@ class PanelsMixin:
             pass
 
     def _set_panel_collapsed(self, which: str, collapsed: bool) -> str:
-        """v1.2.4.1 (task 1): collapse/expand the sidebar or the map into a strip.
+        """v1.2.4.1: collapse/expand the sidebar or the map into a strip.
 
         `which` — "sidebar" | "map"; `collapsed` — the target state (True = strip).
         Idempotent: a no-op if the panel is already in the target state (toggled/trigger
@@ -226,14 +226,14 @@ class PanelsMixin:
         Collapsing the second panel is forbidden for ALL control paths (button/strip/menu/
         programmatic setChecked — they all converge on toggled). Returns "changed" / "noop" / "forbidden".
 
-        v1.4.5 (ROADMAP task 5): the collapsed container is capped at the strip width
+        v1.4.5: the collapsed container is capped at the strip width
         (`setMaximumWidth`) and the divider handle is DISABLED while a panel is a strip —
         `minimumWidth` alone would let the handle stretch it into empty space. Both
         invariants are applied by
         `_sync_splitter_handle()` at the END of this method, so every control path and
         every resize source (handle, window resize, dock, state restore) agrees.
 
-        v1.4.6 (ROADMAP task 2): the MAP's collapsedness is also the LIST MODE — the
+        v1.4.6: the MAP's collapsedness is also the LIST MODE — the
         sidebar container is the full window width in that state, and the tree fills it
         with the server parameters (`sidebar.list.*`, see `_sync_list_mode()`). The
         trigger is deliberately this method and not the QAction: the diamond, the strip,
@@ -305,10 +305,10 @@ class PanelsMixin:
             return "noop"  # Qt teardown — the C++ object is already destroyed
 
         setattr(self, flag_attr, bool(collapsed))
-        # v1.4.5 (ROADMAP task 5): the width caps (the collapsed one is exactly a strip
+        # v1.4.5: the width caps (the collapsed one is exactly a strip
         # wide) and the handle's enabled state — ONE place, every control path.
         self._sync_splitter_handle()
-        # v1.4.6 (ROADMAP task 2): the map's collapsedness IS the list mode — the
+        # v1.4.6: the map's collapsedness IS the list mode — the
         # sidebar switches to the wide table (and back) from this one place.
         self._sync_list_mode()
         try:
@@ -319,7 +319,7 @@ class PanelsMixin:
         return "changed"
 
     def _sync_splitter_handle(self) -> None:
-        """v1.4.5 (ROADMAP task 5): the 18px invariant + the divider's affordance.
+        """v1.4.5: the 18px invariant + the divider's affordance.
 
         The drift this fixes: a collapsed container was pinned only by `minimumWidth`,
         which is a HINT to the QSplitter — dragging the handle (or an external resize
@@ -361,7 +361,7 @@ class PanelsMixin:
             pass  # Qt teardown — the splitter or a container is already destroyed
 
     def _sync_list_mode(self) -> None:
-        """v1.4.6 (ROADMAP task 2): the map's collapsedness IS the sidebar's LIST mode.
+        """v1.4.6: the map's collapsedness IS the sidebar's LIST mode.
 
         With the map collapsed the sidebar container takes the whole window width
         (QSplitter redistributes), so `SidebarPanel.set_list_mode(True)` turns the tree
@@ -375,7 +375,7 @@ class PanelsMixin:
         REAL switch refreshes the rows (`refresh_sidebar()` — the one composition hook
         every add/remove/import/load/undo already passes through).
 
-        v1.5.5 (ROADMAP task 2): the two INVENTORY actions follow the mode. "Copy List" and
+        v1.5.5: the two INVENTORY actions follow the mode. "Copy List" and
         "Export List…" report the TABLE, so they are enabled exactly while the table exists
         — a disabled item (the `act_backups` pattern for "no project is open") is the honest
         affordance for "there is no list on screen right now"; the enable state is applied on
@@ -400,12 +400,12 @@ class PanelsMixin:
         """Force the [strip | expanded panel] sizes of a COLLAPSED panel.
 
         v1.2.4.1 had this arithmetic inline in `_set_panel_collapsed`; v1.3.3.6
-        (ROADMAP task 4) reuses it after the splitter-state restore, so a saved layout
+ reuses it after the splitter-state restore, so a saved layout
         can never resurrect the width of a panel the user collapsed before closing the
         window. The caller guarantees the OTHER panel is expanded (collapsing both is
         forbidden — `_set_panel_collapsed` returns "forbidden").
 
-        v1.4.5 (ROADMAP task 5): the collapsed container is ALSO capped at the strip
+        v1.4.5: the collapsed container is ALSO capped at the strip
         width (`setMaximumWidth`) — with only `minimumWidth` + `setSizes` a later
         resize (the window, the dock, the handle) would stretch the strip again.
         """
@@ -420,7 +420,7 @@ class PanelsMixin:
             self._splitter.setSizes([total - w_strip, w_strip])
 
     def _apply_splitter_state_from_config(self) -> None:
-        """v1.3.3.6 (ROADMAP task 4): restore the panel widths — applied LAST.
+        """v1.3.3.6: restore the panel widths — applied LAST.
 
         The ORDER is the contract (the v1.4.5 splitter-handle rules build on it):
         this runs AFTER `restore_window_geometry()`/`restoreState()` (early in
@@ -432,11 +432,11 @@ class PanelsMixin:
         A missing key / a broken value leaves the 250/950 defaults of `_setup_ui`
         untouched (`restore_splitter_state` returns False and never raises).
 
-        v1.4.5 (ROADMAP task 5): the width caps and the handle's enabled state are
+        v1.4.5: the width caps and the handle's enabled state are
         re-applied afterwards in EVERY case (a restored layout must not re-enable a
         divider next to a collapsed panel).
 
-        v1.4.6 (ROADMAP task 2): the LIST mode is re-applied here too — the collapsed
+        v1.4.6: the LIST mode is re-applied here too — the collapsed
         map may have come from the config (a restored layout never carries the mode),
         and the column set must already be the wide one when the first rows are built.
         """

@@ -227,7 +227,7 @@ win = make_main()
 win._open_example_map()
 app.processEvents()
 _cards = {n.data.id: n for n in win.scene.nodes()}
-# v1.6.5 (ROADMAP task 6): the demo holds ONE unmanaged card as well — it declares no
+# v1.6.5: the demo holds ONE unmanaged card as well — it declares no
 # status (there is nothing to emulate about a box nobody can reach), so the emulation is
 # asserted over the MANAGED cards and the neighbour is asserted on its own terms below.
 _neighbour_id = EP.unmanaged_example_ids()[0]

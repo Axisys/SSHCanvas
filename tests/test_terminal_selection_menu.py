@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.2.7 — Terminal: double/triple-click selection + context menu (ROADMAP v1.2.7).
+"""v1.2.7 — Terminal: double/triple-click selection + context menu (v1.2.7).
 
 `word_units()` is pure (a word = the maximal run of non-blank cells; punctuation belongs to it —
 "foo,bar" is one; the stub of a wide CJK glyph belongs to the word; blanks → `[]`). The double click

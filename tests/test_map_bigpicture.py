@@ -418,7 +418,7 @@ check("§1c a drag far outside the view is clamped into it",
       and mi.x() >= 0 and mi.y() >= 0,
       f"pos={mi.pos()} view={view.width()}x{view.height()}")
 
-# ── v1.5 (ROADMAP): the SNAP — a drop at an anchored edge re-attaches the panel ──────
+# ── v1.5: the SNAP — a drop at an anchored edge re-attaches the panel ────────────────
 # The clamped drop above landed flush against the anchored RIGHT edge, so it counted as
 # "put me back": the saved position was CLEARED and the corner rule came back.
 check("§1c v1.5 SNAP: a drop flush at the anchored RIGHT edge re-anchors the panel",

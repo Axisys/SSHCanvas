@@ -34,7 +34,7 @@ class SidebarMixin:
     def _on_tree_item_double_click(self, item: QTreeWidgetItem, column: int):
         """v0.9.9.4: select the row's node and reveal it on the map.
 
-        v1.4.6 (ROADMAP task 3, the decision pinned with the release): in LIST mode
+        v1.4.6: in LIST mode
         (the map is collapsed) a row carries the server parameters and there is nothing
         to reveal — the double click therefore does what a double click on the node CARD
         does, the `ui_node_double_click` mode: "properties" opens the AddServer dialog
@@ -52,14 +52,14 @@ class SidebarMixin:
             self._select_node(node, center=True)
 
     def _on_sidebar_context_menu(self, pos):
-        """v0.9.6 (ROADMAP #1–#2): right-click a server in the tree — node actions.
+        """v0.9.6: right-click a server in the tree — node actions.
 
-        The set and order — per ROADMAP v0.9.6 (SidebarPanel.CONTEXT_MENU_ITEMS):
+        The set and order — `SidebarPanel.CONTEXT_MENU_ITEMS` (the ONE declaration):
         Connect SSH, External terminal, Edit, Copy IP,
         Copy Hostname, Ping, Collect info, Show on map
         (centering + accent), Delete (the guarded path). i18n — reusing
         the map's ctx.* keys; the only new one is ctx.reveal_on_map. "Map-canvas"
-        actions are deliberately NOT duplicated (ROADMAP #2): the drag connection
+        actions are deliberately NOT duplicated: the drag connection
         and the collapse/expand plaque live only in the map context, where they make sense.
         """
         item = self.tree.itemAt(pos)
@@ -72,7 +72,7 @@ class SidebarMixin:
 
         menu = host_attr(self, "QMenu")(self)  # the panel fills it; the window shows it
         self.sidebar.fill_context_menu(menu, node)
-        # v1.4rc3 (ROADMAP task 7): the plugin hooks append their rows to the SAME menu
+        # v1.4rc3: the plugin hooks append their rows to the SAME menu
         # (the frozen contract names "the node context menu of the map or of the
         # sidebar" as one surface). The panel passed the rows of the real tree, so the
         # node travels as its ID — the manager narrows it to a plugin node record.
@@ -85,11 +85,11 @@ class SidebarMixin:
                 self.log.warning(f"sidebar context menu exec failed: {e}")
 
     def _reveal_node_on_map(self, node: "ServerNode"):
-        """v0.9.6 (ROADMAP #1): "Show on map" — a smooth flight + an accent.
+        """v0.9.6: "Show on map" — a smooth flight + an accent.
 
         Selecting the node (the tree row and the map frame are synced via
         _sync_selection_state); the camera — the `_select_node(center=True, smooth=True)`
-        path, which v1.4.4 (ROADMAP task 2) turns into a `ui/motion.py` FLIGHT (250 ms,
+        path, which v1.4.4 turns into a `ui/motion.py` FLIGHT (250 ms,
         OutQuad, interruptible) instead of an instant jump; the accent — the
         ServerNode.reveal_flash flash frame (the set_status pulse pattern).
         """

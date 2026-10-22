@@ -1,4 +1,4 @@
-"""v1.1.2 final — Parallel status probes (release theme, ROADMAP v1.1.2 final).
+"""v1.1.2 final — Parallel status probes.
 
 The acceptance test of the series, on fake probes (a monkeypatched `probe_ssh`) and without the network:
 the counting of the parallel calls (`max_active` ≤ `max_parallel` and > 1) with the round shorter than the
@@ -76,7 +76,7 @@ def _targets(n, prefix="p", delay=0.0):
     return out
 
 
-# ══ 1. Counting the parallel calls (task 1: ThreadPoolExecutor) ══════════
+# ══ 1. Counting the parallel calls (ThreadPoolExecutor) ══════════
 print("== parallelism ==")
 chk = StatusChecker(interval_ms=5000, probe_timeout=0.5, max_parallel=4, parent=None)
 _reset_counters()
@@ -118,7 +118,7 @@ else:
     check("the results are spread in time as they become ready (the spread ≥ 0.15 s)", False, str(times))
 chk2.stop()
 
-# ══ 3. The _busy semantics are unchanged (task 1: a repeated start is ignored) ══
+# ══ 3. The _busy semantics are unchanged (a repeated start is ignored) ══
 print("== _busy semantics ==")
 chk3 = StatusChecker(interval_ms=5000, probe_timeout=0.6, max_parallel=2, parent=None)
 _reset_counters()
@@ -162,7 +162,7 @@ check("after the stop() is_busy == False (the finished-signal is delivered)", ch
 check("the cancelled before the probe start gave no results (delivered < 6, ≤ 2)",
       len(emitted) < 6 and len(emitted) <= 2, str(emitted))
 
-# ══ 5. The status_max_parallel key: the config + the setters (task 2) ════════════════
+# ══ 5. The status_max_parallel key: the config + the setters ════════════════
 print("== status_max_parallel config ==")
 from i18n import save_config as _save_cfg, load_config as _load_cfg
 
@@ -170,7 +170,7 @@ _clear_cfg = clear_cfg      # v1.4.1: the shared helper (the same ~/.sshmap/conf
 
 _clear_cfg()
 st = get_status_settings()
-check("no config → the max_parallel default 16 (the ROADMAP 'default 16')",
+check("no config → the max_parallel default 16",
       st["max_parallel"] == DEFAULT_MAX_PARALLEL == 16, str(st))
 _save_cfg({"status_max_parallel": 32})
 st = get_status_settings()
@@ -198,7 +198,7 @@ chk5.set_max_parallel("junk")
 check("set_max_parallel: the broken value → the default 16", chk5.max_parallel == 16)
 chk5.stop()
 
-# ══ 6. The soft auto-interval for the large maps (task 3) ═════════════════════
+# ══ 6. The soft auto-interval for the large maps ═════════════════════
 print("== auto interval for large maps ==")
 chk6 = StatusChecker(interval_ms=30_000, probe_timeout=0.2, max_parallel=16, parent=None)
 check("N=50 — NOT a large map (the threshold: N > 50)", not chk6.is_large_map()
@@ -227,7 +227,7 @@ check("after the round on the small map the timer is returned to the base one",
       chk6._timer.interval() == 20_000, str(chk6._timer.interval()))
 chk6.stop()
 
-# ══ 7. E2E: the hint in the MainWindow status bar at N > 50 (task 3) ════════
+# ══ 7. E2E: the hint in the MainWindow status bar at N > 50 ════════
 print("== main window hint ==")
 import ui.main_window as MW
 from models.server import ServerData
@@ -253,7 +253,7 @@ check("after the scene is cleared the flag is reset (the threshold is crossed ag
 win._dirty = False
 win.close(); win.destroy()
 
-# ══ 8. The "Statuses" dialog: the spin + collect() (task 2) ════════════════════════
+# ══ 8. The "Statuses" dialog: the spin + collect() ════════════════════════
 print("== settings dialog ==")
 import i18n as _i18n_mod
 from ui.settings_dialog import SettingsDialog

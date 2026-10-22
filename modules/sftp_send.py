@@ -239,7 +239,7 @@ def create_spool(name: str = "", token=None) -> str:
     os.close(handle)
     try:
         os.chmod(path, SPOOL_FILE_MODE)   # the tightest mode the platform offers
-    except OSError:
+    except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
         pass
     return path
 

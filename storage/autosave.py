@@ -155,7 +155,7 @@ def _atomic_copy(src: str, dst: str) -> None:
     atomic.publish_atomic(dst, lambda temp: shutil.copy2(src, temp))
 
 
-# ── Autosave (ROADMAP v0.9.7 #1, #3) ───────────────────────────────────
+# ── Autosave ───────────────────────────────────────────────────────────
 
 def write_autosave(project_path: str, data: dict) -> str:
     """Write the project's last autosave. Returns the file path."""
@@ -179,7 +179,7 @@ def autosave_mtime(project_path: str) -> Optional[float]:
 
 
 def autosave_is_newer(project_path: str) -> bool:
-    """ROADMAP v0.9.7 #3: is the autosave newer than the file on disk?
+    """Is the autosave newer than the file on disk?
 
     Only an mtime comparison — "newness" is determined by the file system,
     with no trust in the content (a corrupt autosave is rejected by read_autosave).
@@ -193,7 +193,7 @@ def autosave_is_newer(project_path: str) -> bool:
         return False
 
 
-# ── Ring buffer of backups (ROADMAP v0.9.7 #2) ─────────────────────────────
+# ── Ring buffer of backups ─────────────────────────────────────────────────
 
 def rotate_backups(project_path: str, max_count: int = DEFAULT_BACKUP_COUNT) -> List[str]:
     """Shift the ring buffer and put the current file into slot 1.
@@ -221,7 +221,7 @@ def rotate_backups(project_path: str, max_count: int = DEFAULT_BACKUP_COUNT) -> 
         if os.path.isfile(extra):
             try:
                 os.remove(extra)
-            except OSError:
+            except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
                 pass
     _atomic_copy(project_path, backup_path_for(project_path, 1))
     return list_backups(project_path, max_count)

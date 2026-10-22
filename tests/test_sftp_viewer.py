@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP, ROADMAP v1.3.1).
+"""v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP).
 
 The release theme: the read-only preview inside the existing SFTP tab (stage 3 of the file chain; stage
 4 "editing" is rejected). Everything is checked WITHOUT the network — the fake in-memory SFTP of
@@ -620,7 +620,7 @@ try:
 
     page = win.page
     page.shutdown()
-    check("page.shutdown() closes the preview together with the session (ROADMAP task 4)",
+    check("page.shutdown() closes the preview together with the session",
           tab7.viewer.isHidden() and tab7.viewer_text.toPlainText() == "")
     check("shutdown() stays idempotent (a repeated call is a no-op)",
           page.shutdown() is None)

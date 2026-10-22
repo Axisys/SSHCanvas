@@ -22,7 +22,7 @@ try:  # v1.1.4: shared seam for swapping the facade module's globals (see mixin_
 except ImportError:
     from mixin_support import host_attr
 
-try:  # v1.6.5 (ROADMAP task 4): the ONE predicate of the unmanaged gate
+try:  # v1.6.5: the ONE predicate of the unmanaged gate
     from ..models.server import is_unmanaged as _is_unmanaged
 except ImportError:  # flat launch from the project root
     from models.server import is_unmanaged as _is_unmanaged
@@ -32,7 +32,7 @@ try:  # v1.7.5.1: the ONE URL-scheme rule (the opener and the three writers)
 except ImportError:  # flat launch from the project root
     from models.server import is_launchable_url
 
-try:  # v1.2.3 (ROADMAP v1.2.3): multi-input — highlight of the session containers
+try:  # v1.2.3: multi-input — highlight of the session containers
     from ..modules.multi_input import apply_container_highlight as _apply_multi_highlight
 except ImportError:
     from modules.multi_input import apply_container_highlight as _apply_multi_highlight
@@ -56,7 +56,7 @@ class SshMixin:
             QMessageBox.information(self, self.t("msg.info_title"),
                                   self.t("msg.select_server_ssh"))
             return
-        # v1.6.5 (ROADMAP task 4): an UNMANAGED card has no login to connect with — the
+        # v1.6.5: an UNMANAGED card has no login to connect with — the
         # gate refuses where the user would otherwise meet a login dialog for a host
         # nobody administers. ONE helper, asked by every SSH entry point below it.
         if self._refuse_unmanaged(node, "ctx.ssh_connect"):
@@ -69,12 +69,12 @@ class SshMixin:
             QMessageBox.critical(self, self.t("msg.ssh_error"), self.t("msg.connect_failed", error=str(e)))
 
     def _find_terminal_window_for(self, node_id):
-        """v1.2.1 (task 1): the node's live terminal window — so that a new
+        """v1.2.1: the node's live terminal window — so that a new
         session can be opened as a TAB in it. The registry holds sessions (pages);
         the page knows its host (set_host_window). A dead C++ object / a fake
         without _host_window -> None (duck-typing, RuntimeError does not crash).
 
-        v1.3.3.5 (ROADMAP task 2): a SPLIT PANE is skipped — it points at the same
+        v1.3.3.5: a SPLIT PANE is skipped — it points at the same
         window as its parent tab, but a pane is not a reason to re-target a new
         session at its window (a window whose tab was closed but whose pane still
         lives is NOT the node's "live terminal window" for the connect path).
@@ -96,7 +96,7 @@ class SshMixin:
         return None
 
     def _send_session_targets(self, exclude_key=""):
-        """v1.7.3 (ROADMAP v1.7.3, task 1): the sessions a file may be SENT to — the provider.
+        """v1.7.3: the sessions a file may be SENT to — the provider.
 
         The registry owns the sessions, so the walk lives here and a Files container finds it
         through the parent chain (`find_host_hook`, the `_adopt_split_session` precedent): the pane
@@ -145,7 +145,7 @@ class SshMixin:
         return diff_targets_from_pages(getattr(self, "_terminal_windows", []))
 
     def _save_remembered_dirs(self):
-        """v1.7.3 (ROADMAP v1.7.3, task 2): write the per-server directory memory of every session.
+        """v1.7.3: write the per-server directory memory of every session.
 
         The map is APPLICATION-level, so it is collected from every live Files container — the
         windows AND the dock — into ONE merged write (each container merges its own entries into
@@ -171,7 +171,7 @@ class SshMixin:
                 pass
 
     def _last_terminal_window(self):
-        """v1.7.2 (task 4): the LAST live terminal WINDOW — the `"single"` mode's one container.
+        """v1.7.2: the LAST live terminal WINDOW — the `"single"` mode's one container.
 
         The mode's whole point: a new session joins the window that is already open instead of
         creating another one, WHATEVER node it belongs to (the per-node rule of
@@ -193,7 +193,7 @@ class SshMixin:
         return None
 
     def _merge_terminal_windows(self, target) -> tuple:
-        """v1.7.2 (task 5): move every OTHER live terminal window's sessions INTO `target`.
+        """v1.7.2: move every OTHER live terminal window's sessions INTO `target`.
 
         The registry owns the containers (a session knows its host), so the walk — and the one
         question "which window is a terminal window" (`CONTAINER_KIND`) — lives here. The move is
@@ -269,7 +269,7 @@ class SshMixin:
         return moved, closed
 
     def _limit_terminal_sessions(self):
-        """v1.3.3.5 (ROADMAP task 2): the sessions the terminal_max_open limit counts.
+        """v1.3.3.5: the sessions the terminal_max_open limit counts.
 
         The registry `_terminal_windows` deliberately holds EVERY live session,
         SPLIT PANES included — they keep the node's green dot lit, they receive the
@@ -282,7 +282,7 @@ class SshMixin:
                 if not getattr(s, "_is_split_pane", False)]
 
     def _adopt_split_session(self, page):
-        """v1.3.3.5 (ROADMAP task 2): register the terminal window's SPLIT PANE.
+        """v1.3.3.5: register the terminal window's SPLIT PANE.
 
         The host hook the window finds on its parent (duck-typed —
         `SSHTerminalWindow._session_sink()`), called once per pane right after the pane
@@ -312,7 +312,7 @@ class SshMixin:
         self._multi_refresh_ui()
 
     def _ensure_terminals_dock(self):
-        """v1.2.2 (task 2): the "Terminals" dock in MainWindow — lazy creation.
+        """v1.2.2: the "Terminals" dock in MainWindow — lazy creation.
 
         The first session in "tabs" mode creates a QDockWidget with
         TerminalDockContent (a QTabWidget of pages, modules/terminal_dock.py) in
@@ -356,31 +356,31 @@ class SshMixin:
         OLDEST session / cancel. Returns None if the user canceled (the calling
         code must not report an "opened" terminal).
 
-        v1.2 (ROADMAP task 4): the registry registers SESSIONS
+        v1.2: the registry registers SESSIONS
         (TerminalSessionPage), not windows — the limit is counted by sessions
         across ALL windows; the teardown of the oldest one on the limit — via
         the page (page.close_terminal -> the host's close_page).
 
-        v1.2.1 (task 1): a new session = a new tab — if the node already has a
+        v1.2.1: a new session = a new tab — if the node already has a
         live terminal window (_find_terminal_window_for), the session is opened
         there via window.add_session() (the tab title — the node's alias, the
         status message terminal.session_new_tab); otherwise — a new window with
         a single tab (v1.2 behavior).
 
-        v1.2.2 (tasks 2/4): the display mode from the terminal_mode key
+        v1.2.2: the display mode from the terminal_mode key
         ("windows" default | "tabs"): in "tabs" mode a new session opens as a
         TAB in the "Terminals" dock (_ensure_terminals_dock, lazy creation) —
         node-window reuse does not apply; applied WITHOUT a restart: new
         sessions go to the chosen mode, open windows/dock keep living as they
         are until closed.
 
-        v1.7.2 (task 4): the THIRD mode, "single" — every new session joins the LAST live terminal
+        v1.7.2: the THIRD mode, "single" — every new session joins the LAST live terminal
         window as its next tab, whatever node it belongs to. The per-NODE reuse rule of
         `_find_terminal_window_for()` is bypassed BY THE MODE, because one window is shared by every
         node there; the tab strip, the activity marks, the close cross, the status bridges and the
         `terminal_max_open` limit stay the shipped ones.
 
-        v1.6.5 (ROADMAP task 4): the terminal (and with it the SFTP tab of the same
+        v1.6.5: the terminal (and with it the SFTP tab of the same
         session) is an SSH verb — an UNMANAGED card is refused HERE, which is the one
         choke point every terminal path (connect, quick launch, split, the dock) goes
         through, so no caller can open a shell on a host nobody administers.
@@ -394,7 +394,7 @@ class SshMixin:
         ts_cfg = _load_ts()
         max_open = ts_cfg["max_open"]
         mode = ts_cfg["mode"]   # "windows" (default) | "tabs" (the dock) | "single" (one window)
-        # v1.3.3.5 (ROADMAP task 2): counted over the sessions the limit really owns —
+        # v1.3.3.5: counted over the sessions the limit really owns —
         # the SPLIT PANES are excluded (a pane is a second shell inside a session the
         # user already opened, not a new terminal), and the "close the oldest" candidate
         # is picked from the same list.
@@ -418,9 +418,9 @@ class SshMixin:
         node.set_ssh_connected(True)
         self._ssh_connected_nodes.add(node.data.id)  # indicator reset on terminal close
         if mode == "tabs":
-            # v1.2.2 (task 2): a new session -> the "Terminals" dock on the map
+            # v1.2.2: a new session -> the "Terminals" dock on the map
             # (lazy creation / repeated show). Open "windows"-mode windows keep
-            # living as they are — node-window reuse does not apply here (task 4).
+            # living as they are — node-window reuse does not apply here.
             dock = self._ensure_terminals_dock()
             content = dock.content
             had_tabs = content.session_tabs.count() > 0
@@ -438,7 +438,7 @@ class SshMixin:
             if win_cls is None:
                 raise RuntimeError("SSHTerminalWindow is not available in the MainWindow module")
             # A new session = a new tab: the node's own live window takes it, otherwise a fresh
-            # window is created. v1.7.2 (task 4): the "single" mode asks for the LAST live window
+            # window is created. v1.7.2: the "single" mode asks for the LAST live window
             # and for ANY node — the shape of `_find_terminal_window_for()` without its per-node
             # rule.
             existing = (self._last_terminal_window() if mode == "single"
@@ -463,7 +463,7 @@ class SshMixin:
         session.destroyed.connect(lambda *_a, s=session: self._forget_terminal_window(s))
         self._terminal_windows.append(session)
         terminal_window.show()
-        # v1.2.3 (ROADMAP task 2): in multi-input mode a new session is
+        # v1.2.3: in multi-input mode a new session is
         # highlighted immediately (frame / "MULTI" badge) + the plaque counter
         # is updated.
         self._multi_refresh_ui()
@@ -505,7 +505,7 @@ class SshMixin:
         v1.0RC4: initial_command — the first command for the terminal (quick
         launch with a command and no keyring password).
 
-        v1.6.5 (ROADMAP task 4): the second door of the SSH family — the properties
+        v1.6.5: the second door of the SSH family — the properties
         dialog's "Connect via SSH" and the double-click-to-connect mode both end here, so
         the unmanaged gate is asked once more before a login dialog is built.
         """
@@ -591,7 +591,7 @@ class SshMixin:
         auto=True — a quiet auto-start after a successful SSH connect (no error
         messages, only the status bar).
 
-        v1.6.5 (ROADMAP task 4): the collector authenticates over SSH, so the gate is
+        v1.6.5: the collector authenticates over SSH, so the gate is
         asked here too — the single-node path of the family (the batch filters its own
         scope) and the only one a caller outside the connect path can reach.
         """
@@ -605,7 +605,7 @@ class SshMixin:
             return
         sid = node.data.id
         # Guard: do not spawn parallel collections for the same node
-        # v1.5.3 (ROADMAP task 2): the ONE home of that guard is `_info_is_busy()` /
+        # v1.5.3: the ONE home of that guard is `_info_is_busy()` /
         # `_track_info_collector()` — the batch path asks the same question and registers
         # its collectors in the same registry, so "collect the selection" twice cannot
         # double-probe a host.
@@ -626,11 +626,11 @@ class SshMixin:
         key = "status.info_running_auto" if auto else "status.info_running"
         try:
             self.statusBar().showMessage(self.t(key, alias=node.data.alias), 4000)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
             pass
 
     def _info_is_busy(self, server_id) -> bool:
-        """v1.5.3 (ROADMAP task 2): is a collector already running for this node?
+        """v1.5.3: is a collector already running for this node?
 
         The per-node guard of the info family, in ONE place: the single-node path
         (`_collect_node_info`) and the batch (`InfoBatch(is_busy=…)`) both ask here, so a
@@ -669,7 +669,7 @@ class SshMixin:
         except (AttributeError, RuntimeError):
             pass  # a duck-typed collector without the signal — shutdown still waits on it
 
-    # ── v1.5.3 (ROADMAP task 2): collect for MANY nodes at once ────────────────
+    # ── v1.5.3: collect for MANY nodes at once ─────────────────────────────────
 
     def _collectible_nodes(self) -> list:
         """Every node of the map, in scene order (the "all" scope of the gather action)."""
@@ -679,7 +679,7 @@ class SshMixin:
             return []
 
     def _collect_info_scope(self, node=None) -> list:
-        """WHICH nodes the "gather information" action covers (v1.5.3, ROADMAP task 2).
+        """WHICH nodes the "gather information" action covers (v1.5.3).
 
         The rule follows the map's own habits: a MULTI-selection means "these"; a single
         selected node means it; a right-clicked row/node (a context-menu call) means that
@@ -719,7 +719,7 @@ class SshMixin:
             except TypeError:
                 targets = self._collect_info_scope(node)
         targets = [n for n in targets if getattr(n, "data", None) is not None]
-        # v1.6.5 (ROADMAP task 4): the hardware facts are collected OVER SSH, so an
+        # v1.6.5: the hardware facts are collected OVER SSH, so an
         # unmanaged card leaves the scope here. The gate is the ONE predicate, applied to
         # the BATCH rather than to each node: "gather information for everything" collects
         # from every card it can and never reports a neighbour as a failure — and a scope
@@ -732,7 +732,7 @@ class SshMixin:
         if not targets:
             try:
                 self.statusBar().showMessage(self.t("status.info_batch_none"), 5000)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
                 pass
             return 0
         batch = getattr(self, "_info_batch", None)
@@ -761,7 +761,7 @@ class SshMixin:
         else:
             try:
                 self.statusBar().showMessage(self.t("status.info_batch_none"), 5000)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
                 pass
         return accepted
 
@@ -789,7 +789,7 @@ class SshMixin:
             try:
                 self.statusBar().showMessage(
                     self.t("status.info_batch_progress", done=done, total=total), 3000)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
                 pass
 
     def _on_info_batch_ready(self, server_id: str, info: dict):
@@ -846,8 +846,8 @@ class SshMixin:
         """Write a collection result into the node's data + DATE it. Returns True on a write.
 
         The ONE write path of the collected facts (the single-node path and the batch both
-        end here): the values, the timestamp of THIS measurement (`info_collected_at`,
-        v1.5.3 task 1) and the redraw. The node may have been deleted while collecting —
+        end here): the values, the timestamp of THIS measurement (`info_collected_at`)
+        and the redraw. The node may have been deleted while collecting —
         then there is nothing to write and no date to set.
         """
         node = self.scene.get_node(server_id)
@@ -877,7 +877,7 @@ class SshMixin:
             d.disk = str(info.get("disk_gb") or "")
         if "disk_devices" in info:
             d.disk_devices = [str(entry) for entry in (info.get("disk_devices") or [])]
-        # v1.6.6 (ROADMAP task 5): the DATA-mount family, written as ONE unit by this same
+        # v1.6.6: the DATA-mount family, written as ONE unit by this same
         # path. A collection that says anything about a mount — an ANSWER or a NAMED refusal —
         # writes all three answers, so a refusal CLEARS them: the pair is never a stale figure
         # beside a request that no longer resolves. A collection that is silent about a data
@@ -889,13 +889,13 @@ class SshMixin:
             # v1.8rc6 (N35): the note is written with the answers it explains — a refusal leaves
             # the pair EMPTY and the note, an answer leaves the figures and NO note.
             d.disk_note = str(info.get("disk_note") or "")
-        # v1.8.4 (ROADMAP task 3): the INODE fact is written where it was MEASURED — beside the
+        # v1.8.4: the INODE fact is written where it was MEASURED — beside the
         # mount pair it belongs to. The key is present only while the batch carried the section,
         # so a legacy batch (and a fixture that predates the read) leaves the stored figure alone
         # instead of clearing a fact it never asked about.
         if "disk_inodes" in info:
             d.disk_inodes = str(info.get("disk_inodes") or "")
-        # v1.5.3 (ROADMAP task 1): the date goes WITH the data — a fresh measurement is what
+        # v1.5.3: the date goes WITH the data — a fresh measurement is what
         # the "collected N ago" line and the stale mark describe. It is an ordinary field of
         # the model (optional in JSON, 0.0 = not dated) and it NEVER changes a value.
         try:
@@ -908,7 +908,7 @@ class SshMixin:
             node.set_info_collected_at(getattr(d, "info_collected_at", 0.0))
         except (AttributeError, RuntimeError):
             pass  # a test double without the v1.5.3 hook — the values are already written
-        # v1.6.6 (ROADMAP task 4): a refused data mount is REPORTED where a collection reports
+        # v1.6.6: a refused data mount is REPORTED where a collection reports
         # — the status bar (the English line is already in the log and the activity ring).
         self._report_disk_note(d, info)
         self.refresh_sidebar()
@@ -916,7 +916,7 @@ class SshMixin:
         return True
 
     def _report_disk_note(self, data, info: dict) -> None:
-        """v1.6.6 (ROADMAP task 4): the status-bar sentence of an unanswered REQUEST.
+        """v1.6.6: the status-bar sentence of an unanswered REQUEST.
 
         The collection's own report half — a share refused BY NAME, a requested path that is
         not on the host, or a DEVICE the `lsblk` listing does not hold. `disk_refusal_kind()`
@@ -947,7 +947,7 @@ class SshMixin:
                     disk_refusal_text(self.t, info.get("disk_device_note"), data.alias,
                                       device=str(getattr(data, "disk_device", "") or "").strip()),
                     8000)
-        except (RuntimeError, AttributeError, ImportError):
+        except (RuntimeError, AttributeError, ImportError):  # noqa: BLE001 — teardown of a dead object: the values are already written
             pass  # Qt teardown / a stripped window — the values are already written
 
     def _on_info_ready(self, server_id: str, info: dict, collector):
@@ -959,7 +959,7 @@ class SshMixin:
         try:
             self.statusBar().showMessage(
                 self.t("status.info_collected", alias=d.alias), 5000)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
             pass
         if self.log:
             self.log.info("System info collected",
@@ -976,7 +976,7 @@ class SshMixin:
         try:
             self.statusBar().showMessage(
                 self.t("status.info_failed", error=error), 8000)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
             pass
 
     def _connect_ssh_external(self, node=None):
@@ -986,7 +986,7 @@ class SshMixin:
         The password is NOT passed (visible in ps) — the OS's ssh will ask for
         it itself / key auth.
 
-        v1.6.5 (ROADMAP task 4): the icon fields (user / port / private key) of an
+        v1.6.5: the icon fields (user / port / private key) of an
         UNMANAGED card are empty by construction and the host is not administered from
         here, so the external terminal is refused by the same gate as the built-in one.
         """
@@ -1007,7 +1007,7 @@ class SshMixin:
             user=(data.user or "").strip(),
             port=data.ssh_port or 22,
             key_path=(data.key_path or "").strip() or None,
-            # v1.12.3 (ROADMAP task 2): the node's own jump host — the ONE value `ssh -J` takes. The
+            # v1.12.3: the node's own jump host — the ONE value `ssh -J` takes. The
             # INTERNAL path stays out of it (`AGENTS.md` §4.4.2): the OS client is what carries the
             # proxy here, and `validate_target()` refuses a value its parser could act on.
             jump=(getattr(data, "jump_host", "") or "").strip() or None,
@@ -1081,7 +1081,7 @@ class SshMixin:
         type="url"     -> the default browser (webbrowser);
         type="command" -> the first command in the server's SSH terminal.
 
-        v1.6.5 (ROADMAP task 4): a COMMAND entry is an SSH verb and is refused for an
+        v1.6.5: a COMMAND entry is an SSH verb and is refused for an
         unmanaged card — a URL entry still opens, because the browser needs no shell on
         that host (the plan's own exception).
         """
@@ -1135,7 +1135,7 @@ class SshMixin:
             return
         try:
             self.statusBar().showMessage(self.t("status.ql_opened", name=name), 4000)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
             pass
         if self.log:
             # the "name" key cannot go into extra — it is a built-in
@@ -1152,7 +1152,7 @@ class SshMixin:
         SSH dialog, and after the connect the same command is sent to the
         terminal (initial_command).
 
-        v1.6.5 (ROADMAP task 4): the second half of the quick-launch gate — the command
+        v1.6.5: the second half of the quick-launch gate — the command
         can also be reached through this method directly, and it is the SSH terminal it
         would be sent to.
         """
@@ -1173,7 +1173,7 @@ class SshMixin:
                 try:
                     self.statusBar().showMessage(
                         self.t("status.ql_command", name=name, alias=data.alias), 5000)
-                except Exception:
+                except Exception:  # noqa: BLE001 — best effort (declared): the status line is cosmetic
                     pass
         else:
             self._run_ssh_connect(node, prefill_password="", initial_command=cmd)
@@ -1183,7 +1183,7 @@ class SshMixin:
                           extra={"alias": data.alias, "ql_name": name})
 
     def _forget_terminal_window(self, session):
-        """v1.2 (ROADMAP task 4): the registry holds SESSIONS
+        """v1.2: the registry holds SESSIONS
         (TerminalSessionPage), not windows — a window can also come here
         (resolved to its .page).
 
@@ -1210,7 +1210,7 @@ class SshMixin:
                         node.set_ssh_connected(False)
         except RuntimeError:
             pass  # C++ object already destroyed during teardown — fine
-        # v1.2.3 (ROADMAP task 4): a dead session is dropped from the registry
+        # v1.2.3: a dead session is dropped from the registry
         # on the regular path — the "MULTI: N sessions" plaque counter is
         # updated, the broadcast keeps working for the rest (dead threads are
         # additionally filtered by the hub by liveness).
@@ -1223,7 +1223,7 @@ class SshMixin:
     # to a state change and the registry hooks — the broadcast lives at the single input point.
 
     def _toggle_multi_input(self, checked=None):
-        """v1.2.3 (tasks 2/3): toggle multi-input — the "View" menu item
+        """v1.2.3: toggle multi-input — the "View" menu item
         (a checkable QAction; wired to toggled(bool) — in PySide6 6.11
         triggered via QMenu.addAction(text, slot) does NOT pass the state to
         the Python slot) or the exit button on the plaque (an explicit False).
@@ -1283,7 +1283,7 @@ class SshMixin:
         return confirm(VERB_BROADCAST, guarded[0][1], names=names, parent=self)
 
     def _sync_multi_shortcut(self):
-        """v1.2.3 -> v1.3.2 (ROADMAP task 4): the multi-input sequence on the QAction.
+        """v1.2.3 -> v1.3.2: the multi-input sequence on the QAction.
 
         The RULE is unchanged since v1.2.3/ the sequence is installed ONLY
         while the mode is on (QAction has no setShortcutEnabled; an empty QKeySequence
@@ -1313,7 +1313,7 @@ class SshMixin:
             pass  # C++ object already removed (close race) — nothing to update
 
     def _on_multi_changed(self, active: bool):
-        """v1.2.3: a hub state change -> UI (tasks 2/3).
+        """v1.2.3: a hub state change -> UI.
 
         * QAction: the check + the exit sequence (configurable since v1.3.2, but
           installed ONLY in the mode — see _sync_multi_shortcut);
@@ -1323,7 +1323,7 @@ class SshMixin:
           badges, the window title) or its reset;
         * the status message (status.multi_enabled / status.multi_disabled).
 
-        v1.3.3.4 (ROADMAP task 5): the callback is also reached through
+        v1.3.3.4: the callback is also reached through
         `hub.refresh()` — the per-session exclusion toggle re-renders the very same
         UI without a mode change. Everything here is idempotent, so a refresh is
         harmless; only the status MESSAGE is guarded (a "Multi-input enabled" line
@@ -1340,7 +1340,7 @@ class SshMixin:
                 pass  # C++ object already removed (close race) — nothing to update
         state_changed = active != getattr(self, "_multi_shown_state", False)
         self._multi_shown_state = active
-        # v1.3.2 (task 4): the sequence — from the registry, still mode-conditional.
+        # v1.3.2: the sequence — from the registry, still mode-conditional.
         self._sync_multi_shortcut()
         count = self._multi_participant_count()
         try:
@@ -1372,7 +1372,7 @@ class SshMixin:
             pass
 
     def _multi_participant_count(self) -> int:
-        """v1.3.3.4 (ROADMAP task 5): the sessions the broadcast actually reaches.
+        """v1.3.3.4: the sessions the broadcast actually reaches.
 
         The count never comes from the whole registry, which
         would promise an excluded session the bytes it never gets; it comes
@@ -1391,7 +1391,7 @@ class SshMixin:
         return len(registry)
 
     def _multi_refresh_ui(self):
-        """v1.2.3 (task 4): the registry changed (a session opened/closed) ->
+        """v1.2.3: the registry changed (a session opened/closed) ->
         the plaque counter + the container highlight. Called from
         _spawn_terminal_window / _forget_terminal_window; the mode is off —
         no-op (the plaque is hidden, nothing to highlight). Idempotent:

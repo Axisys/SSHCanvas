@@ -106,7 +106,7 @@ def osc7_report_end(data, after: int = 0) -> int:
 class TerminalPageCwdMixin:
     """The follow itself: the checkbox's state, the hook and the hold-back (mixed into the page)."""
 
-    # ── v1.6.3 (ROADMAP task 5): the cwd follow (OSC 7) ─────────────────────
+    # ── v1.6.3: the cwd follow (OSC 7) ──────────────────────────────────────
 
     def follow_cwd(self) -> bool:
         """Is this session following the shell's directory? (the checkbox's state)"""

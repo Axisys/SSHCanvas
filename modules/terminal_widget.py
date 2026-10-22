@@ -31,7 +31,7 @@ try:
 except ImportError:
     from modules.terminal_screen import PALETTES, resolve_color
 
-# v1.6.4 (ROADMAP task 5): the pinned scrollback — the canvas reads the MODE of its screen
+# v1.6.4: the pinned scrollback — the canvas reads the MODE of its screen
 # (`terminal_scroll`) to decide whether new output may move the view and what "the user wants
 # the live line again" means. The resolver is the screen module's (ONE declaration, one default).
 try:
@@ -41,24 +41,24 @@ except ImportError:
     from modules.terminal_screen import (SCROLL_MODE_DEFAULT as _SCROLL_MODE_DEFAULT,
                                          SCROLL_MODE_PIN as _SCROLL_MODE_PIN)
 
-# v1.13.2 (ROADMAP v1.13.2): the wallpaper — the three keys, their validation and the PURE geometry.
+# v1.13.2: the wallpaper — the three keys, their validation and the PURE geometry.
 # The module is Qt-free, so the canvas owns the decode, the blend and the cache (DOCUMENTATION.md §78).
 try:
     from . import terminal_background as TB
 except ImportError:   # a flat launch from the project root
     from modules import terminal_background as TB
 
-# v1.2.3 (ROADMAP v1.2.3): multi-input — the broadcast hub of the input to all open sessions.
+# v1.2.3: multi-input — the broadcast hub of the input to all open sessions.
 # There is no import cycle: multi_input knows nothing about terminal_widget.
 try:
     from .multi_input import get_hub as _get_multi_hub
 except ImportError:
     from modules.multi_input import get_hub as _get_multi_hub
 
-# v1.3.3.4 (ROADMAP task 1): the floating find panel — the map_search_bar pattern. The panel itself
+# v1.3.3.4: the floating find panel — the map_search_bar pattern. The panel itself
 # is imported by `terminal_widget_find.py`, which owns `_ensure_find_bar()`.
 
-# v1.5rc4 (ROADMAP task 5): the ONE visible-focus indicator of the three keyboard
+# v1.5rc4: the ONE visible-focus indicator of the three keyboard
 # domains — the terminal canvas shows the same ring as the map and the sidebar, in the
 # STRONG accent role of v1.5rc1 (never a new colour). The module imports only
 # ui/theme + ui/theme_qss — no cycle with terminal_widget.
@@ -112,7 +112,7 @@ def get_translator():
 
 
 def build_macro_payload(text, bracketed_paste: bool = True) -> bytes:
-    """v1.3 (ROADMAP v1.3): a command library macro → the payload for the PTY. A pure function.
+    """v1.3: a command library macro → the payload for the PTY. A pure function.
 
     A single-line macro — the raw text + a trailing \\n (the Quick Launch path
     semantics: the shell receives "command\\n" and executes the line). A
@@ -199,7 +199,7 @@ def char_width(data: str) -> int:
     """The full width of a character per wcwidth(3): 0 — zero width (combining/control),
     1 — narrow, 2 — wide (CJK/Fullwidth/emoji).
 
-    v1.2.9 (ROADMAP "terminal hygiene"): replaces the east_asian_width W/F heuristic
+    v1.2.9: replaces the east_asian_width W/F heuristic
     of v1.0RC1 — the v1.0 known limitation is closed. The SAME `wcwidth` library
     that pyte 0.8.2 itself uses (pyte.screens: `from wcwidth import wcwidth`)
     for grid layout, so the wide/narrow classification of the canvas always
@@ -452,7 +452,7 @@ def word_units(row_chars):
     return units
 
 
-# ── v1.6.2 (ROADMAP task 4): the cursor SHAPES (pure geometry, no Qt) ────────
+# ── v1.6.2: the cursor SHAPES (pure geometry, no Qt) ─────────────────────────
 # The cursor was a full-cell block. It is one of three DECLARED shapes now, and the
 # default is the thin blink line of Windows Terminal.
 CURSOR_STYLE_BLOCK = "block"          # the historical painting: the whole cell, glyph swapped
@@ -483,7 +483,7 @@ def resolve_cursor_style(style) -> str:
     return CURSOR_STYLE_DEFAULT
 
 
-# ── v1.6.4 (ROADMAP task 3): Ctrl+wheel = the FONT ZOOM ─────────────────────
+# ── v1.6.4: Ctrl+wheel = the FONT ZOOM ──────────────────────────────────────
 # The DECLARED point-size range of the canvas font. `terminal_font_size` validates a stored
 # value against exactly this range (`modules/ssh_terminal.py: load_terminal_settings()`), so a
 # zoom can never step outside what the settings hub can show and what a restart can restore.
@@ -531,13 +531,13 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
     FORMAT_CACHE_LIMIT = 512      # the format cache limit (DOCUMENTATION.md §14a)
     CURSOR_COLOR = "#e2e8f0"      # the cursor ink: the default text color (the classic look)
-    # v1.6.2 (ROADMAP task 4): the cursor SHAPE. `CURSOR_STYLES` / `CURSOR_STYLE_DEFAULT` and
+    # v1.6.2: the cursor SHAPE. `CURSOR_STYLES` / `CURSOR_STYLE_DEFAULT` and
     # the geometry live at module level (`resolve_cursor_style()` / `cursor_shape_rect()`), so
     # the topical test reads them without a widget; the class only carries the ACTIVE value.
     SELECTION_COLOR = (59, 130, 246, 90)   # v1.0RC2: the selection overlay (RGBA, alpha≈35%)
-    BLINK_INTERVAL_MS = 530       # v1.0RC3: the cursor blink period (ROADMAP task 8)
+    BLINK_INTERVAL_MS = 530       # v1.0RC3: the cursor blink period
     DOUBLE_CLICK_MS = 500         # v1.2.7: the double/triple-click interval (the test hook)
-    # v1.3.3.4 (ROADMAP task 1): the find-bar overlays. Values — the central theme
+    # v1.3.3.4: the find-bar overlays. Values — the central theme
     # accents with the alpha of the SELECTION_COLOR precedent (theme.ACCENT for the
     # other matches, theme.SELECTION_AMBER for the CURRENT one — the same
     # amber/blue pair the map uses for "this one" vs "also matches").
@@ -558,7 +558,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         super().__init__(parent)
         self.tscreen = tscreen
         self.terminal_thread = terminal_thread
-        # v1.2.3 (ROADMAP task 1): the multi-input hub — None = the module default;
+        # v1.2.3: the multi-input hub — None = the module default;
         # an explicit instance — a test seam (isolation from the app singleton).
         self._multi_hub = multi_hub
         # v1.1.2RC3 (AUDIT U3): the wheel mode from the terminal_wheel config —
@@ -567,11 +567,11 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         # v1.2.13: if a TUI enabled mouse tracking (DECSET 1000/1002/1003), the wheel
         # goes to the PTY as an SGR/X10 report — the passthrough takes precedence over "off".
         self._wheel_mode = wheel_mode if wheel_mode in ("scrollback", "off") else "scrollback"
-        # v1.6.2 (ROADMAP task 4): the cursor shape from the terminal_cursor_style config —
+        # v1.6.2: the cursor shape from the terminal_cursor_style config —
         # "block" (the historical slab) | "bar" (the default: the thin blinking line) |
         # "underline". An unknown value → the declared default (resolve_cursor_style()).
         self._cursor_style = resolve_cursor_style(cursor_style)
-        # v1.13.2 (ROADMAP v1.13.2): the WALLPAPER — a path, a mode and an opacity beside the palette,
+        # v1.13.2: the WALLPAPER — a path, a mode and an opacity beside the palette,
         # the font and the cursor (the same "read at session creation" rule). The DECODE is cached per
         # path and the COMPOSITE per `(path, size, mode, opacity, base)`, so a resize, a scroll or a
         # palette switch never re-reads the file (§4.3, `DOCUMENTATION.md` §78).
@@ -589,7 +589,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         # recorder here (TerminalSessionPage.record_sent_command) and send_macro() calls it
         # after a successful send — the canvas itself knows no store and no i18n.
         self.command_sent_hook = None
-        # v1.6.4 (ROADMAP task 3): the FONT ZOOM hook — Ctrl+wheel steps the point size and the
+        # v1.6.4: the FONT ZOOM hook — Ctrl+wheel steps the point size and the
         # owning page persists it (ONE debounced timer, the §4.2 `CmdEditTextNote` pattern)
         # and reports the new size in the session's status line. The canvas owns the GESTURE
         # and the metrics; the config key and the words belong to the page (the
@@ -626,7 +626,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self._last_click_ms = 0.0
         self._click_sel_end = None
 
-        # v1.0RC3: the cursor blink — a dedicated QTimer (ROADMAP task 8): started in
+        # v1.0RC3: the cursor blink — a dedicated QTimer: started in
         # showEvent, stopped in hideEvent (a hidden window does not blink).
         # _cursor_visible=True by default: a widget that is never shown
         # (the offscreen tests) always draws the cursor.
@@ -645,11 +645,11 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self._find_matches = []
         self._find_current = -1
         self._find_saved_position = None
-        # v1.6.4 (ROADMAP task 5): the CONTENT offset captured beside the position — what Esc
+        # v1.6.4: the CONTENT offset captured beside the position — what Esc
         # restores under `terminal_scroll = "pin"` (the position drifts there).
         self._find_saved_top = None
 
-        # v1.3.3.4 (ROADMAP task 3): the transcript — a tee of the session output into
+        # v1.3.3.4: the transcript — a tee of the session output into
         # a local file. The state lives here (the menu that toggles it is this widget's
         # context menu) and the page feeds it in _on_output; the file is opened in
         # BINARY append mode, so the file holds exactly the fed bytes.
@@ -658,8 +658,8 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self._transcript_guard = False   # re-entrancy guard of the checkable menu item
         self._transcript_host = ""       # the host name in the suggested file name
 
-        # v1.3.3.4 (ROADMAP task 5): the per-session multi-input exclusion. In memory
-        # only (a session is short-lived — the ROADMAP decision); the hub reads the
+        # v1.3.3.4: the per-session multi-input exclusion. In memory
+        # only (a session is short-lived, and the flag is VIEW state); the hub reads the
         # flag through getattr() in broadcast().
         self._multi_excluded = False
 
@@ -674,7 +674,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         # the test hook: the stats of the last paint (runs vs per-character drawText)
         self.last_paint_stats = {"rows": 0, "runs": 0, "draw_text_calls": 0}
-        # v1.5rc4 (ROADMAP task 5): the terminal is one of the three keyboard domains and
+        # v1.5rc4: the terminal is one of the three keyboard domains and
         # says so with the SAME ring the map and the sidebar show. In `terminal_mode =
         # "tabs"` the session shares the window with the map, so the ring is also the
         # answer to "where do my keys go?".
@@ -683,7 +683,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
     # ── metrics/palette/font ──────────────────────────────
     def _update_metrics(self):
-        # v1.6.3 (ROADMAP task 1): KERNING OFF — the grid is fixed, and a kerned pair of
+        # v1.6.3: KERNING OFF — the grid is fixed, and a kerned pair of
         # glyphs is drawn closer than the two cells it occupies, which is exactly the
         # drift the per-cell painting below exists to prevent. Set on the FONT (before the
         # metrics are read) so every cached QFont copy and every drawText shares it.
@@ -731,7 +731,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self._format_cache.clear()
         self.update()
 
-    # ── v1.6.4 (ROADMAP task 3): Ctrl+wheel = the font zoom ─────────────────
+    # ── v1.6.4: Ctrl+wheel = the font zoom ──────────────────────────────────
 
     def font_size(self) -> int:
         """The LIVE point size of the canvas font (the zoom's read seam)."""
@@ -767,7 +767,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
                 pass
         return size
 
-    # ── v1.6.2 (ROADMAP task 4): the cursor shape ───────────────────────────
+    # ── v1.6.2: the cursor shape ────────────────────────────────────────────
     def cursor_style(self) -> str:
         """The ACTIVE shape — one of `CURSOR_STYLES`."""
         return self._cursor_style
@@ -782,7 +782,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         self.update()
         return self._cursor_style
 
-    # ── v1.13.2 (ROADMAP v1.13.2): the WALLPAPER ─────────────────────────────
+    # ── v1.13.2: the WALLPAPER ───────────────────────────────────────────────
     # The image sits BETWEEN the base fill and the cell fills: a DEFAULT-background cell shows through
     # it, an EXPLICIT one stays opaque. It is PRE-BLENDED onto that colour, so `WA_OpaquePaintEvent` holds.
 
@@ -950,7 +950,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
             try:
                 from modules.logger import get_logger
                 get_logger("modules.terminal_widget").warning(f"paint failed: {e}")
-            except Exception:
+            except Exception:  # noqa: BLE001 — the log is a side channel: the paint already returned
                 pass
         finally:
             painter.end()
@@ -987,7 +987,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
                 cell_x, cell_y = x * self._cell_w, y * self._cell_h
                 # the wide glyphs — the double width (the font itself draws the glyph wide);
                 # the placeholder was already skipped in split_row_runs.
-                # v1.6.3 (ROADMAP task 1): a NARROW run's cell count comes from its GLYPHS, not
+                # v1.6.3: a NARROW run's cell count comes from its GLYPHS, not
                 # from len(text) — one cell may hold a grapheme cluster (patch 0005).
                 glyphs = [text] if is_wide else run_glyphs(row, x, text)
                 run_cells = 2 if is_wide else len(glyphs)
@@ -1027,7 +1027,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
                                      brush_sel)
             stats["selection_cells"] = len(sel)
 
-        # v1.3.3.4 (ROADMAP task 1): the find-bar matches — the same translucent
+        # v1.3.3.4: the find-bar matches — the same translucent
         # overlay technique as the selection (drawn after the text, so the glyphs
         # stay readable); the CURRENT match in amber, the others in the accent blue.
         find_rows = self._visible_find_cells()
@@ -1084,13 +1084,13 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
         self.last_paint_stats = stats
 
-        # v1.5rc4 (ROADMAP task 5): the visible focus of the terminal domain. Painted
+        # v1.5rc4: the visible focus of the terminal domain. Painted
         # LAST (over the grid, the selection, the find marks and the cursor) with the ONE
         # shared painter, so the frame is identical to the map's and the sidebar's.
         if self._focus_ring is not None and self._focus_ring.is_active():
             self._focus_ring.paint(painter, self.rect())
 
-    # ── v1.5rc4 (ROADMAP task 5): the VISIBLE FOCUS of the terminal ───────────
+    # ── v1.5rc4: the VISIBLE FOCUS of the terminal ────────────────────────────
     # The canvas is a keyboard domain of its own (the xterm protocol of §14a): the ring
     # tells the user that the shell — not the map behind it in `terminal_mode = "tabs"` —
     # owns the keys. Drawn over the grid with the ONE shared painter (ui/focus_ring.py).
@@ -1136,7 +1136,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         return False
 
     def _release_pin(self) -> bool:
-        """v1.6.4 (ROADMAP task 5): the USER-INTENT half of the pinned scrollback.
+        """v1.6.4: the USER-INTENT half of the pinned scrollback.
 
         Under `terminal_scroll = "pin"` the view keeps the lines the user is reading while
         output arrives; typing (or pasting) means "I want to see what the shell answers", so
@@ -1169,7 +1169,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
 
     # ══════════════════════════════════════════════════════════════════════════
-    # v1.3.3.4 (ROADMAP task 2): clear the scrollback / reset the screen — LOCAL
+    # v1.3.3.4: clear the scrollback / reset the screen — LOCAL
     # actions (the context menu), not one byte to the PTY.
     # ══════════════════════════════════════════════════════════════════════════
 
@@ -1207,7 +1207,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
     # ── v1.3.3.1 (invariant): the theme / language hooks of the canvas ─────────
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to the canvas.
+        """v1.4.3: re-apply the theme to the canvas.
 
         The canvas paints its grid from the terminal's OWN output palette, which
         the UI theme deliberately does not touch (AGENTS.md §4.6) — so the only
@@ -1216,7 +1216,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         chrome around the canvas (the page's status line, the tabs), and a stale
         frame would show it. Never raises.
 
-        v1.5rc4 (ROADMAP task 5): the VISIBLE-FOCUS ring repaints here too — its
+        v1.5rc4: the VISIBLE-FOCUS ring repaints here too — its
         colour is read live from the ACTIVE theme (`theme.ACCENT_STRONG`), so a
         switch has to redraw it.
         """
@@ -1247,7 +1247,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
         except RuntimeError:
             self._find_bar = None   # the C++ object is gone — stop touching it
 
-    # ── v1.0RC3: the cursor blink (a dedicated QTimer, ROADMAP task 8) ─────
+    # ── v1.0RC3: the cursor blink (a dedicated QTimer) ─────────────────────
     def resizeEvent(self, event):
         """v1.3.3.4: keep the floating find panel at the top right of the canvas.
 
@@ -1277,7 +1277,7 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
 
     def hideEvent(self, event):
         super().hideEvent(event)
-        self._blink_timer.stop()         # a hidden window does not blink (ROADMAP v1.0RC3)
+        self._blink_timer.stop()         # a hidden window does not blink (v1.0RC3)
 
     def _toggle_cursor_blink(self):
         self._cursor_visible = not self._cursor_visible

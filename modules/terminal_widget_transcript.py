@@ -19,7 +19,7 @@ except ImportError:
 class TerminalTranscriptMixin:
     """The transcript tee, its file name and its menu item (mixed into `TerminalWidget`)."""
     # ══════════════════════════════════════════════════════════════════════════
-    # v1.3.3.4 (ROADMAP task 3): the transcript — a tee of the session output into
+    # v1.3.3.4: the transcript — a tee of the session output into
     # a local file. The page feeds it in _on_output (the single output path) and
     # closes it from shutdown(); nothing here ever raises into the session.
     # ══════════════════════════════════════════════════════════════════════════
@@ -75,7 +75,7 @@ class TerminalTranscriptMixin:
 
         Called by TerminalSessionPage._on_output on the SAME bytes it feeds to pyte;
         every failure is swallowed and the transcript is stopped: a broken file must
-        never raise into the session teardown (the ROADMAP requirement of task 3) and
+        never raise into the session teardown (the ONE teardown of `AGENTS.md` §4.3.5) and
         must not retry a dead descriptor on every chunk either. The write is FLUSHED
         right away — the point of a transcript is to be tail-able while the session
         runs (and a crash of the application must not cost the last block).

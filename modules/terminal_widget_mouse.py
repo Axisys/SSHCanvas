@@ -25,9 +25,9 @@ class TerminalMouseMixin:
     def wheelEvent(self, event):
         """The mouse wheel: v1.2.13 — the TUI mouse tracking first, then the scrollback.
 
-        The v1.6.4 routing (ROADMAP tasks 3 and 5) — read top to bottom, the FIRST match wins:
+        The v1.6.4 routing — read top to bottom, the FIRST match wins:
         0. `Ctrl` + the wheel (without `Alt` — the AltGr guard of the keyboard path) is the
-           FONT ZOOM (task 3): ±1 pt through `zoom_font()`, clamped to the range the
+           FONT ZOOM: ±1 pt through `zoom_font()`, clamped to the range the
            `terminal_font_size` key validates. The branch sits BEFORE every routing decision
            below on purpose: the gesture is free (nothing in the canvas ever read a modifier),
            and it must work in a tracking TUI and with `terminal_wheel = "off"` as well.
@@ -47,7 +47,7 @@ class TerminalMouseMixin:
            down → next_page; at the edges pyte is a no-op), wheel_mode="off" →
            event.ignore(). The scrollback under "off" stays on Ctrl+Shift+PageUp/PageDown.
            Under `terminal_scroll = "pin"` this is also the way BACK to the live line: the
-           wheel down reaches the bottom and the pin has nothing left to hold (task 5).
+           wheel down reaches the bottom and the pin has nothing left to hold.
 
         The modes are read on EVERY event (a TUI toggles them during a session —
         htop enables 1003+1006 at start, disables them on exit; caching is not allowed).
@@ -83,7 +83,7 @@ class TerminalMouseMixin:
     def _send_wheel_to_pty(self, event, sgr):
         """v1.2.13: the wheel → the PTY (an xterm mouse report, SGR/X10). Never raises.
 
-        v1.6.3 (ROADMAP task 2): the encoder is the ONE `_send_mouse()` — this method is
+        v1.6.3: the encoder is the ONE `_send_mouse()` — this method is
         the wheel's door into it (the button is the wheel's own code, the flag is a press).
         The coordinates come from `_event_cell()` (the 1-based cell, clamped to the grid).
         The sending is DIRECTLY to `terminal_thread.send_data()`, NOT through `_send()`:
@@ -159,7 +159,7 @@ class TerminalMouseMixin:
             data = b"\x1b[M" + bytes([32 + code, 32 + col, 32 + row])
         try:
             self.terminal_thread.send_data(data)
-        except Exception:
+        except Exception:  # noqa: BLE001 — best effort (declared): a dead channel mid-teardown
             pass  # a dead channel/thread mid-teardown — the report silently does not go out
 
     @staticmethod
@@ -185,7 +185,7 @@ class TerminalMouseMixin:
         return TerminalMouseMixin.MOUSE_BUTTON_NONE
 
     def _mouse_local_override(self, event) -> bool:
-        """`Shift` held → the LOCAL path wins (v1.6.3, ROADMAP task 3).
+        """`Shift` held → the LOCAL path wins (v1.6.3).
 
         The ONE hatch out of a TUI that went away without its own disable: the tracked
         bits stay in `screen.mode` (xterm clears nothing either) and the LOCAL wheel must
@@ -311,7 +311,7 @@ class TerminalMouseMixin:
         if event.button() == Qt.MouseButton.LeftButton and self._open_link_at(event):
             event.accept()
             return
-        # v1.6.3 (ROADMAP task 2): the application asked for the mouse → the press is
+        # v1.6.3: the application asked for the mouse → the press is
         # REPORTED and no local selection starts. Shift (the local override) sends it to
         # the branch below instead.
         if self._mouse_reports_to_pty(event):
@@ -337,7 +337,7 @@ class TerminalMouseMixin:
             self._last_click_ms = now_ms
 
             if self._click_count >= 3:
-                # a triple-click — the whole line (ROADMAP v1.2.7 task 1)
+                # a triple-click — the whole line (v1.2.7)
                 self._select_line(cell)
             elif self._click_count == 2:
                 # a double-click — the word under the cursor
@@ -355,7 +355,7 @@ class TerminalMouseMixin:
         # v1.9: the link hover follows the pointer — a LOCAL, non-consuming effect, so it is
         # refreshed before the routing below (a tracking TUI still gets its motion report).
         self._refresh_hover(event.position().toPoint())
-        # v1.6.3 (ROADMAP task 2): a MOTION reaches the application under 1002 (while a
+        # v1.6.3: a MOTION reaches the application under 1002 (while a
         # button is held) or 1003 (any motion) — the report is the held button + 32, and
         # "no button" is 3. Under 1000 a motion is not part of the protocol and falls
         # through to the local drag.
@@ -378,7 +378,7 @@ class TerminalMouseMixin:
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        # v1.6.3 (ROADMAP task 2): the release closes the report the application is
+        # v1.6.3: the release closes the report the application is
         # waiting for (SGR 'm' / the X10 code + 3) — the local selection is never touched.
         if self._mouse_reports_to_pty(event):
             button = self._xterm_button(event.button())
@@ -410,7 +410,7 @@ class TerminalMouseMixin:
         super().mouseReleaseEvent(event)
 
 
-    # ── v1.2.7: the right-click context menu (ROADMAP v1.2.7 task 2) ──────────
+    # ── v1.2.7: the right-click context menu (v1.2.7) ─────────────────────────
     def select_all(self):
         """Select all — the whole visible grid (the context menu, the Ctrl+A semantics)."""
         cols = getattr(self.tscreen, "columns", 80)
@@ -431,16 +431,16 @@ class TerminalMouseMixin:
         thread (terminal_thread), the same path as Ctrl+V (_bracketed_paste → _send:
         the bracketed-paste block to the PTY + the multi-input broadcast).
 
-        v1.3.3.4 (ROADMAP tasks 1–3, 5) — four items, all of them LOCAL:
+        v1.3.3.4 — four items, all of them LOCAL:
           * Find… (Ctrl+Shift+F) — opens the floating find panel. Labelled with the
-            panel's own placeholder key (the ROADMAP key set of this version has no
+            panel's own placeholder key (the i18n key set has no
             separate menu string for it: terminal.find.placeholder reads
             "Find in terminal…", which is exactly what the menu says);
-          * Clear scrollback / Reset screen — the two local actions of task 2 (no
+          * Clear scrollback / Reset screen — the two local actions (no
             bytes to the PTY: pyte's history is dropped / the grid is re-initialized);
           * Save transcript… — CHECKABLE: on — a file dialog + a tee of the output,
-            off — the file is closed (task 3; the checkmark IS the on/off state);
-          * Exclude from multi-input — CHECKABLE, per session, in memory (task 5).
+            off — the file is closed (the checkmark IS the on/off state);
+          * Exclude from multi-input — CHECKABLE, per session, in memory.
         """
         t = host_attr(self, "get_translator")()
         menu = host_attr(self, "QMenu")(self)

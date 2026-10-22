@@ -23,7 +23,7 @@ from storage import atomic as _atomic
 # ── Configuration ──────────────────────────────────────────────
 
 _i18n_dir = os.path.dirname(__file__)  # Points to i18n/ folder
-# v1.1.1 (ROADMAP item 2): English by default — affects only NEW
+# v1.1.1: English by default — affects only NEW
 # users (without a saved config.json); existing users already have the chosen
 # language recorded in ~/.sshmap/config.json (get_last_language() returns it).
 # Restore Russian: "Help → Language" or the "Language" tab of the settings dialog.
@@ -37,13 +37,13 @@ _translations: Dict[str, str] = {}
 _CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".sshmap")
 _CONFIG_FILE = os.path.join(_CONFIG_DIR, "config.json")
 
-# v1.3.3 (ROADMAP): the root meta keys of a language file. They describe the FILE,
+# v1.3.3: the root meta keys of a language file. They describe the FILE,
 # they are not UI strings — excluded from the parity checks and from t() (see the
 # module docstring). "name" = the language name in its own language ("Русский");
 # "partial" (v1.3.3.1) = `true` marks a deliberately incomplete translation file.
 _META_KEYS = ("name", "partial")
 
-# v1.3.3.1 (ROADMAP task 2): a Notepad "UTF-8 with BOM" file must load. Every read
+# v1.3.3.1: a Notepad "UTF-8 with BOM" file must load. Every read
 # path of a language file goes through this encoding — the BOM is stripped by the
 # codec, so a BOM-prefixed file is byte-for-byte equivalent to a plain UTF-8 one.
 _LANG_ENCODING = "utf-8-sig"
@@ -74,7 +74,7 @@ def _log_debug(message: str) -> None:
 
 
 def _log_warning(message: str) -> None:
-    """A WARNING line — the v1.5.2 LANGUAGE-FALLBACK record (ROADMAP task 2).
+    """A WARNING line — the v1.5.2 LANGUAGE-FALLBACK record.
 
     A language that cannot be loaded is a real fallback (the app keeps the previous
     one, or English), and until v1.5.2 it was a DEBUG line — invisible in the activity
@@ -201,7 +201,7 @@ def _user_language_path(code) -> Optional[str]:
         return None
     data, reason = _read_language_file(path)
     if data is None:
-        # v1.5.2 (ROADMAP task 2): a WARNING, not a DEBUG line — the built-in file takes
+        # v1.5.2: a WARNING, not a DEBUG line — the built-in file takes
         # over here, i.e. the user's own file is silently ignored unless the log says so.
         _log_warning(f"user language {code!r} skipped ({reason}) — not a language file: {path}")
         return None
@@ -211,7 +211,7 @@ def _user_language_path(code) -> Optional[str]:
 def language_file_path(code) -> Optional[str]:
     """The file that WINS for `code` — the USER folder first, the package second.
 
-    v1.3.3.8 (ROADMAP task 1): the shadowing rule lives HERE, in one place. None means
+    v1.3.3.8: the shadowing rule lives HERE, in one place. None means
     "no such language" (the caller keeps its default). Never raises.
     """
     return _user_language_path(code) or _builtin_language_path(code)
@@ -244,7 +244,7 @@ def _read_language_name(code: str) -> str:
 
 
 def is_partial(language: str) -> bool:
-    """Is this language file marked `"partial": true` (v1.3.3.1, ROADMAP task 2)?
+    """Is this language file marked `"partial": true` (v1.3.3.1)?
 
     A partial file is a deliberately INCOMPLETE translation: it loads and works
     exactly like a complete one (the runtime en-fallback is unchanged — a missing
@@ -286,7 +286,7 @@ def load_config() -> dict:
             data = json.load(f)
         if isinstance(data, dict):
             return data
-    except (json.JSONDecodeError, IOError, OSError):
+    except (json.JSONDecodeError, IOError, OSError):  # noqa: BLE001 — the caller owns the fallback: a broken store reads as empty
         pass
     return {}
 
@@ -314,7 +314,7 @@ def get_available_languages() -> list:
     "name" meta key (missing / broken → the code). Adding a language = dropping one
     JSON file: no code change, no list to update. Sorted by the displayed name.
 
-    v1.3.3.8 (ROADMAP task 1): the USER folder `~/.sshmap/languages/` is merged in
+    v1.3.3.8: the USER folder `~/.sshmap/languages/` is merged in
     next to the package `i18n/` one. A user file with the code of a built-in language
     SHADOWS it (the displayed name comes from the user's file); a new code adds a
     language. A user file that is not a usable language file is skipped with a log
@@ -354,7 +354,7 @@ def load_language(language: str) -> bool:
 
     filepath = language_file_path(language)
     if filepath is None:
-        # v1.5.2 (ROADMAP task 2): the OTHER half of the language-fallback record — the
+        # v1.5.2: the OTHER half of the language-fallback record — the
         # active language is kept and the caller only learns "False" without this line.
         _log_warning(f"language {language!r} not loaded (no usable file) — keeping "
                      f"{_current_language!r}")
@@ -378,7 +378,7 @@ def load_language(language: str) -> bool:
 
 
 def reload_current_language() -> bool:
-    """Re-read the ACTIVE language file from disk (v1.3.3.1, ROADMAP task 3).
+    """Re-read the ACTIVE language file from disk (v1.3.3.1).
 
     The "Help → Language → Rescan the language files" action uses this: the language
     list itself is re-read by the menu rebuild, while an EDITED translation of the
@@ -417,11 +417,11 @@ def import_language_file(source_path) -> dict:
       * it declares a display name in the `"name"` meta key → "name_missing";
       * the file name is usable as a language code        → "bad_code".
 
-    The `"name"` requirement is the stricter half of the ROADMAP wording ("the
-    `"name"` meta key or a warning"): the acceptance pins "a file without `"name"` is
-    refused and the folder stays clean", and a language in the menu must be able to
-    say what it is called. (A nameless file DROPPED IN BY HAND still works — the
-    runtime shows the code, the v1.3.3 rule; only the IMPORT asks for the name.)
+    The `"name"` requirement is the strict half of the rule (`AGENTS.md` §4.5.1): an
+    IMPORTED file without `"name"` is refused and the folder stays clean, because a
+    language in the menu must be able to say what it is called. (A nameless file
+    DROPPED IN BY HAND still works — the runtime shows the code; only the IMPORT
+    asks for the name.)
 
     A file that passes and is INCOMPLETE (its key set misses keys of the reference
     `en`) is imported anyway: `"partial": true` is written into the COPY (the

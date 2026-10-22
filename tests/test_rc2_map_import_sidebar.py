@@ -53,7 +53,7 @@ def _stuck_drag():
     view3._group_drag_olds = [(node3, QPointF(node3.pos()))]
 
 
-# (a) focusOutEvent ("blur" in ROADMAP terminology) — losing focus mid-drag
+# (a) focusOutEvent ("blur" in Qt terminology) — losing focus mid-drag
 _stuck_drag()
 check("N3: preconditions — NoDrag + _move_drag_node/_group_drag_olds",
       view3.dragMode() == QGraphicsView.NoDrag and view3._move_drag_node is node3
@@ -333,7 +333,7 @@ for attr, _icon_name, _key, _ru in _BUTTONS:
 check("U1: all 6 buttons — text-align: left + padding-left (the offset from the left edge)",
       not _bad_align, str(_bad_align))
 check("U1: every button keeps its vector icon (icon, then text)", not _no_icon, str(_no_icon))
-# v1.4.5 (ROADMAP task 1): the six buttons moved from full-width rows into a compact
+# v1.4.5: the six buttons moved from full-width rows into a compact
 # 2-column × 3-row grid and the row height shrank with them (34 → the compact height).
 from ui.sidebar import _COMPACT_BUTTON_HEIGHT, _BUTTON_COLUMNS
 check("U1: the buttons carry the compact row height (v1.4.5; was the full-width 34 px)",

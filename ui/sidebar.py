@@ -39,7 +39,7 @@ except ImportError:
         def refresh_button_icon(button, name):  # noqa: N802 — stub
             return False
 
-try:  # v1.5rc2 (ROADMAP task 2): the DECLARED status shapes — the row marker's mark
+try:  # v1.5rc2: the DECLARED status shapes — the row marker's mark
     from . import status_shape
 except ImportError:
     try:
@@ -47,12 +47,12 @@ except ImportError:
     except ImportError:  # flat layout without ui/status_shape — the v1.4.x round dot
         status_shape = None
 
-try:  # v1.9.8 (ROADMAP v1.9.8, task 2): the ONE order of the server menu (the card reads it too)
+try:  # v1.9.8: the ONE order of the server menu (the card reads it too)
     from . import server_menu
 except ImportError:
     from ui import server_menu
 
-try:  # v1.6.5 (ROADMAP task 6): the ONE predicate behind the Status cell of the table
+try:  # v1.6.5: the ONE predicate behind the Status cell of the table
     from ..models.server import is_unmanaged as _is_unmanaged
 except ImportError:
     try:
@@ -61,7 +61,7 @@ except ImportError:
         def _is_unmanaged(target) -> bool:
             return False
 
-try:  # v1.5rc4 (ROADMAP task 5): the ONE visible-focus indicator of the keyboard domains
+try:  # v1.5rc4: the ONE visible-focus indicator of the keyboard domains
     from . import focus_ring
 except ImportError:
     try:
@@ -69,7 +69,7 @@ except ImportError:
     except ImportError:  # flat layout without ui/focus_ring — the panel simply has no frame
         focus_ring = None
 
-try:  # v1.6.5 (ROADMAP task 4): the ONE gate of an unmanaged card (a disabled row + why)
+try:  # v1.6.5: the ONE gate of an unmanaged card (a disabled row + why)
     from . import unmanaged
 except ImportError:
     try:
@@ -113,7 +113,7 @@ CONTEXT_MENU_ACTIONS = tuple(
 
 # Panel buttons: (attribute, icon, i18n key, fallback) — order as in the
 # original _setup_ui.
-# v1.1: 6th button "Settings" (hub, ROADMAP v1.1 task 2) — a vector gear
+# v1.1: 6th button "Settings" (hub) — a vector gear
 # from ui/icons.py; retranslate() below iterates _BUTTONS — the new tuple
 # is picked up.
 _BUTTONS = (
@@ -141,7 +141,7 @@ _COMPACT_BUTTON_ICON = 16       # the icon size of a compact cell
 _COMPACT_BUTTON_MIN_WIDTH = 40
 _COMPACT_BUTTON_QSS = "QPushButton { text-align: left; padding-left: 6px; padding-right: 2px; }"
 
-# The statuses the status bar can filter the tree by (v1.4.5, ROADMAP task 3) —
+# The statuses the status bar can filter the tree by (v1.4.5) —
 # the same three the cards and the status dots know.
 _STATUS_FILTERS = ("online", "warn", "offline")
 
@@ -356,7 +356,7 @@ def _age_text(key: str, translate_fn=None, **kw) -> str:
 
 def list_sort_key(field: str, data, status: str = "", status_age=None,
                   info_age=None) -> tuple:
-    """v1.5.5 (ROADMAP task 1): the sort key of ONE `LIST_COLUMNS` cell (pure).
+    """v1.5.5: the sort key of ONE `LIST_COLUMNS` cell (pure).
 
     `data` is a `ServerData`, `status` the RAW status ("" = never probed), the two ages
     are in SECONDS (None / 0 = undated). The field names are the `LIST_COLUMNS` keys, so
@@ -403,7 +403,7 @@ def list_sort_keys(data, status: str = "", status_age=None, info_age=None) -> li
 
 def list_cell_values(data, status_text: str = "", status_age_text: str = "",
                      info_age_text: str = "") -> list:
-    """v1.4.6 (ROADMAP task 1): the LIST-mode cells of ONE row, one per `LIST_COLUMNS`.
+    """v1.4.6: the LIST-mode cells of ONE row, one per `LIST_COLUMNS`.
 
     Pure (a `ServerData` in, strings out — no Qt, no scene, no scene item), so the
     topical test can pin the mapping headlessly. The rules:
@@ -646,16 +646,16 @@ class SidebarPanel(QWidget):
         self.tag_filter = QComboBox()
         layout.addWidget(self.tag_filter)
 
-        # v1.4.5 (ROADMAP task 3): the transient status filter — set by MainWindow
+        # v1.4.5: the transient status filter — set by MainWindow
         # from the clickable status-bar counters ("" = no status filter).
         self._status_filter = ""
 
-        # v1.4.6 (ROADMAP task 1): the LIST layout (the map is collapsed — the panel
+        # v1.4.6: the LIST layout (the map is collapsed — the panel
         # stretches to the full window width and the tree carries the whole parameter
         # set). A LAYOUT flag, not data: the rows are rebuilt by `refresh_rows`, so the
         # mode switch never touches the model, the filters or the selection.
         self._list_mode = False
-        # v1.5.5 (ROADMAP task 1): the remembered SORT of the table — the column and the
+        # v1.5.5: the remembered SORT of the table — the column and the
         # direction, re-applied after every rebuild (the default: the alias, A→Z, which
         # is the order an inventory is read in). The header owns the LIVE value; this is
         # the panel's memory of it, and `sortIndicatorChanged` keeps the two in step.
@@ -672,7 +672,7 @@ class SidebarPanel(QWidget):
         # Icon cache for the status dots ("", "online", "warn", "offline")
         self._status_dot_icons = {}
 
-        # v1.5.5 (ROADMAP task 1): the header is the USER's control of the table order.
+        # v1.5.5: the header is the USER's control of the table order.
         # Qt sorts by itself (the sections are clickable as soon as `setSortingEnabled`
         # is on — the LIST mode); the panel only has to REMEMBER where the indicator went,
         # because the next `refresh_rows()` rebuilds the rows from scratch.
@@ -696,7 +696,7 @@ class SidebarPanel(QWidget):
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
         # ── Buttons (always created, i18n applied when a callback is present) ──
-        # v1.4.5 (ROADMAP task 1): the compact 2×3 grid — the six full-width rows of
+        # v1.4.5: the compact 2×3 grid — the six full-width rows of
         # v1.1.2RC2 are three dense rows now; the buttons themselves (attributes,
         # icons, signals, i18n) are exactly the same objects as before.
         self.buttons_grid = QGridLayout()
@@ -757,7 +757,7 @@ class SidebarPanel(QWidget):
     # one stylesheet swap, never a hide/show (that would move the focus away the moment we react).
 
     def eventFilter(self, obj, event):
-        """Follow the tree's focus (v1.5rc4, ROADMAP task 5) — everything else passes."""
+        """Follow the tree's focus (v1.5rc4) — everything else passes."""
         if obj is getattr(self, "tree", None) and self._focus_ring is not None:
             try:
                 kind = event.type()
@@ -824,7 +824,7 @@ class SidebarPanel(QWidget):
     # ── Buttons ─────────────────────────────────────────────────────────────────
 
     def set_buttons_visible(self, visible: bool) -> None:
-        """v1.1.1 (ROADMAP item 5): show/hide the sidebar button block.
+        """v1.1.1: show/hide the sidebar button block.
 
         The ui_show_sidebar_buttons key (default True — v1.1 behavior). The
         layout reflows itself: hidden buttons take no space, the tree/search
@@ -868,7 +868,7 @@ class SidebarPanel(QWidget):
         read live from the theme, so it is re-applied here too.
         """
         self._status_dot_icons.clear()
-        # v1.5rc4 (ROADMAP task 5): the focus frame is a stylesheet VALUE too (its colour
+        # v1.5rc4: the focus frame is a stylesheet VALUE too (its colour
         # is read live from the theme) — re-apply it with the panel's other styles.
         if getattr(self, "_focus_ring", None) is not None:
             self._focus_ring.refresh_theme()
@@ -889,7 +889,7 @@ class SidebarPanel(QWidget):
         data = self.tag_filter.currentData()
         return str(data) if data else ""
 
-    # ── v1.4.5 (ROADMAP task 3): the transient status filter ─────────────────
+    # ── v1.4.5: the transient status filter ──────────────────────────────────
     # The status bar OWNS this filter (its counters are the control); the panel only
     # holds the value and applies it while rebuilding the rows. It is combined with
     # the tag filter with AND — a row must pass BOTH. Deliberately NOT persisted:
@@ -904,7 +904,7 @@ class SidebarPanel(QWidget):
         """The status the tree is filtered by, or "" (no status filter)."""
         return getattr(self, "_status_filter", "")
 
-    # ── v1.4.6 (ROADMAP task 1): the adaptive columns — narrow vs LIST ────────
+    # ── v1.4.6: the adaptive columns — narrow vs LIST ─────────────────────────
     # The panel OWNS what "list mode" looks like (its column set, its headers, its
     # cells); what CAUSES it — the map's collapsedness — belongs to MainWindow, which
     # only calls `set_list_mode()` (the "module + callbacks" pattern of this module:
@@ -944,7 +944,7 @@ class SidebarPanel(QWidget):
         headers are i18n). The opening widths are set only when the column COUNT
         changes: a language switch must not throw away widths the user dragged.
 
-        v1.5.5 (ROADMAP task 1): the LIST layout is the SORTABLE one. Sorting is switched
+        v1.5.5: the LIST layout is the SORTABLE one. Sorting is switched
         WITH the layout — the narrow tree is a one-column alias list whose order is the
         scene's, and a sort indicator there would promise an order the mode has no data
         for. The indicator and the section state are re-applied on the way in (the panel
@@ -1047,7 +1047,7 @@ class SidebarPanel(QWidget):
         legend and the status-filter hint already use — no fourth spelling of
         online/warn/offline in the translation files.
 
-        v1.6.5 (ROADMAP task 6): the RAW value of an unmanaged row is
+        v1.6.5: the RAW value of an unmanaged row is
         `STATUS_NOT_MONITORED` (never a status), and it renders as the ONE caption of the
         release — the same sentence the card's tooltip carries, because "this box is not
         monitored" is one fact with one wording.
@@ -1122,11 +1122,11 @@ class SidebarPanel(QWidget):
         `nodes` — an iterable of ServerNode (MainWindow passes scene.nodes());
         the panel does not depend on the scene — only on the node data.
 
-        v1.4.6 (ROADMAP task 1): the row SHAPE follows the active mode — the narrow
+        v1.4.6: the row SHAPE follows the active mode — the narrow
         `alias (host) [tags]` caption, or one cell per `LIST_COLUMNS` entry. The
         filtering, the search and the public API are identical in both modes.
 
-        v1.5.5 (ROADMAP task 1): in LIST mode every row also carries the SORT KEY of every
+        v1.5.5: in LIST mode every row also carries the SORT KEY of every
         cell (`_ListRowItem`) and the REMEMBERED sort is re-applied at the end — the
         rebuild is where a naive implementation would drop it. Sorting is switched OFF
         while the rows go in (one sorted insert per row otherwise) and turned on once.
@@ -1152,7 +1152,7 @@ class SidebarPanel(QWidget):
                 continue
             if active_tag and active_tag not in (getattr(node.data, "tags", None) or []):
                 continue
-            # v1.4.5 (ROADMAP task 3): the status filter — AND with the tag filter.
+            # v1.4.5: the status filter — AND with the tag filter.
             if active_status and (getattr(node, "status", "") or "") != active_status:
                 continue
 
@@ -1162,7 +1162,7 @@ class SidebarPanel(QWidget):
             if list_mode:
                 item.set_row_index(tree.topLevelItemCount())   # the stable tie-break
                 status_age, info_age = self._status_age(node), self._info_age(node)
-                # v1.6.5 (ROADMAP task 6): the RAW value of the Status cell is a STATUS —
+                # v1.6.5: the RAW value of the Status cell is a STATUS —
                 # except on an unmanaged card, which has none and never will: its cell says
                 # so through the declared caption, and the same value is what the language
                 # switch re-texts (and what the sort key ranks).
@@ -1189,7 +1189,7 @@ class SidebarPanel(QWidget):
                 item.setText(0, f"{node.data.alias}  ({node.data.host})")
             item.setData(0, Qt.UserRole, node.data.id)
             # Review fix v0.8.0 (#3): colored status marker for the node (online/warn/offline/not checked)
-            # v1.6.5 (ROADMAP task 6): the marker receives the SAME raw value the Status cell
+            # v1.6.5: the marker receives the SAME raw value the Status cell
             # was built from — for an unmanaged row that is the declared caption id, which is
             # what makes the dot, its tooltip and the cell follow one decision.
             self.apply_status_marker(item, raw_status if list_mode else node.status,
@@ -1204,7 +1204,7 @@ class SidebarPanel(QWidget):
             self._apply_sort(sort_column, sort_order)
 
     def list_report_rows(self) -> list:
-        """v1.5.5 (ROADMAP task 2): the VISIBLE table as plain rows — the header FIRST.
+        """v1.5.5: the VISIBLE table as plain rows — the header FIRST.
 
         The export reads the TREE, not the scene: what leaves the application is exactly
         what is on screen — the columns of `LIST_COLUMNS` (whose cells came from the ONE
@@ -1296,18 +1296,18 @@ class SidebarPanel(QWidget):
     def apply_status_marker(self, item: QTreeWidgetItem, status: str, host: str = "") -> None:
         """Put the status dot + tooltip (i18n node.status.*) on a tree row.
 
-        v1.4.6 (ROADMAP task 3): in the LIST layout the row also carries the status as
+        v1.4.6: in the LIST layout the row also carries the status as
         TEXT (the `sidebar.list.status` column) — a probe result must refresh it in
         place, without a full rebuild of the rows (the scroll position survives).
 
-        v1.5.5 (ROADMAP task 1): the in-place path refreshes the SORT KEY of that cell
+        v1.5.5: the in-place path refreshes the SORT KEY of that cell
         (and the raw value a language switch re-texts from) as well. Without it a round
         would leave a stale key behind and the next re-sort would order the table by the
         PREVIOUS status of every row — the defect this line exists to prevent.
         """
         item.setIcon(0, self._status_dot_icon(status))
         if status == STATUS_NOT_MONITORED:
-            # v1.6.5 (ROADMAP task 6): a card that is never monitored carries its OWN
+            # v1.6.5: a card that is never monitored carries its OWN
             # sentence as the row's second channel — the same key the card's tooltip and
             # the Status cell use, so the tree, the table and the map say one thing.
             item.setToolTip(0, self._tr("node.unmanaged.tooltip"))
@@ -1350,7 +1350,7 @@ class SidebarPanel(QWidget):
         passed the ql_entry/ql_configure callbacks; without them the menu is
         as in v0.9.6 — backward-compat for old calling code).
 
-        v1.9.8 (task 2): the sequence, the sections and the row set come from `ui/server_menu.py`
+        v1.9.8: the sequence, the sections and the row set come from `ui/server_menu.py`
         (the card menu reads the SAME table); the diagnostic verbs are one `Diagnostics ▸` submenu.
         """
         self._fill_quick_launch(menu, node)
@@ -1367,7 +1367,7 @@ class SidebarPanel(QWidget):
             callback = self._actions[action_key]
             # checked — the bool from QAction.triggered; we pass only the node to the callback.
             act.triggered.connect(lambda checked=False, n=node, cb=callback: cb(n))
-            # v1.6.5 (ROADMAP task 4): the rows that cannot work on an UNMANAGED card are
+            # v1.6.5: the rows that cannot work on an UNMANAGED card are
             # DISABLED here, with the reason in their tooltip — the SAME gate the map's
             # context menu asks (`ui/unmanaged.py` owns the table and the sentence), so the
             # two menus can never disagree about which verb needs a login.
@@ -1434,7 +1434,7 @@ class SidebarPanel(QWidget):
             # checked — the bool from QAction.triggered; we close over both the node and the entry.
             act.triggered.connect(
                 lambda checked=False, n=node, en=e, cb=cb_entry: cb(n, en))
-            # v1.6.5 (ROADMAP task 4): a COMMAND entry is refused for an unmanaged card (a
+            # v1.6.5: a COMMAND entry is refused for an unmanaged card (a
             # URL entry still opens — the browser needs no shell on that host).
             if str(e.get("type", "url")).strip().lower() == "command":
                 self._gate_row(act, "ql_command", node, name)

@@ -92,7 +92,7 @@ class SettingsMixin:
 
         self._node_double_click_mode = ui_cfg["node_double_click"]
 
-        # v1.2.4.1 (task 4): the panel collapse state from config.json —
+        # v1.2.4.1: the panel collapse state from config.json —
         # ui_sidebar_collapsed / ui_map_collapsed. Applied at startup AFTER
         # restoreState() (the method is called in __init__ after restore_window_geometry)
         # and after the settings dialog's OK (idempotent: _set_panel_collapsed is a no-op
@@ -109,10 +109,10 @@ class SettingsMixin:
             if self.log:
                 self.log.warning(f"Apply panel collapsed states failed: {e}")
 
-        # v1.4.5 (ROADMAP task 5): the divider's affordance follows the state — with
+        # v1.4.5: the divider's affordance follows the state — with
         # no panel collapsed this is the plain "both expanded" sync (the tooltip and
         # the released width caps), with one collapsed the handle is disabled.
-        # v1.4.6 (ROADMAP task 2): and the sidebar follows the map — a map collapsed
+        # v1.4.6: and the sidebar follows the map — a map collapsed
         # by the saved state (or by the settings dialog) opens in LIST mode.
         self._sync_splitter_handle()
         self._sync_list_mode()
@@ -130,11 +130,11 @@ class SettingsMixin:
           read the config at the next window creation/launch — no action needed;
         * v1.2.2: terminal_mode ("windows"|"tabs") — applied WITHOUT a restart
           "to new sessions": _spawn_terminal_window reads the key on every call;
-          open windows/the dock live on as-is until closed (task 4) — no action.
+          open windows/the dock live on as-is until closed — no action.
         * v1.3.2: the configurable hotkeys — _apply_hotkeys() reinstalls the sequences
           of the registered QActions/QShortcuts (QAction.setShortcut /
           QShortcut.setKey) from the "hotkeys" key; the F12 multi-input rule is kept.
-        * v1.4.3 (ROADMAP task 6): the APPEARANCE — the `theme` key of config.json
+        * v1.4.3: the APPEARANCE — the `theme` key of config.json
           is read back and applied through `apply_theme()` (the mode + the accent
           hue). The "Appearance" tab already applied it live while the dialog was
           open; this is what makes the OK authoritative (and what covers a config
@@ -145,7 +145,7 @@ class SettingsMixin:
         # place before it, exactly as the startup path puts it before the first widget.
         apply_saved_ui_font()
 
-        # v1.4.3 (ROADMAP task 6): the theme first — every other option below is
+        # v1.4.3: the theme first — every other option below is
         # applied to widgets whose colours the switch may have just changed.
         # v1.5rc1: the motion flag travels in the SAME nested key, so it is
         # installed here as well (`apply_motion_setting` reads `theme.motion`).
@@ -164,7 +164,7 @@ class SettingsMixin:
                 _saved_theme = load_theme_settings()
                 self.apply_theme(theme_from_settings(_saved_theme))
                 apply_motion_setting(_saved_theme)
-                # v1.6 (ROADMAP task 2): the card density rides the same nested key —
+                # v1.6: the card density rides the same nested key —
                 # installed before the repaint walk below so the cards follow it there.
                 if apply_density_setting is not None:
                     apply_density_setting(_saved_theme)
@@ -188,13 +188,13 @@ class SettingsMixin:
             try:
                 from services.status_checker import get_status_settings as _get_st
                 _st_cfg = _get_st()
-                # v1.6.6 (ROADMAP task 2): the mode is applied LIVE and BEFORE the interval —
+                # v1.6.6: the mode is applied LIVE and BEFORE the interval —
                 # switching it ON stops a running timer at once, switching it OFF resumes the
                 # periodic rounds this window already had enabled (the checker remembers).
                 checker.set_manual_only(bool(_st_cfg.get("manual", False)))
                 checker.set_interval(int(_st_cfg["interval_sec"]) * 1000)
                 checker.set_probe_timeout(float(_st_cfg["probe_timeout_sec"]))
-                # v1.1.2 final (task 2): the parallel-probe cap — from the next round
+                # v1.1.2 final: the parallel-probe cap — from the next round
                 checker.set_max_parallel(int(_st_cfg["max_parallel"]))
             except Exception as e:  # noqa: BLE001 — the statuses must not break applying
                 if self.log:
@@ -207,7 +207,7 @@ class SettingsMixin:
             if self.log:
                 self.log.warning(f"Apply UI options failed: {e}")
 
-        # v1.3.2 (task 3): the configurable hotkeys — QAction.setShortcut / QShortcut.setKey
+        # v1.3.2: the configurable hotkeys — QAction.setShortcut / QShortcut.setKey
         # on the already existing objects: the new sequences work without a restart.
         try:
             self._apply_hotkeys()
@@ -231,7 +231,7 @@ class SettingsMixin:
                 except (RuntimeError, AttributeError):
                     pass  # Qt teardown / a session without a widget — skip it
 
-        # v1.6.2 (ROADMAP task 4): the cursor shape of the ALREADY OPEN sessions — the second
+        # v1.6.2: the cursor shape of the ALREADY OPEN sessions — the second
         # live terminal setting (the font loop above is the twin: same walk, same silence on
         # a session that is already gone).
         for s in list(getattr(self, "_terminal_windows", [])):
@@ -240,7 +240,7 @@ class SettingsMixin:
             except (RuntimeError, AttributeError):
                 pass  # Qt teardown / a session without a widget — skip it
 
-        # v1.13.2 (ROADMAP v1.13.2): the WALLPAPER of the ALREADY OPEN sessions — the third live
+        # v1.13.2: the WALLPAPER of the ALREADY OPEN sessions — the third live
         # terminal setting, the same walk. ONE call applies all three keys (an empty path is the OFF
         # state, so a cleared field takes the picture away without a second branch).
         for s in list(getattr(self, "_terminal_windows", [])):
@@ -251,7 +251,7 @@ class SettingsMixin:
             except (RuntimeError, AttributeError):
                 pass  # Qt teardown / a session without a widget — skip it
 
-        # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's CEILING of the ALREADY OPEN sessions — the fourth
+        # v1.7.5: the reader's CEILING of the ALREADY OPEN sessions — the fourth
         # live terminal-side setting (the font, the cursor and the wallpaper above are its twins). Every
         # open Files container is told, so its panes read with the new cap at once and the "no preview"
         # facts of the old cap are dropped.

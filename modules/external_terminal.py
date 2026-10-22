@@ -26,7 +26,7 @@ except ImportError:
 
 log = get_logger(__name__)
 
-# ── Settings (single ~/.sshmap/config.json; v1.1 — ROADMAP task 7) ────────────
+# ── Settings (single ~/.sshmap/config.json; v1.1) ─────────────────────────────
 
 # Name of the OLD settings file (v0.8.2–v1.0): needed only for migration on read.
 SETTINGS_FILENAME = ".sshmap_settings.json"
@@ -65,7 +65,7 @@ def _read_legacy_settings() -> Optional[dict]:
 
 
 def _migrate_legacy_settings() -> Optional[str]:
-    """v1.1 (ROADMAP task 7): one-time migration of the key from the old file into config.json.
+    """v1.1: one-time migration of the key from the old file into config.json.
 
     Called on read when the key is still absent from config.json: the value is
     copied into config.json (save_config — atomic merge-write), then the old
@@ -88,7 +88,7 @@ def _migrate_legacy_settings() -> Optional[str]:
         return raw
     try:
         os.remove(_legacy_settings_path())
-    except OSError:
+    except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
         pass  # could not delete (read-only home, etc.) — the key is already in config.json
     log.info("Migrated external_terminal setting from %s to config.json",
              LEGACY_SETTINGS_FILENAME)
@@ -98,7 +98,7 @@ def _migrate_legacy_settings() -> Optional[str]:
 def load_external_terminal_setting() -> str:
     """Read the terminal setting from ~/.sshmap/config.json ('auto' by default).
 
-    v1.1 (ROADMAP task 7): single settings file. If the key is absent from
+    v1.1: single settings file. If the key is absent from
     config.json but present in the old ~/.sshmap_settings.json — migration on
     read (_migrate_legacy_settings()). Invalid value → 'auto'.
 
@@ -128,7 +128,7 @@ def load_external_terminal_setting() -> str:
 def save_external_terminal_setting(value: str) -> bool:
     """Save the setting to ~/.sshmap/config.json (atomic merge-write).
 
-    v1.1 (ROADMAP task 7): the old ~/.sshmap_settings.json is NO LONGER written;
+    v1.1: the old ~/.sshmap_settings.json is NO LONGER written;
     if it still exists with the key — load_external_terminal_setting() migrates
     it and deletes the file. False on a write error.
     """

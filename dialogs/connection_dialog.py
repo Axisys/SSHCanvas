@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 def _live_nodes(nodes: List[ServerNode], provider: Optional[Callable] = None) -> List[ServerNode]:
     """The nodes the pickers offer: the LIVE scene when a provider was handed in.
 
-    v1.6.8 (ROADMAP task 3): the searchable pickers are fed "through a callback (the
+    v1.6.8: the searchable pickers are fed "through a callback (the
     module + callbacks pattern: the dialog knows no scene)" — the window passes
     ``nodes_provider``, a zero-argument callable that reads the scene, and this dialog
     never learns what a scene is. A provider that fails or answers nothing leaves the
@@ -42,7 +42,7 @@ def _live_nodes(nodes: List[ServerNode], provider: Optional[Callable] = None) ->
 class _LabelLineEdit(QLineEdit):
     """QLineEdit with an INPUT limit that does not truncate already-set text.
 
-    v1.1.1 (ROADMAP item 6): Qt setMaxLength() TRUNCATES the current text when the
+    v1.1.1: Qt setMaxLength() TRUNCATES the current text when the
     limit is set (verified on PySide6 6.11: both orders — setText→setMaxLength and
     setMaxLength→setText result in truncation), and old projects with labels longer
     than 20 characters lost their tail in EditConnectionDialog ("limit only for input"
@@ -127,7 +127,7 @@ class ConnectionDialog(QDialog):
     v0.7: added connection type selection (QComboBox) and source/target prefill
     capability — used by the "drag" mode from MapView.
 
-    v1.6.8 (ROADMAP task 3): **the two pickers can be TYPED into.** The two fields stay
+    v1.6.8: **the two pickers can be TYPED into.** The two fields stay
     the DISPLAY of the selection (`self.source` / `self.target` keep their contract —
     `currentData()` is still the node id the command writes), and the CHOOSING becomes
     searchable: ONE `QCompleter` per field over the item text, which is
@@ -176,7 +176,7 @@ class ConnectionDialog(QDialog):
         self.source = QComboBox()
         self.target = QComboBox()
         self.label = QLineEdit()
-        # v1.1.1 (ROADMAP item 6): 20-character limit — for INPUT only (new dialog);
+        # v1.1.1: 20-character limit — for INPUT only (new dialog);
         # hint in i18n (connection.label_hint).
         self.label.setMaxLength(20)
         if self._i18n_available:
@@ -193,7 +193,7 @@ class ConnectionDialog(QDialog):
         self.bidirectional_check = QCheckBox(
             self.t("connection.bidirectional") if self._i18n_available else "Bidirectional")
 
-        # v1.6.8 (ROADMAP task 3): the node list comes from the LIVE scene through the
+        # v1.6.8: the node list comes from the LIVE scene through the
         # caller's callback; the fallback is the list it passed in.
         self._node_map: Dict[str, ServerNode] = {}
         for n in _live_nodes(nodes, nodes_provider):
@@ -256,7 +256,7 @@ class ConnectionDialog(QDialog):
         btns.rejected.connect(self.reject)
         layout.addRow(btns)
 
-    # ── v1.6.8 (ROADMAP task 3): the searchable pickers ──────────────────────────
+    # ── v1.6.8: the searchable pickers ───────────────────────────────────────────
 
     def _install_search(self, combo: QComboBox, kind: str) -> None:
         """Make ONE picker typeable: a `QCompleter` over `alias` AND `host`.
@@ -399,7 +399,7 @@ class EditConnectionDialog(QDialog):
         self.target = QLineEdit(tgt_text)
         self.target.setReadOnly(True)
 
-        # v1.1.1 (ROADMAP item 6): 20-character limit — for INPUT only. _LabelLineEdit:
+        # v1.1.1: 20-character limit — for INPUT only. _LabelLineEdit:
         # Qt setMaxLength() immediately truncates existing text (verified on PySide6 6.11),
         # so old projects with long labels are read unchanged, while the limit is
         # enforced by a guard on input (see the class).

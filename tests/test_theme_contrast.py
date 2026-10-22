@@ -6,7 +6,9 @@ WCAG ratio for DARK, LIGHT and "auto" (both resolutions) and fails when a tone d
 §1 the WCAG arithmetic; §2 the declared pairs and the exemptions; §3 completeness (every field of
 `Theme` is gated or explained); §4 the gate itself; §5 DARK did not move a pixel; §6 the LIGHT re-tuning
 and the arrow derivation; §7 "Auto (system)" resolved live; §8 the two roles at the call sites
-(`accent_strong` for ink, `accent` for decoration); §9 the render probe; §10 i18n and the release state."""
+(`accent_strong` for ink, `accent` for decoration); §9 the render probe; §10 i18n and the release state;
+§11 the painted-row gate (every custom delegate's SELECTED row, measured on the pixmap)."""
+import ast
 import dataclasses
 import hashlib
 import os
@@ -363,7 +365,7 @@ check("§6 text_muted reaches AA on every surface it is drawn on (the review's 4
 check("§6 the card label follows the muted tone (one secondary ink, not two)",
       theme.LIGHT.node_label == theme.LIGHT.text_muted)
 
-# The DECISION the ROADMAP asked to pin: the arrow palette keeps the DERIVATION
+# The DECISION: the arrow palette keeps the DERIVATION
 # (`vpn` ← node_hover, `database` ← group_hover) — LIGHT re-tunes the two hover
 # fields instead of carrying a second table.
 check("§6 the arrow derivation is KEPT — `vpn`/`database` still read the hover fields",
@@ -483,7 +485,7 @@ check("§7 motion_from_settings: only a real boolean counts, a broken value mean
 check("§7 apply_motion_setting installs the flag into ui/motion.py",
       apply_motion_setting({"motion": False}) is False
       and apply_motion_setting({"motion": True}) is True)
-# v1.6 (ROADMAP task 2): the card density rides the same nested key — validated the same
+# v1.6: the card density rides the same nested key — validated the same
 # way and installed into ui/theme.py, so a rejected dialog can put it back.
 check("§7 density_from_settings / apply_density_setting: a real id counts, a broken one is 'normal'",
       density_from_settings({"density": "compact"}) == "compact"
@@ -532,7 +534,7 @@ _dlg.reject()
 check("§7 ...and Cancel() puts the flag back the way the dialog found it",
       motion_mod.motion_enabled() == _was_motion,
       f"{motion_mod.motion_enabled()} vs {_was_motion}")
-# v1.6 (ROADMAP task 2): the card density of the same tab is LIVE too — the combo installs
+# v1.6: the card density of the same tab is LIVE too — the combo installs
 # it at once and `reject()` restores the value the dialog opened with.
 _dlg.density_combo.setCurrentIndex(
     next(i for i in range(_dlg.density_combo.count())
@@ -686,5 +688,126 @@ check(f"§10 the parity pin covers the three new keys ({EXPECTED_I18N_KEYS})",
       str({code: len([k for k in langs[code] if k not in ("name", "partial")])
            for code in sorted(langs)}))
 check_release_state(ROOT)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# §11 The PAINTED-ROW gate — a custom delegate keeps its text on a readable surface
+# ════════════════════════════════════════════════════════════════════════════
+print("== §11 the painted-row gate: every custom delegate clears 4.5:1 on BOTH text tones ==")
+
+from PySide6.QtCore import QRect, Qt  # noqa: E402
+from PySide6.QtGui import QPainter, QPixmap  # noqa: E402
+from PySide6.QtWidgets import (QListWidget, QListWidgetItem, QStyle,  # noqa: E402
+                               QStyleOptionViewItem)
+
+# The CLASS is the subject, not one row: a delegate paints its own item, so the background under
+# its text is CHOSEN there — which is exactly where a tone can be spent without a pair in §2.
+# (module, delegate class, the row's height, the module's PURE frame-geometry reader)
+PAINTED_ROWS = (
+    ("ui.bookmark_panel", "_BookmarkRowDelegate", 34, "selection_frame_rect"),
+)
+
+
+def _delegate_classes(root):
+    """Every `QStyledItemDelegate` subclass of the application tree, as "module.Class"."""
+    found = set()
+    for base, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in {"__pycache__", ".git", "tests", "third_party",
+                                                "examples", "build", "dist", "test-results"}]
+        for name in sorted(files):
+            if not name.endswith(".py"):
+                continue
+            path = os.path.join(base, name)
+            with open(path, encoding="utf-8", errors="replace") as handle:
+                try:
+                    tree = ast.parse(handle.read())
+                except SyntaxError:
+                    continue
+            module = os.path.relpath(path, root)[:-3].replace(os.sep, ".")
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                for parent in node.bases:
+                    label = (parent.attr if isinstance(parent, ast.Attribute)
+                             else getattr(parent, "id", ""))
+                    if label == "QStyledItemDelegate":
+                        found.add(f"{module}.{node.name}")
+    return found
+
+
+_DECLARED = {f"{module}.{name}" for module, name, _h, _r in PAINTED_ROWS}
+_FOUND = _delegate_classes(ROOT)
+check(f"§11 the tree holds exactly the {len(_DECLARED)} declared custom delegate(s) — a NEW one "
+      f"joins this table or the gate misses it", _FOUND == _DECLARED,
+      f"found={sorted(_FOUND)} declared={sorted(_DECLARED)}")
+
+
+def _paint_delegate_row(module_name, class_name, rect_name, height, selected):
+    """Paint ONE delegate's row into a pixmap; answer (image, option, frame rect, view)."""
+    module = __import__(module_name, fromlist=["*"])
+    view = QListWidget()
+    view.setAlternatingRowColors(True)
+    item = QListWidgetItem("Wiki")
+    item.setData(int(Qt.ItemDataRole.UserRole), "https://w.example")
+    view.addItem(item)
+    delegate = getattr(module, class_name)(view)
+    view.setItemDelegate(delegate)
+    option = QStyleOptionViewItem()
+    option.initFrom(view)
+    option.widget = view
+    option.rect = QRect(0, 0, 260, height)
+    if selected:
+        option.state |= QStyle.StateFlag.State_Selected
+    pixmap = QPixmap(option.rect.size())
+    pixmap.fill(view.palette().base().color())   # the fill the VIEW paints under its rows
+    painter = QPainter(pixmap)
+    try:
+        delegate.paint(painter, option, view.model().index(0, 0))
+    finally:
+        painter.end()
+    return pixmap.toImage(), option, getattr(module, rect_name)(option.rect), view
+
+
+_PAINTED_PROBLEMS = []
+for _module, _class, _height, _rect_name in PAINTED_ROWS:
+    for _label, _instance in (("DARK", theme.DARK), ("LIGHT", theme.LIGHT)):
+        theme_qss.apply_theme(_instance, app=app, refresh_windows=False)
+        _plain_image, _, _frame, _view = _paint_delegate_row(
+            _module, _class, _rect_name, _height, selected=False)
+        _sel_image, _sel_option, _sel_frame, _ = _paint_delegate_row(
+            _module, _class, _rect_name, _height, selected=True)
+        _base = _view.palette().base().color().name()
+        _sample = (2, _height // 2)          # inside the row, outside the frame and the text
+        _surface = _sel_image.pixelColor(*_sample).name()
+        if not (_surface == _base == _plain_image.pixelColor(*_sample).name()):
+            _PAINTED_PROBLEMS.append(f"{_label} {_class}: the selected row repainted its background "
+                                     f"{_surface} (base {_base}) — a FILL, not a frame")
+            continue
+        for _field in ("text_primary", "text_muted"):
+            _ratio = contrast_ratio(getattr(_instance, _field), _surface)
+            if _ratio < 4.5:
+                _PAINTED_PROBLEMS.append(f"{_label} {_class}: {_field} on the painted row "
+                                         f"= {_ratio:.2f} (needs 4.5)")
+        _highlight = _sel_option.palette.highlight().color().name()
+        _ink = sum(1 for _x in range(0, 12) for _y in range(_height)
+                   if _sel_image.pixelColor(_x, _y).name() == _highlight)
+        if not _ink:
+            _PAINTED_PROBLEMS.append(f"{_label} {_class}: the selection left no mark at all")
+        _plain_ink = sum(1 for _x in range(0, 12) for _y in range(_height)
+                         if _plain_image.pixelColor(_x, _y).name() == _highlight)
+        if _plain_ink:
+            _PAINTED_PROBLEMS.append(f"{_label} {_class}: an UNSELECTED row carries the selection ink")
+        if abs(_sel_frame.left() - _frame.left()) > 1e-9:
+            _PAINTED_PROBLEMS.append(f"{_label} {_class}: the frame moved between the two paints")
+check(f"§11 every declared delegate keeps its text on a 4.5:1 surface in ALL "
+      f"{len(PAINTED_ROWS) * 2} painted rows (DARK + LIGHT)", not _PAINTED_PROBLEMS,
+      "; ".join(_PAINTED_PROBLEMS))
+check("§11 the gate is not vacuous — the highlight FILL it forbids would fail both tones",
+      contrast_ratio(theme.LIGHT.text_muted, theme.LIGHT.accent_strong) < 4.5
+      and contrast_ratio(theme.DARK.text_muted, theme.DARK.accent_strong) < 4.5,
+      f"muted on the fill: LIGHT="
+      f"{contrast_ratio(theme.LIGHT.text_muted, theme.LIGHT.accent_strong):.2f} DARK="
+      f"{contrast_ratio(theme.DARK.text_muted, theme.DARK.accent_strong):.2f}")
+theme_qss.apply_theme(theme.DARK, app=app, refresh_windows=False)
 
 finish()

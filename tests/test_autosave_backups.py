@@ -1,6 +1,6 @@
 """Regression v0.9.7 — autosave + the project backup ring buffer.
 
-ROADMAP v0.9.7:
+The contract this file guards:
   #1 the autosave into ~/.sshmap/autosave/ (the interval from the config, the default ~60 s,
      only when dirty and with the open project file).
   #2 the ring buffer of the backups (N files, the default 10) at every manual save —
@@ -76,7 +76,7 @@ os.utime(A.autosave_path_for(p), (now - 100, now - 100))
 os.utime(p, (now, now))
 check("an autosave OLDER than the file → not 'fresh'", A.autosave_is_newer(p) is False)
 os.utime(A.autosave_path_for(p), (now + 100, now + 100))
-check("an autosave NEWER than the file → 'fresh' (ROADMAP #3)", A.autosave_is_newer(p) is True)
+check("an autosave NEWER than the file → 'fresh'", A.autosave_is_newer(p) is True)
 
 print("== rotate_backups: the ring buffer ==")
 q = os.path.join(WORK, "ring", "map.json")
@@ -122,7 +122,7 @@ except FileNotFoundError:
 
 print("== get_autosave_settings (the config ~/.sshmap/config.json) ==")
 s = A.get_autosave_settings()
-check("defaults: on / 60 s / 10 backups (ROADMAP v0.9.7)",
+check("defaults: on / 60 s / 10 backups (v0.9.7)",
       s == {"enabled": True, "interval_sec": 60, "backup_count": 10}, str(s))
 save_config({"autosave_enabled": False, "autosave_interval_sec": "abc", "backup_count": -5})
 s2 = A.get_autosave_settings()
@@ -173,7 +173,7 @@ with open(slots[1]["path"], encoding="utf-8") as f:
 check("after the 3rd save: ring [slot1=3 servers, slot2=2], the newest first",
       len(slots) == 2 and s1 == 3 and s2 == 2, f"slots={[i['slot'] for i in slots]} {s1}/{s2}")
 
-# ══ MainWindow: the autosave on the ticks (ROADMAP #1) ════════════════════════
+# ══ MainWindow: the autosave on the ticks ════════════════════════
 print("== autosave tick ==")
 win.scene.add_server(ServerData(id="a7b5", alias="lb-1", host="127.0.0.1", user="nginx", x=900, y=100))
 win._dirty = True
@@ -191,10 +191,10 @@ win._dirty = False
 app.processEvents()
 _mtime_before = os.path.getmtime(auto_p)
 win._autosave_tick()
-check("a tick while clean does NOT rewrite (dirty only — ROADMAP #1)",
+check("a tick while clean does NOT rewrite (dirty only)",
       os.path.getmtime(auto_p) == _mtime_before)
 
-# a new project WITHOUT a file — there is nothing to autosave (ROADMAP #3 is tied to a file)
+# a new project WITHOUT a file — there is nothing to autosave (it is tied to a file)
 _auto_files_before = len(os.listdir(A.AUTOSAVE_DIR))
 win_ns = MW.MainWindow()
 win_ns.scene.add_server(ServerData(id="ns01", alias="orphan", host="127.0.0.1", user="x", x=1, y=1))
@@ -204,7 +204,7 @@ _auto_files_after = len(os.listdir(A.AUTOSAVE_DIR))
 check("no project file → the autosave tick is a no-op", _auto_files_before == _auto_files_after,
       f"{_auto_files_before} -> {_auto_files_after}")
 
-# ══ The open: the autosave is newer than the file → the offer (ROADMAP #3) ═══════════════
+# ══ The open: the autosave is newer than the file → the offer ═══════════════
 print("== open: autosave newer → prompt ==")
 with open(proj_path, encoding="utf-8") as f:
     check("the predicate: the file = 4 servers, the autosave = 5 and newer",
@@ -231,7 +231,7 @@ try:
 finally:
     QMessageBox.question = _q_orig
 
-# ══ The backup dialog + the rollback to the previous versions (ROADMAP #2) ════════════════
+# ══ The backup dialog + the rollback to the previous versions ════════════════
 print("== backups dialog + restore ==")
 items = win._backup_items()
 check("_backup_items: the autosave + 2 slots, the newest first",

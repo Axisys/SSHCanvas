@@ -24,7 +24,7 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
-try:  # v1.5.4 (ROADMAP task 1): the DECLARED status shapes — the mark of the aggregate
+try:  # v1.5.4: the DECLARED status shapes — the mark of the aggregate
     from ..ui import status_shape
 except ImportError:
     try:
@@ -157,7 +157,7 @@ def status_caption(summary, translate=None) -> str:
     return " · ".join(parts)
 
 
-# ── v1.6 (ROADMAP task 6): the auto-arrangement of a group's members ─────────────
+# ── v1.6: the auto-arrangement of a group's members ──────────────────────────────
 # The geometry is a PURE function (the `sidebar.list_sort_key()` precedent): the layout
 # of a group is measured without a widget, so the topical gate can pin every mode and
 # the window only has to turn the answer into ONE undo command. The three modes are the
@@ -318,7 +318,7 @@ def arrange_unit_positions(items, mode: str, per_line: int = 0,
 class NodeGroup(QGraphicsObject):
     """A cluster/folder on the map: a frame + a title, drag/resize, server membership.
 
-    **v1.4.2 (ROADMAP task 5) — the FOLD.** A chevron in the title band (and a
+    **v1.4.2 — the FOLD.** A chevron in the title band (and a
     context-menu pair of the window) folds the group: every member card becomes its
     v0.8.4 BADGE and the badges are laid out in a grid inside the frame, which is then
     re-fitted to the grid. Unfolding restores the frame size, every member's position
@@ -346,7 +346,7 @@ class NodeGroup(QGraphicsObject):
     # v1.4.2: the fold (the grid of badges + the chevron's click zone in the title band)
     BADGE_GAP = 8.0        # the gap between two badges of a folded group
     CHEVRON_ZONE = 26.0    # the chevron's click zone in the RIGHT corner of the title band
-    # v1.5.4 (ROADMAP task 1): the aggregate plaque of the title band — the worst
+    # v1.5.4: the aggregate plaque of the title band — the worst
     # member status as a SHAPE + the counts as words. A fixed slot at the right end of
     # the band (before the chevron), so the title elides into what is left instead of
     # fighting it; `AGGREGATE_MIN_SPAN` is the room below which the plaque is dropped
@@ -359,7 +359,7 @@ class NodeGroup(QGraphicsObject):
     CORNER_RADIUS = theme.RADIUS_GROUP   # rounding of the frame (in one style with the node card)
 
     # v1.2.5: colors — from the central theme (ui/theme.py); values unchanged.
-    # v1.4.3 (ROADMAP task 5): LIVE descriptors / lazily computed values — a
+    # v1.4.3: LIVE descriptors / lazily computed values — a
     # class read resolves the ACTIVE theme on every access, and the group's own
     # `refresh_theme()` re-runs `paint()` through `update()`.
     COLOR_BORDER = theme.ThemeColor("group_border")    # violet-600 — distinct from the nodes' blue
@@ -449,7 +449,7 @@ class NodeGroup(QGraphicsObject):
         # v1.4.2: a member captured while the group is folded joins the grid (a session
         # fold only — a group restored folded from a file keeps its saved arrangement)
         self.membershipChanged.connect(self._on_membership_changed)
-        # v1.5.4 (ROADMAP task 1): the aggregate of the group changed with the composition
+        # v1.5.4: the aggregate of the group changed with the composition
         self.membershipChanged.connect(self._on_membership_changed_aggregate)
 
     # ── Geometry helpers (the StickyNote/ServerNode pattern: explicit geometry) ──
@@ -561,7 +561,7 @@ class NodeGroup(QGraphicsObject):
         top-left corner), then clamped inside the frame with MEMBER_MARGIN, so they
         do not "fall out" of the folder even if the group became smaller than a node.
 
-        v1.4.2 (ROADMAP task 5): a FOLDED group is the exception — its badges are a grid,
+        v1.4.2: a FOLDED group is the exception — its badges are a grid,
         so a resize re-lays the grid out (the column count follows the new width) instead
         of scaling cards that are not cards at the moment.
 
@@ -589,7 +589,7 @@ class NodeGroup(QGraphicsObject):
         self._width, self._height = float(w), float(h)
 
         for node in list(self._members):
-            # v1.4.2 (ROADMAP task 4): the member geometry is its CARD rect
+            # v1.4.2: the member geometry is its CARD rect
             # (`card_rect_scene()`), not the painted boundingRect — the drop-shadow halo
             # would otherwise shift and inflate every proportional reposition.
             r = node.card_rect_scene()  # a node — an independent scene item: scene coordinates
@@ -612,7 +612,7 @@ class NodeGroup(QGraphicsObject):
         return True
 
     def _apply_move(self, delta: QPointF):
-        """Shift the group AND all members by delta (task v0.8.1 #2 — the drag part).
+        """Shift the group AND all members by delta (the drag part).
 
         v1.4.2: the whole shift is atomic for the badge grid (`_suspend_layout`) — the
         members move one by one, and a re-layout triggered by an intermediate resync
@@ -721,7 +721,7 @@ class NodeGroup(QGraphicsObject):
         except RuntimeError:
             pass  # Qt teardown — the item is already destroyed
 
-    # ── v1.5.4 (ROADMAP task 1): the group AGGREGATE — "where is the problem" ────────
+    # ── v1.5.4: the group AGGREGATE — "where is the problem" ─────────────────────────
 
     def status_summary(self) -> dict:
         """The aggregate of the members' statuses, read LIVE (v1.5.4).
@@ -816,7 +816,7 @@ class NodeGroup(QGraphicsObject):
                          int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
                          shown)
 
-    # ── v1.4.2 (ROADMAP task 5): the FOLD — the members become a grid of badges ──────
+    # ── v1.4.2: the FOLD — the members become a grid of badges ───────────────────────
 
     def is_collapsed(self) -> bool:
         """Is the group folded (its members shown as badges)?"""
@@ -1075,7 +1075,7 @@ class NodeGroup(QGraphicsObject):
     def _state_colors(self):
         """(pen_color, pen_width, fill, title_color, pen_style) for the current state.
 
-        v1.5.4 (ROADMAP task 1): in the ORDINARY state the frame takes the colour of the
+        v1.5.4: in the ORDINARY state the frame takes the colour of the
         group's WORST member status when that is a problem (`warn` / `offline`) — the
         "trouble first" signal the feature exists for. It is a REDUNDANT channel: the
         aggregate plaque carries the same fact as a declared SHAPE and as words, so a
@@ -1083,7 +1083,7 @@ class NodeGroup(QGraphicsObject):
         are INTERACTIONS and always win over the aggregate; a group without trouble (or
         without members) keeps its violet frame exactly as before.
 
-        v1.9.7 (ROADMAP task 7): the SELECTED frame is the card's OWN decision — the amber
+        v1.9.7: the SELECTED frame is the card's OWN decision — the amber
         `selection_amber` at `theme.SELECTION_FRAME_WIDTH`, DASHED at the declared
         `theme.SELECTION_DASH_PATTERN` — so the two surfaces mark a selection ONE way.
         """
@@ -1132,7 +1132,7 @@ class NodeGroup(QGraphicsObject):
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 self._display_name)
 
-        # v1.5.4 (ROADMAP task 1): the aggregate plaque — the worst member status and the
+        # v1.5.4: the aggregate plaque — the worst member status and the
         # counts, in the right end of the SAME band (so the group FOLD, which re-fits the
         # frame and keeps the band, keeps the aggregate as well).
         self._paint_aggregate(painter)
@@ -1152,7 +1152,7 @@ class NodeGroup(QGraphicsObject):
             r = theme.RADIUS_RESIZE_MARK
             painter.drawRoundedRect(QRectF(w - 16.0, h - 16.0, 10.0, 10.0), r, r)
 
-    # ── Theme (v1.4.3, ROADMAP task 5) ───────────────────────────────────
+    # ── Theme (v1.4.3) ───────────────────────────────────────────────────
 
     def refresh_theme(self):
         """Re-read the theme and repaint (v1.4.3).

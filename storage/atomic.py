@@ -166,8 +166,10 @@ def _remove(path) -> None:
         return
     try:
         os.remove(path)
-    except OSError:
-        pass
+    except OSError as e:
+        logger = _log()
+        if logger is not None:
+            logger.debug("The provisional file %s was not removed (%s)", path, e)
 
 
 def publish_atomic(path, write_temp) -> None:
@@ -223,5 +225,8 @@ def write_json_atomic(path, data, merge: bool = False, reader=None, indent: int 
                 payload = current
             publish_atomic(path, lambda temp: dump_json(temp, payload, indent=indent))
         return True
-    except (OSError, TypeError, ValueError):
+    except (OSError, TypeError, ValueError) as e:
+        logger = _log()
+        if logger is not None:
+            logger.warning("The write of %s was refused: %s", path, e)
         return False

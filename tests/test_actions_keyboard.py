@@ -43,10 +43,10 @@ NEW_DEFAULT_ACTIONS = {
     "view.zoom_out": "Ctrl+-",
 }
 
-# v1.3.3.3 (task 3): the global actions that were OUTSIDE the registry and now carry an
-# EMPTY default — assignable, no hotkey out of the box. The list is the ROADMAP's
+# v1.3.3.3: the global actions that were OUTSIDE the registry and now carry an
+# EMPTY default — assignable, no hotkey out of the box. The list is the registry's
 # enumeration + `view.center_map` (found by the v1.3.3 third-party review) + the About
-# item of task 6 + node.check_status of task 5.
+# item + `node.check_status`.
 EMPTY_DEFAULT_ACTIONS = {
     "node.check_status",
     "view.center_map", "view.collapse_all", "view.expand_all",
@@ -63,9 +63,9 @@ EMPTY_DEFAULT_ACTIONS = {
     "plugins.run_on_nodes",
     # v1.4.1: the second import path — "Import from SSH Config…" (File menu).
     "file.import_ssh_config",
-    # v1.4.2: the minimap panel — a checkable View item (ROADMAP task 2).
+    # v1.4.2: the minimap panel — a checkable View item.
     "view.toggle_minimap",
-    # v1.4.5: the legend panel — a checkable View item + its toolbar mirror (task 4).
+    # v1.4.5: the legend panel — a checkable View item + its toolbar mirror.
     "view.toggle_legend",
     # v1.5rc3: "Open the example map" (the Help item of the demo map — the empty state's
     # second button calls the same window method). No key out of the box.
@@ -123,7 +123,7 @@ class _FakeChecker:
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The registry is complete (task 1–3): the structural "no orphans" audit
+# 1. The registry is complete: the structural "no orphans" audit
 # ════════════════════════════════════════════════════════════
 print("== 1. the registry is complete ==")
 
@@ -143,7 +143,7 @@ check("registry: 62 actions — the v1.3.2 set + Save As + the zoom family + the
 check("registry: the 4 new SEQUENCED actions carry exactly the promised defaults",
       {a: HR.default_sequence(a) for a in NEW_DEFAULT_ACTIONS} == NEW_DEFAULT_ACTIONS,
       str({a: HR.default_sequence(a) for a in NEW_DEFAULT_ACTIONS}))
-check("registry: the promoted global actions ARE registered (task 3; v1.3.3.7: +file.export_svg)",
+check("registry: the promoted global actions ARE registered (v1.3.3.7: +file.export_svg)",
       EMPTY_DEFAULT_ACTIONS <= set(ids),
       str(sorted(EMPTY_DEFAULT_ACTIONS - set(ids))))
 check("registry: each of them has an EMPTY default (no hotkey, so no behaviour change)",
@@ -267,7 +267,7 @@ check("source: no literal setShortcut(...) sequences left in the UI modules",
       not _src_literals, str(_src_literals))
 
 # ════════════════════════════════════════════════════════════
-# 2. The shortcuts really FIRE on a live window (task 1–2)
+# 2. The shortcuts really FIRE on a live window
 # ════════════════════════════════════════════════════════════
 print("== 2. the new shortcuts fire (a live window) ==")
 
@@ -286,7 +286,7 @@ try:
     fire(mw, "Ctrl+Shift+S")
 finally:
     mw._save_project_as = _orig_save_as
-check("Ctrl+Shift+S really fires 'Save As...' (task 1)", _saved == [1], str(_saved))
+check("Ctrl+Shift+S really fires 'Save As...'", _saved == [1], str(_saved))
 
 # Ctrl+= / Ctrl+- / Ctrl+0 → the view scale
 mw.view.reset_zoom()
@@ -348,7 +348,7 @@ check("menu: the two zoom items are real View-menu items carrying the new icons"
 # ════════════════════════════════════════════════════════════
 # 3. An action with an EMPTY default: in the menu, in the tab, and a no-op until assigned
 # ════════════════════════════════════════════════════════════
-print("== 3. the empty default (task 3/4) ==")
+print("== 3. the empty default ==")
 
 check("empty default: the action is present in the menu and ENABLED (usable by mouse)",
       menu_action(mw, "file.import_servers") is not None
@@ -392,7 +392,7 @@ check("empty default: without the assignment the SAME action cannot be triggered
       HR.default_sequence("file.exit") == "" and HR.sequences_for("file.exit", "") == [])
 
 # ════════════════════════════════════════════════════════════
-# 4. "Reset to defaults" (task 4)
+# 4. "Reset to defaults"
 # ════════════════════════════════════════════════════════════
 print("== 4. the reset button ==")
 
@@ -458,7 +458,7 @@ check("reset: the reset clears the conflict as well",
       and HR.find_conflicts(_dlg_conflict.hotkey_sequences()) == set())
 
 # ════════════════════════════════════════════════════════════
-# 5. "Check statuses now" (task 5)
+# 5. "Check statuses now"
 # ════════════════════════════════════════════════════════════
 print("== 5. Check statuses now ==")
 
@@ -560,7 +560,7 @@ check("start_round(unknown ids): still no round (an unknown id is skipped)",
       chk.start_round(["nope"]) is False)
 
 # ════════════════════════════════════════════════════════════
-# 6. The About window (task 6)
+# 6. The About window
 # ════════════════════════════════════════════════════════════
 print("== 6. About ==")
 
@@ -679,7 +679,7 @@ finally:
     AD.open_config_folder = _orig_open
 check("about: a failing OS call is reported, never raised into the event loop", _survived)
 
-check("about: the Help menu item exists and is registered (task 6)",
+check("about: the Help menu item exists and is registered",
       menu_action(mw4, "about.open") is not None
       and mw4.act_about is menu_action(mw4, "about.open")
       and menu_action(mw4, "about.open") in mw4._hotkey_targets["help.about"])

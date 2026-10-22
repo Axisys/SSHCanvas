@@ -109,7 +109,7 @@ def _log_line(level: str, message: str) -> None:
         return
     try:
         getattr(logger, level)(message)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — optional import
         pass
 
 
@@ -213,7 +213,7 @@ class PluginRecord:
 
 
 class _HookWorker(QThread):
-    """v1.4rc2: ONE headless hook invocation on a MANAGED worker thread (ROADMAP task 6).
+    """v1.4rc2: ONE headless hook invocation on a MANAGED worker thread.
 
     The ordinary use is `run_on_nodes(nodes, ctx)` — the "run this on the selected
     servers" scenario, whose real work (`ctx.run_command`) is itself another managed
@@ -227,7 +227,7 @@ class _HookWorker(QThread):
 
     def __init__(self, rec: PluginRecord, hook_name: str, args: tuple, parent=None):
         super().__init__(parent)
-        # v1.6.4 (ROADMAP task 1): the managed hook worker names itself — the manager's orphan
+        # v1.6.4: the managed hook worker names itself — the manager's orphan
         # registry holds it past its wait budget, so it is one of the threads Qt's
         # "Destroyed while running" abort would otherwise report as ''. No behaviour.
         self.setObjectName("_HookWorker")
@@ -451,7 +451,7 @@ class PluginManager(QObject):
         """(Re)build the registry from both sources. Returns the records.
 
         Entry points first, then the folder: on a NAME conflict the packaged plugin
-        wins and the local file is skipped with a log line (ROADMAP rc1 task 1). The
+        wins and the local file is skipped with a log line. The
         enable/disable state of `config.json` is applied to the fresh records, and one
         event per plugin (plus one for the round) is queued for the UI. Never raises.
         """
@@ -472,7 +472,7 @@ class PluginManager(QObject):
             if rec is None:
                 continue
             if rec.plugin_id in found:
-                # The packaged plugin wins (ROADMAP rc1 task 1) — a local override of an
+                # The packaged plugin wins — a local override of an
                 # installed plugin is NOT a feature: two plugins with one identity would
                 # both be listed and both be switched by one config key.
                 _log_line("warning", f"local plugin {path} skipped: the id {rec.plugin_id!r} "
@@ -622,7 +622,7 @@ class PluginManager(QObject):
         return out
 
     def plugin_node_context_menu(self, menu, node=None) -> int:
-        """Let every loaded plugin append its rows to a node context menu (ROADMAP task 7).
+        """Let every loaded plugin append its rows to a node context menu.
 
         `menu` is the live `QMenu` the window (map) or the sidebar panel created;
         `node` is ONE node-like value (`ServerData`, a `PluginNode`, a node id) or an
@@ -719,7 +719,7 @@ class PluginManager(QObject):
     def plugin_run_command(self, plugin_id: str, nodes, command: str,
                            on_result=None, on_finished=None,
                            timeout: float = COMMAND_TIMEOUT_S) -> bool:
-        """`ctx.run_command()` — one managed SSH worker per call (ROADMAP task 5).
+        """`ctx.run_command()` — one managed SSH worker per call.
 
         The credentials are resolved by the core (`modules/plugin_runner.py`), the results
         arrive per node, and the plugin's callbacks are invoked on the GUI thread. One
@@ -1121,7 +1121,7 @@ class PluginManager(QObject):
             try:
                 if th in self._workers:
                     self._workers.remove(th)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — best effort (declared): a double cleanup
                 pass
 
         try:
@@ -1152,7 +1152,7 @@ class PluginManager(QObject):
         return int(self._running_commands)
 
     def shutdown(self, wait_ms: int = HOOK_WAIT_BUDGET_MS) -> bool:
-        """Stop every managed worker with a bounded wait (the ROADMAP rc2 acceptance).
+        """Stop every managed worker with a bounded wait.
 
         Each worker is asked to stop (`stop()` when it has one — the command runner does,
         `requestInterruption()` otherwise) and then waited on until the shared deadline.
@@ -1173,11 +1173,11 @@ class PluginManager(QObject):
                         stop(min(budget_ms, max(1, int((deadline - time.monotonic()) * 1000))))
                     except TypeError:
                         stop()
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001 — the caller owns the fallback: the thread is still joined
                         pass
                 elif hasattr(thread, "requestInterruption"):
                     thread.requestInterruption()
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — the caller owns the fallback: the thread is still joined
                 pass
             remaining = int(max(0.0, deadline - time.monotonic()) * 1000)
             finished = False
@@ -1382,7 +1382,7 @@ class PluginManager(QObject):
 
     def _error_record(self, plugin_id: str, source: str, origin: str, reason: str, exc,
                       name: str = "", version: str = "") -> PluginRecord:
-        """Build + LOG an error record (the "a record in modules/logger.py" of the ROADMAP).
+        """Build + LOG an error record (ONE record shape — `modules/logger.py`).
 
         `name`/`version` are filled when the manifest WAS readable (a foreign api_version):
         a half-valid plugin still shows its own identity in the menu and in the log.

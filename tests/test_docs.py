@@ -281,7 +281,7 @@ for _name in REFERENCE_DOCS:
 # current release (vX.Y.Z)"). Nothing read that figure back, so it sat at v1.12.2.2 while the tree
 # carried v1.12.4 — the same class as the map's rows: a document claim no guard resolved.
 _doc_header = _read(_DOC).split("\n---\n")[0]
-_header_versions = sorted(set(re.findall(r"v(\d+(?:\.\d+)+)", _doc_header)))
+_header_versions = sorted(set(re.findall(r"v(\d+(?:\.\d+)+(?:rc\d+)?)", _doc_header)))
 check(f"§2 DOCUMENTATION.md's header names the SHIPPED release ({EXPECTED_APP_VERSION})",
       _header_versions == [EXPECTED_APP_VERSION], f"header={_header_versions}")
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4rc3 — Plugin foundation, part 3: the UI hooks and dogfooding (ROADMAP tasks 7–9).
+"""v1.4rc3 — Plugin foundation, part 3: the UI hooks and dogfooding.
 
 rc1 discovered the plugins and gave them a menu, rc2 gave them `PluginContext` + `run_command`; rc3 makes
 the last two hooks REACHABLE: a plugin's commands land in the command palette (Ctrl+K) in their own

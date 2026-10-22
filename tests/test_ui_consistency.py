@@ -16,7 +16,8 @@ import sys
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap, check,
                      check_i18n_format, check_i18n_parity, check_release_state, clear_cfg, docs_mode,
-                     finish, load_i18n_langs, read_cfg, releases_at_least, wait_for)
+                     finish, load_i18n_langs, pane_family_text, read_cfg, releases_at_least,
+                     wait_for)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation, offscreen)
 
@@ -59,6 +60,9 @@ def _src(*parts) -> str:
         with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
             _SRC[parts] = handle.read()
     return _SRC[parts]
+
+
+_PANE_FAMILY = pane_family_text(ROOT)   # the facade + every `modules/sftp_pane*.py` — WHEREVER it lives
 
 
 def make_window():
@@ -433,13 +437,12 @@ check("§4 all THREE source states carry a tooltip (the elevated one had the onl
       all(str(LANGS[code].get(key) or "").strip() for code in LANGS
           for key in ("sftp.elevated.tooltip", "sftp.local.server_tooltip",
                       "sftp.local.local_tooltip"))
-      and "btn_server.setToolTip(_t(\"sftp.local.server_tooltip\"))" in _src("modules",
-                                                                            "sftp_tab.py"))
+      and "btn_server.setToolTip(_t(\"sftp.local.server_tooltip\"))" in _PANE_FAMILY)
 check("§4 the inactive states gain a DECLARED contrast in both themes (never a literal colour)",
       "sftp.source_button" in TQ.style_names()
       and "QToolButton:checked" in TQ.style("sftp.source_button")
       and "QToolButton:hover" in TQ.style("sftp.source_button")
-      and "theme_qss.refresh(button, \"sftp.source_button\")" in _src("modules", "sftp_tab.py")
+      and "theme_qss.refresh(button, \"sftp.source_button\")" in _PANE_FAMILY
       and "sftp.source_button" in _src("ui", "theme_qss.py"))
 
 
@@ -540,7 +543,7 @@ check(f"§6 the {len(_NEW_KEYS)} keys of v1.9.8 are present and non-empty in eve
 check("§6 ...and they are the keys the CODE really asks for (the version's own vocabulary)",
       all(key in _src("ui", "activity_panel.py") or key in _src("ui", "plugins_panel.py")
           or key in _src("ui", "server_menu.py") or key in _src("modules", "terminal_page.py")
-          or key in _src("modules", "sftp_tab.py") or key in _src("ui", "settings_dialog.py")
+          or key in _PANE_FAMILY or key in _src("ui", "settings_dialog.py")
           for key in _NEW_KEYS)
       and "_t(\"ctx.diagnostics\")" in _src("graphics", "map_view.py"))
 check("§6 no new dependency, no second config file, no pytest",

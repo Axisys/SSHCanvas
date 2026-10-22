@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.4.6 — List mode: collapsing the map = server parameters (ROADMAP v1.4.6).
+"""v1.4.6 — List mode: collapsing the map = server parameters (v1.4.6).
 
 The topical test of the release: offscreen, no network (the probes answer instantly) and no real
 terminal session. Its §1–§9 sections check, in order: the adaptive columns (the wide LIST layout,
@@ -106,7 +106,7 @@ def close_window(win):
 
 
 # ════════════════════════════════════════════════════════════
-# 1. The adaptive columns (tasks 1 + 2)
+# 1. The adaptive columns
 # ════════════════════════════════════════════════════════════
 print("== 1. the adaptive columns ==")
 
@@ -223,7 +223,7 @@ check("the status dot icon is still painted on the row (the v0.8.0 marker surviv
           for i in range(win.tree.topLevelItemCount())))
 
 # ════════════════════════════════════════════════════════════
-# 3. The switch is idempotent and stable (task 2)
+# 3. The switch is idempotent and stable
 # ════════════════════════════════════════════════════════════
 print("== 3. idempotency and stability ==")
 
@@ -257,7 +257,7 @@ check("refresh_sidebar() in wide mode is idempotent (no row is duplicated)",
       f"count={win.tree.topLevelItemCount()} columns={win.tree.columnCount()}")
 
 # ════════════════════════════════════════════════════════════
-# 4. Row actions in wide mode (task 3)
+# 4. Row actions in wide mode
 # ════════════════════════════════════════════════════════════
 print("== 4. row actions in wide mode ==")
 
@@ -337,7 +337,7 @@ finally:
     MW.MainWindow._run_ssh_connect = _orig_run_connect
 
 # ════════════════════════════════════════════════════════════
-# 5. The filters in wide mode (task 3)
+# 5. The filters in wide mode
 # ════════════════════════════════════════════════════════════
 print("== 5. search + tag filter in wide mode ==")
 
@@ -408,7 +408,7 @@ check("both panels are expanded and the tree is narrow again",
 close_window(win)
 
 # ════════════════════════════════════════════════════════════
-# 7. Persistence: the mode IS ui_map_collapsed (task 2)
+# 7. Persistence: the mode IS ui_map_collapsed
 # ════════════════════════════════════════════════════════════
 print("== 7. persistence round-trip ==")
 

@@ -124,7 +124,7 @@ def expanded_height(node) -> int:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the flag and the serialization (task 1) ==")
+print("== §1 the flag and the serialization ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§1 a ServerData is MANAGED unless it says otherwise (the field is additive)",
@@ -160,7 +160,7 @@ check("§1 the flag is OPTIONAL — VERSION_FORMAT stays 0.9 (the key is absent 
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 the dialog: the checkbox, the credentials and the opt-in (tasks 1/5) ==")
+print("== §2 the dialog: the checkbox, the credentials and the opt-in ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 dlg = AddServerDialog(None)
@@ -265,7 +265,7 @@ finally:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 the card: the mark, the free band and the measured height (task 2) ==")
+print("== §3 the card: the mark, the free band and the measured height ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 win = make_main()
@@ -357,7 +357,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the honest status: the skip set and the unchecked reading (task 3) ==")
+print("== §4 the honest status: the skip set and the unchecked reading ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 win = make_main()
@@ -407,7 +407,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 the ONE action gate (task 4) ==")
+print("== §5 the ONE action gate ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§5 the gate DECLARES its verbs (a new row cannot be blocked by accident)",
@@ -622,7 +622,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the opt-in reachability check (task 5) ==")
+print("== §6 the opt-in reachability check ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 win = make_main()
@@ -696,7 +696,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §7 the inventory table (task 6) ==")
+print("== §7 the inventory table ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§7 LIST_COLUMNS still holds thirteen columns (no pinned figure moves)",
@@ -746,7 +746,7 @@ app.processEvents()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §8 the demo card and the release state (task 6) ==")
+print("== §8 the demo card and the release state ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _demo = EP.build_example_project()
@@ -815,7 +815,7 @@ check("§8 the i18n pin moved by the ELEVEN keys of this release and by the ELEV
       " v1.8.1 adds 41: the host-key question and its manager window, the credential prompt of the"
       " second factor and of a key's passphrase, and the endpoint-scope sentences, and v1.8.1.1 adds"
       " ONE: the send identity sentence and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the dialog's four section titles, the four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; the fifth read adds TWO: the listing's bound sentence and the merge line of the folder's question; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu",
-      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1,
+      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1,
       str(EXPECTED_I18N_KEYS))
 _missing = {code: [k for k in NEW_KEYS if not str(data.get(k) or "").strip()]
             for code, data in LANGS.items()}

@@ -585,7 +585,7 @@ for _key in ("msg.credentials_save_failed", "ssh.credential_scope_mismatch", "ho
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§7 the i18n pin is UNCHANGED — this patch adds no translation key",
-      EXPECTED_I18N_KEYS == 1162 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1162 + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.4"),
       EXPECTED_APP_VERSION)
 import version as VERSION_MODULE  # noqa: E402

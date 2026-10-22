@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QSplitter, QPushButton, QVBoxLayout, QWidget
 
-try:  # v1.9.8 (task 3): the vector icon set (the split button wears its own glyph)
+try:  # v1.9.8: the vector icon set (the split button wears its own glyph)
     from ..ui.icons import get_icon
 except ImportError:
     try:
@@ -22,7 +22,7 @@ except ImportError:
             from PySide6.QtGui import QIcon
             return QIcon()
 
-try:  # v1.9.8 (task 3): the ONE registry of the widget stylesheets (the corner controls' feedback)
+try:  # v1.9.8: the ONE registry of the widget stylesheets (the corner controls' feedback)
     from ..ui import theme_qss
 except ImportError:
     try:
@@ -172,7 +172,7 @@ class TerminalSplit:
         btn = QPushButton(t("terminal.split"))
         btn.setCheckable(True)
         btn.setToolTip(t("terminal.split_tooltip"))
-        # v1.9.8 (task 3): the corner control wears its own GLYPH beside the label, and the theme's
+        # v1.9.8: the corner control wears its own GLYPH beside the label, and the theme's
         # own hover/checked feedback comes from the ONE registry (`ui/theme_qss.py: corner.button`).
         try:
             btn.setIcon(get_icon("split"))

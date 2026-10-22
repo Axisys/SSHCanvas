@@ -82,7 +82,7 @@ class SshConfigImportDialog(QDialog):
             row = QTreeWidgetItem([
                 str(host.alias), str(host.host), str(host.port),
                 str(host.user), str(host.key_path or ""),
-                # v1.12.3 (ROADMAP task 2): the `ProxyJump` value the row was parsed with — the
+                # v1.12.3: the `ProxyJump` value the row was parsed with — the
                 # fifth column is the key FILE, this one is the proxy the connect will carry.
                 str(getattr(host, "jump_host", "") or ""),
             ])

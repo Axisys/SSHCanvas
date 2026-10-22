@@ -331,7 +331,7 @@ class StandaloneSurface(QWidget):
     def quick_launch_command(self, data, command: str, name: str = "") -> bool:
         """A `command` entry — a session whose FIRST line is that command (the map's own order).
 
-        DECIDED (`ROADMAP` v1.13.3): the ENTRY doors are answered here with the `_stored_password()`
+        DECIDED (`AGENTS.md` §4.3.9): the ENTRY doors are answered here with the `_stored_password()`
         pre-check — a stored credential or a key opens the session with NO dialog, and only a node
         with neither falls back to the SHIPPED connect dialog, which then carries the command. The
         unmanaged gate is the shipped one: a `command` entry is an SSH verb, a URL entry is not.

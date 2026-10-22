@@ -521,7 +521,7 @@ clear_cfg()
 
 
 # ════════════════════════════════════════════════════════════
-# 5. Tracking by SESSIONS in MainWindow (ROADMAP task 4)
+# 5. Tracking by SESSIONS in MainWindow
 # ════════════════════════════════════════════════════════════
 print("== session tracking in MainWindow ==")
 

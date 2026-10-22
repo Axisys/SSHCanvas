@@ -18,7 +18,7 @@ try:
 except ImportError:
     from graphics.server_node import ServerNode
 
-try:  # v1.6.5 (ROADMAP tasks 4/5): the unmanaged gate and its ONE opt-in
+try:  # v1.6.5: the unmanaged gate and its ONE opt-in
     from ..models.server import is_unmanaged as _is_unmanaged
     from ..models.server import unmanaged_ping_allowed as _unmanaged_ping_allowed
 except ImportError:  # flat launch from the project root
@@ -30,7 +30,7 @@ try:  # v1.1.4: the common seam for monkeypatching the facade module's globals (
 except ImportError:
     from mixin_support import host_attr
 
-try:  # v1.6 (ROADMAP task 1): the PURE half of the bulk edit (states → values)
+try:  # v1.6: the PURE half of the bulk edit (states → values)
     from ..dialogs.bulk_edit_dialog import changes_for
 except ImportError:
     try:
@@ -38,7 +38,7 @@ except ImportError:
     except ImportError:  # a stripped build — the bulk edit reports itself unavailable
         changes_for = None
 
-try:  # v1.6 (ROADMAP task 6): the PURE geometry of a group arrangement
+try:  # v1.6: the PURE geometry of a group arrangement
     from ..graphics.node_group import NodeGroup as _NodeGroup, arrange_positions
 except ImportError:
     try:
@@ -47,7 +47,7 @@ except ImportError:
         _NodeGroup = None
         arrange_positions = None
 
-try:  # v1.8.4 (ROADMAP task 1): the PURE geometry of the map's TOP level (units ride together)
+try:  # v1.8.4: the PURE geometry of the map's TOP level (units ride together)
     from ..graphics.node_group import arrange_unit_positions
 except ImportError:
     try:
@@ -151,7 +151,7 @@ class NodeOpsMixin:
             with open(path, "r", encoding="utf-8", errors="replace") as f:
                 text = f.read()
         except OSError as e:
-            # v1.5.2 (ROADMAP task 2): a refused file was a dialog only — the history
+            # v1.5.2: a refused file was a dialog only — the history
             # keeps the reason too (the dialog is gone the moment it is dismissed).
             if self.log:
                 self.log.warning(f"TXT import: {path} is unreadable — {e}")
@@ -190,7 +190,7 @@ class NodeOpsMixin:
             existing.add(entry.lower())
 
         if not pending:
-            # v1.5.2 (ROADMAP task 2): "the import found nothing new" is a RESULT — it
+            # v1.5.2: "the import found nothing new" is a RESULT — it
             # reached a dialog and nothing else. The history keeps it.
             if self.log:
                 self.log.info(f"TXT import: no new servers in {path} "
@@ -333,7 +333,7 @@ class NodeOpsMixin:
         return keys
 
     def _import_servers_from_ssh_config(self):
-        """v1.4.1 (ROADMAP task 3): bulk import from the OpenSSH client config.
+        """v1.4.1: bulk import from the OpenSSH client config.
 
         `~/.ssh/config` → the parser (`services/ssh_config_importer.py`) →
         deduplication against the map (a host the map already knows is reported,
@@ -368,7 +368,7 @@ class NodeOpsMixin:
             for host in duplicates
         ]
         if not fresh:
-            # v1.5.2 (ROADMAP task 2): the "nothing new" result of the second import path.
+            # v1.5.2: the "nothing new" result of the second import path.
             if self.log:
                 self.log.info(f"SSH config import: no new servers in "
                               f"{result.path or config_path} ({len(skipped)} skipped)")
@@ -490,7 +490,7 @@ class NodeOpsMixin:
                 break
         data.id = new_id
         # v0.9.3: the password from the keyring by the new node's server_id (task #1)
-        # v1.6.5 (ROADMAP task 1): unless the card is UNMANAGED — the keyring is never
+        # v1.6.5: unless the card is UNMANAGED — the keyring is never
         # written for such a card, and its copy is one of those cards too.
         try:
             from services.credential_manager import get_credential_manager, node_scope
@@ -531,7 +531,7 @@ class NodeOpsMixin:
         except RuntimeError:
             return []
 
-    # ── v1.3.3.3 (ROADMAP task 5): "Check statuses now" ─────────────────────────
+    # ── v1.3.3.3: "Check statuses now" ──────────────────────────────────────────
 
     def _check_statuses_now(self, node: "ServerNode" = None) -> bool:
         """Run ONE status round for the selected nodes, on demand.
@@ -555,7 +555,7 @@ class NodeOpsMixin:
 
         Returns True when a round was actually started. Never raises.
 
-        v1.6.5 (ROADMAP task 4): an UNMANAGED card is refused before the target list is
+        v1.6.5: an UNMANAGED card is refused before the target list is
         built. It is also absent from the checker's own plan (`_status_skip_ids`), so this
         is the sentence that explains WHY the menu row was disabled rather than a silent
         no-op — and a selection that mixes kinds still checks every card it can.
@@ -591,7 +591,7 @@ class NodeOpsMixin:
                 self.log.info(f"Manual status round started for {len(targets)} node(s)")
         return started
 
-    # ── v1.5.3 (ROADMAP task 3): "why is it red?" ───────────────────────────────
+    # ── v1.5.3: "why is it red?" ────────────────────────────────────────────────
 
     def _diagnose_node(self, node: "ServerNode" = None) -> bool:
         """Run ONE reachability report for a node and answer with its own sentence.
@@ -620,10 +620,10 @@ class NodeOpsMixin:
             except (RuntimeError, AttributeError):
                 pass
             return False
-        # v1.6.5 (ROADMAP task 4): the report ends at the SSH banner — a host nobody
+        # v1.6.5: the report ends at the SSH banner — a host nobody
         # administers has no banner to read, so the whole DNS → TCP → banner family is
         # refused. The ONE thing an unmanaged card may be asked is the ICMP half, and it
-        # has its own opt-in (the ping of task 5, which names itself a manual result).
+        # has its own opt-in (the ping names itself a manual result).
         if self._refuse_unmanaged(target, "ctx.diagnose_offline"):
             return False
         data = target.data
@@ -782,7 +782,7 @@ class NodeOpsMixin:
         return True
 
     def _bulk_edit_selection(self) -> bool:
-        """v1.6 (ROADMAP task 1): edit tags / comment / quick launch for the selection.
+        """v1.6: edit tags / comment / quick launch for the selection.
 
         The multi-selection sibling of "properties": the dialog is TRI-STATE (a field left
         at "leave unchanged" is never written), and the whole apply is ONE command
@@ -856,7 +856,7 @@ class NodeOpsMixin:
             return []
 
     def _arrange_group(self, group, mode: str = "", per_line: int = 0) -> bool:
-        """v1.6 (ROADMAP task 6): line a group's members up in ONE undo step.
+        """v1.6: line a group's members up in ONE undo step.
 
         The layout is the pure `graphics.node_group.arrange_positions()`; this method only
         reads the live geometry, pushes ONE `CmdArrangeGroup` and reports. Two declared
@@ -933,7 +933,7 @@ class NodeOpsMixin:
         return True
 
     def _ask_arrange_group(self, group) -> bool:
-        """The group's "Arrange…" entry point: ask the mode, then apply it (v1.6, task 6).
+        """The group's "Arrange…" entry point: ask the mode, then apply it (v1.6).
 
         The ONE entry point of both surfaces (the group's context menu and the Edit menu):
         it answers the folded refusal itself (before asking anything), opens the dialog for
@@ -984,7 +984,7 @@ class NodeOpsMixin:
             return False
         return self._ask_arrange_group(group)
 
-    # ── v1.8.4 (ROADMAP task 1): the WHOLE-map auto-layout ───────────────────────
+    # ── v1.8.4: the WHOLE-map auto-layout ────────────────────────────────────────
 
     def _arrange_map_units(self):
         """The map's TOP level as the pure layout's cells: `(key, x, y, w, h, unit)` + the items.
@@ -1247,7 +1247,7 @@ class NodeOpsMixin:
         Windows: `ping -n 3`, POSIX: `ping -c 3`. The result — in the status bar.
         v0.9.9.3: the thread was moved to services/diagnostics.py (PingThread).
 
-        v1.6.5 (ROADMAP task 5): the SECOND reading of this action is the ONE network call
+        v1.6.5: the SECOND reading of this action is the ONE network call
         an UNMANAGED card may ever make — pure ICMP, never a TCP/SSH probe — and only when
         the card itself opted in (`ServerData.unmanaged_ping`, DEFAULT OFF). The answer
         takes the same status-bar road AND lands on the card as a line MARKED a manual
@@ -1275,7 +1275,7 @@ class NodeOpsMixin:
         ping_thread = PingThread(node.data.host)
 
         def _on_ping_done(ok, text):
-            # v1.6.5 (ROADMAP task 5): the manual result of a card that HAS no status is a
+            # v1.6.5: the manual result of a card that HAS no status is a
             # note of its own — the card line names the check as manual, so a reader of the
             # tooltip cannot mistake it for a probe round's answer.
             if unmanaged:
@@ -1346,7 +1346,7 @@ class NodeOpsMixin:
         if reply != QMessageBox.Yes:
             return False
         # v0.8.3: deleting the connection — an undo command
-        # v1.6 (ROADMAP task 3): the command is PINNED to the arrow the user picked — a
+        # v1.6: the command is PINNED to the arrow the user picked — a
         # pair may carry several parallel links, and the direction alone cannot name one.
         from modules.undo_commands import CmdAddRemoveConnection
         src_id = arrow.source.data.id
@@ -1389,7 +1389,7 @@ class NodeOpsMixin:
             worker.request_stop()
             try:
                 worker.finished.disconnect(self._flush_deferred_deletes)
-            except (TypeError, RuntimeError):
+            except (TypeError, RuntimeError):  # noqa: BLE001 — teardown of a dead object: the slot was never connected
                 pass   # never connected / the C++ object is already gone
             worker.finished.connect(self._flush_deferred_deletes)
         except (RuntimeError, AttributeError):

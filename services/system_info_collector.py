@@ -57,7 +57,7 @@ df -i -P / __DISK_MOUNT__ 2>/dev/null
 echo ---END---
 """
 
-_TIMEOUT_S = 10          # overall timeout for the channel (roadmap: 5 s per command; the batch is light)
+_TIMEOUT_S = 10          # overall timeout for the channel (5 s per command; the batch is light)
 _SECTION_OS = "---OS---"
 _SECTION_CPU = "---CPU---"
 _SECTION_RAM = "---RAM---"
@@ -462,7 +462,7 @@ def resolve_disk_device(devices, requested) -> dict:
     return {"name": name, "size": "", "note": DISK_NOTE_DEVICE_MISSING}
 
 
-# ── v1.8.4 (ROADMAP task 3): the INODE fact beside the space figure ──────────────
+# ── v1.8.4: the INODE fact beside the space figure ───────────────────────────────
 # Its own section: the six inode columns of `df -i -P` would parse as a `df --output` space row.
 # The answer describes the SAME filesystem the mount answer names — 40 % free SPACE beside 100 %
 # used INODES is the second lie a card can tell.
@@ -626,7 +626,7 @@ def parse_info_output(output: str, disk_device: str = "") -> Dict[str, object]:
         result["disk_free"] = answer["free"]
         result["disk_size"] = answer["size"]
         result["disk_note"] = answer["note"]
-        # v1.8.4 (ROADMAP task 3): the INODE fact of the filesystem that answer just named. It
+        # v1.8.4: the INODE fact of the filesystem that answer just named. It
         # belongs to the ANSWER (an accepted mount), so a refused one clears it with the pair; a
         # batch WITHOUT the section (a legacy one) says NOTHING and leaves the stored figure alone.
         if _SECTION_INODES in sections:
@@ -710,7 +710,7 @@ class SystemInfoCollector(QThread):
                     password=final_password, key_path=self.data.key_path, client=client,
                     timeout=_TIMEOUT_S, banner_timeout=_TIMEOUT_S)
 
-                # v1.6.6 (ROADMAP task 4): the batch carries THIS node's requested data mount
+                # v1.6.6: the batch carries THIS node's requested data mount
                 # (`build_info_batch` quotes it into the `df` argument and the existence test).
                 stdin, stdout, stderr = client.exec_command(
                     build_info_batch(getattr(self.data, "disk_mount", "")),

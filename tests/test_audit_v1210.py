@@ -291,7 +291,7 @@ check("§6 the row without a path: ('', the label)", _row1.data(0, Qt.UserRole) 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# §7. VERSION_FORMAT_RE: lowercase rc (task 7)
+# §7. VERSION_FORMAT_RE: lowercase rc
 # ─────────────────────────────────────────────────────────────────────────────
 
 for _good in ("1.2.10", "1.2.10rc1", "1.2.10RC1", "1.2.10rc3", "1.1.3", "1.0RC4", "0.9.9.7"):

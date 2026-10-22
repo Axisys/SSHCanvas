@@ -21,7 +21,7 @@ from typing import List, Optional
 
 from PySide6.QtCore import QThread, Signal
 
-try:  # v1.5.2: the task records of the activity history (ROADMAP task 2)
+try:  # v1.5.2: the task records of the activity history
     from .logger import get_logger
 except ImportError:
     try:
@@ -49,7 +49,7 @@ KIND_LIST = "list"
 KIND_UPLOAD = "upload"
 KIND_DOWNLOAD = "download"
 KIND_READ = "read"          # v1.3.1: the SFTP viewer — read a text file into memory
-KIND_MKDIR = "mkdir"        # v1.3.3.2: the file operations (ROADMAP task 1)
+KIND_MKDIR = "mkdir"        # v1.3.3.2: the file operations
 KIND_RENAME = "rename"
 KIND_DELETE = "delete"
 KIND_NORMALIZE = "normalize"   # v1.6.3: the address bar's path resolution (the server's own)
@@ -61,7 +61,7 @@ KIND_TRASH = "trash"        # v1.13.6: the REVERSIBLE delete — the OS trash, a
 # silent about them — the SFTP tab reports their outcome itself (its message signal).
 OP_KINDS = (KIND_MKDIR, KIND_RENAME, KIND_DELETE, KIND_COPY, KIND_MOVE, KIND_TRASH)
 
-# ── v1.5.2 (ROADMAP task 2): the logged family of the activity history ────────
+# ── v1.5.2: the logged family of the activity history ─────────────────────────
 # The TRANSFER and FILE-MANAGER kinds are logged; `list` (navigation) and `read` (the
 # viewer opening a file) are not — see the module docstring. The set is declared once,
 # so a new kind cannot be forgotten silently: it either joins this tuple or it is a
@@ -186,7 +186,7 @@ def task_log_line(kind: str, label: str, outcome: str = OUTCOME_DONE, error: str
         return f"SFTP {kind} cancelled: {text}", logging.INFO
     return f"SFTP {kind} finished: {text}", logging.INFO
 
-# v1.3.3.2 (ROADMAP tasks 3 and 6): the provisional name of BOTH transfer directions
+# v1.3.3.2: the provisional name of BOTH transfer directions
 # (a local `<dest>.part` committed with os.replace, a remote `<target>.part` renamed
 # on success). One constant so the two halves cannot drift apart.
 PART_SUFFIX = ".part"
@@ -353,7 +353,7 @@ MAX_READ_BYTES = 1024 * 1024
 #: The declared "no truncation" cap of a read task — over `MAX_READ_BYTES` it is REFUSED (v1.7.5).
 READ_CAP_NONE = 0
 
-# ── v1.3.1 (ROADMAP task 3): the text/binary heuristic ───────────────────────
+# ── v1.3.1: the text/binary heuristic ────────────────────────────────────────
 # The extension lists are a FAST PATH, not the decision: a known-binary extension
 # is refused without opening the file, a known-text one (or no extension at all —
 # README, Makefile) is read; the real check is the NULL BYTE in the FIRST chunk
@@ -561,7 +561,7 @@ def register_orphan_sftp_worker(worker: "SftpWorker"):
             try:
                 _orphan_workers.remove(w)
             except ValueError:
-                pass  # already removed (double finished — does not happen in practice)
+                log.debug("The orphan registry did not hold %r — a double finished", w)
         worker.finished.connect(_drop)
 
 
@@ -579,7 +579,7 @@ class SftpWorker(QThread):
 
     def __init__(self, sftp_client, parent=None):
         super().__init__(parent)
-        # v1.6.4 (ROADMAP task 1): the managed transfer worker names itself — Qt's abort on a
+        # v1.6.4: the managed transfer worker names itself — Qt's abort on a
         # thread destroyed while running names an UNNAMED one as '', and `register_orphan_sftp_worker`
         # above exists to keep THIS class alive until finished(). No behaviour.
         self.setObjectName("SftpWorker")
@@ -616,7 +616,7 @@ class SftpWorker(QThread):
 
         remote_name — the destination file name (the conflict dialog's "Rename"
         answer); empty = the basename of the local file. The transfer is ATOMIC:
-        it lands on `<target>.part` and is renamed on success (v1.3.3.2, task 6).
+        it lands on `<target>.part` and is renamed on success (v1.3.3.2).
 
         A DIRECTORY source is walked on the WORKER thread and carried as a whole
         tree (v1.7.4rc2): the GUI never scans a local folder, and one row stays one
@@ -635,7 +635,7 @@ class SftpWorker(QThread):
 
         local_name — the name of the local copy (the conflict dialog's "Rename"
         answer); empty = the basename of the remote file. The transfer is ATOMIC:
-        it lands on `<dest>.part` and is committed with os.replace (v1.3.3.2, task 3).
+        it lands on `<dest>.part` and is committed with os.replace (v1.3.3.2).
 
         part_mode — the permission the provisional file is CREATED with (0 = the platform
         default); a caller whose copy must not be readable by others asks for it (v1.7.5.1).
@@ -653,7 +653,7 @@ class SftpWorker(QThread):
             part_mode=int(part_mode or 0)))
 
     def queue_mkdir(self, remote_dir: str, name: str) -> Optional[int]:
-        """v1.3.3.2 (ROADMAP task 1): create a directory under remote_dir.
+        """v1.3.3.2: create a directory under remote_dir.
 
         The mode is the server's default (paramiko's 0o777 minus the umask, as the
         mkdir command does) — the tab validates the NAME, the server the rest.
@@ -677,7 +677,7 @@ class SftpWorker(QThread):
         """v1.3.3.2: delete a remote file (remove) or a DIRECTORY (rmdir).
 
         Deliberately not recursive: a non-empty directory reports the server's
-        error (recursive transfers are out of v1.3.3.2 — ROADMAP "Not in").
+        error (a recursive tree is the worker's own walk, never this verb).
         """
         return self._queue_task(_SftpTask(
             self._next_id, KIND_DELETE, posixpath.basename(remote_path),
@@ -685,7 +685,7 @@ class SftpWorker(QThread):
 
     def queue_read(self, remote_path: str, total_size: int = 0,
                    max_bytes: int = READ_CAP_NONE) -> Optional[int]:
-        """v1.3.1 (ROADMAP task 2): read a remote file into memory for the viewer.
+        """v1.3.1: read a remote file into memory for the viewer.
 
         total_size — the size from the listing (0 — unknown): it is only a fast
         path for the limit check; the hard limit is re-checked while reading.
@@ -704,7 +704,7 @@ class SftpWorker(QThread):
             detail=remote_path, max_bytes=max_bytes))
 
     def queue_copy(self, source: str, target_dir: str, name: str = "") -> Optional[int]:
-        """v1.7rc2 (ROADMAP v1.7rc2, task 1): copy a remote FILE or a whole DIRECTORY TREE.
+        """v1.7rc2: copy a remote FILE or a whole DIRECTORY TREE.
 
         The destination is `target_dir/name`, `name` defaulting to the source's basename.
         A FILE is streamed through the 32 KB chunk loop into `<target>.part` and published
@@ -726,7 +726,7 @@ class SftpWorker(QThread):
             remote_path=source, remote_path2=target, detail=target))
 
     def queue_move(self, source: str, target_dir: str, name: str = "") -> Optional[int]:
-        """v1.7rc2 (ROADMAP task 2): move a remote file/directory ACROSS directories.
+        """v1.7rc2: move a remote file/directory ACROSS directories.
 
         `SSH_FXP_RENAME` is atomic on ONE filesystem, so a file — and a whole directory
         whose destination does not exist yet — moves in ONE operation. A directory whose
@@ -743,7 +743,7 @@ class SftpWorker(QThread):
             remote_path=source, remote_path2=target, detail=target))
 
     def queue_normalize(self, remote_path: str, base_dir: str = "") -> Optional[int]:
-        """v1.6.3 (ROADMAP task 4): resolve a typed path THROUGH THE SERVER.
+        """v1.6.3: resolve a typed path THROUGH THE SERVER.
 
         The address bar of the Files tab hands over exactly what the user typed and never
         resolves it locally: `~` is expanded against the server's home (`_expand_home`, the
@@ -879,7 +879,7 @@ class SftpWorker(QThread):
                     self._log_task(task, outcome=OUTCOME_CANCELLED)
                 except Exception as e:  # noqa: BLE001 — path/permission/network error
                     # THE QUEUE DOES NOT DIE: the task reported an error, the
-                    # loop continues (ROADMAP task 5 requirement).
+                    # loop continues.
                     self._emit(self.task_error, task.id, task.kind, str(e))
                     self._log_task(task, outcome=OUTCOME_FAILED, error=str(e))
                 finally:
@@ -887,11 +887,11 @@ class SftpWorker(QThread):
         finally:
             try:
                 self._sftp.close()
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Closing the SFTP client failed: %s", e)
 
     def _log_task(self, task: _SftpTask, outcome: str = OUTCOME_DONE, error: str = ""):
-        """v1.5.2 (ROADMAP task 2): ONE record per transfer / file-manager task.
+        """v1.5.2: ONE record per transfer / file-manager task.
 
         The line is built by the PURE `task_log_line()` (pinned by the topical test) and
         written from the worker thread: `~/.sshmap/logs/sshmap.log` AND the activity ring
@@ -1094,7 +1094,7 @@ class SftpWorker(QThread):
         self._emit(self.list_ready, task.id, task.remote_path, entries)
 
     def _do_upload(self, task: _SftpTask):
-        """v1.3.3.2 (task 6): upload to `<target>.part`, then rename it into place — or a TREE.
+        """v1.3.3.2: upload to `<target>.part`, then rename it into place — or a TREE.
 
         An interrupted upload (cancel, a dead network, a full disk) therefore never
         truncates the EXISTING remote file: the destination is untouched until the
@@ -1166,8 +1166,8 @@ class SftpWorker(QThread):
             if remote_fh is not None:
                 try:
                     remote_fh.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug("Closing the uploaded file %s failed: %s", task.remote_path, e)
             if not committed and not keep_temp:
                 self._remote_remove_quiet(temp)   # cancel/failure: no litter, no loss
 
@@ -1245,7 +1245,7 @@ class SftpWorker(QThread):
                 self._walk_local_into(full, depth + 1, entries)
 
     def _commit_upload(self, temp: str, target: str):
-        """Publish the finished provisional file as the destination (task 6).
+        """Publish the finished provisional file as the destination.
 
         posix-rename@openssh.com is the atomic overwrite — the extension exists
         exactly for it. A server that refuses it (not OpenSSH / no extension) gets
@@ -1267,8 +1267,8 @@ class SftpWorker(QThread):
             try:
                 posix_rename(temp, target)
                 return
-            except Exception:
-                pass   # the extension is unknown to this server — the v3 fallback
+            except Exception as e:
+                log.debug("posix-rename of %s was refused (%s) — the v3 fallback", target, e)
         try:
             self._sftp.rename(temp, target)
         except Exception:
@@ -1285,7 +1285,7 @@ class SftpWorker(QThread):
                 raise
 
     def _do_download(self, task: _SftpTask):
-        """v1.3.3.2 (task 3): download to `<dest>.part`, commit with os.replace.
+        """v1.3.3.2: download to `<dest>.part`, commit with os.replace.
 
         A cancelled or failed download leaves the destination byte-identical to
         what it was; the provisional file is removed (never left on the disk).
@@ -1348,13 +1348,13 @@ class SftpWorker(QThread):
         finally:
             try:
                 remote_fh.close()
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Closing the downloaded file %s failed: %s", remote_path, e)
             if not committed:
                 try:
                     os.remove(temp)
-                except OSError:
-                    pass   # never created / already gone — nothing to clean
+                except OSError as e:
+                    log.debug("The provisional file %s was not removed (%s)", temp, e)
 
     def _download_tree(self, task: _SftpTask):
         """The RECURSIVE download of one remote directory (v1.7.4rc2, LOCAL_PANE.md §6).
@@ -1404,7 +1404,7 @@ class SftpWorker(QThread):
                 raise _SftpPartial(copied, path, str(e)) from e
             copied += 1
 
-    # ── v1.3.3.2: the file operations (ROADMAP task 1) ───────────────────
+    # ── v1.3.3.2: the file operations ────────────────────────────────────
 
     def _do_mkdir(self, task: _SftpTask):
         self._sftp.mkdir(task.remote_path)
@@ -1446,7 +1446,7 @@ class SftpWorker(QThread):
         except Exception:
             return False
 
-    # ── v1.7rc2 (ROADMAP v1.7rc2): the copy / move family ────────────────
+    # ── v1.7rc2: the copy / move family ──────────────────────────────────
 
     def _stat_entry(self, path: str, quiet: bool = False):
         """The SFTPAttributes of ONE remote path (None when `quiet` and unreadable).
@@ -1699,7 +1699,7 @@ class SftpWorker(QThread):
             copied += 1
 
     def _do_move(self, task: _SftpTask):
-        """v1.7rc2 (ROADMAP task 2): the cross-directory move.
+        """v1.7rc2: the cross-directory move.
 
         A file — and a whole directory whose destination does not exist yet — moves in ONE
         atomic rename. A directory whose destination ALREADY exists is moved entry by entry
@@ -1800,7 +1800,7 @@ class SftpWorker(QThread):
         return posixpath.join(str(home), path[2:])
 
     def _do_normalize(self, task: _SftpTask):
-        """v1.6.3 (ROADMAP task 4): the server's REALPATH of a typed path.
+        """v1.6.3: the server's REALPATH of a typed path.
 
         `~` first (a tilde is not part of the SFTP protocol — `_expand_home` asks the
         server for its home), then `normalize()`. The resolved path is then CHECKED on the
@@ -1824,7 +1824,7 @@ class SftpWorker(QThread):
         self._emit(self.normalize_ready, task.id, task.remote_path, resolved)
 
     def _do_read(self, task: _SftpTask):
-        """v1.3.1 (ROADMAP task 2): read a text file into memory (the viewer).
+        """v1.3.1: read a text file into memory (the viewer).
 
         The download pattern (32 KB chunks, cancellation and progress between the
         chunks), but the result is kept in memory and published as read_ready.
@@ -1875,5 +1875,5 @@ class SftpWorker(QThread):
         finally:
             try:
                 remote_fh.close()
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Closing the read file %s failed: %s", task.remote_path, e)

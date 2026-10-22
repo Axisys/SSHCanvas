@@ -39,7 +39,7 @@ def resolve_local_path(text, base_dir=None) -> str:
         # answers the ONE path the platform spells, while a path WITHOUT a `~` is never touched.
         try:
             expanded = os.path.normpath(expanded)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — the caller owns the fallback: the expanded path is usable
             pass
     if not expanded:
         return ""
@@ -59,7 +59,7 @@ def resolve_local_path(text, base_dir=None) -> str:
         return expanded
     try:
         base = os.path.expanduser(str(base))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — the caller owns the fallback: the unexpanded base is a base
         pass
     try:
         return os.path.normpath(os.path.join(base, expanded))

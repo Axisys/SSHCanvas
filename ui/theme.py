@@ -72,7 +72,7 @@ def set_card_density(value) -> str:
     _CARD_DENSITY = resolve_density(value)
     return _CARD_DENSITY
 
-# ── THE SELECTION FRAME (v1.9.7, ROADMAP task 7) ──────────────────────────────
+# ── THE SELECTION FRAME (v1.9.7) ──────────────────────────────────────────────
 #: A selected card and a selected group share ONE frame decision: the amber `selection_amber` at
 #: `SELECTION_FRAME_WIDTH`, DASHED at this pattern — the channel that survives greyscale, a
 #: colour-vision deficiency and the print palette. The pattern is deliberately NOT either of the
@@ -80,7 +80,7 @@ def set_card_density(value) -> str:
 SELECTION_DASH_PATTERN = (2.0, 3.0)
 SELECTION_FRAME_WIDTH = 3
 
-# The EXPORT palettes (v1.5rc2, ROADMAP task 3). An export is a different medium
+# The EXPORT palettes (v1.5rc2). An export is a different medium
 # from the screen: it must not print a dark page, so the DEFAULT is `print` — the
 # LIGHT instance (a white page with the high-contrast lines) — and `theme` is the
 # opt-out that keeps the current look. The two ids are the vocabulary of

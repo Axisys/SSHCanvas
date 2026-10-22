@@ -47,7 +47,7 @@ except Exception:  # pragma: no cover - fallback path
     except Exception:
         _translate = None
 
-try:  # v1.1 (task 7): a single source — config.json; the migration is inside the module
+try:  # v1.1: a single source — config.json; the migration is inside the module
     from ..modules.external_terminal import (
         TERMINAL_CHOICES_WINDOWS, TERMINAL_CHOICES_LINUX,
         load_external_terminal_setting,
@@ -104,7 +104,7 @@ def _viewer_max_module():
     return sftp_tab
 
 
-# v1.3.3.8 (ROADMAP task 2): the technical detail behind a refused language file.
+# v1.3.3.8: the technical detail behind a refused language file.
 # `language.import_failed` / `language.exported` carry it as {error} — exactly like
 # `msg.save_failed{error=…}` and `msg.import_servers_failed{error=…}` carry a path or
 # an exception text: a reason is a diagnostic, not a translatable UI sentence. The
@@ -136,7 +136,7 @@ def _import_error_detail(reason: str) -> str:
 
 
 def load_ui_settings():
-    """v1.1.1 (ROADMAP v1.1.1): reads and validates the ui_* keys from ~/.sshmap/config.json.
+    """v1.1.1: reads and validates the ui_* keys from ~/.sshmap/config.json.
 
     The same pattern as get_status_settings()/get_autosave_settings() — each
     domain reads its own keys; the source is i18n.load_config() (never
@@ -263,7 +263,7 @@ def load_theme_settings() -> dict:
         result["motion"] = motion
     elif motion is not None:
         _log_dialog(f"theme.motion {motion!r} is not a boolean — keeping the motion on")
-    # v1.6 (ROADMAP task 2): the card density — a foreign value is the historical card.
+    # v1.6: the card density — a foreign value is the historical card.
     density = raw.get("density")
     resolved = theme.resolve_density(density)
     if density is not None and resolved != str(density).strip().lower():
@@ -347,7 +347,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(_t("settings.title"))
         self.resize(500, 400)
 
-        # v1.4.3 (ROADMAP task 6): the theme the dialog OPENED with. The
+        # v1.4.3: the theme the dialog OPENED with. The
         # "Appearance" tab applies live (that is what makes the choice
         # meaningful), so Cancel has to put the application back — otherwise a
         # rejected dialog would still have changed the look of the app.
@@ -355,7 +355,7 @@ class SettingsDialog(QDialog):
         # v1.5rc1: the motion flag the dialog OPENED with — the "Reduce motion"
         # box is live too, so Cancel has to restore it (the theme's own rule).
         self._initial_motion = load_theme_settings()["motion"]
-        # v1.6 (ROADMAP task 2): the card density the dialog opened with — the combo is
+        # v1.6: the card density the dialog opened with — the combo is
         # live as well, so `reject()` restores it together with the theme and the motion.
         self._initial_density = load_theme_settings()["density"]
         self._density = self._initial_density
@@ -390,13 +390,13 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.tabs)
 
         self._build_general_tab()
-        self._build_appearance_tab()   # v1.4.3 (ROADMAP task 6)
+        self._build_appearance_tab()   # v1.4.3
         self._build_terminal_tab()
-        self._build_files_tab()   # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's ceiling
+        self._build_files_tab()   # v1.7.5: the reader's ceiling
         self._build_statuses_tab()
         self._build_autosave_tab()
         self._build_map_tab()
-        self._build_hotkeys_tab()   # v1.3.2 (ROADMAP v1.3.2, task 2)
+        self._build_hotkeys_tab()   # v1.3.2
         self._build_language_tab()
 
         # ── OK/Cancel buttons (OK = saving config.json + the applied signal) ─────
@@ -444,7 +444,7 @@ class SettingsDialog(QDialog):
         })
 
     def _register_form_rows(self, page, form) -> None:
-        """Index every row of a QFormLayout (v1.5rc4, ROADMAP task 3).
+        """Index every row of a QFormLayout (v1.5rc4).
 
         A row is its label + its field; a row whose field is a LAYOUT (the language
         manager's two buttons) contributes all of that layout's widgets. A row added with
@@ -482,7 +482,7 @@ class SettingsDialog(QDialog):
             self._register_search_entry(page, label, widgets, text)
 
     def _on_search_changed(self, text: str):
-        """The field changed (v1.5rc4, task 3) — re-filter and jump to the first hit."""
+        """The field changed (v1.5rc4) — re-filter and jump to the first hit."""
         self._apply_settings_search(text)
 
     def _apply_settings_search(self, query: str) -> list:
@@ -649,7 +649,7 @@ class SettingsDialog(QDialog):
         # live without a restart (MainWindow: QApplication.setFont on OK and at startup).
         ui_cfg = load_ui_settings()
         self.ui_font_family_edit = QLineEdit(ui_cfg["font_family"])
-        # v1.9.8 (task 5): the ONE field of the tab that EXPECTS a font name says so — a bare box
+        # v1.9.8: the ONE field of the tab that EXPECTS a font name says so — a bare box
         # was all a user saw (the audit's finding), so it gains a placeholder and the rule in words.
         self.ui_font_family_edit.setPlaceholderText(
             _t("settings.general.ui_font_family_placeholder"))
@@ -661,7 +661,7 @@ class SettingsDialog(QDialog):
         self.ui_font_size_spin.setRange(0, 72)
         self.ui_font_size_spin.setValue(ui_cfg["font_size"] or 0)
         self.ui_font_size_spin.setSpecialValueText(_t("settings.ui_font_system"))
-        # v1.9.8 (task 5): the "0 = system" rule left the LABEL (which now spells the control the
+        # v1.9.8: the "0 = system" rule left the LABEL (which now spells the control the
         # way the Terminal tab does) and lives in the tooltip of the field it describes.
         self.ui_font_size_spin.setToolTip(_t("settings.general.ui_font_size_hint"))
         self._lbl_ui_font_size = QLabel(_t("settings.general.ui_font_size"))
@@ -685,7 +685,7 @@ class SettingsDialog(QDialog):
         self._register_form_rows(tab, form)   # v1.5rc4: the searchable rows of this tab
         self.tabs.addTab(tab, _t("settings.tab.general"))
 
-    # ── "Appearance" tab (v1.4.3, ROADMAP task 6): the theme — mode + accent ────
+    # ── "Appearance" tab (v1.4.3): the theme — mode + accent ────────────────────
 
     def _build_appearance_tab(self):
         """The theme of the application: dark/light + the accent hue (v1.4.3).
@@ -733,7 +733,7 @@ class SettingsDialog(QDialog):
         self.motion_chk.toggled.connect(self._on_motion_toggled)
         layout.addWidget(self.motion_chk)
 
-        # ── v1.6 (ROADMAP task 2): the CARD DENSITY ───────────────────────────
+        # ── v1.6: the CARD DENSITY ────────────────────────────────────────────
         # The second non-colour flag of the nested `theme` object (the motion
         # precedent): `normal` is the historical card, `compact` hides the info
         # plaque and the tag chip of every card on the map. LIVE, like the mode and
@@ -798,7 +798,7 @@ class SettingsDialog(QDialog):
         self.density_combo.currentIndexChanged.connect(self._on_density_changed)
         self._mark_current_swatch()
 
-        # ── v1.5rc4 (ROADMAP task 3): the searchable rows of this tab ─────────
+        # ── v1.5rc4: the searchable rows of this tab ──────────────────────────
         # The tab is a QVBoxLayout (not a form), so its rows are registered by hand —
         # the mode row, the motion box, the accent label + its swatches, the user's own
         # colour row and the hint. Each entry names the pieces that hide together.
@@ -919,7 +919,7 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown
 
     def _on_density_changed(self, *_args):
-        """The card-density combo moved (v1.6, ROADMAP task 2) — applied LIVE.
+        """The card-density combo moved (v1.6) — applied LIVE.
 
         The density is module state (`theme.set_card_density`) rather than a Theme
         field, so it is installed here and the cards follow through the ordinary
@@ -950,14 +950,14 @@ class SettingsDialog(QDialog):
         tab = QWidget()
         form = QFormLayout(tab)
 
-        # v1.2.2 (task 4): the terminal display mode — "windows" (default,
+        # v1.2.2: the terminal display mode — "windows" (default,
         # current behavior: separate windows) | "tabs" (the "Terminals" dock on the map).
         # Applied without a restart: new sessions go to the chosen mode,
         # open windows/the dock stay as-is until closed.
         self.mode_combo = QComboBox()
         self.mode_combo.addItem(_t("settings.terminal.mode.windows"), "windows")
         self.mode_combo.addItem(_t("settings.terminal.mode.tabs"), "tabs")
-        # v1.7.2 (task 4): the THIRD mode — every new session joins the last live terminal window
+        # v1.7.2: the THIRD mode — every new session joins the last live terminal window
         # as its next tab (one window that collects them), whatever node it belongs to.
         self.mode_combo.addItem(_t("settings.terminal.mode.single"), "single")
         idx = next((i for i in range(self.mode_combo.count())
@@ -1025,7 +1025,7 @@ class SettingsDialog(QDialog):
         self._lbl_history = QLabel(_t("settings.terminal.history_lines"))
         form.addRow(self._lbl_history, self.history_spin)
 
-        # v1.1 (task 3): the session close behavior — a new key
+        # v1.1: the session close behavior — a new key
         self.close_behavior_combo = QComboBox()
         self.close_behavior_combo.addItem(
             _t("settings.terminal.close_behavior.close"), "close")
@@ -1051,7 +1051,7 @@ class SettingsDialog(QDialog):
         self._lbl_wheel = QLabel(_t("settings.terminal.wheel"))
         form.addRow(self._lbl_wheel, self.wheel_combo)
 
-        # v1.6.2 (ROADMAP task 4): the cursor SHAPE — the first new UI-facing key since
+        # v1.6.2: the cursor SHAPE — the first new UI-facing key since
         # terminal_wheel. "bar" (the DEFAULT: the thin blinking line of Windows Terminal) |
         # "block" (the historical full-cell slab) | "underline". The canvas reads the key on
         # session creation (load_terminal_settings → TerminalWidget(cursor_style=…)) and the
@@ -1066,7 +1066,7 @@ class SettingsDialog(QDialog):
         self._lbl_cursor = QLabel(_t("settings.terminal.cursor"))
         form.addRow(self._lbl_cursor, self.cursor_combo)
 
-        # v1.13.2 (ROADMAP v1.13.2): the terminal WALLPAPER — a PATH, a placement and an opacity. The
+        # v1.13.2: the terminal WALLPAPER — a PATH, a placement and an opacity. The
         # canvas paints the image UNDER the grid, between its base fill and its cell fills, so a cell
         # with the palette's DEFAULT background stays transparent to it. The three keys are read when a
         # session is CREATED (like the palette, the font and the cursor) and the window re-applies them
@@ -1245,7 +1245,7 @@ class SettingsDialog(QDialog):
         """The slider OR the box moved: mirror the number and re-read the warning (never raises)."""
         try:
             self._sync_viewer_max_widgets(int(value))
-        except (TypeError, ValueError, RuntimeError):
+        except (TypeError, ValueError, RuntimeError):  # noqa: BLE001 — the caller owns the fallback: the slider keeps its value
             pass
 
     def _sync_viewer_max_widgets(self, mib: int):
@@ -1357,7 +1357,7 @@ class SettingsDialog(QDialog):
         self._lbl_probe_timeout = QLabel(_t("settings.statuses.timeout"))
         form.addRow(self._lbl_probe_timeout, self.probe_timeout_spin)
 
-        # v1.1.2 final (task 2): the cap on parallel probes per round —
+        # v1.1.2 final: the cap on parallel probes per round —
         # status_max_parallel (default 16; range = the clamp of get_status_settings).
         self.max_parallel_spin = QSpinBox()
         self.max_parallel_spin.setRange(1, _MPL)
@@ -1372,7 +1372,7 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(tab, _t("settings.tab.statuses"))
 
     def _on_manual_only_toggled(self, checked: bool) -> None:
-        """v1.6.6 (ROADMAP task 3): the manual-only row follows its checkbox.
+        """v1.6.6: the manual-only row follows its checkbox.
 
         The interval spinbox is DISABLED and keeps its value (the user's number is remembered,
         not zeroed — the sentinel is written by `collect()`, never by the spinbox), and the
@@ -1458,7 +1458,7 @@ class SettingsDialog(QDialog):
     # ── "Hotkeys" tab (v1.3.2: the configurable hotkeys — the action registry) ──────
 
     def _build_hotkeys_tab(self):
-        """v1.3.2 (ROADMAP task 2): a table [action | hotkey] over the action registry.
+        """v1.3.2: a table [action | hotkey] over the action registry.
 
         The action's NAME reuses the existing menu i18n key (no new strings for the list
         itself). An EMPTY sequence = the hotkey is disabled, the action stays available
@@ -1466,13 +1466,13 @@ class SettingsDialog(QDialog):
         label appears — saving is still possible (Qt resolves the ambiguity at runtime,
         and the user may be mid-edit).
 
-        v1.3.3.3 (ROADMAP task 3/4): the registry grew, most of its actions with an
+        v1.3.3.3: the registry grew, most of its actions with an
         EMPTY default (assignable, no hotkey out of the box), so "clearing a field is the
         documented way" stops being a reasonable answer to "I want the defaults back" —
         the "Reset to defaults" button (`_on_reset_hotkeys`) restores every registry
         default through the same merge-write.
 
-        v1.5rc4 (ROADMAP task 4): the tab became NAVIGABLE — the plan's own words:
+        v1.5rc4: the tab became NAVIGABLE — the plan's own words:
           * a **filter field** above the table (by the action's name OR its current
             sequence, so "ctrl+s" finds "Save" too);
           * **grouping by family** — a caption row per family (File / Edit / View / Node /
@@ -1505,7 +1505,7 @@ class SettingsDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        # v1.5rc4 (task 4): the filter field — the settings search of the hub (task 3) is
+        # v1.5rc4: the filter field — the settings search of the hub is
         # a search over the SETTINGS, this one narrows one long table.
         self.hotkeys_filter = QLineEdit()
         self.hotkeys_filter.setObjectName("HotkeysFilterEdit")
@@ -1517,7 +1517,7 @@ class SettingsDialog(QDialog):
         self.hotkeys_filter.textChanged.connect(self._on_hotkeys_filter_changed)
         layout.addWidget(self.hotkeys_filter)
 
-        # v1.5rc4 (task 4): the counts header — how many actions have a key right now and
+        # v1.5rc4: the counts header — how many actions have a key right now and
         # how many are still assignable. Read from the LIVE table (not from the registry),
         # so it answers the same question the user is looking at.
         self._lbl_hotkeys_counts = QLabel("")
@@ -1525,7 +1525,7 @@ class SettingsDialog(QDialog):
         self._lbl_hotkeys_counts.setWordWrap(True)
         layout.addWidget(self._lbl_hotkeys_counts)
 
-        # v1.5rc4 (task 4): the row plan — a caption per family, its actions under it.
+        # v1.5rc4: the row plan — a caption per family, its actions under it.
         self._hotkey_rows = []
         for family in family_order():
             ids = list(self._hotkeys_by_family.get(family) or [])
@@ -1577,7 +1577,7 @@ class SettingsDialog(QDialog):
 
         self._lbl_hotkeys_disabled_hint = QLabel(_t("settings.hotkeys.disabled_hint"))
         self._lbl_hotkeys_disabled_hint.setWordWrap(True)
-        # v1.5rc4 (task 4): "what do I do with a row?" — the assignment itself.
+        # v1.5rc4: "what do I do with a row?" — the assignment itself.
         self._lbl_hotkeys_assign_hint = QLabel(_t("settings.hotkeys.assign_hint"))
         self._lbl_hotkeys_assign_hint.setWordWrap(True)
         self._lbl_hotkeys_conflict = QLabel("")
@@ -1586,7 +1586,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.hotkeys_table, 1)
         layout.addWidget(self._lbl_hotkeys_disabled_hint)
         layout.addWidget(self._lbl_hotkeys_assign_hint)
-        # v1.3.3.3 (task 4): "Reset to defaults" — right-aligned under the hint; the
+        # v1.3.3.3: "Reset to defaults" — right-aligned under the hint; the
         # action is idempotent (a second click writes the very same mapping).
         _reset_row = QHBoxLayout()
         _reset_row.addStretch(1)
@@ -1596,7 +1596,7 @@ class SettingsDialog(QDialog):
         layout.addLayout(_reset_row)
         layout.addWidget(self._lbl_hotkeys_conflict)
 
-        # v1.5rc4 (task 3): the page is searchable by the settings search too — the hint
+        # v1.5rc4: the page is searchable by the settings search too — the hint
         # row is its searchable label (the family captions and the table are the content
         # the hit reveals, not rows of their own). Without it a search for the TAB TITLE
         # would find "somewhere else" and this page would look like a dead end.
@@ -1608,7 +1608,7 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(tab, _t("settings.tab.hotkeys"))
         self._refresh_hotkey_conflicts()   # the saved config itself may already conflict
 
-    # ── v1.5rc4 (ROADMAP task 4): querying and filtering the hotkey table ───────
+    # ── v1.5rc4: querying and filtering the hotkey table ────────────────────────
 
     def hotkey_row(self, action_id: str) -> int:
         """The table row of an action (-1 — unknown) — the caption rows shifted them."""
@@ -1638,7 +1638,7 @@ class SettingsDialog(QDialog):
         return out
 
     def _on_hotkeys_filter_changed(self, text: str):
-        """The filter field changed — narrow the table (v1.5rc4, task 4)."""
+        """The filter field changed — narrow the table (v1.5rc4)."""
         self._apply_hotkeys_filter(text)
 
     def _apply_hotkeys_filter(self, query: str) -> list:
@@ -1706,7 +1706,7 @@ class SettingsDialog(QDialog):
         return _t(key) if key else str(action_id)
 
     def _retranslate_hotkey_families(self):
-        """Re-text the family captions of the hotkey table (v1.5rc4, task 4)."""
+        """Re-text the family captions of the hotkey table (v1.5rc4)."""
         try:
             try:
                 from ui.hotkey_registry import family_label_key
@@ -1728,7 +1728,7 @@ class SettingsDialog(QDialog):
             item.setForeground(QColor(theme.TEXT_MUTED))
 
     def _update_hotkey_counts(self):
-        """Re-read the counts header from the live table (v1.5rc4, task 4)."""
+        """Re-read the counts header from the live table (v1.5rc4)."""
         label = getattr(self, "_lbl_hotkeys_counts", None)
         if label is None:
             return
@@ -1747,7 +1747,7 @@ class SettingsDialog(QDialog):
                 for aid, edit in getattr(self, "hotkey_edits", {}).items()}
 
     def _on_reset_hotkeys(self):
-        """v1.3.3.3 (task 4): restore every registry default in the table AND on disk.
+        """v1.3.3.3: restore every registry default in the table AND on disk.
 
         The mapping comes from the registry (``default_hotkeys``) — no default is
         duplicated here, so a new action in ``ui/hotkey_registry.py`` is reset for free.
@@ -1796,7 +1796,7 @@ class SettingsDialog(QDialog):
     def _refresh_hotkey_conflicts(self):
         """Mark the conflicting rows + show/hide the warning. Never raises.
 
-        v1.5rc4 (ROADMAP task 4): the walk follows the ROW PLAN (`_hotkey_rows`) — a family
+        v1.5rc4: the walk follows the ROW PLAN (`_hotkey_rows`) — a family
         caption is re-texted from the registry and never marked with "⚠", and the counts
         header is refreshed in the same pass (it reads the live editors, so every edit
         that reaches this method also updates "with a key" vs "assignable").
@@ -1849,7 +1849,7 @@ class SettingsDialog(QDialog):
         self._lbl_language = QLabel(_t("settings.language.label"))
         form.addRow(self._lbl_language, self.language_combo)
 
-        # v1.3.3.8 (ROADMAP task 2): the language manager — IMPORT / EXPORT only
+        # v1.3.3.8: the language manager — IMPORT / EXPORT only
         # (a language EDITOR inside the app is deliberately NOT in this version: the
         # file stays the user's to edit in any text editor). The buttons copy a file
         # into ~/.sshmap/languages/ (the user folder, created on demand) and back out;
@@ -1878,7 +1878,7 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown — the label is already destroyed
 
     def _on_import_language(self):
-        """v1.3.3.8 (ROADMAP task 2): "Import a language file…".
+        """v1.3.3.8: "Import a language file…".
 
         Validate + copy the chosen `.json` into `~/.sshmap/languages/`
         (`i18n.import_language_file()` does the validation and the atomic write — a
@@ -1919,7 +1919,7 @@ class SettingsDialog(QDialog):
         self._activate_language(result["code"])
 
     def _on_export_language(self):
-        """v1.3.3.8 (ROADMAP task 2): "Export the current language…".
+        """v1.3.3.8: "Export the current language…".
 
         Writes the file that WINS for the ACTIVE language (`i18n.export_language_file`)
         — or the `en` template when the active file is unavailable — to a path the
@@ -1980,7 +1980,7 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown — the combo is already destroyed
 
     def _refresh_language_combo(self, force: bool = False):
-        """v1.3.3.1 (ROADMAP task 3): re-read the discovered languages at dialog open.
+        """v1.3.3.1: re-read the discovered languages at dialog open.
 
         The combo was built once at dialog construction; a language file placed into
         `i18n/` (or into the user folder since v1.3.3.8) afterwards must not need a
@@ -2050,7 +2050,7 @@ class SettingsDialog(QDialog):
             try:
                 from modules.logger import get_logger
                 get_logger("ui.settings_dialog").warning(f"save_config failed: {e}")
-            except Exception:
+            except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the failure
                 pass
             QMessageBox.warning(
                 self, _t("msg.error_title"),
@@ -2083,7 +2083,7 @@ class SettingsDialog(QDialog):
                 self._motion_enabled = bool(self._initial_motion)
         except (AttributeError, RuntimeError):
             pass  # Qt teardown / a dialog built without the tab
-        # v1.6 (ROADMAP task 2): the card density is live too — restore it (the theme
+        # v1.6: the card density is live too — restore it (the theme
         # walk that `theme_changed` triggers repaints the cards back).
         try:
             if str(getattr(self, "_density", "")) != str(self._initial_density):
@@ -2126,27 +2126,27 @@ class SettingsDialog(QDialog):
         v1.3.3.8: +1 key — terminal_wheel ("scrollback"|"off", the combo gives
         fixed ids). This closes the LAST config-only key: the hub's 20 UI-facing
         keys become 21 and every setting now lives in the hub.
-        v1.4.3 (ROADMAP task 6): +1 key — theme ({mode, accent} of the
+        v1.4.3: +1 key — theme ({mode, accent} of the
         "Appearance" tab). The value is NESTED like `hotkeys` — one config key
         carrying the whole appearance choice — and `i18n.save_config` merges at
         the TOP level, so `_on_accept` re-merges the stored object (a mode change
         must not drop the accent of a foreign version).
-        v1.6.2 (ROADMAP task 4): +1 key — terminal_cursor_style ("bar"|"block"|
+        v1.6.2: +1 key — terminal_cursor_style ("bar"|"block"|
         "underline" of the "Terminal" tab; the combo gives fixed ids, so the value
         is valid by construction). 22 → 23 UI-facing keys.
-        v1.7.1.1 (ROADMAP v1.7.1.1): +1 key — terminal_files_mode ("tab"|"panel"
+        v1.7.1.1: +1 key — terminal_files_mode ("tab"|"panel"
         of the same "Terminal" tab, the row below the display mode; the combo gives
         fixed ids). It owns the Files panel's MODE, which the terminal window would
         otherwise write for itself as the legacy `ui_files_panel` (read once as the
         migration source, never written again). 23 → 24 UI-facing keys.
-        v1.7.5 (ROADMAP v1.7.5, task 2): +1 key — ui_viewer_max_bytes (the reader's
+        v1.7.5: +1 key — ui_viewer_max_bytes (the reader's
         CEILING, in BYTES, of the new "Files" tab; the slider and the value box give a
         value inside the module's declared range, so it is valid by construction).
         24 → 25 UI-facing keys.
         v1.10rc2: +1 key — terminal_term (the PTY's `TERM` of the "Terminal" tab; the field is
         editable and the reader's OWN allowlist (`resolve_term()`) judges what it carries, so a
         value the field cannot express is impossible by construction). 26 → 27 UI-facing keys.
-        v1.13.2 (ROADMAP v1.13.2): +3 keys — the terminal WALLPAPER of the "Terminal" tab:
+        v1.13.2: +3 keys — the terminal WALLPAPER of the "Terminal" tab:
         terminal_background (the path field), terminal_background_mode (the combo's fixed ids) and
         terminal_background_opacity (the slider + the box, inline 0..100 by construction).
         27 → 30 UI-facing keys.
@@ -2157,12 +2157,12 @@ class SettingsDialog(QDialog):
             from modules.ssh_terminal import resolve_term
         return {
             "external_terminal": self.ext_term_combo.currentData() or "auto",
-            # v1.2.2 (task 4): the terminal display mode
+            # v1.2.2: the terminal display mode
             "terminal_mode": self.mode_combo.currentData() or "windows",
-            # v1.7.1.1 (ROADMAP v1.7.1.1): where the Files tree lives — "tab" | "panel";
+            # v1.7.1.1: where the Files tree lives — "tab" | "panel";
             # the 24th UI-facing key, and the ONE owner of the Files panel's MODE
             "terminal_files_mode": self.files_mode_combo.currentData() or "tab",
-            # v1.7.5 (ROADMAP v1.7.5, task 2): the reader's ceiling in bytes — the ONE owner
+            # v1.7.5: the reader's ceiling in bytes — the ONE owner
             # of the cap every pane hands to its read tasks ("Files" tab; the pane re-reads
             # it, so a change invalidates its "no preview" facts). `viewer_max_bytes()` judges
             # the value through the module's own range before it is written.
@@ -2171,20 +2171,20 @@ class SettingsDialog(QDialog):
             "terminal_font_size": int(self.font_size_spin.value()),
             "terminal_history_lines": int(self.history_spin.value()),
             "terminal_close_behavior": self.close_behavior_combo.currentData() or "close",
-            # v1.3.3.8 (ROADMAP task 4): the mouse-wheel mode
+            # v1.3.3.8: the mouse-wheel mode
             "terminal_wheel": self.wheel_combo.currentData() or "scrollback",
-            # v1.6.2 (ROADMAP task 4): the cursor shape — the 23rd UI-facing key
+            # v1.6.2: the cursor shape — the 23rd UI-facing key
             "terminal_cursor_style": self.cursor_combo.currentData() or "bar",
             # v1.10rc2: the PTY's `TERM` — the 27th UI-facing key. The reader's OWN allowlist
             # judges the field, so a hand-typed name and the config key cannot disagree.
             "terminal_term": resolve_term(self.term_combo.currentText()),
-            # v1.13.2 (ROADMAP v1.13.2): the terminal wallpaper — the three keys of the "Terminal"
+            # v1.13.2: the terminal wallpaper — the three keys of the "Terminal"
             # tab's wallpaper row. The path is stored AS TYPED (the resolver expands `~` when the
             # canvas opens it), the mode and the opacity are the controls' own values.
             "terminal_background": self.background_edit.text().strip(),
             "terminal_background_mode": self.background_mode_combo.currentData() or "cover",
             "terminal_background_opacity": int(self.background_opacity_spin.value()),
-            # v1.4.3 (ROADMAP task 6): the appearance — the mode + the accent hue,
+            # v1.4.3: the appearance — the mode + the accent hue,
             # stored as the colour the user actually picked (the hue is derived
             # back). v1.5rc1: +`motion` — the "Reduce motion" switch of the same
             # tab, so the appearance choice stays ONE nested key (the hub's
@@ -2192,18 +2192,18 @@ class SettingsDialog(QDialog):
             "theme": {"mode": self.theme_mode_combo.currentData() or theme.MODE_DARK,
                       "accent": self._accent_hex,
                       "motion": bool(self._motion_enabled),
-                      # v1.6 (ROADMAP task 2): the card density — a fourth VALUE of the
+                      # v1.6: the card density — a fourth VALUE of the
                       # SAME nested key, so the hub's collect() key count stays 22.
                       "density": (self.density_combo.currentData()
                                   or theme.DENSITY_NORMAL)},
-            # v1.6.6 (ROADMAP task 3): the DECLARED `0` sentinel is what the manual-only
+            # v1.6.6: the DECLARED `0` sentinel is what the manual-only
             # checkbox writes — the spinbox itself is never zeroed, so the user's interval is
             # still there when the box is un-ticked (the row is a VIEW of the state).
             "status_interval_sec": (int(getattr(self, "_manual_interval_sec", 0))
                                     if self.manual_only_chk.isChecked()
                                     else int(self.status_interval_spin.value())),
             "status_probe_timeout_sec": float(self.probe_timeout_spin.value()),
-            # v1.1.2 final (task 2): the cap on parallel probes per round
+            # v1.1.2 final: the cap on parallel probes per round
             "status_max_parallel": int(self.max_parallel_spin.value()),
             "autosave_enabled": bool(self.autosave_enabled_chk.isChecked()),
             "autosave_interval_sec": int(self.autosave_interval_spin.value()),
@@ -2219,7 +2219,7 @@ class SettingsDialog(QDialog):
             "ui_show_connection_type": bool(self.show_conn_type_chk.isChecked()),
             # v1.10rc1: the auto-open option — the path beside it is closeEvent's own key
             "ui_reopen_last_project": bool(self.reopen_last_chk.isChecked()),
-            # v1.3.2 (ROADMAP task 2/3): the configurable hotkeys — the table's values
+            # v1.3.2: the configurable hotkeys — the table's values
             # ({} — a dialog built without the tab, a defensive fallback)
             "hotkeys": self.hotkey_sequences(),
         }
@@ -2227,7 +2227,7 @@ class SettingsDialog(QDialog):
     # ── i18n: retranslating the dialog's own strings (a language change in the open dialog) ───
 
     def refresh_theme(self):
-        """v1.4.3 (ROADMAP task 4): re-apply the theme to the dialog's own strings.
+        """v1.4.3: re-apply the theme to the dialog's own strings.
 
         The hub is the ONE dialog that can be on screen WHILE the theme changes (its own
         "Appearance" tab applies live), so it owns the hook like every other container:
@@ -2245,7 +2245,7 @@ class SettingsDialog(QDialog):
             self._refresh_hotkey_conflicts()
         except (RuntimeError, AttributeError):
             pass  # Qt teardown / a dialog built without the tab
-        # v1.5rc4 (ROADMAP task 3/4): the family captions and the search highlight are
+        # v1.5rc4: the family captions and the search highlight are
         # VALUES of the same kind — re-read them from the live theme.
         try:
             self._retranslate_hotkey_families()
@@ -2274,7 +2274,7 @@ class SettingsDialog(QDialog):
         except (AttributeError, RuntimeError):
             pass  # Qt teardown / a build without the Files surface
 
-        # v1.4.3 (ROADMAP task 6): the "Appearance" tab
+        # v1.4.3: the "Appearance" tab
         self._lbl_theme_mode.setText(_t("settings.appearance.mode"))
         for i in range(self.theme_mode_combo.count()):
             mid = self.theme_mode_combo.itemData(i)
@@ -2358,7 +2358,7 @@ class SettingsDialog(QDialog):
             if key:
                 self.close_behavior_combo.setItemText(i, _t(key))
 
-        # v1.3.3.8 (ROADMAP task 4): the wheel combo + the language manager buttons
+        # v1.3.3.8: the wheel combo + the language manager buttons
         self._lbl_wheel.setText(_t("settings.terminal.wheel"))
         for i in range(self.wheel_combo.count()):
             wid = self.wheel_combo.itemData(i)
@@ -2369,7 +2369,7 @@ class SettingsDialog(QDialog):
             if key:
                 self.wheel_combo.setItemText(i, _t(key))
 
-        # v1.6.2 (ROADMAP task 4): the cursor-shape combo
+        # v1.6.2: the cursor-shape combo
         self._lbl_cursor.setText(_t("settings.terminal.cursor"))
         for i in range(self.cursor_combo.count()):
             sid = self.cursor_combo.itemData(i)
@@ -2404,7 +2404,7 @@ class SettingsDialog(QDialog):
         self._lbl_status_interval.setText(_t("settings.statuses.interval"))
         self._lbl_probe_timeout.setText(_t("settings.statuses.timeout"))
         self._lbl_max_parallel.setText(_t("settings.statuses.max_parallel"))
-        # v1.6.6 (ROADMAP task 3): the manual-only row is a CONTAINER of its own — the checkbox
+        # v1.6.6: the manual-only row is a CONTAINER of its own — the checkbox
         # and the sentence that explains the mode are re-texted with the rest of the tab.
         self.manual_only_chk.setText(_t("settings.statuses.manual_only"))
         self.manual_only_hint.setText(_t("settings.statuses.manual_only.hint"))
@@ -2427,7 +2427,7 @@ class SettingsDialog(QDialog):
 
         # v1.3.2: the "Hotkeys" tab — the headers, the hint, the warning and the
         # per-row action names (they reuse the existing menu i18n keys).
-        # v1.5rc4 (task 4): + the filter placeholder, the counts header, the "how to
+        # v1.5rc4: + the filter placeholder, the counts header, the "how to
         # assign" hint and the FAMILY captions of the grouped table.
         self.hotkeys_table.setHorizontalHeaderLabels(
             [_t("settings.hotkeys.action"), _t("settings.hotkeys.sequence")])
@@ -2438,7 +2438,7 @@ class SettingsDialog(QDialog):
         self._retranslate_hotkey_families()
         self._refresh_hotkey_conflicts()   # re-marks the rows + re-texts the warning
 
-        # v1.5rc4 (ROADMAP task 3): the settings search's own strings
+        # v1.5rc4: the settings search's own strings
         self.search_edit.setPlaceholderText(_t("settings.search.placeholder"))
         self._update_search_status()
 

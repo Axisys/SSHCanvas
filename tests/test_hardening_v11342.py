@@ -14,8 +14,8 @@ import sys
 import threading
 
 from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, VERSION_FORMAT_RE, bootstrap, check,
-                     check_i18n_parity, check_release_state, clear_cfg, finish, load_i18n_langs,
-                     releases_at_least, wait_until)
+                     changelog_family_text, check_i18n_parity, check_release_state, clear_cfg, finish,
+                     load_i18n_langs, releases_at_least, wait_until)
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation + offscreen inside)
 
@@ -387,7 +387,7 @@ for _key in ("diff.error_read", "sftp.viewer.too_large", "sftp.send.failed"):
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§7 the i18n pin is UNCHANGED — this patch adds no translation key",
-      EXPECTED_I18N_KEYS == 1162 + 4 + 13 + 1, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1162 + 4 + 13 + 1 + 1, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this patch's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.4"),
       EXPECTED_APP_VERSION)
 check("§7 the pin names this patch's line or a later release and the format accepts it",
@@ -406,8 +406,9 @@ check("§7 the ledger entries of this patch left `AUDIT_PENDING.md`",
       and "### `v1.13.4.2`" not in _ledger)
 check("§7 the plan of record no longer carries the shipped section",
       "## v1.13.4.2" not in _read("ROADMAP.md"))
-check("§7 the changelog family carries the entry",
-      "v1.13.4.2" in _read("CHANGELOG.md") and "v1.13.4.2" in _read("CHANGELOG_DETAILS.md"))
+check("§7 the changelog family carries the entry (the LIVE file or a CLOSED line of it)",
+      "v1.13.4.2" in changelog_family_text(ROOT)
+      and "v1.13.4.2" in changelog_family_text(ROOT, "DETAILS"))
 check("§7 the contract and the mechanism follow the code",
       "utf16_spans" in _read("DIFF.md") and "DIFF_MAX_LINES" in _read("DOCUMENTATION.md"))
 check("§7 the suite map lists this file (tests/INDEX.md regenerated)",

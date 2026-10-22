@@ -131,7 +131,7 @@ check("§1 no record carries a password (never serialized — §4.4)",
       all("password" not in s for s in _servers))
 check("§1 NO status is baked into the FORMAT (the probes tell the truth)",
       not _has_key(_raw, "status"), str(sorted(_all_keys(_raw))))
-# v1.6.5 (ROADMAP task 6): the demo's live sample of the release — ONE card the operator
+# v1.6.5: the demo's live sample of the release — ONE card the operator
 # does not administer. It is the release's contract in data form: the flag, NO credentials
 # at all (not even a user) and the opt-in ping left OFF.
 _unmanaged_ids = set(EP.unmanaged_example_ids())
@@ -146,7 +146,7 @@ check("§1 v1.6.5: it carries NO credentials and the opt-in ping is OFF",
       str(_unmanaged[0]))
 check("§1 v1.6.5: its host is a documentation address like every other card",
       EP.is_reserved_host(_unmanaged[0]["host"]), _unmanaged[0]["host"])
-# v1.5 (ROADMAP): the demo DECLARES its statuses instead of measuring them — in code, not
+# v1.5: the demo DECLARES its statuses instead of measuring them — in code, not
 # in the file — and every one of them is therefore EMULATED and marked as such.
 check("§1 v1.5: the demo DECLARES one status per MANAGED node (in code, never in the file)",
       set(EP.DEMO_STATUSES) == {s["id"] for s in _servers} - _unmanaged_ids,
@@ -231,7 +231,7 @@ check("§2 ...and EVERY one of them is marked as emulated (the honesty rule)",
 check("§2 ...and an emulated status carries NO age (it was never probed)",
       all(n.freshness_text() == "" and n.status_checked_at == 0.0
           for n in win.scene.nodes() if n.data.id not in _unmanaged_ids))
-# v1.6.5 (ROADMAP task 6): the neighbour opens with the release's honest mark instead of a
+# v1.6.5: the neighbour opens with the release's honest mark instead of a
 # status — and it is what the demo's own skip set must protect (no round may probe it).
 _neighbour = win.scene.get_node(sorted(_unmanaged_ids)[0])
 check("§2 the unmanaged card opens UNCHECKED and MARKED, with no emulation at all",

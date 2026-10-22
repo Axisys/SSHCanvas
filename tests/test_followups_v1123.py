@@ -463,7 +463,7 @@ check("§5 ...and the NEXT pane is born with it (resolution stays ONCE per pane)
 _tab_fresh.deleteLater()
 check("§5 the declaration keeps the ONE key and the pane-scoped door in the code",
       STAB.VIEWER_ENCODING_CONFIG == "ui_viewer_encoding"
-      and "def apply_viewer_encoding(self, codec, pane=None)" in _read("modules", "sftp_tab.py")
+      and "def apply_viewer_encoding(self, codec, pane=None)" in PANE_SRC
       and "apply_viewer_encoding(codec, pane=self)" in PANE_SRC,
       STAB.VIEWER_ENCODING_CONFIG)
 write_cfg({})
@@ -495,7 +495,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 _NEW_KEYS = ("server.jump_label", "server.jump_hint", "sshconfig.col_jump")
 check("§7 the release adds the THREE keys of the jump field to EVERY language at once",
-      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1
+      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1
       and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS)
       and all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS),
       f"{EXPECTED_I18N_KEYS} / " + str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))

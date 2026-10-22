@@ -67,7 +67,7 @@ def action_blocked(action: str, target) -> bool:
     if not key:
         return False
     if key == CONDITIONAL_ACTION:
-        # The OPT-IN exception (task 5): ICMP is allowed on an unmanaged card ONLY when the
+        # The OPT-IN exception: ICMP is allowed on an unmanaged card ONLY when the
         # card itself asked for it; a managed card keeps the ordinary ping of any node.
         return is_unmanaged(target) and not unmanaged_ping_allowed(target)
     return is_unmanaged(target)

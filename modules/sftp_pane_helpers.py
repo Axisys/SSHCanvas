@@ -1,20 +1,24 @@
-"""The PURE helpers of the Files pane family (`_SftpPane` wave 2).
+# -*- coding: utf-8 -*-
+"""The PURE helpers and the vocabulary of the Files pane family (`_SftpPane`).
 
-`format_size` / `format_mtime` / `decode_text` / `preview_block_reason` turn a size, a timestamp or
-a byte buffer into the text a row or the reader shows — no widget, no provider, no network — and the
-reader's encoding CHOICE (its list, its resolver and its writer) lives here beside the decode with
-the per-SESSION memory of a pane's codec (`ui_sftp_encodings`) and the ONE delete-question key.
-`ask_conflict()` is the overwrite question of ONE item of a batch: the module's only Qt surface and
-the ONE seam a caller substitutes (`modules.sftp_tab.QMessageBox`). Every name here is re-exported
-by the pane family and by the shipped `modules.sftp_tab`, so a caller imports them from the facade.
-
-Contract — `SFTP_PANES.md` §5-§6; mechanism — `DOCUMENTATION.md` §59, §64, §66.
+`format_size` / `format_mtime` / `decode_text` / `preview_block_reason` turn a size, a timestamp or a
+byte buffer into the text a row or the reader shows — no widget, no provider, no network — beside the
+reader's encoding/wrap settings (`ui_viewer_encoding`, `ui_viewer_wrap`, `ui_sftp_encodings`), the TWO
+path DIALECTS (`PathDialect` / `dialect_for`), the per-server directory memory (`ui_sftp_dirs`), the
+row ROLES and the source/drag vocabulary the widget module imports, the row readers (`row_path` /
+`row_name`), the cut predicate and the Commander's own settings; `ask_conflict()` is the ONE overwrite
+question, with its `QMessageBox` taken from the facade (`STAB.QMessageBox`). Every name is re-exported
+by `modules.sftp_tab` — `SFTP_PANES.md` §5-§6; `DOCUMENTATION.md` §59, §64, §66, §68.
 """
 
 import codecs
+import json
+import os
+import posixpath
 import sys
 from datetime import datetime
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QCheckBox, QMessageBox
 
 try:
@@ -23,10 +27,49 @@ except Exception:  # noqa: BLE001 — import outside the project tree (flat run)
     def _t(key, **kwargs):  # type: ignore
         return key
 
-try:  # the extension classifier of the reader's own guess
-    from .sftp_worker import READ_ERROR_BINARY, classify_extension
+try:  # the extension classifier of the reader's guess and the machine payload readers
+    from .sftp_worker import (NAME_ERROR_UNSAFE, READ_ERROR_BINARY, classify_extension,
+                              parse_task_payload)
 except ImportError:
-    from sftp_worker import READ_ERROR_BINARY, classify_extension
+    from sftp_worker import (NAME_ERROR_UNSAFE, READ_ERROR_BINARY,  # type: ignore
+                             classify_extension, parse_task_payload)
+
+try:  # the LOCAL provider's machine codes — `local_error_text()` renders its refusals
+    from . import local_fs_worker as local_fs
+except ImportError:  # flat launch from the project root
+    import local_fs_worker as local_fs  # type: ignore
+
+
+# ── The pane's VOCABULARY — the row roles, the two sources and the drag payload ──────
+# Declared HERE, in the pure module that BOTH layers read: the row readers below compare the roles,
+# the dialects compare the sources and `pane_payload()` reads the MIME, while
+# `modules/sftp_pane_widgets.py` imports them DOWNWARD (it never reaches back through the facade).
+
+#: v1.7.3: the drag payload of a row that started INSIDE a Files pane. The remote path alone
+#: cannot say WHICH pane (two servers show the same path), so the private type carries the session
+#: key, the pane's identity and the path while `text/plain` keeps the plain path for every foreign
+#: consumer (a terminal, an editor, a chat window).
+PANE_DRAG_MIME = "application/x-sshmap-pane-row"
+
+#: v1.7.4rc1: the two DATA SOURCES of a pane. A pane is typed to ONE of them (its provider);
+#: `SOURCE_REMOTE` is the session's own transport (`SftpTab._worker`) and `SOURCE_LOCAL` is the OS
+#: disk of this machine, read through `modules/local_fs_worker.py` on its OWN thread. The source is
+#: a property of the PANE (LOCAL_PANE.md §1), never of the container: ONE pane of the Commander may
+#: read the local disk while the other one reads the server.
+SOURCE_REMOTE = "remote"
+SOURCE_LOCAL = "local"
+PANE_SOURCES = (SOURCE_REMOTE, SOURCE_LOCAL)
+
+#: v1.8: the THIRD position of a pane's SOURCE CONTROL — a REMOTE pane whose PROVIDER reads the
+#: server as another user (`ELEVATED_PANE.md` §1). It is deliberately NOT a third data source: the
+#: dialect stays POSIX, `PANE_SOURCES` keeps its pair and §5's four-pair dispatch keeps its rows.
+SOURCE_ELEVATED = "elevated"
+
+#: The listing's row ROLES — what the listing writes and `_SftpRowItem` compares.
+PATH_ROLE = Qt.ItemDataRole.UserRole       # full remote path of the entry
+ISDIR_ROLE = Qt.ItemDataRole.UserRole + 1  # bool — is it a directory?
+SIZE_ROLE = Qt.ItemDataRole.UserRole + 2   # int — file size (0 for a directory)
+MTIME_ROLE = Qt.ItemDataRole.UserRole + 3  # int — unix mtime
 
 
 def _facade_attr(name, default=None):
@@ -74,7 +117,7 @@ def format_mtime(ts) -> str:
 
 
 def decode_text(data: bytes, truncated: bool = False, encoding: str = "auto"):
-    """v1.3.1 (ROADMAP task 3): bytes → (text, encoding really used).
+    """v1.3.1: bytes → (text, encoding really used).
 
     UTF-8 (BOM-aware — "utf-8-sig" strips an UTF-8 BOM) first; on a decode
     failure the Latin-1 fallback, which never fails and always yields a string
@@ -100,13 +143,13 @@ def decode_text(data: bytes, truncated: bool = False, encoding: str = "auto"):
         try:
             decoder = codecs.getincrementaldecoder(codec)()
             return decoder.decode(data, final=not truncated), chosen
-        except (UnicodeDecodeError, LookupError):
+        except (UnicodeDecodeError, LookupError):  # noqa: BLE001 — the caller owns the fallback: the shipped rule below answers
             pass   # the choice cannot read this buffer — the shipped rule below is the answer
     if truncated:
         try:
             decoder = codecs.getincrementaldecoder("utf-8-sig")()
             return decoder.decode(data, final=False), "utf-8"
-        except (UnicodeDecodeError, LookupError):
+        except (UnicodeDecodeError, LookupError):  # noqa: BLE001 — the caller owns the fallback: the shipped rule below answers
             pass   # a real invalid byte — the fallback below is the shipped answer
     try:
         return data.decode("utf-8-sig"), "utf-8"
@@ -332,7 +375,7 @@ def preview_block_reason(path: str, size=0, facts=None) -> str:
 
 
 def ask_conflict(parent, name: str, target: str, remaining: int = 0, facts: str = ""):
-    """v1.3.3.2 (ROADMAP task 2): the overwrite question for ONE item of a batch.
+    """v1.3.3.2: the overwrite question for ONE item of a batch.
 
     Returns `(action, apply_all)`, where action is one of
 
@@ -386,3 +429,353 @@ def ask_conflict(parent, name: str, target: str, remaining: int = 0, facts: str 
         action = "skip"        # Skip, or a cancelled dialog (clickedButton() is None)
     apply_all = bool(check.isChecked()) and action in ("overwrite", "skip")
     return action, apply_all
+
+
+# ── The two PATH DIALECTS — the ONE adapter a pane resolves paths through ─────
+def _win_standard_path(path: str) -> str:
+    """`os.path.normcase` on every OS (a PURE helper, so the dialect stays testable everywhere).
+
+    The LOCAL dialect is case-insensitive on Windows and case-SENSITIVE elsewhere; the shipped
+    `os.path.normcase` is an identity on POSIX, so it is used directly and the fallback keeps the
+    same answer when the platform module cannot be asked.
+    """
+    try:
+        return os.path.normcase(str(path or ""))
+    except Exception:  # noqa: BLE001 — never break a listing over a path comparison
+        return str(path or "")
+
+
+class PathDialect:
+    """The PATH RULES of one data source — the ONE adapter a pane resolves paths through.
+
+    A remote pane speaks POSIX (`posixpath`, the "/" root) and a LOCAL pane speaks the OS disk
+    (backslashes, a drive or UNC root, case-insensitive names). Every join, split, root test and
+    name comparison of the pane goes through its dialect, so a second dialect costs ONE object and
+    not a second pane (LOCAL_PANE.md §2). PURE: no Qt, no IO, no i18n.
+    """
+
+    def __init__(self, kind: str, label: str):
+        self.kind = str(kind)
+        self.label = str(label)
+
+    @property
+    def is_local(self) -> bool:
+        return self.kind == SOURCE_LOCAL
+
+    @property
+    def separator(self) -> str:
+        """The character that continues INTO a directory (the completer's trailing one)."""
+        return "\\" if self.is_local else "/"
+
+    def dirname(self, path: str) -> str:
+        """The parent of `path` — "" at the root (the root itself for the LOCAL dialect)."""
+        text = str(path or "")
+        if self.is_local:
+            return os.path.dirname(text)
+        return posixpath.dirname(text)
+
+    def join(self, base: str, name: str) -> str:
+        """`base` + `name` as ONE path."""
+        text, child = str(base or ""), str(name or "")
+        if self.is_local:
+            return os.path.join(text, child)
+        return posixpath.join(text or "/", child)
+
+    def basename(self, path: str) -> str:
+        """The LAST component of `path` (the name a row, a dialog or a sentence shows)."""
+        text = str(path or "")
+        if self.is_local:
+            return os.path.basename(text)
+        return posixpath.basename(text)
+
+    def is_root(self, path: str) -> bool:
+        """Is `path` a ROOT (nothing above it)? A bare drive name and `~` are NOT.
+
+        For the LOCAL dialect a root is the path its own parent already is — a drive root
+        (`C:\\`), a UNC share root, `/` — which is exactly what the pane's "go up" test needs:
+        answering True for the bare `C:` would send the listing to the process's current
+        directory of that drive, and answering False for `C:\\` would render a ".." row that
+        cannot be resolved.
+        """
+        text = str(path or "")
+        if not text:
+            return False
+        if self.is_local:
+            if not os.path.isabs(text):
+                return False
+            return os.path.dirname(text) == text
+        return text == "/"
+
+    def is_absolute(self, path: str) -> bool:
+        """Is `path` already anchored? `~` counts as absolute: it resolves to a home."""
+        text = str(path or "")
+        if text.startswith("~"):
+            return True
+        if self.is_local:
+            return os.path.isabs(text)
+        return text.startswith("/")
+
+    def same(self, left: str, right: str) -> bool:
+        """Are the two paths the SAME subject? Case-insensitively on the OS disk."""
+        if self.is_local:
+            return _win_standard_path(left) == _win_standard_path(right)
+        return str(left or "") == str(right or "")
+
+    def root(self) -> str:
+        """The value a LOCAL pane opens with when nothing else is known — the OS home."""
+        return os.path.expanduser("~") if self.is_local else "/"
+
+
+#: The two dialects, declared ONCE (the pane resolves one from its source).
+POSIX_PATHS = PathDialect(SOURCE_REMOTE, "/")
+LOCAL_PATHS = PathDialect(SOURCE_LOCAL, os.sep)
+
+
+def dialect_for(source: str) -> PathDialect:
+    """The dialect of a pane's SOURCE (`SOURCE_REMOTE` unless the source really is local)."""
+    return LOCAL_PATHS if str(source or "") == SOURCE_LOCAL else POSIX_PATHS
+
+
+# ── The LOCAL provider's and the download's refusals, rendered ONCE ──────────
+def local_error_text(message: str) -> str:
+    """A LOCAL `task_error` payload → its translated sentence (a plain message passes through).
+
+    The provider names the MACHINE code and the OS's own text (LOCAL_PANE.md §3); the sentence is
+    the tab's, so a refusal reads like every other message of the window. A payload the tab does
+    not know falls back to the shipped generic operation sentence.
+    """
+    data = parse_task_payload(message)
+    if not data:
+        return _t("sftp.op.error", error=message)
+    code = str(data.get("code") or "")
+    if code == local_fs.KIND_LIST_PARTIAL:
+        return _t(local_fs.LOCAL_ERROR_KEYS[local_fs.KIND_LIST_PARTIAL],
+                  count=int(data.get("count") or 0), names=str(data.get("names") or ""))
+    key = local_fs.LOCAL_ERROR_KEYS.get(code)
+    if not key:
+        return _t("sftp.op.error", error=str(data.get("error") or message))
+    return _t(key, error=str(data.get("error") or ""))
+
+
+def name_refusal_text(message: str) -> str:
+    """A NAME_ERROR_UNSAFE payload → its translated sentence; "" — another message (v1.7.5.1).
+
+    ONE renderer for the two surfaces that can see the code (the pane's own message line and the
+    session's status line), so a refused download name reads the same wherever it is reported.
+    """
+    data = parse_task_payload(message)
+    if not data or str(data.get("code") or "") != NAME_ERROR_UNSAFE:
+        return ""
+    return _t("sftp.name_refused", name=str(data.get("name") or ""))
+
+
+# ── The per-server directory memory (`ui_sftp_dirs`) ──────────────────
+
+#: v1.7.3: the per-server directory memory. ONE key of `~/.sshmap/config.json` holds a map
+#: `{server key: directory}` (`history_key()` is the key), written by the window's close and read
+#: when a pane is built; the map outlives the servers it names, so it is BOUNDED and evicted
+#: oldest-first. A restored path is a HINT: a directory the server refuses falls back to the
+#: shipped opening rule with ONE status line.
+DIRS_CONFIG = "ui_sftp_dirs"
+MAX_REMEMBERED_DIRS = 32
+
+
+def load_remembered_dirs() -> dict:
+    """The per-server directory map from `~/.sshmap/config.json` ({} — nothing to restore).
+
+    FOREIGN content answers `{}` rather than a guess (a string where a map is expected, an entry
+    whose path is not absolute): a broken config must never navigate a pane anywhere. Never raises.
+    """
+    try:
+        from i18n import load_config
+    except Exception:  # noqa: BLE001 — a build without i18n keeps no memory
+        return {}
+    try:
+        raw = (load_config() or {}).get(DIRS_CONFIG)
+    except Exception:  # noqa: BLE001 — a broken config store must not break a pane
+        return {}
+    return sanitize_dirs(raw)
+
+
+def sanitize_dirs(raw) -> dict:
+    """The usable entries of a stored map: a string key and an ABSOLUTE path, or nothing."""
+    out = {}
+    if not isinstance(raw, dict):
+        return out
+    for key, path in raw.items():
+        name, value = str(key or ""), str(path or "")
+        if name and value.startswith("/"):
+            out[name] = value
+    return out
+
+
+def remember_dir(mapping, key, path, limit: int = MAX_REMEMBERED_DIRS) -> dict:
+    """Move ONE `{server key: directory}` entry to the END, evicting the OLDEST over the cap (PURE).
+
+    Insertion order IS the age, so the eviction needs no timestamp and the map stays a plain JSON
+    object; a blank key or a relative path changes NOTHING (a remote directory is absolute).
+    """
+    out = dict(mapping or {})
+    name, value = str(key or ""), str(path or "")
+    if name and value.startswith("/"):
+        out.pop(name, None)
+        out[name] = value
+    while len(out) > max(1, int(limit)):
+        out.pop(next(iter(out)))
+    return out
+
+
+def remembered_dir_for(mapping, key) -> str:
+    """The directory remembered for ONE server key ("" — never visited / no memory)."""
+    try:
+        return str((mapping or {}).get(str(key or "")) or "")
+    except Exception:  # noqa: BLE001 — a foreign mapping is simply "no memory"
+        return ""
+
+
+# ── The cut fact, the row readers and the drag payload ───────────────────
+def read_was_truncated(data_len, cap, known_size=0) -> bool:
+    """PURE (N46): did a read stop at the pane's ceiling — i.e. is the tail cut?
+
+    The listing's own size is the CERTAIN signal (`known_size > data_len` — the very condition the
+    panel already reports as `sftp.viewer.truncated`); the ceiling is the fallback for a file the
+    listing does not know, where a read that returned the whole cap can only have been cut. A file
+    the listing measures as COMPLETE is never called truncated, whatever the cap is.
+    """
+    try:
+        known = int(known_size or 0)
+        length = int(data_len or 0)
+    except (TypeError, ValueError):
+        return False
+    if known > 0:
+        return known > length
+    try:
+        cap = int(cap or 0)
+    except (TypeError, ValueError):
+        return False
+    return cap > 0 and length >= cap
+
+
+def row_path(item) -> str:
+    """The FULL path a listing row carries in its PATH_ROLE ("" — no role, a dead item). PURE."""
+    try:
+        return str(item.data(0, PATH_ROLE) or "")
+    except (RuntimeError, AttributeError):
+        return ""
+
+
+def row_name(item) -> str:
+    """The NAME a listing row sorts by — the basename of its PATH_ROLE, in EITHER dialect (PURE).
+
+    The sort key is read off the ROLE and never off the widget text, so the comparison cannot be
+    moved by a re-text pass; the split accepts both separators because a LOCAL row and a REMOTE one
+    spell the same shape of path two ways (LOCAL_PANE.md §2).
+    """
+    path = row_path(item)
+    for separator in ("/", "\\"):
+        if separator in path:
+            path = path.rsplit(separator, 1)[-1]
+    if path:
+        return path
+    try:
+        return str(item.text(0) or "")
+    except (RuntimeError, AttributeError):
+        return ""
+
+
+def local_files(mime_data) -> list:
+    """Existing local files from the dragged URLs. Directories, deleted/
+    nonexistent paths, and non-file data — are skipped.
+
+    A MODULE function (v1.7rc1): the drag payload is a property of a PANE and the
+    container keeps the same name as a `staticmethod` because the shipped suite reads
+    it off the CLASS (`SftpTab._local_files(mime)`).
+    """
+    out = []
+    if mime_data is None or not mime_data.hasUrls():
+        return out
+    for url in mime_data.urls():
+        if not url.isLocalFile():
+            continue
+        path = url.toLocalFile()
+        if os.path.isfile(path):
+            out.append(path)
+    return out
+
+
+def pane_payload(mime_data):
+    """The `{session, pane, path}` payload of a drag that started inside a pane (None — foreign).
+
+    A malformed payload (not JSON, not an object, no path) is a FOREIGN drag. The `source` field is
+    the row's DIALECT (`source`, `size`): a local row and a remote one carry paths of two different
+    spellings, so a drop resolves the basename with the dialect that really produced it.
+    """
+    if mime_data is None or not mime_data.hasFormat(PANE_DRAG_MIME):
+        return None
+    try:
+        data = json.loads(bytes(mime_data.data(PANE_DRAG_MIME)).decode("utf-8"))
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    path = str(data.get("path") or "")
+    if not path:
+        return None
+    source = str(data.get("source") or SOURCE_REMOTE)
+    try:
+        size = int(data.get("size") or 0)
+    except (TypeError, ValueError):
+        size = 0
+    return {"session": str(data.get("session") or ""), "pane": data.get("pane"), "path": path,
+            "source": source if source in PANE_SOURCES else SOURCE_REMOTE, "size": size}
+
+
+# ── The Files Commander's own settings (`ui_sftp_commander*`) ───────────────
+
+# The state of the two-pane view lives in `~/.sshmap/config.json`, exactly like the terminal SPLIT's
+# (`ui_terminal_split` / `ui_terminal_split_ratio`): ONE bool and ONE float, merged into the window's
+# geometry write on close. The ratio is a FRACTION of the width, so a window resize keeps the proportion,
+# and a foreign/broken value falls back to the default instead of squeezing a pane into unusability.
+COMMANDER_CONFIG_BOOL = "ui_sftp_commander"          # bool — the mode was on at the last close
+COMMANDER_CONFIG_RATIO = "ui_sftp_commander_ratio"   # float — the FIRST pane's share of the width
+COMMANDER_RATIO_DEFAULT = 0.5
+COMMANDER_RATIO_MIN = 0.2
+COMMANDER_RATIO_MAX = 0.8
+
+#: The narrowest a pane may be dragged, in pixels — installed as `setMinimumWidth`
+#: while the mode is on (Qt gotcha #13 forbids `setMaximum*` on a splitter member) and
+#: dropped again when it goes off, so the single-pane look costs no floor at all.
+COMMANDER_MIN_PANE_PX = 200
+
+
+def load_commander_settings():
+    """v1.7rc1: the Files Commander state/ratio from ~/.sshmap/config.json.
+
+    The `load_split_settings()` shape (§4.3): every key is optional, a foreign type (a
+    string "true", a bool where a float is expected, a non-finite number) answers the
+    DEFAULT — a broken config must never open a second pane or squeeze the two into
+    unusability. Never raises. Returns `{"commander": bool, "ratio": float}`.
+    """
+    defaults = {"commander": False, "ratio": COMMANDER_RATIO_DEFAULT}
+    try:
+        from i18n import load_config
+    except Exception:  # noqa: BLE001 — a build without i18n keeps the defaults
+        return dict(defaults)
+    try:
+        cfg = load_config()
+    except Exception:  # noqa: BLE001 — a broken config store must not break the tab
+        return dict(defaults)
+
+    v = cfg.get(COMMANDER_CONFIG_BOOL)
+    if isinstance(v, bool):
+        defaults["commander"] = v
+
+    v = cfg.get(COMMANDER_CONFIG_RATIO)
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        try:
+            ratio = float(v)
+        except (TypeError, ValueError):
+            ratio = COMMANDER_RATIO_DEFAULT
+        if ratio == ratio and ratio not in (float("inf"), float("-inf")):  # not NaN/inf
+            defaults["ratio"] = max(COMMANDER_RATIO_MIN, min(COMMANDER_RATIO_MAX, ratio))
+    return defaults

@@ -38,12 +38,12 @@ except ImportError:
 SORT_DEFAULT_COLUMN = 0
 SORT_COLUMNS = (0, 1, 2)   # Name | Size | Modified — the three real sort keys of the pane
 
-#: v1.9.8 (task 4): the cell of a column that does not apply to a row — a folder has no Size and
+#: v1.9.8: the cell of a column that does not apply to a row — a folder has no Size and
 #: no Modified of its own. A DASH, and deliberately not an i18n key: it is a typographic mark
 #: ("not applicable"), the same in every language, like the ".." row's own name.
 DIR_CELL = "—"
 
-#: v1.9.8 (task 4): the mark the ACTIVE pane carries on its header line, beside its source. The
+#: v1.9.8: the mark the ACTIVE pane carries on its header line, beside its source. The
 #: keyboard's pane has to be readable at a glance, and the thin focus ring alone was not.
 ACTIVE_PANE_MARK = "▸"
 
@@ -76,7 +76,7 @@ class SftpPaneListingMixin:
         self._relist(path)
 
     def follow_directory(self, path: str) -> bool:
-        """v1.6.3 (ROADMAP task 5): the SHELL moved — move the listing with it.
+        """v1.6.3: the SHELL moved — move the listing with it.
 
         The caller is the session's OSC 7 scanner, so the path comes from the remote: an
         empty / relative / NUL-carrying report is refused here (a "no follow", never an
@@ -114,7 +114,7 @@ class SftpPaneListingMixin:
         if tid is not None:
             self._pending_lists[tid] = self._current_dir
 
-    # ── v1.6.3 (ROADMAP task 4): the address bar ─────────────────────────────
+    # ── v1.6.3: the address bar ──────────────────────────────────────────────
 
     def _set_path_text(self, text: str):
         """Write the address bar WITHOUT echoing it back as an edit.
@@ -257,7 +257,7 @@ class SftpPaneListingMixin:
         if not self._sort_is_default():
             self.apply_sort()
         self._focus_first_row()
-        # v1.7.3 (task 2): a directory the SERVER really answered for is what memory keeps — and
+        # v1.7.3: a directory the SERVER really answered for is what memory keeps — and
         # the restored hint has arrived, so it is no longer pending. A LOCAL pane has no
         # per-server memory: its directory belongs to the OS, not to a server (LOCAL_PANE.md §4).
         self._restore_dir = ""
@@ -292,7 +292,7 @@ class SftpPaneListingMixin:
         item.setData(0, self.ISDIR_ROLE, bool(entry["is_dir"]))
         item.setData(0, self.SIZE_ROLE, int(entry.get("size") or 0))
         item.setData(0, self.MTIME_ROLE, int(entry.get("mtime") or 0))
-        # v1.9.8 (task 4): a DIRECTORY's Size and Modified cells carry the declared dash — an empty
+        # v1.9.8: a DIRECTORY's Size and Modified cells carry the declared dash — an empty
         # cell reads as "not measured", while a dash says "this column does not apply to a folder".
         is_dir = bool(entry["is_dir"])
         item.setText(1, DIR_CELL if is_dir

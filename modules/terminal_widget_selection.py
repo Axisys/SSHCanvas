@@ -18,7 +18,7 @@ except ImportError:
 
 class TerminalSelectionMixin:
     """The local cell selection and the copy (mixed into `TerminalWidget`)."""
-    # ── the mouse selection + the copy (v1.0RC2, task 5) ────
+    # ── the mouse selection + the copy (v1.0RC2) ────────────
     def _cell_at(self, pos):
         """A pixel point → (row, col), clamped to the bounds of the tscreen grid."""
         cols = getattr(self.tscreen, "columns", 80)
@@ -75,7 +75,7 @@ class TerminalSelectionMixin:
         clipboard.setText(text)
         return True
 
-    # ── v1.2.7: the double/triple-click (ROADMAP v1.2.7 task 1) ───────────────
+    # ── v1.2.7: the double/triple-click (v1.2.7) ──────────────────────────────
     def _select_word(self, cell):
         """A double-click — select the word on the line under the cursor.
 
@@ -98,7 +98,7 @@ class TerminalSelectionMixin:
         self._click_sel_end = None   # a click on a space — the selection does not change
 
     def _select_line(self, cell):
-        """A triple-click — the whole line, 0..columns-1 (ROADMAP v1.2.7 task 1).
+        """A triple-click — the whole line, 0..columns-1 (v1.2.7).
 
         The trailing whitespace on copy is trimmed by selected_text() (rstrip) anyway,
         so "the whole line" = the full visible column range. _click_sel_end —

@@ -310,7 +310,7 @@ worker2.shutdown(wait_ms=2000)
 
 
 # ════════════════════════════════════════════════════════════
-# 3. Atomic upload (ROADMAP task 6)
+# 3. Atomic upload
 # ════════════════════════════════════════════════════════════
 print("== 3. worker: the upload is atomic ==")
 
@@ -416,7 +416,7 @@ worker3c.shutdown(wait_ms=2000)
 
 
 # ════════════════════════════════════════════════════════════
-# 4. Atomic download (ROADMAP task 3)
+# 4. Atomic download
 # ════════════════════════════════════════════════════════════
 print("== 4. worker: the download is atomic ==")
 
@@ -618,7 +618,7 @@ worker5.shutdown(wait_ms=2000)
 
 
 # ════════════════════════════════════════════════════════════
-# 7. The overwrite conflict (ROADMAP task 2)
+# 7. The overwrite conflict
 # ════════════════════════════════════════════════════════════
 print("== 7. tab: the overwrite conflict ==")
 
@@ -763,7 +763,7 @@ worker11.shutdown(wait_ms=2000)
 
 
 # ════════════════════════════════════════════════════════════
-# 8. A drop onto a DIRECTORY ROW (ROADMAP task 4)
+# 8. A drop onto a DIRECTORY ROW
 # ════════════════════════════════════════════════════════════
 print("== 8. tab: the drop target is the directory under the cursor ==")
 
@@ -847,7 +847,7 @@ worker12.shutdown(wait_ms=2000)
 
 
 # ════════════════════════════════════════════════════════════
-# 9. Drag-out as text (ROADMAP task 5)
+# 9. Drag-out as text
 # ════════════════════════════════════════════════════════════
 print("== 9. tab: drag-out publishes the remote path ==")
 

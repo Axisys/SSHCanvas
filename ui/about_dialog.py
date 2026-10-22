@@ -101,7 +101,7 @@ def open_config_folder() -> bool:
     path = app_config_dir()
     try:
         os.makedirs(path, exist_ok=True)
-    except OSError:
+    except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
         pass  # not writable / already a file — the OS call reports the truth
     if sys.platform == "win32":
         os.startfile(path)          # noqa: S606 — a directory, not an executable
@@ -145,7 +145,7 @@ def cheatsheet() -> str:
 
 
 class AboutDialog(QDialog):
-    """v1.3.3.3 (task 6): the About box — version, license, paths, cheat-sheet."""
+    """v1.3.3.3: the About box — version, license, paths, cheat-sheet."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

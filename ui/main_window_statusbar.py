@@ -37,14 +37,14 @@ except ImportError:
         status_bar_needed_width = None
 
 
-# ── v1.4.5 (ROADMAP task 3): the clickable status counters of the status bar ───
+# ── v1.4.5: the clickable status counters of the status bar ────────────────────
 
 # The order the three status counters appear in (the same order the cards, the dots
 # and the status bar text have always used).
 STATUS_FILTER_ORDER = ("online", "warn", "offline")
 
 class _StatusCounter(QLabel):
-    """One status counter of the status bar — a CLICKABLE filter (v1.4.5, task 3).
+    """One status counter of the status bar — a CLICKABLE filter (v1.4.5).
 
     The counters were passive text ("Online: 3 | Warn: 1 | Offline: 2") next to the
     server/connection totals. Split out of one label into three widgets they can carry
@@ -94,10 +94,10 @@ class _StatusCounter(QLabel):
         super().mousePressEvent(event)
 
 class _ProblemsChip(QLabel):
-    """The "problems only" toggle of the status bar (v1.5.4, ROADMAP task 2).
+    """The "problems only" toggle of the status bar (v1.5.4).
 
     The lens has to be reachable from somewhere, and the v1.4.5 status counters are the
-    precedent the ROADMAP names: a CLICKABLE piece of the status bar beside the three
+    precedent: a CLICKABLE piece of the status bar beside the three
     status counters, transient by construction (nothing is written to `config.json`), so
     a restart never leaves the map dimmed for no visible reason. It is deliberately NOT a
     registry action — it is not a menu item, and the counters next to it are not either.
@@ -193,7 +193,7 @@ class StatusBarMixin:
         widgets = [getattr(self, "counts_label", None)]
         for status in STATUS_FILTER_ORDER:
             widgets.append((getattr(self, "status_filter_labels", None) or {}).get(status))
-        # v1.5.4 (ROADMAP task 2): the "problems only" chip belongs to the interactive
+        # v1.5.4: the "problems only" chip belongs to the interactive
         # family the policy never gives up — it is a CONTROL, not passive text.
         widgets.append(getattr(self, "problems_chip", None))
         widgets.append(getattr(self, "zoom_label", None))
@@ -216,7 +216,7 @@ class StatusBarMixin:
         """True while the totals pair is hidden (the topical test's seam)."""
         return bool(getattr(self, "_status_bar_compact", False))
 
-    # ── v1.5.4 (ROADMAP task 2): the "problems only" lens ───────────────────────
+    # ── v1.5.4: the "problems only" lens ────────────────────────────────────────
 
     def _on_problems_chip_clicked(self):
         """The status-bar chip: toggle the lens (the `_on_status_filter_clicked` pattern)."""
@@ -286,7 +286,7 @@ class StatusBarMixin:
         return count
 
     def _status_ready_text(self) -> str:
-        """The bar's idle sentence — EMPTY while the map holds no card (v1.9.7, ROADMAP task 6).
+        """The bar's idle sentence — EMPTY while the map holds no card (v1.9.7).
 
         The sentence names the node-properties gesture, and a hint for a node that is not there is
         exactly what the first screen must not say: an empty map shows the first-run hint on the
@@ -316,7 +316,7 @@ class StatusBarMixin:
     def _update_counts_label(self):
         """UI polish: the permanent counters of the status bar.
 
-        v1.4.5 (ROADMAP task 3): the "Servers / Connections" pair and the three STATUS
+        v1.4.5: the "Servers / Connections" pair and the three STATUS
         counters live in two kinds of widget — the status ones are CLICKABLE filters of
         the sidebar. The counters always show the TOTALS: the filter changes the tree,
         never the numbers (a filter is a view, not a fact). This is also the single
@@ -339,9 +339,9 @@ class StatusBarMixin:
                 counter.set_active(status == active)
             except RuntimeError:
                 continue  # Qt teardown — this counter is already destroyed
-        # v1.5.4 (ROADMAP task 2): the "problems only" chip counts the servers that need
+        # v1.5.4: the "problems only" chip counts the servers that need
         # attention — a TOTAL like the three status counters beside it, never the view.
         self._sync_problems_chip()
         self._sync_empty_state()
-        # v1.9.7 (ROADMAP task 6): the minimap leaves an empty map and returns with the first card.
+        # v1.9.7: the minimap leaves an empty map and returns with the first card.
         self._sync_minimap_visibility()

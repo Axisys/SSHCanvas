@@ -9,7 +9,7 @@ the two result slots, and the freshness family — the repaint tick (`FRESHNESS_
 `_refresh_status_freshness()`) that never starts a round and never changes a status, plus the two marks it
 carries (a STATUS's age, whose source of truth is the checker, and the COLLECTED FACTS' age).
 Mechanism — `DOCUMENTATION.md` §19."""
-try:  # v1.6.5 (ROADMAP tasks 3/4): the ONE predicate of an unmanaged card
+try:  # v1.6.5: the ONE predicate of an unmanaged card
     from ..models.server import is_unmanaged as _is_unmanaged
 except ImportError:  # flat launch from the project root
     from models.server import is_unmanaged as _is_unmanaged
@@ -100,7 +100,7 @@ class StatusMixin:
     def _sync_status_targets(self):
         """Update the StatusChecker target list to match the current scene nodes.
 
-        v1.3.3.3 (task 5): the normalization lives in ``status_checker._build_targets``
+        v1.3.3.3: the normalization lives in ``status_checker._build_targets``
         — the on-demand round of "Check statuses now" builds its list with the same
         helper instead of a drifting copy.
         """
@@ -141,7 +141,7 @@ class StatusMixin:
             if self.log:
                 self.log.warning(f"StatusChecker set_servers failed: {e}")
             return
-        # v1.1.2 final (task 3): large map (N > LARGE_MAP_THRESHOLD) —
+        # v1.1.2 final: large map (N > LARGE_MAP_THRESHOLD) —
         # the check interval doubles (StatusChecker.effective_interval_ms);
         # a one-time status-bar hint when the threshold is crossed upward.
         try:
@@ -181,7 +181,7 @@ class StatusMixin:
             return  # node already removed — it needs no status
         try:
             node.set_status(status)
-            # v1.5rc3 (ROADMAP task 3): the result is dated. The checker owns WHEN the
+            # v1.5rc3: the result is dated. The checker owns WHEN the
             # probe answered and how old a result may get (`stale_threshold_s()`); the
             # card owns how it is painted and worded. Nothing here derives a STATUS
             # from the age — freshness is a label on the existing fact.
@@ -194,7 +194,7 @@ class StatusMixin:
             # Review fix v0.8.0 (#3): the tree row marker is updated in place
             # (node.status — the actual status after set_status; unknowns are ignored)
             self._update_sidebar_status_marker(server_id)
-            # v1.4.5 (ROADMAP task 3): a status change can move a node in or out of an
+            # v1.4.5: a status change can move a node in or out of an
             # ACTIVE status filter — the in-place marker update would leave the filtered
             # tree stale, so the rows are rebuilt (only while a filter is on).
             if getattr(self, "_status_filter", ""):
@@ -203,7 +203,7 @@ class StatusMixin:
                 except RuntimeError:
                     pass  # Qt teardown — the window is closing
             elif getattr(self, "_problems_only", False):
-                # v1.5.4 (ROADMAP task 2): the LENS reads the status too — a card that
+                # v1.5.4: the LENS reads the status too — a card that
                 # just went red must light up (and a card that recovered must recede)
                 # without a rebuild of the sidebar, which no status filter asked for.
                 try:
@@ -242,7 +242,7 @@ class StatusMixin:
         status that cannot be refreshed (no checker, a headless test) is simply left as
         it is — the map is honest either way, it just says less.
 
-        v1.5.3 (ROADMAP task 1): the SAME tick re-reads the age of the COLLECTED FACTS.
+        v1.5.3: the SAME tick re-reads the age of the COLLECTED FACTS.
         They are dated in the data itself (`info_collected_at`), so no checker is involved
         and the two families stay independent: this second walk only repaints a plaque
         whose measurement has crossed `ServerNode.INFO_STALE_AFTER_SEC` (a week) — a fresh
@@ -257,7 +257,7 @@ class StatusMixin:
             if checker is not None:
                 self._apply_node_freshness(node)
             self._apply_node_info_freshness(node)
-        # v1.5.4 (ROADMAP task 2): a datum that has just grown STALE is a NEW problem —
+        # v1.5.4: a datum that has just grown STALE is a NEW problem —
         # the chip re-counts and, while the lens is on, the dimming follows (nothing else
         # is touched: a lens is a view, and the counters keep their totals).
         try:

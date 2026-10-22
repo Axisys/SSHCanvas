@@ -98,7 +98,7 @@ def toolbar_buttons(win):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §1 the status bar at three window widths (task 1) ==")
+print("== §1 the status bar at three window widths ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 clear_cfg()
@@ -172,7 +172,7 @@ check("§1 the window itself can get that narrow (the chrome no longer dictates 
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §2 the toolbar: the pinned keep-set and the overflow (task 2) ==")
+print("== §2 the toolbar: the pinned keep-set and the overflow ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _buttons = toolbar_buttons(win)
@@ -271,7 +271,7 @@ check("§2 widening again restores the bar (idempotent policy)",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §3 the settings search (task 3) ==")
+print("== §3 the settings search ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 dlg = SettingsDialog(None)
@@ -330,7 +330,7 @@ dlg.close()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the Hotkeys tab is navigable (task 4) ==")
+print("== §4 the Hotkeys tab is navigable ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 dlg = SettingsDialog(None)
@@ -400,7 +400,7 @@ dlg.close()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §5 the visible focus of the three keyboard domains (task 5) ==")
+print("== §5 the visible focus of the three keyboard domains ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check("§5 the indicator has ONE colour — the strong accent of v1.5rc1 (never a new tone)",
@@ -496,7 +496,7 @@ _canvas.hide()
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §6 the keyboard walk on the map (task 6) ==")
+print("== §6 the keyboard walk on the map ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 win = make_main()
@@ -595,7 +595,7 @@ check("§6 the walk reuses the WINDOW's selection path (the sidebar follows it)"
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §7 the floating-panel priority (task 7) ==")
+print("== §7 the floating-panel priority ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 clear_cfg()

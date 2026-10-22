@@ -56,7 +56,7 @@ class QuickLaunchDialog(QDialog):
 
         # Current list of entries (source of truth; the table is its display)
         self._entries: List[dict] = []
-        # v1.6.1 (ROADMAP task 9): the row loaded back into the fields, or None. The next
+        # v1.6.1: the row loaded back into the fields, or None. The next
         # apply REPLACES that entry in place instead of adding a new one — an entry can be
         # corrected without removing and retyping it.
         self._edit_index: Optional[int] = None
@@ -98,7 +98,7 @@ class QuickLaunchDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setMinimumHeight(140)
-        # v1.6.1 (ROADMAP task 9): a double click on a row is the SECOND door to the same
+        # v1.6.1: a double click on a row is the SECOND door to the same
         # "load it back into the fields" gesture the Edit button opens.
         self.table.itemDoubleClicked.connect(self._on_row_double_clicked)
         layout.addWidget(self.table)
@@ -233,12 +233,12 @@ class QuickLaunchDialog(QDialog):
         self.value_edit.clear()
 
     def _on_row_double_clicked(self, item):
-        """v1.6.1 (task 9): a double click on a row = the Edit button."""
+        """v1.6.1: a double click on a row = the Edit button."""
         if item is not None:
             self._start_edit(item.row())
 
     def _edit_selected(self):
-        """v1.6.1 (task 9): load the selected entry back into the input fields."""
+        """v1.6.1: load the selected entry back into the input fields."""
         self._start_edit(self.table.currentRow())
 
     def _start_edit(self, row: int):
@@ -262,7 +262,7 @@ class QuickLaunchDialog(QDialog):
     def _sync_apply_button(self):
         """The apply button says what it will do: `Add` normally, `Save` while editing.
 
-        Both labels are EXISTING i18n keys — the release adds none (v1.6.1 task 9).
+        Both labels are EXISTING i18n keys — the release adds none (v1.6.1).
         """
         if self._edit_index is None:
             self.btn_apply.setText(
@@ -276,7 +276,7 @@ class QuickLaunchDialog(QDialog):
             pass  # Qt teardown — the button is already gone
 
     def _move_selected(self, delta: int):
-        """v1.6.1 (task 9): move the selected entry inside the list (the menu's order).
+        """v1.6.1: move the selected entry inside the list (the menu's order).
 
         The LIST is the source of the order and the table is its display, so both rows
         involved are re-written. A pending edit follows its entry; a move is refused at
