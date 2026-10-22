@@ -12,6 +12,7 @@ Two REQUEST/ANSWER pairs beside the root: the data MOUNT (`disk_mount`, `""` ⇒
 answered by the mount point `df` reported (a share refused BY NAME), the DEVICE choice (`disk_device`)
 by that device's `lsblk -d` capacity — a name the listing does not hold is REPORTED, never a guess."""
 
+import re
 from typing import Dict
 
 from PySide6.QtCore import QThread, Signal
@@ -36,8 +37,9 @@ log = get_logger(__name__)
 # (user input never reaches the shell bare) and the section's SECOND command is the POSIX ROOT fallback.
 DISK_MOUNT_TOKEN = "__DISK_MOUNT__"
 INFO_BATCH = r"""
-echo ---OS---
+echo ---KERNEL---
 uname -srmo 2>/dev/null
+echo ---OS---
 cat /etc/os-release 2>/dev/null || lsb_release -ds 2>/dev/null
 echo ---CPU---
 nproc 2>/dev/null
@@ -58,6 +60,7 @@ echo ---END---
 """
 
 _TIMEOUT_S = 10          # overall timeout for the channel (5 s per command; the batch is light)
+_SECTION_KERNEL = "---KERNEL---"
 _SECTION_OS = "---OS---"
 _SECTION_CPU = "---CPU---"
 _SECTION_RAM = "---RAM---"
@@ -173,20 +176,49 @@ def parse_os_release(text: str) -> str:
 
 
 def parse_kernel_name(text: str) -> str:
-    """The KERNEL name of the OS section's `uname -srmo` line — `"Linux"` (PURE, v1.14.1).
+    """The KERNEL name of the batch's OWN `uname` line — `"Linux"` (PURE, v1.14.1.1).
 
-    The batch's first OS line is `KERNEL RELEASE MACHINE OS` ("Linux 5.15.0-91-generic x86_64
-    GNU/Linux"), so a word followed by a RELEASE token is the signature; `/etc/os-release`'s
-    `KEY=value` lines and `lsb_release`'s `Description: …` never match it. An output without the
-    line (a legacy batch, a fixture) answers "" — nothing is guessed.
+    The batch marks the fact in its own section (`---KERNEL---` + `uname -srmo`, whose first field is
+    `uname -s`), so ONE non-blank line is read and its FIRST token is the name: a bare `Linux`, a
+    `Darwin 23.4.0 arm64` and a `FreeBSD 14.0-RELEASE amd64` all answer their first word. A
+    `KEY=value` line never matches (the token must be followed by a space or the end), and an output
+    without the line (a batch that carries no marker) answers "" — the release text is NOT scanned
+    here, because a description is not a kernel (`parse_uname_line()`).
     """
-    import re
-    pattern = re.compile(r"^([A-Za-z][A-Za-z0-9._+-]{0,31})\s+(\d\S*)")
+    pattern = re.compile(r"^([A-Za-z][A-Za-z0-9._+-]{0,31})(?=\s|$)")
     for line in str(text or "").splitlines():
-        match = pattern.match(_clean_text(line))
-        if match:
-            return match.group(1)
+        cleaned = _clean_text(line)
+        if cleaned:
+            match = pattern.match(cleaned)
+            return match.group(1) if match else ""
     return ""
+
+
+#: The `uname -srmo` shape of a whole OS section: the kernel name, the RELEASE (a digit-led token)
+#: and the MACHINE — an architecture carries a version digit (`x86_64`, `arm64`, `i686`) — or, where
+#: the platform supports `-o`, the OS field with the kernel's own slash (`GNU/Linux`).
+_UNAME_LINE_RE = re.compile(r"^([A-Za-z][A-Za-z0-9._+-]{0,31})\s+\d[\w.~+-]*\s+(\S+)(?:\s+(\S+))?$")
+
+
+def parse_uname_line(text: str) -> str:
+    """The kernel name of a `uname -srmo` line at the TOP of an OS section (PURE, v1.14.1.1).
+
+    The shape of the shipped v1.14.1 batch — that line was the FIRST one of `---OS---` — and the ONLY
+    way an unmarked section may answer this fact. A distribution's description ("Ubuntu 24.04.1 LTS",
+    the `lsb_release -ds` fallback) matches the kernel and the release fields and fails the MACHINE
+    one: `LTS` names no architecture, so it answers "" and the fact stays unmeasured instead of a
+    release name entering the model as a kernel.
+    """
+    lines = [clean for clean in (_clean_text(raw) for raw in str(text or "").splitlines()) if clean]
+    if not lines:
+        return ""
+    match = _UNAME_LINE_RE.match(lines[0])
+    if not match:
+        return ""
+    machine, os_field = match.group(2), match.group(3) or ""
+    if not any(char.isdigit() for char in machine) and "/" not in os_field:
+        return ""
+    return match.group(1)
 
 
 def parse_cpu(text: str):
@@ -591,8 +623,8 @@ def parse_info_output(output: str, disk_device: str = "") -> Dict[str, object]:
     for line in output.splitlines():
         line = line.rstrip("\r")
         s = line.strip()
-        if s in (_SECTION_OS, _SECTION_CPU, _SECTION_RAM, _SECTION_DISK, _SECTION_DISKS,
-                 _SECTION_DISKMOUNT, _SECTION_INODES):
+        if s in (_SECTION_KERNEL, _SECTION_OS, _SECTION_CPU, _SECTION_RAM, _SECTION_DISK,
+                 _SECTION_DISKS, _SECTION_DISKMOUNT, _SECTION_INODES):
             current = s
             sections[current] = []
         elif s == _SECTION_END:
@@ -605,9 +637,13 @@ def parse_info_output(output: str, disk_device: str = "") -> Dict[str, object]:
     os_name = parse_os_release("\n".join(sections.get(_SECTION_OS, [])))
     if os_name:
         result["os_name"] = os_name
-    # v1.14.1: the KERNEL fact rides in the SAME section (`uname -srmo`) — the one answer
-    # `os_name` cannot give, because the PRETTY_NAME of a Linux distribution carries no "Linux".
-    kernel = parse_kernel_name("\n".join(sections.get(_SECTION_OS, [])))
+    # v1.14.1.1: the KERNEL fact rides in its OWN section (`uname -srmo`) — the one answer `os_name`
+    # cannot give, because the PRETTY_NAME of a Linux distribution carries no "Linux". A batch that
+    # carries no marker is read through the shape of its FIRST OS line and nothing else, so a
+    # `lsb_release -ds` description never becomes a kernel name.
+    kernel = parse_kernel_name("\n".join(sections.get(_SECTION_KERNEL, [])))
+    if not kernel:
+        kernel = parse_uname_line("\n".join(sections.get(_SECTION_OS, [])))
     if kernel:
         result["kernel_name"] = kernel
 

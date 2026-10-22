@@ -11,9 +11,10 @@ read by the PURE `modules/sftp_pane_helpers.py`, the colour is the `viewer.backg
 
 Contract — `SFTP_PANES.md` §3b, `AGENTS.md` §4.15; mechanism — `DOCUMENTATION.md` §38.
 """
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QKeySequence, QShortcut, QTextCursor
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QMenu, QPushButton, QWidget
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMenu, QPlainTextEdit, QPushButton,
+                               QWidget)
 
 try:
     from i18n import t as _t
@@ -56,6 +57,38 @@ VIEWER_FIND_MATCH_MAX = 2000
 #: The inset of the bar's own layout, in pixels, and the chip's side (the header's cross is 24 px).
 VIEWER_FIND_MARGIN = 4
 VIEWER_BACKGROUND_CHIP_PX = 22
+
+
+class ViewerTextView(QPlainTextEdit):
+    """The reader's TEXT — it OWNS its keys (v1.14.1.1).
+
+    `Ctrl+F` is claimed through `QEvent.ShortcutOverride` (the canvas's `_owns_shortcut()` precedent).
+    A widget-scoped `QShortcut` here is the trap: with `view.find_on_map` on the window (`Ctrl+F`,
+    `WindowShortcut`), Qt 6.11 answers `Ambiguous shortcut overload` and fires NEITHER. An accepted
+    override takes the key out of the shortcut map's way, and `keyPressEvent()` opens the bar — the
+    pane's `open_viewer_find()` is reached through `find_requested`.
+    """
+
+    find_requested = Signal()
+
+    @staticmethod
+    def _owns_find_key(event) -> bool:
+        """Is this event the reader's own `Ctrl+F` (the ONE spelling both handlers read)?"""
+        return (event.key() == Qt.Key.Key_F
+                and event.modifiers() == Qt.KeyboardModifier.ControlModifier)
+
+    def event(self, event):  # noqa: N802 — Qt's own spelling
+        if event.type() == QEvent.Type.ShortcutOverride and self._owns_find_key(event):
+            event.accept()   # the key is MINE — the window action must not be asked
+            return True
+        return super().event(event)
+
+    def keyPressEvent(self, event):  # noqa: N802 — Qt's own spelling
+        if self._owns_find_key(event):
+            self.find_requested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class _ViewerFindLineEdit(QLineEdit):
@@ -167,39 +200,51 @@ class SftpViewerVerbsMixin:
     # ── the two controls (installed once, by the pane's assembly) ────────
 
     def _setup_viewer_verbs(self):
-        """Install the reader's own controls — the find shortcut and the background chip.
+        """Install the reader's own controls — the `Ctrl+F` owner and the background chip.
 
-        Called ONCE by the pane's assembly, after the reader panel exists: `Ctrl+F` is a widget-scoped
-        shortcut on the text (no window action is re-bound), the object name is what the
+        Called ONCE by the pane's assembly, after the reader panel exists: the reader's TEXT owns
+        the key (`ViewerTextView`, so no window action is re-bound), the object name is what the
         `viewer.background` QSS rule selects, and the stored hue is applied at build time so an open
         Files tab wears the user's surface from its first paint. A stored value that is not a hue is
-        REFUSED once and the theme's own surface stays (`sftp.viewer.background_refused`).
+        REFUSED once — and that sentence is DEFERRED to the next event-loop turn, because a signal
+        emitted from this constructor stage has no receiver yet (`_new_pane()` connects
+        `pane.message` after it, the page later still — `AGENTS.md` §4.15).
         """
         try:
             self.viewer_text.setObjectName("SftpViewerText")
-        except RuntimeError:
-            return   # Qt teardown — the panel is already gone
+            self.viewer_text.find_requested.connect(self.open_viewer_find)
+        except (RuntimeError, AttributeError):
+            return   # Qt teardown / a reader substituted by a stub — nothing to install on
         self._viewer_find_matches = []
         self._viewer_find_current = -1
         self._viewer_find_query = ""
         self._viewer_find_bar = None
-        shortcut = QShortcut(QKeySequence("Ctrl+F"), self.viewer_text)
-        shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        shortcut.activated.connect(self.open_viewer_find)
-        self._viewer_find_shortcut = shortcut
-        self._apply_stored_viewer_background()
+        self._apply_stored_viewer_background(deferred=True)
 
-    def _apply_stored_viewer_background(self):
+    def _apply_stored_viewer_background(self, deferred: bool = False):
         """Read `ui_viewer_background` ONCE and paint the reader — the refusal is said HERE.
 
-        Called by the setup and by a re-read (a suite drives the refusal through it): a value that is
-        not a hue leaves the theme's own surface and answers `sftp.viewer.background_refused` once.
+        Called by the setup (`deferred=True`: the message has no receiver before the container and
+        the page are wired) and by a re-read (a suite drives the refusal through it, synchronously).
+        A value that is not a hue leaves the theme's own surface and answers
+        `sftp.viewer.background_refused` once.
         """
         hue, refused = resolve_viewer_background()
         self._viewer_background = hue
         self._apply_viewer_background(hue)
-        if refused:
+        if not refused:
+            return
+        if deferred:
+            QTimer.singleShot(0, self._say_viewer_background_refused)
+        else:
+            self._say_viewer_background_refused()
+
+    def _say_viewer_background_refused(self):
+        """Say the ONE refusal sentence — never raises (a queued turn may outlive the pane)."""
+        try:
             self.message.emit(_t("sftp.viewer.background_refused"))
+        except RuntimeError:
+            pass   # Qt teardown — the reader is already gone, so the sentence has no audience
 
     # ── the find bar (`Ctrl+F`) ──────────────────────────────────────────
 
@@ -449,11 +494,16 @@ class SftpViewerVerbsMixin:
             return   # Qt teardown — the chip is already gone
 
     def _on_background_chosen(self, hue):
-        """A menu row was picked: the CONTAINER writes the one key and walks every pane."""
+        """A menu row was picked: the CONTAINER writes the one key and walks every pane.
+
+        The ASKING pane travels with the choice (`pane=self`): the applied sentence is answered to
+        it, and the container emits only when a receiver exists — a global setting changed with no
+        confirmation was the shipped defect (v1.14.1.1).
+        """
         apply_all = getattr(self._container, "apply_viewer_background", None)
         if callable(apply_all):
             try:
-                apply_all(hue)
+                apply_all(hue, pane=self)
                 return
             except RuntimeError:
                 return   # Qt teardown — nothing to repaint

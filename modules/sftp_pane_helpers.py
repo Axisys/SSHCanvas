@@ -42,6 +42,11 @@ try:  # the LOCAL provider's machine codes — `local_error_text()` renders its 
 except ImportError:  # flat launch from the project root
     import local_fs_worker as local_fs  # type: ignore
 
+try:  # v1.14.1.1: the ONE finite-number gate of a stored config value (`models/server.py`)
+    from models.server import finite_number
+except ImportError:  # the package layout (`sshmap.modules.*`)
+    from ..models.server import finite_number  # type: ignore
+
 
 # ── The pane's VOCABULARY — the row roles, the two sources and the drag payload ──────
 # Declared HERE, in the pure module that BOTH layers read: the row readers below compare the roles,
@@ -241,14 +246,12 @@ def save_viewer_encoding(value) -> bool:
         return False
 
 
-#: v1.14.1: the READER's BACKGROUND — ONE global key holding a HUE (0..359) and nothing else: the
-#: syntax palette is tuned to the theme's own surface, so a free COLOUR would make the ink unreadable
-#: while a hue keeps the tone (the lightness of `base_bg`) derivable. An absent value IS the theme.
+#: v1.14.1: the READER's BACKGROUND — ONE global key holding a HUE (0..359) and nothing else: a free
+#: COLOUR would make the syntax ink unreadable, while a hue keeps the tone of `base_bg` derivable.
 VIEWER_BACKGROUND_CONFIG = "ui_viewer_background"
 VIEWER_BACKGROUND_HUE_MIN = 0
 VIEWER_BACKGROUND_HUE_MAX = 359
-#: The presets the reader's chip offers — `(name, hue)`, the "Appearance" tab's own vocabulary
-#: (`settings.appearance.accent.<name>` is the SAME i18n key, never a copy of it).
+#: The presets the reader's chip offers — `(name, hue)`; each NAME is the Appearance tab's own i18n key.
 VIEWER_BACKGROUND_PRESETS = (("sky", 198.4), ("cyan", 187.0), ("green", 142.0), ("amber", 38.0),
                              ("orange", 25.0), ("pink", 330.0), ("violet", 262.0),
                              ("slate", 215.0))
@@ -257,22 +260,19 @@ VIEWER_BACKGROUND_PRESETS = (("sky", 198.4), ("cyan", 187.0), ("green", 142.0), 
 def viewer_background_hue(value):
     """PURE: one stored value → `(hue, refused)` — a hue in 0..359, or None for the theme.
 
-    An ABSENT / null / blank value is the theme. Every other value outside the declared range — a
-    string, a bool, a negative number, 400 — is REFUSED rather than clamped into a colour the user
-    never chose, and the caller says so once (v1.14.1).
+    An ABSENT / null / blank value is the theme; everything outside 0..359 — a string, a bool, 400, a
+    hand-edited `1e999` (the ONE `finite_number()` gate) — is REFUSED, never clamped (v1.14.1.1).
     """
     if value is None:
         return (None, False)
     if isinstance(value, str) and not value.strip():
         return (None, False)
-    if isinstance(value, bool):
-        return (None, True)
-    try:
-        rounded = int(round(float(value)))
-    except (TypeError, ValueError):
-        return (None, True)
+    number = finite_number(value)
+    if number is None:
+        return (None, True)   # a bool, a string, a NaN and ±inf land here together
+    rounded = int(round(number))
     if not (VIEWER_BACKGROUND_HUE_MIN <= rounded <= VIEWER_BACKGROUND_HUE_MAX):
-        return (None, True)   # a NaN and an out-of-range number land here together
+        return (None, True)   # an out-of-range number is never clamped into a colour
     return (rounded % 360, False)
 
 

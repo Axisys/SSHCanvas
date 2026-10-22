@@ -101,7 +101,7 @@ try:
     from .sftp_pane_transfer import SftpPaneTransferMixin
     from .sftp_pane_dnd import SftpPaneDndMixin
     from .sftp_pane_elevated import SftpPaneElevatedMixin
-    from .sftp_pane_verbs import SftpViewerVerbsMixin   # v1.14.1: the reader's find bar and chip
+    from .sftp_pane_verbs import SftpViewerVerbsMixin, ViewerTextView  # v1.14.1: the reader's verbs
 except ImportError:  # flat launch from the project root
     from sftp_pane_walk import PANE_HINTS, PANE_SHORTCUTS, HINT_SEPARATOR, SftpPaneWalkMixin
     from sftp_pane_listing import SORT_COLUMNS, SORT_DEFAULT_COLUMN, SftpPaneListingMixin
@@ -118,7 +118,12 @@ except ImportError:  # flat launch from the project root
     from sftp_pane_transfer import SftpPaneTransferMixin
     from sftp_pane_dnd import SftpPaneDndMixin
     from sftp_pane_elevated import SftpPaneElevatedMixin
-    from sftp_pane_verbs import SftpViewerVerbsMixin  # type: ignore
+    from sftp_pane_verbs import SftpViewerVerbsMixin, ViewerTextView  # type: ignore
+
+try:  # v1.14.1.1: the ONE finite-number gate of a stored config value (`models/server.py`)
+    from ..models.server import finite_number
+except ImportError:  # flat launch from the project root
+    from models.server import finite_number  # type: ignore
 
 
 # v1.14rc3: the split — the four WIDGETS with their constants, the PURE readers and the VOCABULARY of
@@ -193,17 +198,14 @@ REEXPORTED_QT = (QCompleter, QFontDatabase, QHBoxLayout, QLabel, QLineEdit, QPla
 def clamp_viewer_max_bytes(value) -> int:
     """PURE: a cap into the DECLARED range `[VIEWER_MAX_BYTES_MIN, VIEWER_MAX_BYTES_MAX]`.
 
-    A foreign value (a string, `None`, a bool, a negative number) answers the DEFAULT — the
-    shipped `MAX_READ_BYTES`. The range is ONE declaration, so the slider, the value box and
-    the reader can never disagree about what a legal cap is.
+    A foreign value (a string, `None`, a bool, a negative number, a hand-edited `1e999` — the ONE
+    `finite_number()` gate, v1.14.1.1) answers the DEFAULT — the shipped `MAX_READ_BYTES`. The range
+    is ONE declaration, so the slider, the value box and the reader agree on what a legal cap is.
     """
-    if isinstance(value, bool):
+    number = finite_number(value)
+    if number is None:
         return VIEWER_MAX_BYTES_MIN
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return VIEWER_MAX_BYTES_MIN
-    return max(VIEWER_MAX_BYTES_MIN, min(VIEWER_MAX_BYTES_MAX, number))
+    return max(VIEWER_MAX_BYTES_MIN, min(VIEWER_MAX_BYTES_MAX, int(number)))
 
 
 def resolve_viewer_max_bytes(cfg: dict = None) -> int:
@@ -1126,7 +1128,7 @@ MOVED_NAMES = {
     "SftpContainerSessionMixin": SftpContainerSessionMixin,
     "SftpContainerViewerMixin": SftpContainerViewerMixin,
     # v1.14.1: the reader's own verbs — the find bar and the background chip
-    "SftpViewerVerbsMixin": SftpViewerVerbsMixin,
+    "SftpViewerVerbsMixin": SftpViewerVerbsMixin, "ViewerTextView": ViewerTextView,
 }
 
 # The LIVE-NAMESPACE SEAMS, declared once: every name a `sftp_pane_*.py` / `sftp_container_*.py` mixin
@@ -1162,7 +1164,7 @@ MODULE_FACADE_SEAMS = (
     # ── the container instantiates, the widgets and the two readers of the assembly, the Commander
     # ── facts, the dirs memory and the relay's two doors ──
     _SftpPane, _SftpTree, _ButtonRow, _SourceSwitch, _sync_source_switch, SORT_DEFAULT_COLUMN,
-    resolve_viewer_max_bytes, focus_ring, syntax,
+    resolve_viewer_max_bytes, focus_ring, syntax, ViewerTextView,
     COMMANDER_RATIO_MIN, COMMANDER_RATIO_MAX, COMMANDER_MIN_PANE_PX, COMMANDER_CONFIG_BOOL,
     COMMANDER_CONFIG_RATIO, DIRS_CONFIG, load_remembered_dirs, remember_dir, remembered_dir_for,
 )

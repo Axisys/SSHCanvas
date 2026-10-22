@@ -160,6 +160,27 @@ def info_collected_epoch(value) -> float:
     return moment if moment > 0.0 else 0.0
 
 
+def finite_number(value):
+    """Coerce a raw config value into a FINITE float — `None` when it is not one (v1.14.1.1).
+
+    PURE, and the ONE gate of every reader that turns a stored number into a colour, a brightness or
+    a byte cap: `json.load()` accepts `Infinity` / `1e999`, so a hand-edited `config.json` reaches a
+    reader as an infinity — `float()` converts it and `int()` then raises `OverflowError`, which a
+    caller catching `(TypeError, ValueError)` never sees. A NaN is refused the same way (the
+    `info_collected_epoch()` rule), and a BOOLEAN is refused too: `True` is no hue, no percentage and
+    no cap, whatever `float(True)` answers.
+    """
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if number != number or number in (float("inf"), float("-inf")):  # NaN / ±inf
+        return None
+    return number
+
+
 def optional_text(value) -> str:
     """Coerce a raw optional STRING field into its usable value (v1.6.6).
 

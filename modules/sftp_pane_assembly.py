@@ -39,6 +39,7 @@ class SftpPaneAssemblyMixin:
         _SourceSwitch = host_attr(self, "_SourceSwitch")
         _SftpTree = host_attr(self, "_SftpTree")
         _ButtonRow = host_attr(self, "_ButtonRow")
+        _ViewerTextView = host_attr(self, "ViewerTextView", QPlainTextEdit)
         _apply_status_style = host_attr(self, "_apply_status_style")
         _sync_source_switch = host_attr(self, "_sync_source_switch")
         SORT_DEFAULT_COLUMN = host_attr(self, "SORT_DEFAULT_COLUMN", 0)
@@ -324,7 +325,7 @@ class SftpPaneAssemblyMixin:
         viewer_head.addWidget(self.btn_viewer_background, 0)
         viewer_head.addWidget(self.btn_viewer_close, 0)
         viewer_box.addLayout(viewer_head)
-        self.viewer_text = QPlainTextEdit()
+        self.viewer_text = _ViewerTextView()
         self.viewer_text.setReadOnly(True)          # v1.3.1: read-only (editing is rejected)
         self.viewer_text.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         # v1.7.3: the reader's OWN context menu — Qt's standard one PLUS the "Word wrap" row, which
@@ -337,7 +338,7 @@ class SftpPaneAssemblyMixin:
         # resize, which is exactly the two moments new blocks become visible.
         self.viewer_text.updateRequest.connect(self._on_viewer_update_request)
         viewer_box.addWidget(self.viewer_text, 1)
-        # v1.14.1: the reader's own verbs — the `Ctrl+F` shortcut and the stored background hue.
+        # v1.14.1: the reader's own verbs — the `Ctrl+F` owner and the stored background hue.
         self._setup_viewer_verbs()
         self.viewer.hide()
         self.set_viewer_wrap(self._viewer_wrap, persist=False)

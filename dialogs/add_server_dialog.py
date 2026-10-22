@@ -693,6 +693,13 @@ class AddServerDialog(QDialog):
             disk_path=self.disk_path.text().strip(),
             disk_free=self.disk_free.text().strip(),
             disk_size=self.disk_size.text().strip(),
+            # v1.14.1.1: the collected facts the dialog has NO widget for are COPIED, never reset —
+            # the properties dialog replaces `node.data` WHOLE, so a dropped field is a fact a port
+            # edit would silently delete (the kernel fact alone gates the `Network ▸` row).
+            kernel_name=getattr(self._data, "kernel_name", "") if self._data else "",
+            disk_inodes=getattr(self._data, "disk_inodes", "") if self._data else "",
+            disk_note=getattr(self._data, "disk_note", "") if self._data else "",
+            disk_device_note=getattr(self._data, "disk_device_note", "") if self._data else "",
             # v1.7.1.2: the device REQUEST and the LIST the collection read.
             # The choice is the NAME alone — a combo row reads "sdb 100 gb", and the first word of
             # a device label is the name, so the figure the user sees never enters the model.
@@ -704,6 +711,9 @@ class AddServerDialog(QDialog):
             quick_launch=[dict(e) for e in self._quick_launch_entries],  # v1.0RC4
             unmanaged=unmanaged,  # v1.6.5
             unmanaged_ping=bool(unmanaged and self.unmanaged_ping.isChecked()),  # v1.6.5
+            # v1.14.1.1: the date belongs to the last COLLECTION, not to this edit — an edit of a
+            # measured figure (a tag, a port, the comment) re-dates nothing.
+            info_collected_at=getattr(self._data, "info_collected_at", 0.0) if self._data else 0.0,
         )
 
     def _device_name(self) -> str:

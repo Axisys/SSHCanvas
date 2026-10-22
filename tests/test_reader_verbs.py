@@ -184,11 +184,10 @@ TEXT = "alpha one\nbeta two\nALPHA three\ngamma\n"
 pane._show_viewer("/tmp/notes.txt", len(TEXT), TEXT)
 check("§3 a closed reader has no bar (nothing is built until `Ctrl+F`)",
       pane.viewer_find_active is False and pane._viewer_find_bar is None)
-check("§3 the shortcut is the TEXT's own and takes no window action (`Ctrl+F`, widget-scoped)",
-      pane._viewer_find_shortcut is not None
-      and pane._viewer_find_shortcut.key().toString() == "Ctrl+F"
-      and pane._viewer_find_shortcut.context()
-      == SVV.Qt.ShortcutContext.WidgetWithChildrenShortcut)
+check("§3 the TEXT owns the key (`ViewerTextView` accepts the ShortcutOverride; no `QShortcut`)",
+      isinstance(pane.viewer_text, SVV.ViewerTextView)
+      and not hasattr(pane, "_viewer_find_shortcut"),
+      type(pane.viewer_text).__name__)
 pane.open_viewer_find()
 check("§3 `Ctrl+F` opens the bar as a ROW of the reader panel (never a floating child)",
       pane.viewer_find_active and pane._viewer_find_bar.parent() is pane.viewer

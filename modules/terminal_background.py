@@ -12,6 +12,11 @@ broken config answers the DECLARED defaults and never raises (`AGENTS.md` §4.3,
 
 import os
 
+try:  # v1.14.1.1: the ONE finite-number gate of a stored config value (`models/server.py`)
+    from ..models.server import finite_number
+except ImportError:  # flat launch from the project root
+    from models.server import finite_number  # type: ignore
+
 BACKGROUND_MODE_COVER = "cover"       # the whole canvas — the image is scaled up and cropped
 BACKGROUND_MODE_CONTAIN = "contain"   # the whole image — scaled down, the canvas shows around it
 BACKGROUND_MODE_TILE = "tile"         # the native size, repeated from the top-left corner
@@ -53,16 +58,14 @@ def resolve_background_opacity(value) -> int:
     """The `terminal_background_opacity` value → an int inside `BACKGROUND_OPACITY_MIN..MAX`. PURE.
 
     A JSON number is CLAMPED (a hand-edited `150` is the strongest image, not a defect); a float
-    rounds to the nearest whole percent; a bool, a string, a null or a NaN answers the DEFAULT — the
-    same foreign-type rule every `terminal_*` reader follows.
+    rounds to the nearest whole percent; a bool, a string, a null, a NaN and ±inf — the ONE
+    `finite_number()` gate, v1.14.1.1 — answer the DEFAULT, the same foreign-type rule every
+    `terminal_*` reader follows. A `1e999` in the config never raises here.
     """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
         return BACKGROUND_OPACITY_DEFAULT
-    try:
-        number = float(value)
-    except (TypeError, ValueError):   # a float subclass that refuses to convert
-        return BACKGROUND_OPACITY_DEFAULT
-    if number != number:              # NaN
+    number = finite_number(value)
+    if number is None:                # a float subclass, a NaN or ±inf
         return BACKGROUND_OPACITY_DEFAULT
     return max(BACKGROUND_OPACITY_MIN, min(BACKGROUND_OPACITY_MAX, int(round(number))))
 

@@ -272,6 +272,21 @@ def _viewer_background_hue():
     return None
 
 
+def _finite_hue(value):
+    """The ONE non-finite gate of a stored hue, resolved at call time (`models/server.py`).
+
+    Lazy on purpose, like `_viewer_background_hue()`: this module imports WITHOUT the application
+    tree (a stripped build, a suite that only builds a stylesheet), and a hand-edited `1e999` — the
+    infinity `json.load()` accepts — must answer the theme instead of raising `OverflowError` out of
+    the reader's first paint (v1.14.1.1).
+    """
+    try:
+        from ..models.server import finite_number
+    except ImportError:  # flat launch from the project root
+        from models.server import finite_number  # type: ignore
+    return finite_number(value)
+
+
 def viewer_background_hex(hue, base_hex: str) -> str:
     """The reader's background of ONE hue over the theme's own surface tone (v1.14.1).
 
@@ -284,7 +299,10 @@ def viewer_background_hex(hue, base_hex: str) -> str:
         if not base.isValid():
             return base_hex
         lightness = int(base.lightness())                 # Qt's HSL lightness, 0..255
-        hue_number = int(round(float(hue))) % 360
+        number = _finite_hue(hue)
+        if number is None:
+            return base_hex                               # a bool, a string, a NaN or ±inf
+        hue_number = int(round(number)) % 360
     except (TypeError, ValueError):
         return base_hex
     return QColor.fromHsl(hue_number, VIEWER_BACKGROUND_SATURATION,
