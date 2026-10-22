@@ -26,6 +26,11 @@ class ServerData:
     # by SystemInfoCollector; stored in JSON (server_data_to_dict via asdict).
     os_name: str = ""     #PRETTY_NAME from /etc/os-release, e.g. "Ubuntu 24.04 LTS"
     cpu_model: str = ""   # CPU model from /proc/cpuinfo
+    # v1.14.1: the KERNEL name of the node — the first word of the batch's `uname -srmo` line
+    # ("Linux", "Darwin", "FreeBSD"). `os_name` cannot answer it: "Ubuntu 24.04 LTS" carries no
+    # "Linux" word, so a kernel-gated verb that guessed from it would be wrong on the best-known
+    # distributions. Optional and additive (`VERSION_FORMAT` stays "0.9"): absent = never measured.
+    kernel_name: str = ""
     # v0.9.4: tags/environment roles (prod/staging/dev/...). A list of strings; stored in
     # JSON as the "tags" array (server_data_to_dict via asdict). Backward-compat:
     # old JSON without the key is read as an empty list (server_data_from_dict).
@@ -119,6 +124,22 @@ def unmanaged_ping_allowed(target) -> bool:
     this card. DEFAULT OFF, so a new unmanaged card makes no network call at all.
     """
     return bool(getattr(getattr(target, "data", target), "unmanaged_ping", False))
+
+
+#: The `uname -s` value the Linux-only verbs are gated on (v1.14.1).
+LINUX_KERNEL = "Linux"
+
+
+def is_linux_host(target) -> bool:
+    """Is this node a LINUX one — the gate of the Linux-only verbs (v1.14.1)?
+
+    The KERNEL fact (`ServerData.kernel_name`, the first word of the batch's `uname -srmo` line),
+    never a guess at `os_name`: "Ubuntu 24.04 LTS" carries no "Linux" word, so a string test there
+    would refuse the operating systems the verbs are written for. A card whose facts were never
+    collected answers False — unknown is not Linux. PURE and duck-typed like `is_unmanaged()`.
+    """
+    name = str(getattr(getattr(target, "data", target), "kernel_name", "") or "").strip()
+    return name.lower() == LINUX_KERNEL.lower()
 
 
 def info_collected_epoch(value) -> float:
@@ -279,7 +300,7 @@ def server_data_from_dict(raw: dict) -> ServerData:
     # ("never measured" / "no jump"), so a hand-edited project file can never put a non-string into a
     # field the card, the dialog and the `-J` command line render.
     for _field in ('disk_mount', 'disk_path', 'disk_free', 'disk_size', 'disk_inodes',
-                   'disk_device', 'disk_note', 'disk_device_note', 'jump_host'):
+                   'disk_device', 'disk_note', 'disk_device_note', 'jump_host', 'kernel_name'):
         data[_field] = optional_text(data.get(_field))
     data['disk_devices'] = sanitize_device_list(data.get('disk_devices'))
     try:
@@ -329,7 +350,7 @@ def server_data_to_dict(data: ServerData) -> dict:
     # written before the release is never "measured" by a later save. v1.7.1.2: the device REQUEST
     # follows `disk_mount`, the LIST the answers; v1.8rc6 (N35) adds the two refusal NOTES with them.
     for _field in ('disk_path', 'disk_free', 'disk_size', 'disk_inodes',
-                   'disk_note', 'disk_device_note'):
+                   'disk_note', 'disk_device_note', 'kernel_name'):
         if not optional_text(serialized.get(_field)):
             serialized.pop(_field, None)
     if not sanitize_device_list(serialized.get('disk_devices')):

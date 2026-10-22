@@ -603,7 +603,7 @@ check("§6 the THIRTEEN keys of the release are present and non-empty in EVERY l
       str({code: [key for key in _NEW_KEYS if not LANGS[code].get(key)]
            for code in sorted(LANGS)}))
 check("§6 ...and the pin counts them beside the previous release (1166 + 13)",
-      EXPECTED_I18N_KEYS == 1166 + 13 + 1 + 1 and len(_NEW_KEYS) == 13, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1166 + 13 + 1 + 1 + 12 and len(_NEW_KEYS) == 13, str(EXPECTED_I18N_KEYS))
 check("§6 every sentence of the family is really TRANSLATED, not the English copy",
       len({LANGS[code]["sftp.search.header"] for code in LANGS}) > 1
       and len({LANGS[code]["sftp.local.trash_confirm"] for code in LANGS}) > 1)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over seven pane mixins.
+"""The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over eight pane mixins.
 
 Wave 1 moved the walk, the listing and the preview into `modules/sftp_pane_walk.py` /
 `..._listing.py` / `..._viewer.py`, wave 2 the transfers and the drag & drop into `..._transfer.py` /
@@ -124,6 +124,9 @@ CONTAINER = {
 # The SIXTH mixin, added by the release's own feature (`ELEVATED_PANE.md` §1): the two waves did not
 # move it, so it carries no method table of its own — the family count below is what it moves.
 ELEVATED = "modules/sftp_pane_elevated.py"
+# The EIGHTH pane mixin (v1.14.1): the reader's own verbs — the find bar and the background chip — in
+# a module of its OWN, so the preview (`sftp_pane_viewer.py`) keeps its measured size (§4.15).
+VERBS = "modules/sftp_pane_verbs.py"
 #: the names the FACADE keeps — the assembly, the state accessors, the worker/provider binding, the
 #: source switching, the theme/re-text walks and the file operations the context menu fires
 FACADE_METHODS = [
@@ -134,8 +137,8 @@ FACADE_METHODS = [
     "_op_new_folder", "_op_rename", "_op_delete", "_op_copy_path", "_queue_op",
 ]
 PLANNED_MRO = ["_SftpPane", "SftpPaneAssemblyMixin", "SftpPaneWalkMixin", "SftpPaneListingMixin",
-               "SftpPaneViewerMixin", "SftpPaneTransferMixin", "SftpPaneDndMixin",
-               "SftpPaneElevatedMixin", "QWidget"]
+               "SftpPaneViewerMixin", "SftpViewerVerbsMixin", "SftpPaneTransferMixin",
+               "SftpPaneDndMixin", "SftpPaneElevatedMixin", "QWidget"]
 #: the assembly is a pane mixin: it joins the wave tables for every one-owner question
 WAVES_ALL = {**WAVE, **WAVE2, **ASSEMBLY}
 #: the CONTAINER's MRO — the facade, its three mixins, `QWidget` and the extract family
@@ -163,11 +166,11 @@ print("== §1 the family and the MRO ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _family = pane_family_files(ROOT)
-check("§1 the family is the facade, its SEVEN pane mixins, the helpers, the widgets and the "
+check("§1 the family is the facade, its EIGHT pane mixins, the helpers, the widgets and the "
       "container's three (TWO globs, so a new pane or container file joins by itself)",
-      _family[0] == "modules/sftp_tab.py" and len(_family) == 13
+      _family[0] == "modules/sftp_tab.py" and len(_family) == 14
       and set(WAVE) | set(WAVE2) | set(ASSEMBLY) | set(CONTAINER) | {
-          HELPERS[0], ELEVATED, WIDGETS[0], "modules/sftp_tab.py"} == set(_family),
+          HELPERS[0], ELEVATED, WIDGETS[0], VERBS, "modules/sftp_tab.py"} == set(_family),
       str(_family))
 check("§1 the five wave files exist, one class each, named as the plan says",
       all(os.path.isfile(os.path.join(ROOT, rel)) for rel in list(WAVE) + list(WAVE2))
@@ -195,9 +198,9 @@ check("§1 the widget module defines the FOUR widgets and their two helpers — 
            if isinstance(n, ast.ClassDef)] == list(WIDGETS[1]),
       str([n.name for n in ast.parse(pane_family_sources(ROOT)[WIDGETS[0]]).body
            if isinstance(n, ast.ClassDef)]))
-check("§1 the MRO is the planned one (the facade, the SEVEN mixins, QWidget)",
-      [c.__name__ for c in ST._SftpPane.__mro__][:9] == PLANNED_MRO,
-      str([c.__name__ for c in ST._SftpPane.__mro__][:10]))
+check("§1 the MRO is the planned one (the facade, the EIGHT mixins, QWidget)",
+      [c.__name__ for c in ST._SftpPane.__mro__][:10] == PLANNED_MRO,
+      str([c.__name__ for c in ST._SftpPane.__mro__][:11]))
 check("§1 the CONTAINER's MRO is the planned one (the facade, its three mixins, QWidget)",
       [c.__name__ for c in ST.SftpTab.__mro__][:5] == PLANNED_CONTAINER_MRO
       and "SftpExtractMixin" in [c.__name__ for c in ST.SftpTab.__mro__],
@@ -571,7 +574,7 @@ check("§7 the waves add NO i18n key and NO schema move (the release's OWN featu
       "`ELEVATED_PANE.md`; v1.8.1 adds its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair"
       " — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its"
       " export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 and VERSION_FORMAT == "0.9",
+      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 and VERSION_FORMAT == "0.9",
       f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
 check("§7 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)

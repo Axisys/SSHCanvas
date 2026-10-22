@@ -640,12 +640,10 @@ _NEW_KEYS = ("terminal.standalone.title", "terminal.standalone.empty_hint",
              "terminal.cmdlib.no_project", "terminal.cmdlib.project_empty")
 check("§7 the TEN keys of the release are present and non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS)
-      # the 1104 the standalone left, plus the later follow-ups' keys (v1.12.3's THREE, v1.12.4.1's
-      # ONE, v1.13's FOUR, v1.13.1's THREE, the fifth read's TWO, v1.13.2's EIGHT: the wallpaper row,
-      # v1.13.3's NINE: the row verbs and the Servers menu, v1.13.4's EIGHTEEN: the Diff tab,
-      # v1.13.5's FOUR: the confirmation box and its question, v1.13.6's THIRTEEN: the search's
-      # eleven and the trash's two, and v1.13.6.2's ONE: the per-file cut sentence).
-      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13 - 1 - 1,
+      # the 1104 the standalone left, plus the later keys (v1.12.3's THREE, v1.12.4.1's ONE,
+      # v1.13's FOUR, v1.13.1's THREE, the fifth read's TWO, v1.13.2's EIGHT, v1.13.3's NINE,
+      # v1.13.4's EIGHTEEN, v1.13.5's FOUR, v1.13.6's THIRTEEN, v1.13.6.2's ONE, v1.14.1's TWELVE).
+      and len(_NEW_KEYS) == EXPECTED_I18N_KEYS - 1104 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13 - 1 - 1 - 12,
       str({c: [k for k in _NEW_KEYS if not LANGS[c].get(k)] for c in sorted(LANGS)}))
 check("§7 `{patterns}` is the ONE placeholder of the filter and every language carries it",
       all(set(_placeholders(LANGS[c]["terminal.standalone.project_filter"])) == {"patterns"}

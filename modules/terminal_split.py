@@ -110,6 +110,31 @@ def find_host_hook(widget, name):
     return None
 
 
+def find_split(widget):
+    """The `TerminalSplit` of the container `widget` lives in (None — no split above it). Never raises.
+
+    Both containers declare the controller as their own `split` attribute (the window and the dock),
+    so this parent-chain walk is what lets a Files pane — a tab of a page, the right-hand Files
+    panel, a stack the panel moved to — reach the SAME controller. `__dict__` is read directly: a
+    facade with a forwarding `__getattr__` (the Files tab) must not answer for an attribute it does
+    not hold. The walk is bounded and every dead C++ object ends it.
+    """
+    node, hops = widget, 0
+    while node is not None and hops < 32:
+        try:
+            split = node.__dict__.get("split")
+        except (AttributeError, RuntimeError):
+            return None
+        if split is not None and hasattr(split, "set_enabled"):
+            return split
+        try:
+            node = node.parent()
+        except (RuntimeError, AttributeError):
+            return None
+        hops += 1
+    return None
+
+
 class TerminalSplit:
     """The split of ONE container: the host widget, the vertical splitter, the pane and its owner.
 
@@ -304,24 +329,29 @@ class TerminalSplit:
 
     # ── open / close / MOVE ─────────────────────────────────────────────────
 
-    def set_enabled(self, on: bool, persist: bool = False) -> bool:
+    def set_enabled(self, on: bool, persist: bool = False, initial_command: str = "") -> bool:
         """The ONE split switch. Returns True when the requested state was REACHED.
 
         ON — a pane opens for the ACTIVE session; while a FOREIGN session owns the pane it is MOVED
         (the old pane passes its own `confirm_close()` gate first — a Cancel leaves it where it is,
         and the answer is False). OFF — the pane closes through the same gate; a Cancel keeps it.
         Called from `act_split.toggled` and by the containers' own close paths.
+        v1.14.1: `initial_command` is the ONE argument the split was missing (`add_session()` has
+        shipped it all along) — the command a `Network ▸` verb of a Files pane hands over. A pane
+        that is ALREADY open for this session receives it through `send_to_pane()` instead of being
+        torn down and re-created.
         """
         on = bool(on)
         active = self.active_page
         if on:
             if self.owns_active():
-                self.sync_action(True)      # already open for this session — nothing to do
+                self.sync_action(True)      # already open for this session — nothing to build
+                self.send_to_pane(initial_command)
                 return True
             if self.pane is not None and not self.close_pane():
                 self.sync_action(False)     # the gate was cancelled — the foreign pane stays
                 return False
-            self.open_pane(active)
+            self.open_pane(active, initial_command=initial_command)
             if self.pane is None:
                 self.sync_action(False)     # the pane could not be created
                 return False
@@ -335,9 +365,30 @@ class TerminalSplit:
             self.persist_state()
         return True
 
-    def open_pane(self, page=None):
-        """Create and show the pane for `page` (the active session by default). Idempotent."""
+    def send_to_pane(self, command) -> bool:
+        """Send ONE command into the OPEN pane's session (the `Network ▸` row of a live split).
+
+        An application-sent line goes through the SHIPPED `send_macro()` door — recorded in the
+        session's history and subject to the command guard — because a second `add_session()` would
+        cost a second channel to say the same thing. False — no pane, or nothing to send.
+        """
+        pane = self.pane
+        if pane is None or not command:
+            return False
+        try:
+            return bool(pane.send_macro(str(command)))
+        except (RuntimeError, AttributeError):
+            return False
+
+    def open_pane(self, page=None, initial_command: str = ""):
+        """Create and show the pane for `page` (the active session by default). Idempotent.
+
+        v1.14.1: `initial_command` travels into `add_session()` — the pane's OWN session runs it
+        once the channel is up (the shipped `_send_initial_command()` path); a pane that is already
+        open takes it through `send_to_pane()` instead.
+        """
         if self.pane is not None:
+            self.send_to_pane(initial_command)
             return self.pane
         if page is None:
             page = self.active_page
@@ -346,7 +397,7 @@ class TerminalSplit:
             return None   # nothing on screen to split — an EMPTY container (`TERMINAL_STANDALONE.md` §6)
         password = self._password(page)
         pane = self._container_call("add_session", data, password=password,
-                                    initial_command="", split=True)
+                                    initial_command=str(initial_command or ""), split=True)
         if pane is None:
             return None
         self.pane = pane

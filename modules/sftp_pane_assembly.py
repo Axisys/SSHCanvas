@@ -313,6 +313,15 @@ class SftpPaneAssemblyMixin:
         # into this button (a focusable child of the panel is the one way the walk could be lost).
         self.btn_viewer_close.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         viewer_head.addWidget(self.viewer_label, 1)
+        # v1.14.1: the reader's BACKGROUND chip — it shows the hue the reader's surface is painted
+        # with (`ui_viewer_background`) and opens the preset menu of the verbs mixin. A control, not
+        # a row: the header is already the panel's one strip of chrome.
+        self.btn_viewer_background = QPushButton("")
+        self.btn_viewer_background.setFixedSize(22, 22)
+        self.btn_viewer_background.setToolTip(t("sftp.viewer.background"))
+        self.btn_viewer_background.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_viewer_background.clicked.connect(self._on_viewer_background_clicked)
+        viewer_head.addWidget(self.btn_viewer_background, 0)
         viewer_head.addWidget(self.btn_viewer_close, 0)
         viewer_box.addLayout(viewer_head)
         self.viewer_text = QPlainTextEdit()
@@ -328,6 +337,8 @@ class SftpPaneAssemblyMixin:
         # resize, which is exactly the two moments new blocks become visible.
         self.viewer_text.updateRequest.connect(self._on_viewer_update_request)
         viewer_box.addWidget(self.viewer_text, 1)
+        # v1.14.1: the reader's own verbs — the `Ctrl+F` shortcut and the stored background hue.
+        self._setup_viewer_verbs()
         self.viewer.hide()
         self.set_viewer_wrap(self._viewer_wrap, persist=False)
 

@@ -742,16 +742,16 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self.tabs.addTab(self.widget, t("sftp.tab_terminal"))
         self.sftp_tab = SftpTab() if self._with_sftp else None
         if self.sftp_tab is not None:
-            # v1.7.3: the container is TOLD who this session is — the
-            # `history_key()` of the server (the per-server directory memory is filed under it) and
-            # the `(host, ssh_port, user)` triple that decides the server-side send path.
+            # v1.7.3: the container is TOLD who this session is — the `history_key()` of the server
+            # (the per-server memory is filed under it) and the `(host, ssh_port, user)` triple that
+            # decides the server-side send path. v1.7.5: `user@host` with no alias; v1.14.1: the LIVE
+            # node, which is the reader's kernel gate.
             self.sftp_tab.set_session_info(key=history_key(getattr(server_data, "id", "")),
                                            label=getattr(server_data, "alias", "") or "",
                                            host=getattr(server_data, "host", "") or "",
                                            port=getattr(server_data, "ssh_port", 22),
-                                           # v1.7.5: the pane's SOURCE header line falls back to
-                                           # `user@host` when the session has no alias.
-                                           user=getattr(server_data, "user", "") or "")
+                                           user=getattr(server_data, "user", "") or "",
+                                           data=server_data)
             self.tabs.addTab(self.sftp_tab, t("sftp.tab_files"))
 
         # The COMMAND history — the THIRD tab of the session (`Terminal | Files | History`), one

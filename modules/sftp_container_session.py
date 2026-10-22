@@ -38,7 +38,7 @@ class SftpContainerSessionMixin:
     # ── the session's identity (the per-server memory and `Send to…` use it) ──
 
     def set_session_info(self, key: str = "", label: str = "", host: str = "", port=None,
-                         user: str = ""):
+                         user: str = "", data=None):
         """The SESSION this container lists (called once by the page that builds it).
 
         The key is the `history_key()` of the server — the same fact the per-server directory
@@ -49,12 +49,16 @@ class SftpContainerSessionMixin:
         v1.7.5: `user` joins the identity because the pane's SOURCE HEADER LINE falls back to
         `user@host` when the session was never identified (LOCAL_PANE.md §3) — and every pane
         re-reads its header here, which is what makes the line say the session it belongs to.
+        v1.14.1: `data` is the node's LIVE `ServerData` — the Linux gate of the reader's
+        `Network ▸` row reads its `kernel_name`, and the object is kept (never copied) so a
+        collection that lands while the tab is open is seen by the next menu.
         """
         self._session_key = str(key or "")
         self._session_label = str(label or "")
         self._session_host = str(host or "")
         self._session_port = port
         self._session_user = str(user or "")
+        self._session_data = data
         self._sync_pane_headers()
 
     def session_key(self) -> str:
@@ -72,6 +76,10 @@ class SftpContainerSessionMixin:
     def session_host(self) -> str:
         """The host of the session (the `user@host` fallback of the header line)."""
         return str(self._session_host or "")
+
+    def session_data(self):
+        """The node's LIVE `ServerData` (None — a container nobody identified, or a bare test stub)."""
+        return getattr(self, "_session_data", None)
 
     def _sync_pane_headers(self):
         """Let every pane re-read its SOURCE header line (the identity just changed). Never raises."""

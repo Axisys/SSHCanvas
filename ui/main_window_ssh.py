@@ -856,6 +856,10 @@ class SshMixin:
         d = node.data
         if info.get("os_name"):
             d.os_name = info["os_name"]
+        # v1.14.1: the KERNEL fact — written beside `os_name` (one batch line answers both) and only
+        # when the batch really carried it, so a legacy fixture re-dates nothing.
+        if info.get("kernel_name"):
+            d.kernel_name = info["kernel_name"]
         if info.get("cpu_model"):
             d.cpu_model = info["cpu_model"]
         if info.get("cpu_cores"):
@@ -864,14 +868,10 @@ class SshMixin:
             d.ram = info["ram_gb"]
         # The DEVICE choice speaks for `disk` when the node made one: the capacity `lsblk -d` answered
         # for the named device, or NOTHING when the listing does not hold it (a vanished device is
-        # REPORTED below, so the card never shows another disk's number). A collection silent about a
-        # device leaves the figure alone, exactly like the mount pair; v1.8rc6 (N34) reads the `disk_gb`
-        # KEY as the answer — an explicit "" CLEARS a figure collected earlier instead of re-dating it.
+        # REPORTED below; N34 reads `disk_gb` as the answer, so an explicit "" CLEARS a stale figure).
         if "disk_device_note" in info:
             d.disk = str(info.get("disk_gb") or "")
-            # v1.8rc6 (N35): the WHY travels with the clearing — beside the figure it explains,
-            # so the card can say it long after the 8-second status line is gone. "" (a device
-            # that WAS found) clears the note of an earlier refusal.
+            # v1.8rc6 (N35): the WHY travels with the clearing ("" — a device that WAS found).
             d.disk_device_note = str(info.get("disk_device_note") or "")
         elif "disk_gb" in info:
             d.disk = str(info.get("disk_gb") or "")

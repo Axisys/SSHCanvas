@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """The Files tab of a terminal session — a CONTAINER of 1–2 PANES over ONE SFTP worker.
 
-`SftpTab` is the FACADE of the container: the pane list, the ONE worker binding, the session
-identity, the preview slot, the live viewer settings, the drag forwarding and the ONE teardown, over
-three mixins (`sftp_container_panes.py`, `..._session.py`, `..._viewer.py`) and `SftpExtractMixin`.
-`_SftpPane` is a FACADE of its own, over the pane mixins of `sftp_pane_*.py`, the assembly of
-`sftp_pane_assembly.py`, the widgets of `sftp_pane_widgets.py` and the pure readers of
-`sftp_pane_helpers.py` — every moved name declared by `MOVED_NAMES`. A pane binds the SHARED
-worker's signals and answers only the task ids IT queued, so the panes navigate independently. The
-page talks to the container (`page.sftp_tab`); a shipped attribute read resolves on the ACTIVE pane.
+`SftpTab` is the FACADE of the container (the pane list, the ONE worker binding, the session identity,
+the preview slot, the live viewer settings, the drag forwarding and the ONE teardown) over three
+mixins (`sftp_container_panes.py`, `..._session.py`, `..._viewer.py`) and `SftpExtractMixin`.
+`_SftpPane` is a FACADE of its own over the `sftp_pane_*.py` mixins, the widgets of
+`sftp_pane_widgets.py` and the pure readers of `sftp_pane_helpers.py` — every moved name declared by
+`MOVED_NAMES`. A pane binds the SHARED worker's signals and answers only the task ids IT queued, so
+the panes navigate independently; the page talks to the container (`page.sftp_tab`).
 
 Contract — `SFTP_PANES.md`; mechanism — §38, §59-§63."""
 
@@ -81,10 +80,9 @@ except ImportError:  # flat launch from the project root
     from dialogs.elevated_dialog import ask_elevation
 
 # v1.8rc4/rc5: `_SftpPane` is a FACADE over its pane mixins — the pane-scoped keys and the walk, the
-# listing with its address bar, the read-only preview, the transfers with the batch copy/move, and
-# the drag & drop with the row context menu. The module-level facts of a cluster travel WITH it and
-# are imported back here, so `modules.sftp_tab` keeps the shipped surface a caller and the suite
-# already read (`PANE_SHORTCUTS`, `SORT_COLUMNS`, `format_size`, `ask_conflict`, …).
+# listing with its address bar, the read-only preview (and its v1.14.1 verbs), the transfers with the
+# batch copy/move and the drag & drop with the row context menu. A cluster's module-level facts travel
+# WITH it and are imported back here, so `modules.sftp_tab` keeps the shipped surface the suite reads.
 try:
     from .sftp_pane_walk import (PANE_HINTS, PANE_SHORTCUTS, HINT_SEPARATOR,
                                  SftpPaneWalkMixin)
@@ -98,10 +96,12 @@ try:
                                     VIEWER_ENCODINGS, VIEWER_WRAP_CONFIG, ask_conflict, decode_text,
                                     format_mtime, format_size, normalize_viewer_encoding,
                                     preview_block_reason, resolve_viewer_encoding,
-                                    resolve_viewer_wrap, save_viewer_encoding, save_viewer_wrap)
+                                    resolve_viewer_wrap, save_viewer_background,
+                                    save_viewer_encoding, save_viewer_wrap)
     from .sftp_pane_transfer import SftpPaneTransferMixin
     from .sftp_pane_dnd import SftpPaneDndMixin
     from .sftp_pane_elevated import SftpPaneElevatedMixin
+    from .sftp_pane_verbs import SftpViewerVerbsMixin   # v1.14.1: the reader's find bar and chip
 except ImportError:  # flat launch from the project root
     from sftp_pane_walk import PANE_HINTS, PANE_SHORTCUTS, HINT_SEPARATOR, SftpPaneWalkMixin
     from sftp_pane_listing import SORT_COLUMNS, SORT_DEFAULT_COLUMN, SftpPaneListingMixin
@@ -113,15 +113,16 @@ except ImportError:  # flat launch from the project root
                                    VIEWER_ENCODINGS, VIEWER_WRAP_CONFIG, ask_conflict, decode_text,
                                    format_mtime, format_size, normalize_viewer_encoding,
                                    preview_block_reason, resolve_viewer_encoding,
-                                   resolve_viewer_wrap, save_viewer_encoding, save_viewer_wrap)
+                                   resolve_viewer_wrap, save_viewer_background,
+                                   save_viewer_encoding, save_viewer_wrap)
     from sftp_pane_transfer import SftpPaneTransferMixin
     from sftp_pane_dnd import SftpPaneDndMixin
     from sftp_pane_elevated import SftpPaneElevatedMixin
+    from sftp_pane_verbs import SftpViewerVerbsMixin  # type: ignore
 
 
-# v1.14rc3: the split — the four WIDGETS with their constants, and the PURE readers and the
-# VOCABULARY of the pane family. The names are DEFINED in their own modules and imported back
-# here, so `modules.sftp_tab.<name>` stays the shipped path (`MOVED_NAMES` declares them).
+# v1.14rc3: the split — the four WIDGETS with their constants, the PURE readers and the VOCABULARY of
+# the pane family, DEFINED in their own modules and imported back so `modules.sftp_tab.<name>` holds.
 try:
     from .sftp_pane_widgets import (BUTTONS_BAR_MIN_WIDTH, ELEVATED_SOURCE_LABEL,
                                     ELEVATED_SOURCE_TOOLTIP, LOCAL_SOURCE_LABEL,
@@ -183,9 +184,8 @@ WORKER_SIGNAL_NAMES = ("list_ready", "task_started", "task_done", "task_error",
                        "task_cancelled", "read_ready", "normalize_ready")
 
 #: The Qt classes the pane's ASSEMBLY builds its widgets with, RE-EXPORTED (`AGENTS.md` §4.1): a
-#: caller reads a value off them on THIS module (`modules.sftp_tab.QPlainTextEdit.LineWrapMode`), and
-#: that shipped path outlives the move. Declared ONCE — the manifest is what keeps the re-export from
-#: reading as a dead import.
+#: caller reads a value off them on THIS module (`modules.sftp_tab.QPlainTextEdit.LineWrapMode`) and
+#: that shipped path outlives the move; the manifest keeps the re-export from reading as dead.
 REEXPORTED_QT = (QCompleter, QFontDatabase, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
                  QPushButton, QStringListModel, QTreeWidget)
 
@@ -228,27 +228,24 @@ def resolve_viewer_max_bytes(cfg: dict = None) -> int:
 
 
 class _SftpPane(SftpPaneAssemblyMixin, SftpPaneWalkMixin, SftpPaneListingMixin,
-                SftpPaneViewerMixin, SftpPaneTransferMixin, SftpPaneDndMixin,
-                SftpPaneElevatedMixin, QWidget):
-    """ONE directory pane of the "Files" tab — a FACADE over its seven pane mixins.
+                SftpPaneViewerMixin, SftpViewerVerbsMixin, SftpPaneTransferMixin,
+                SftpPaneDndMixin, SftpPaneElevatedMixin, QWidget):
+    """ONE directory pane of the "Files" tab — a FACADE over its eight pane mixins.
 
     The facade keeps what ONE pane is: the assembly entry (`__init__`), the worker binding and the
-    source switch, the file operations, the copy/move batches, the worker slots and the
-    theme/re-text walks. The clusters live in their own modules: the state and the widgets
+    source switch, the file operations, the copy/move batches, the worker slots and the theme/re-text
+    walks. The clusters live in their own modules: the state and the widgets
     (`sftp_pane_assembly.py`), the pane-scoped keys and the mc/far walk (`sftp_pane_walk.py`), the
     listing and the address bar (`sftp_pane_listing.py`), the read-only preview
-    (`sftp_pane_viewer.py`), the transfers with the batch copy/move (`sftp_pane_transfer.py`), the
-    drag & drop with the row context menu (`sftp_pane_dnd.py`) and the ELEVATED source
-    (`sftp_pane_elevated.py`, `AGENTS.md` §4.25).
+    (`sftp_pane_viewer.py`), its FIND BAR and background chip (`sftp_pane_verbs.py`, v1.14.1), the
+    transfers with the batch copy/move (`sftp_pane_transfer.py`), the drag & drop with the row
+    context menu (`sftp_pane_dnd.py`) and the ELEVATED source (`sftp_pane_elevated.py`, §4.25).
 
     A mixin never imports this module — it duck-types the instance and resolves a facade global
-    through `host_attr()` at call time (`MODULE_FACADE_SEAMS` below DECLARES them, `AGENTS.md`
-    §4.1, §4.3). Everything a pane owns is per-listing state; the WORKER is the container's
-    (`self.worker` reads it), so a second pane costs a second listing and never a second channel.
-
-    The pane answers only the task ids IT queued: the shared worker signals every pane,
-    and the one that does not own a task returns without rendering or reporting anything
-    (task ids are unique, so the split is exact).
+    through `host_attr()` at call time (`MODULE_FACADE_SEAMS` below DECLARES them, `AGENTS.md` §4.1,
+    §4.3). Everything a pane owns is per-listing state; the WORKER is the container's, so a second
+    pane costs a second listing and never a second channel. The pane answers only the task ids IT
+    queued (they are unique, so the split of the shared worker's signals is exact).
     """
 
     # The row ROLES are declared ONCE in `sftp_pane_helpers.py` (the row class and the row readers
@@ -635,6 +632,7 @@ class _SftpPane(SftpPaneAssemblyMixin, SftpPaneWalkMixin, SftpPaneListingMixin,
                 self._highlighter.refresh_theme()
             except RuntimeError:
                 pass  # Qt teardown — the document is already gone
+        self._refresh_viewer_verbs()   # v1.14.1: the find card and the background chip
 
     def retranslate(self):
         """v1.3.3.1: re-text the pane's own strings in the current language.
@@ -664,6 +662,7 @@ class _SftpPane(SftpPaneAssemblyMixin, SftpPaneWalkMixin, SftpPaneListingMixin,
             self.btn_upload.setText(_t("sftp.upload"))
             self.btn_download.setText(_t("sftp.download"))
             self.btn_cancel.setText(_t("sftp.cancel"))
+            self._retranslate_viewer_verbs()   # v1.14.1: the find bar and the background chip
             self.tree.setHeaderLabels([_t("sftp.column_name"), _t("sftp.column_size"),
                                        _t("sftp.column_modified")])
             self.tree.setToolTip(_t("sftp.drag_hint"))
@@ -776,19 +775,17 @@ class SftpTab(SftpContainerPanesMixin, SftpContainerSessionMixin, SftpContainerV
               QWidget, sftp_extract.SftpExtractMixin):
     """The "Files" tab: a container of 1–2 directory PANES over the queue (v1.7rc1).
 
-    The shipped single-listing tab is the ONE-pane case of this container: the pane holds
-    the widgets and the listing state, the container holds the worker binding, the session's
-    "follow the shell's directory" switch, the pane splitter, the ACTIVE pane and the
-    persisted mode. A shipped attribute read (`tab.tree`, `tab._blocked`, `tab._relist()`)
-    resolves on the ACTIVE pane, which is what keeps every earlier contract — and the whole
-    shipped suite — true.
+    The shipped single-listing tab is the ONE-pane case of this container: the pane holds the widgets
+    and the listing state, the container holds the worker binding, the session's "follow the shell's
+    directory" switch, the pane splitter, the ACTIVE pane and the persisted mode. A shipped attribute
+    read (`tab.tree`, `tab._blocked`, `tab._relist()`) resolves on the ACTIVE pane.
 
-    The container's own clusters live in `sftp_container_panes.py` (the panes, the Commander, the
-    ACTIVE pane and the sources), `sftp_container_session.py` (the worker and transport bindings,
-    the dirs memory, the follow and the relay) and `sftp_container_viewer.py` (the ONE preview slot
-    and the live viewer settings). This class keeps the assembly, the ONE teardown, the drag
-    forwarding and the `__getattr__` / `__setattr__` pair — the pair stays HERE, last in the MRO,
-    because it forwards a pane-owned name to the ACTIVE pane.
+    The container's clusters live in `sftp_container_panes.py` (the panes, the Commander, the ACTIVE
+    pane and the sources), `sftp_container_session.py` (the worker and transport bindings, the dirs
+    memory, the follow and the relay) and `sftp_container_viewer.py` (the ONE preview slot, the live
+    viewer settings, the reader's background walk and the `Network ▸` row). This class keeps the
+    assembly, the ONE teardown, the drag forwarding and the `__getattr__` / `__setattr__` pair — the
+    pair stays HERE, last in the MRO, because it forwards a pane-owned name to the ACTIVE pane.
     """
 
     PATH_ROLE = _SftpPane.PATH_ROLE       # the pane's row roles (class-level compatibility)
@@ -799,30 +796,28 @@ class SftpTab(SftpContainerPanesMixin, SftpContainerSessionMixin, SftpContainerV
     VIEWER_TREE_SHARE = _SftpPane.VIEWER_TREE_SHARE
     VIEWER_LAZY_MARGIN = _SftpPane.VIEWER_LAZY_MARGIN
 
-    #: The pane-owned state the container FORWARDS to the ACTIVE pane: a name in this set is
-    #: the PANE's bookkeeping (a test writes `tab._blocked = {…}` and reads it back from the
-    #: pane that really holds it), everything else on the tab address is the container's.
+    #: The pane-owned state the container FORWARDS to the ACTIVE pane: a name in this set is the
+    #: PANE's bookkeeping (a test writes `tab._blocked = {…}` and reads it back from the pane that
+    #: really holds it), everything else on the tab address is the container's.
     PANE_STATE = frozenset({
         "_current_dir", "_pending_lists", "_transfer_tasks", "_own_transfers", "_up_item",
         "_read_tasks", "_last_read", "_viewer_encoding", "_highlighter", "_viewer_language",
         "_highlight_range", "_blocked", "_blocked_icon_cache", "_op_tasks",
         "_pending_batches", "_drag_source", "_normalize_tasks", "_completer_lists",
         "_completer_dir", "_op_batches", "_batches", "_batch_seq", "_pending_drops",
-        # v1.7.5: the listing's sort (a view state) and the reader's ceiling belong to the PANE.
-        "_sort_column", "_sort_desc", "_viewer_cap",
-        # v1.9.3: the reader's ENCODING choice and the path its preview holds (the choice re-reads it).
-        "_viewer_encoding_choice", "_viewer_path",
-        # v1.13.4.3: the ARCHIVE view — the open listing, its copy and the spool legs in flight.
+        # the listing's sort and the reader's ceiling / encoding / preview path (v1.7.5, v1.9.3),
+        # v1.13.4.3's ARCHIVE view, v1.13.6.2's SEARCH run and v1.14.1's find state + hue
+        "_sort_column", "_sort_desc", "_viewer_cap", "_viewer_encoding_choice", "_viewer_path",
         "_archive", "_archive_open", "_archive_tasks", "_archive_dropped", "_archive_legs",
-        "_search_state", "_search_open", "_search_list_tasks", "_search_read_tasks",   # v1.13.6.2
+        "_search_state", "_search_open", "_search_list_tasks", "_search_read_tasks",
+        "_viewer_find_matches", "_viewer_find_current", "_viewer_find_query", "_viewer_background",
     })
 
     # Local hints in the window's status bar (waiting for connection, no selection).
     message = Signal(str)
 
-    # v1.6.3: the user switched the cwd follow. The TAB only reports it —
-    # the session (TerminalSessionPage) installs the hook, applies it live and persists the
-    # `terminal_follow_cwd` key, because the follow is a state of the SESSION, not of a view.
+    # v1.6.3: the user switched the cwd follow. The TAB only reports it — the session installs the
+    # hook, applies it live and persists the `terminal_follow_cwd` key (a SESSION state, not a view).
     follow_cwd_changed = Signal(bool)
 
     # The drag-payload helper of the pane, kept on the CLASS for the shipped suite
@@ -844,20 +839,21 @@ class SftpTab(SftpContainerPanesMixin, SftpContainerSessionMixin, SftpContainerV
         # v1.6.3/v1.7rc1: the follow state of the SESSION — the checkbox is a VIEW of it and
         # lives on the container (one OSC 7 report, one answer).
         self._follow_cwd = False
-        # v1.7.3: the session's identity and the live sends. The KEY is the `history_key()`
-        # of the server (the per-server memory uses it too), the label/host/port are what the
-        # `Send to…` dialog prints and what decides the SAME-host (server-side) path; `_sends`
-        # holds ONE running send per TARGET session.
+        # v1.7.3: the session's identity and the live sends. The KEY is the `history_key()` of the
+        # server (the per-server memory uses it too), the label/host/port are what `Send to…`
+        # prints and what decides the SAME-host path; `_sends` holds ONE send per TARGET session.
         self._session_key = ""
         self._session_label = ""
         self._session_host = ""
         self._session_port = None
         #: v1.7.5: the login user — the `user@host` fallback of a pane's SOURCE header line.
         self._session_user = ""
+        #: v1.14.1: the node's LIVE `ServerData` — the kernel gate of the reader's `Network ▸` row.
+        self._session_data = None
         self._sends = {}
-        # v1.7.3: the per-server directory memory — the map read at construction (so a
-        # pane can restore a directory before anybody navigates) and the entries THIS container
-        # really moved, which are the ones its own write merges into the live config.
+        # v1.7.3: the per-server directory memory — the map read at construction (so a pane can
+        # restore a directory before anybody navigates) and the entries THIS container really
+        # moved, which are the ones its own write merges into the live config.
         self._dirs = load_remembered_dirs()
         self._dirs_touched = {}
         self._extract_provider = None   # v1.13.1: built on the first `Extract` (`sftp_extract`)
@@ -1089,8 +1085,7 @@ class SftpTab(SftpContainerPanesMixin, SftpContainerSessionMixin, SftpContainerV
 
 #: v1.14rc3: the names the split MOVED out of this module — DEFINED in `sftp_pane_widgets.py` /
 #: `sftp_pane_helpers.py` and RE-EXPORTED here, because `modules.sftp_tab.<name>` is what a caller, the
-#: page and the suite import (`AGENTS.md` §4.1). ONE manifest — the name a caller reads → the object
-#: the module really DEFINES, so a copy can never stand in for the definition.
+#: page and the suite import (`AGENTS.md` §4.1). ONE manifest: a copy never stands in for the definition.
 MOVED_NAMES = {
     # the four WIDGETS and the two functions beside them
     "_SftpRowItem": _SftpRowItem, "_SftpTree": _SftpTree, "_ButtonRow": _ButtonRow,
@@ -1130,17 +1125,20 @@ MOVED_NAMES = {
     "SftpContainerPanesMixin": SftpContainerPanesMixin,
     "SftpContainerSessionMixin": SftpContainerSessionMixin,
     "SftpContainerViewerMixin": SftpContainerViewerMixin,
+    # v1.14.1: the reader's own verbs — the find bar and the background chip
+    "SftpViewerVerbsMixin": SftpViewerVerbsMixin,
 }
 
 # The LIVE-NAMESPACE SEAMS, declared once: every name a `sftp_pane_*.py` / `sftp_container_*.py` mixin
 # resolves on THIS module at call time (`host_attr`). The declaration IS the seam — it keeps the name
-# importable, it is the substitution point a suite patches, and it stops a static analyser from reading
-# a live seam as a dead import (`AGENTS.md` §4.1, §4.3), so it comes LAST.
+# importable, it is the substitution point a suite patches, and it keeps a live seam from reading as a
+# dead import (`AGENTS.md` §4.1, §4.3), so it comes LAST.
 MODULE_FACADE_SEAMS = (
     # ── the pure readers the listing and the viewer resolve here (rc5 moved them to their own
     # ── module and re-exports them from this path, so the seam outlives the wave) ──
     format_size, format_mtime, preview_block_reason, decode_text, ask_conflict, read_was_truncated,
     clamp_viewer_max_bytes, save_viewer_wrap, save_viewer_encoding, normalize_viewer_encoding,
+    save_viewer_background,   # v1.14.1: the reader's background key (the chip writes it)
     VIEWER_WRAP_CONFIG, VIEWER_ENCODING_CONFIG, VIEWER_ENCODING_DEFAULT, VIEWER_ENCODINGS,
     resolve_viewer_wrap, resolve_viewer_encoding,
     # ── the Qt surfaces the transfer and the drag & drop mixins resolve here: a suite substitutes

@@ -6,15 +6,18 @@ byte buffer into the text a row or the reader shows — no widget, no provider, 
 reader's encoding/wrap settings (`ui_viewer_encoding`, `ui_viewer_wrap`, `ui_sftp_encodings`), the TWO
 path DIALECTS (`PathDialect` / `dialect_for`), the per-server directory memory (`ui_sftp_dirs`), the
 row ROLES and the source/drag vocabulary the widget module imports, the row readers (`row_path` /
-`row_name`), the cut predicate and the Commander's own settings; `ask_conflict()` is the ONE overwrite
+`row_name`), the cut predicate, the reader's BACKGROUND hue, the `Network ▸` address detector with its
+three commands, and the Commander's own settings; `ask_conflict()` is the ONE overwrite
 question, with its `QMessageBox` taken from the facade (`STAB.QMessageBox`). Every name is re-exported
 by `modules.sftp_tab` — `SFTP_PANES.md` §5-§6; `DOCUMENTATION.md` §59, §64, §66, §68.
 """
 
 import codecs
+import ipaddress
 import json
 import os
 import posixpath
+import re
 import sys
 from datetime import datetime
 
@@ -236,6 +239,121 @@ def save_viewer_encoding(value) -> bool:
         return bool(save_config({VIEWER_ENCODING_CONFIG: normalize_viewer_encoding(value)}))
     except Exception:  # noqa: BLE001 — a write failure must not break the reader
         return False
+
+
+#: v1.14.1: the READER's BACKGROUND — ONE global key holding a HUE (0..359) and nothing else: the
+#: syntax palette is tuned to the theme's own surface, so a free COLOUR would make the ink unreadable
+#: while a hue keeps the tone (the lightness of `base_bg`) derivable. An absent value IS the theme.
+VIEWER_BACKGROUND_CONFIG = "ui_viewer_background"
+VIEWER_BACKGROUND_HUE_MIN = 0
+VIEWER_BACKGROUND_HUE_MAX = 359
+#: The presets the reader's chip offers — `(name, hue)`, the "Appearance" tab's own vocabulary
+#: (`settings.appearance.accent.<name>` is the SAME i18n key, never a copy of it).
+VIEWER_BACKGROUND_PRESETS = (("sky", 198.4), ("cyan", 187.0), ("green", 142.0), ("amber", 38.0),
+                             ("orange", 25.0), ("pink", 330.0), ("violet", 262.0),
+                             ("slate", 215.0))
+
+
+def viewer_background_hue(value):
+    """PURE: one stored value → `(hue, refused)` — a hue in 0..359, or None for the theme.
+
+    An ABSENT / null / blank value is the theme. Every other value outside the declared range — a
+    string, a bool, a negative number, 400 — is REFUSED rather than clamped into a colour the user
+    never chose, and the caller says so once (v1.14.1).
+    """
+    if value is None:
+        return (None, False)
+    if isinstance(value, str) and not value.strip():
+        return (None, False)
+    if isinstance(value, bool):
+        return (None, True)
+    try:
+        rounded = int(round(float(value)))
+    except (TypeError, ValueError):
+        return (None, True)
+    if not (VIEWER_BACKGROUND_HUE_MIN <= rounded <= VIEWER_BACKGROUND_HUE_MAX):
+        return (None, True)   # a NaN and an out-of-range number land here together
+    return (rounded % 360, False)
+
+
+def resolve_viewer_background(cfg: dict = None):
+    """The reader's background as `(hue, refused)` from ONE config read (PURE, v1.14.1)."""
+    if not isinstance(cfg, dict):
+        try:
+            from i18n import load_config
+        except Exception:  # noqa: BLE001 — a build without i18n keeps the theme's look
+            return (None, False)
+        try:
+            cfg = load_config() or {}
+        except Exception:  # noqa: BLE001 — a broken config store keeps the theme's look
+            cfg = {}
+    value = cfg.get(VIEWER_BACKGROUND_CONFIG) if isinstance(cfg, dict) else None
+    return viewer_background_hue(value)
+
+
+def save_viewer_background(hue) -> bool:
+    """Write the ONE background key — a hue, or `None` for the theme (merge-write)."""
+    try:
+        from i18n import save_config
+    except Exception:  # noqa: BLE001 — a build without i18n cannot remember it
+        return False
+    try:
+        return bool(save_config({VIEWER_BACKGROUND_CONFIG: viewer_background_hue(hue)[0]}))
+    except Exception:  # noqa: BLE001 — a write failure must not break the reader
+        return False
+
+
+# ── The reader's `Network ▸` verbs (v1.14.1) ──────────────────────────────────
+# The selection a reader hands over is UNTRUSTED TEXT (a config file, a log line, a stranger's
+# comment), so the row's target is an ALLOWLIST: four dotted decimal octets in 0..255 and an OPTIONAL
+# port in 1..65535 — the commands below are built from that validated address alone.
+
+#: The dotted shape a selection must have before `ipaddress` is even asked.
+NETWORK_TARGET_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){3})(?::(\d{1,5}))?$")
+
+#: The THREE verbs and their ONE literal command each (`{host}` is the validated address).
+NETWORK_VERBS = ("ping", "trace", "reverse")
+NETWORK_COMMANDS = {
+    "ping": "ping -c 4 -W 2 {host}",
+    "trace": "traceroute -n {host} 2>/dev/null || tracepath -n {host}",
+    "reverse": "getent hosts {host}",
+}
+
+
+def parse_network_target(text):
+    """`(host, port)` of a validated `IPv4` / `IPv4:PORT` selection — None for anything else (PURE).
+
+    `ipaddress` is the parser, so the doctored shapes a looser test would accept are refused:
+    `10.0.0.300`, `010.0.0.1` and a five-octet string all answer None. A missing port answers 0.
+    """
+    match = NETWORK_TARGET_RE.match(str(text if text is not None else "").strip())
+    if not match:
+        return None
+    try:
+        host = str(ipaddress.IPv4Address(match.group(1)))
+    except ValueError:
+        return None
+    port_text = match.group(2)
+    if port_text is None:
+        return (host, 0)
+    try:
+        port = int(port_text)
+    except ValueError:
+        return None
+    return (host, port) if 1 <= port <= 65535 else None
+
+
+def network_command(verb: str, host: str) -> str:
+    """The ONE command of a `Network ▸` verb over a VALIDATED address (PURE; "" — refused).
+
+    The host is re-validated here, so the builder cannot become a second, looser door onto the
+    shell: a foreign verb and a foreign address both answer "" (nothing is queued).
+    """
+    template = NETWORK_COMMANDS.get(str(verb or ""))
+    target = parse_network_target(host or "")
+    if not template or not target:
+        return ""
+    return template.format(host=target[0])
 
 
 #: v1.13.6: the per-SESSION encoding memory — the codec THIS pane's user chose, filed by the session's

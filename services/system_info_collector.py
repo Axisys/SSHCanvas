@@ -4,9 +4,9 @@ ONE batch of commands through a single `exec_command()` of the existing paramiko
 section markers and parsed section by section — deliberately NOT tied to the `StatusChecker` (that one
 makes lightweight TCP probes WITHOUT authentication, so credentials must never reach it).
 `SystemInfoCollector(data, password=…)` emits `info_ready(server_id, info_dict)` /
-`info_failed(server_id, error_text)`; `info_dict` carries `os_name`, `cpu_model`, `cpu_cores`,
-`ram_gb`, `disk_gb` and the DEVICE list `disk_devices` beside the DATA-mount family `disk_path` /
-`disk_free` / `disk_size` / `disk_note`.
+`info_failed(server_id, error_text)`; `info_dict` carries `os_name`, `kernel_name`, `cpu_model`,
+`cpu_cores`, `ram_gb`, `disk_gb` and the DEVICE list `disk_devices` beside the DATA-mount family
+`disk_path` / `disk_free` / `disk_size` / `disk_note`.
 
 Two REQUEST/ANSWER pairs beside the root: the data MOUNT (`disk_mount`, `""` ⇒ `DISK_MOUNT_DEFAULT`) is
 answered by the mount point `df` reported (a share refused BY NAME), the DEVICE choice (`disk_device`)
@@ -169,6 +169,23 @@ def parse_os_release(text: str) -> str:
         line = _clean_text(line)
         if line and "=" not in line and not line.startswith("---"):
             return line.strip('"').strip("'")
+    return ""
+
+
+def parse_kernel_name(text: str) -> str:
+    """The KERNEL name of the OS section's `uname -srmo` line — `"Linux"` (PURE, v1.14.1).
+
+    The batch's first OS line is `KERNEL RELEASE MACHINE OS` ("Linux 5.15.0-91-generic x86_64
+    GNU/Linux"), so a word followed by a RELEASE token is the signature; `/etc/os-release`'s
+    `KEY=value` lines and `lsb_release`'s `Description: …` never match it. An output without the
+    line (a legacy batch, a fixture) answers "" — nothing is guessed.
+    """
+    import re
+    pattern = re.compile(r"^([A-Za-z][A-Za-z0-9._+-]{0,31})\s+(\d\S*)")
+    for line in str(text or "").splitlines():
+        match = pattern.match(_clean_text(line))
+        if match:
+            return match.group(1)
     return ""
 
 
@@ -588,6 +605,11 @@ def parse_info_output(output: str, disk_device: str = "") -> Dict[str, object]:
     os_name = parse_os_release("\n".join(sections.get(_SECTION_OS, [])))
     if os_name:
         result["os_name"] = os_name
+    # v1.14.1: the KERNEL fact rides in the SAME section (`uname -srmo`) — the one answer
+    # `os_name` cannot give, because the PRETTY_NAME of a Linux distribution carries no "Linux".
+    kernel = parse_kernel_name("\n".join(sections.get(_SECTION_OS, [])))
+    if kernel:
+        result["kernel_name"] = kernel
 
     cores, model = parse_cpu("\n".join(sections.get(_SECTION_CPU, [])))
     if cores:

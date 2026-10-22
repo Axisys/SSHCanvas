@@ -1180,5 +1180,17 @@
   "diff.error_read": "{name} konnte nicht gelesen werden",
   "diff.send.menu": "An Diff senden",
   "diff.send.row": "{target} · {side}",
-  "diff.send.no_targets": "Keine offene Sitzung"
+  "diff.send.no_targets": "Keine offene Sitzung",
+  "sftp.find.placeholder": "Im Vorschaufenster suchen…",
+  "sftp.find.count": "{cur} / {total}",
+  "sftp.find.prev": "Vorheriger Treffer (Umschalt+Enter)",
+  "sftp.find.next": "Nächster Treffer (Enter)",
+  "sftp.viewer.background": "Hintergrund der Vorschau",
+  "sftp.viewer.background_theme": "Design",
+  "sftp.viewer.background_applied": "Hintergrund der Vorschau: {name}",
+  "sftp.viewer.background_refused": "Der gespeicherte Vorschau-Hintergrund ist kein Farbton — das Design wird verwendet",
+  "sftp.network.menu": "Netzwerk",
+  "sftp.network.ping": "Ping {host}",
+  "sftp.network.trace": "Route verfolgen zu {host}",
+  "sftp.network.reverse": "Reverse-Lookup {host}"
 }

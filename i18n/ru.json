@@ -1180,5 +1180,17 @@
   "diff.error_read": "Не удалось прочитать {name}",
   "diff.send.menu": "Отправить в Diff",
   "diff.send.row": "{target} · {side}",
-  "diff.send.no_targets": "Нет открытых сеансов"
+  "diff.send.no_targets": "Нет открытых сеансов",
+  "sftp.find.placeholder": "Поиск в просмотре…",
+  "sftp.find.count": "{cur} / {total}",
+  "sftp.find.prev": "Предыдущее совпадение (Shift+Enter)",
+  "sftp.find.next": "Следующее совпадение (Enter)",
+  "sftp.viewer.background": "Фон просмотра",
+  "sftp.viewer.background_theme": "Тема",
+  "sftp.viewer.background_applied": "Фон просмотра: {name}",
+  "sftp.viewer.background_refused": "Сохранённый фон просмотра — не оттенок — используется тема",
+  "sftp.network.menu": "Сеть",
+  "sftp.network.ping": "Ping {host}",
+  "sftp.network.trace": "Трассировка до {host}",
+  "sftp.network.reverse": "Обратный поиск {host}"
 }

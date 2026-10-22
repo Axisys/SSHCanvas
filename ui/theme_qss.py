@@ -248,6 +248,48 @@ FOCUS_RING_WIDTH = 2
 #: (`AGENTS.md` §4.6, "No Hardcoding").
 CONTROL_RADIUS_PX = 4
 
+#: v1.14.1: the saturation of the reader's background, on Qt's 0..255 scale — the theme surface's own
+#: LIGHTNESS is kept and only the hue moves, so the syntax palette (tuned to that tone) stays readable.
+VIEWER_BACKGROUND_SATURATION = 58
+
+
+def _viewer_background_hue():
+    """The hue the reader's background is painted with (`None` — the theme's own surface).
+
+    The PURE reader lives in the pane family (`modules/sftp_pane_helpers.py`); it is imported lazily
+    so this module keeps importing WITHOUT the application tree (a stripped build, a suite that only
+    builds a stylesheet) and so a broken config store answers the theme instead of an exception.
+    """
+    for module_name in ("modules.sftp_pane_helpers", "sftp_pane_helpers"):
+        try:
+            module = __import__(module_name, fromlist=["resolve_viewer_background"])
+        except ImportError:
+            continue
+        try:
+            return module.resolve_viewer_background()[0]
+        except Exception:  # noqa: BLE001 — a broken store is the theme's look, never a crash
+            return None
+    return None
+
+
+def viewer_background_hex(hue, base_hex: str) -> str:
+    """The reader's background of ONE hue over the theme's own surface tone (v1.14.1).
+
+    Only the LIGHTNESS of `base_hex` (the theme's `base_bg`) survives: a surface's saturation is too
+    low to read as a hue and a free colour could make the syntax ink unreadable, so the result is
+    exactly as bright as the surface it replaces and differs from it in the hue alone.
+    """
+    try:
+        base = QColor(base_hex)
+        if not base.isValid():
+            return base_hex
+        lightness = int(base.lightness())                 # Qt's HSL lightness, 0..255
+        hue_number = int(round(float(hue))) % 360
+    except (TypeError, ValueError):
+        return base_hex
+    return QColor.fromHsl(hue_number, VIEWER_BACKGROUND_SATURATION,
+                          max(8, min(247, lightness))).name()
+
 
 def accent_swatch_style(fill: str, selected: bool = False) -> str:
     """The stylesheet of ONE accent swatch (`ui/settings_dialog.py`) — a chip of a PRESET colour.
@@ -284,6 +326,53 @@ QToolButton:checked {{
     color: {t.accent_strong};
     border: 1px solid {t.accent_strong};
 }}
+"""
+
+
+def _viewer_surface_qss(t) -> str:
+    """The READER's own surface (`modules/sftp_pane_verbs.py`, v1.14.1) — always ONE rule.
+
+    `ui_viewer_background` holds a HUE; the colour keeps the theme surface's LIGHTNESS, so the syntax
+    palette that was tuned to `base_bg` stays readable. No hue (or a refused one) answers the theme's
+    own `base_bg`, which is exactly what the global `QPlainTextEdit` rule paints — the reader and the
+    theme cannot disagree, and the registry keeps its promise that a name builds a string.
+    """
+    hue = _viewer_background_hue()
+    fill = t.base_bg if hue is None else viewer_background_hex(hue, t.base_bg)
+    return f"QPlainTextEdit#SftpViewerText {{ background-color: {fill}; }}"
+
+
+def _find_bar_qss(t) -> str:
+    """The floating find card — the terminal canvas's and the Files reader's share ONE body (v1.14.1).
+
+    ONE builder for two registry names (`find_bar`, `viewer_find_bar`) and ONE selector list for the
+    two object names, so the two bars cannot drift apart. The sizes stay with the widgets.
+    """
+    return f"""
+QWidget#TerminalFindBar, QWidget#ViewerFindBar {{
+    background-color: {t.window_bg};
+    border: 1px solid {t.accent};
+    border-radius: {t.radius_search_bar}px;
+}}
+QLineEdit {{
+    background-color: transparent;
+    border: none;
+    color: {t.text_primary};
+    font-size: 12px;
+    padding: 2px 4px;
+    selection-background-color: {t.accent_strong};
+}}
+QLabel {{
+    color: {t.text_muted};
+    font-size: 11px;
+}}
+QPushButton {{
+    background-color: transparent;
+    border: none;
+    color: {t.text_muted};
+    font-size: 14px;
+}}
+QPushButton:hover {{ color: {t.text_primary}; }}
 """
 
 
@@ -397,33 +486,13 @@ QPushButton {{
 }}
 QPushButton:hover {{ color: {t.text_primary}; }}
 """,
-    # the floating find card of the terminal canvas (modules/terminal_find_bar.py)
-    "find_bar": lambda t: f"""
-QWidget#TerminalFindBar {{
-    background-color: {t.window_bg};
-    border: 1px solid {t.accent};
-    border-radius: {t.radius_search_bar}px;
-}}
-QLineEdit {{
-    background-color: transparent;
-    border: none;
-    color: {t.text_primary};
-    font-size: 12px;
-    padding: 2px 4px;
-    selection-background-color: {t.accent_strong};
-}}
-QLabel {{
-    color: {t.text_muted};
-    font-size: 11px;
-}}
-QPushButton {{
-    background-color: transparent;
-    border: none;
-    color: {t.text_muted};
-    font-size: 14px;
-}}
-QPushButton:hover {{ color: {t.text_primary}; }}
-""",
+    # the floating find cards — the terminal canvas's (modules/terminal_find_bar.py) and the Files
+    # reader's (modules/sftp_pane_verbs.py): ONE body, TWO registry names, TWO object names.
+    "find_bar": _find_bar_qss,
+    "viewer_find_bar": _find_bar_qss,
+    # v1.14.1: the READER's own surface — `ui_viewer_background` holds a HUE, and an empty (or
+    # refused) value answers the theme's own `base_bg` (see `_viewer_surface_qss`).
+    "viewer.background": _viewer_surface_qss,
     # the sticky note editor (graphics/sticky_note.py) — transparent over the
     # painted note body, so only the text colour follows the theme
     "note.editor": lambda t: f"""

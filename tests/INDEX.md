@@ -206,6 +206,7 @@ of the file itself.
 | `test_quick_launch.py` | — | v1.0RC4 — Quick launch (server links and commands): the release's themed test. |
 | `test_rc2_map_import_sidebar.py` | — | v1.1.2RC2 — Map, import, sidebar (release theme). |
 | `test_rc3_terminal_window.py` | — | Terminal windows: the DECCKM arrows, the split pane and the window-level bridges. |
+| `test_reader_verbs.py` | — | v1.14.1 — THE READER'S VERBS: the background hue, the find bar and the `Network ▸` row. |
 | `test_rebrand.py` | docs | v1.12.1 — the name the project answers to: `SSHCanvas`, and the identifiers the rename FREEZES. |
 | `test_release_v15.py` | — | v1.5 — the release that closes the 1.5 line: the environment badge, the panel snap, |
 | `test_row_verbs.py` | — | The row verbs of the Files pane and of the Servers head (v1.13.3). |
@@ -221,7 +222,7 @@ of the file itself.
 | `test_sftp_container_split.py` | — | v1.14rc4 — the container as a FACADE: the pane's assembly and the three `SftpTab` mixins. |
 | `test_sftp_dnd.py` | — | Drag & drop of files from the desktop into the SFTP tab. |
 | `test_sftp_ops.py` | — | SFTP as a file manager: the operations and an atomic (loss-free) transfer. |
-| `test_sftp_pane_split.py` | — | The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over seven pane mixins. |
+| `test_sftp_pane_split.py` | — | The waves of the `sftp_tab.py` split: `_SftpPane` is a FACADE over eight pane mixins. |
 | `test_sftp_syntax.py` | — | v1.4.7 — Syntax highlighting in the SFTP viewer (numbers, JSON/XML/YAML). |
 | `test_sftp_tab.py` | — | v1.1.3 — SFTP tab in the terminal window (v1.1.3). |
 | `test_sftp_viewer.py` | — | v1.3.1 — File viewer in the SFTP tab (text ≤ 1 MB over SFTP). |

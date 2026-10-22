@@ -69,6 +69,9 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort. Folders and `..` remain grouped at the top.
     *   **Content Search:** Right-click to **Find text…** — or click **Find text** in the button row — to search the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
     *   **Preview Limits:** Reads 1 MB by default (up to 250 MB in Settings). Larger files open with a header indicating the first megabyte.
+    *   **Preview Background:** Tint the preview with a colour hue that keeps the theme's brightness, so highlighted code stays readable. The header chip offers the theme and eight presets.
+    *   **Find in Preview:** `Ctrl`+`F` opens a find bar over the preview: a match counter, `Enter` / `Shift`+`Enter` to step (wrapping) and `Esc` to close.
+    *   **`Network ▸`:** Select an IPv4 address (`10.0.0.5`) or `IPv4:PORT` (`10.0.0.5:5432`), right-click and pick **Ping**, **Trace route** or **Reverse lookup** — the command runs in a new split terminal of the same server. Linux servers only; a non-address selection is refused.
     *   **Encodings:** Supports eight encodings (automatic, UTF-8, CP1251, etc.). The choice is per-pane and is remembered per session, so a CP1251 pane and a Latin-1 pane come back as you left them.
     *   **Archive Viewer:** Right-click archives (`zip`, `tar`, `jar`, etc.) to **Open Archive**, viewing contents in the other pane. Members open in the read-only preview. **Extract** unpacks the archive into the destination folder (merging files on overwrite). Encrypted archives are listed but not read or extracted.
     *   **Local Pane:** Access your local filesystem within the Files Commander using the same UI.
@@ -234,7 +237,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 178 test files and the parallel runner |
+| `tests/` | 179 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

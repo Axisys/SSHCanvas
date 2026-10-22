@@ -1180,5 +1180,17 @@
   "diff.error_read": "无法读取 {name}",
   "diff.send.menu": "发送到差异",
   "diff.send.row": "{target} · {side}",
-  "diff.send.no_targets": "没有打开的会话"
+  "diff.send.no_targets": "没有打开的会话",
+  "sftp.find.placeholder": "在预览中查找…",
+  "sftp.find.count": "{cur} / {total}",
+  "sftp.find.prev": "上一个匹配 (Shift+Enter)",
+  "sftp.find.next": "下一个匹配 (Enter)",
+  "sftp.viewer.background": "预览背景",
+  "sftp.viewer.background_theme": "主题",
+  "sftp.viewer.background_applied": "预览背景：{name}",
+  "sftp.viewer.background_refused": "保存的预览背景不是色相 — 使用主题",
+  "sftp.network.menu": "网络",
+  "sftp.network.ping": "Ping {host}",
+  "sftp.network.trace": "路由跟踪到 {host}",
+  "sftp.network.reverse": "反向查询 {host}"
 }

@@ -21,6 +21,23 @@ except Exception:  # noqa: BLE001 — import outside the project tree (flat run)
     def _t(key, **kwargs):  # type: ignore
         return key
 
+try:  # v1.14.1: the PURE half of the reader's verbs — the hue and the address allowlist
+    from .sftp_pane_helpers import (NETWORK_VERBS, network_command, parse_network_target,
+                                    viewer_background_hue)
+except ImportError:  # flat launch from the project root
+    from sftp_pane_helpers import (NETWORK_VERBS, network_command,  # type: ignore
+                                   parse_network_target, viewer_background_hue)
+
+try:  # v1.14.1: the split of the container this tab lives in — the parent-chain walk
+    from .terminal_split import find_split
+except ImportError:  # flat launch from the project root
+    from terminal_split import find_split  # type: ignore
+
+try:  # v1.14.1: the KERNEL gate of the Linux-only verbs (the `uname -s` fact)
+    from ..models.server import is_linux_host
+except ImportError:
+    from models.server import is_linux_host  # type: ignore
+
 
 class SftpContainerViewerMixin:
     """The preview slot routing and the live viewer settings (mixed into `SftpTab`)."""
@@ -186,3 +203,91 @@ class SftpContainerViewerMixin:
             except (RuntimeError, AttributeError):
                 pass  # Qt teardown / a bare stub — the pane keeps its own
         return cap
+
+    # ── v1.14.1: the reader's background hue (ONE key, every pane) ───────
+
+    def apply_viewer_background(self, hue, pane=None):
+        """Write the ONE reader-background key and apply it to EVERY pane (v1.14.1).
+
+        The twin of `apply_viewer_max_bytes()`: the KEY goes first (the `viewer.background` QSS
+        builder reads the config, so a pane refreshed before the write would paint the old hue),
+        then each pane repaints its own surface. The pane that ASKED is answered with ONE status
+        sentence — the choice is global and persistent, and nothing else on the screen would say so.
+        Returns the NORMALISED hue (None — the theme's own look).
+        """
+        resolved = viewer_background_hue(hue)[0]
+        host_attr(self, "save_viewer_background")(resolved)
+        for target in list(self._panes):
+            try:
+                target.set_viewer_background(resolved, persist=False)
+            except (RuntimeError, AttributeError):
+                continue   # Qt teardown — the pane is already gone
+        name_of = getattr(pane, "background_name", None)
+        if callable(name_of):
+            try:
+                pane.message.emit(_t("sftp.viewer.background_applied", name=name_of(resolved)))
+            except RuntimeError:
+                pass   # Qt teardown — the reader that asked is already gone
+        return resolved
+
+    # ── v1.14.1: the reader's `Network ▸` verbs (the SESSION's, over its selection) ──
+
+    def append_network_menu(self, menu, pane=None) -> int:
+        """Add the `Network ▸` submenu to the reader's menu — the verbs really offered (0 — none).
+
+        Offered ONLY when the session is a Linux one (`is_linux_host`, the `uname -s` KERNEL fact —
+        `os_name` carries no "Linux" word) AND the reader's SELECTION is an address the allowlist
+        accepts. A name, a URL, a path and a half-typed address are refused BEFORE a menu exists, so
+        no text of a document ever reaches a command (`AGENTS.md` §4.15).
+        """
+        if menu is None or getattr(self, "_session_data", None) is None:
+            return 0
+        if not is_linux_host(self._session_data):
+            return 0
+        reader = getattr(pane, "viewer_selection", None)
+        if not callable(reader):
+            return 0
+        try:
+            selection = str(reader() or "")
+        except RuntimeError:
+            return 0   # Qt teardown — the reader is already gone
+        target = parse_network_target(selection)
+        if target is None:
+            return 0
+        submenu = menu.addMenu(_t("sftp.network.menu"))
+        offered = 0
+        actions = []
+        for verb in NETWORK_VERBS:
+            command = network_command(verb, target[0])
+            if not command:
+                continue
+            action = submenu.addAction(_t(f"sftp.network.{verb}", host=target[0]))
+            action.triggered.connect(lambda _checked=False, cmd=command:
+                                     self.run_network_command(cmd))
+            actions.append(action)
+            offered += 1
+        # Qt gotcha #9: a dying Python `QAction` wrapper destroys its `QMenu` — and the action a
+        # submenu is INSTALLED with is the one `menu.addMenu()` created. The pane keeps the submenu,
+        # ITS OWN action and the verb actions, so a menu built on one right click outlives the
+        # wrapper that built it (`_qaction_guard` rule).
+        if pane is not None:
+            try:
+                pane._network_menu = submenu
+                pane._network_menu_action = submenu.menuAction()
+                pane._network_actions = actions
+            except (AttributeError, RuntimeError):
+                pass   # a bare stub without the attribute — the menu lives with its parent
+        return offered
+
+    def run_network_command(self, command) -> bool:
+        """Run ONE literal command in the session's terminal SPLIT — the `Network ▸` door.
+
+        The split belongs to the container this tab lives in (`TerminalSplit`), reached by the
+        parent-chain walk, so a Files pane shown as a tab, a right-hand panel or a moved stack finds
+        the SAME door. The pane is a real second session of the same node with the same credential
+        (`TerminalSplit.set_enabled`); False — nothing was opened.
+        """
+        split = find_split(self)
+        if split is None or not command:
+            return False
+        return bool(split.set_enabled(True, initial_command=str(command)))

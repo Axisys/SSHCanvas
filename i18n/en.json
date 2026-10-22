@@ -1180,5 +1180,17 @@
   "diff.error_read": "Could not read {name}",
   "diff.send.menu": "Send to Diff",
   "diff.send.row": "{target} · {side}",
-  "diff.send.no_targets": "No open session"
+  "diff.send.no_targets": "No open session",
+  "sftp.find.placeholder": "Find in the preview",
+  "sftp.find.count": "{cur} / {total}",
+  "sftp.find.prev": "Previous match (Shift+Enter)",
+  "sftp.find.next": "Next match (Enter)",
+  "sftp.viewer.background": "Preview background",
+  "sftp.viewer.background_theme": "Theme",
+  "sftp.viewer.background_applied": "Preview background: {name}",
+  "sftp.viewer.background_refused": "The stored preview background is not a hue — the theme is used",
+  "sftp.network.menu": "Network",
+  "sftp.network.ping": "Ping {host}",
+  "sftp.network.trace": "Trace route to {host}",
+  "sftp.network.reverse": "Reverse lookup {host}"
 }

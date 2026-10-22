@@ -245,18 +245,12 @@ class SftpPaneViewerMixin:
     def _open_viewer(self, item: QTreeWidgetItem):
         """A double click on a file → read it through the worker queue and show it.
 
-        The pane never touches the remote file itself: the read is a "read" task
-        of the existing queue (32 KB chunks, the limit and the binary check are
-        the worker's job), the answer arrives via read_ready. The panel opens
-        only when the answer is there — a refusal (binary / too large) stays a
-        message in the status bar (task_error → _on_task_error).
-
-        v1.7rc3: in the TWO-PANE view the preview is shown WHERE THE OTHER PANE IS (the mc
-        behaviour) and THIS pane keeps the keyboard and the cursor; the reading pane stays the
-        owner of the task and of the message, so a refusal is reported exactly as before.
-
-        v1.7.4rc1: the read goes to THIS pane's provider, so a LOCAL file previews through the
-        SHIPPED read policy unchanged (LOCAL_PANE.md §3).
+        The pane never touches the remote file itself: the read is a "read" task of the existing
+        queue (the limit and the binary check are the worker's job) and the panel opens only when the
+        answer is there — a refusal stays a message in the status bar (task_error).
+        v1.7rc3: the two-pane view shows the preview WHERE THE OTHER PANE IS (the mc behaviour) and
+        THIS pane keeps the keyboard; v1.7.4rc1: the read goes to THIS pane's provider, so a LOCAL
+        file previews through the SHIPPED read policy unchanged (LOCAL_PANE.md §3).
         """
         if self.provider is None:
             self.message.emit(_t("sftp.waiting_connection"))
@@ -411,6 +405,7 @@ class SftpPaneViewerMixin:
             highlighter.reset_for_document()
         self._highlight_range = None
         self.viewer_text.setPlainText(text)   # the cursor lands at the start by itself
+        self._reset_viewer_find()             # v1.14.1: the matches indexed the PREVIOUS document
         self._viewer_open = True
         # The panel is where the FILE is: with two panes it takes the OTHER pane's slot (mc/far),
         # with one it stays inside this one (the shipped look). The move happens HERE — with the
@@ -1082,6 +1077,9 @@ class SftpPaneViewerMixin:
                                    self._on_encoding_chosen(code))
             submenu.addAction(item)
             self._encoding_actions[codec] = item
+        # v1.14.1: the `Network ▸` row over a validated IPv4 / IPv4:PORT selection. The CONTAINER
+        # builds it: the verbs open a split of the SESSION and are gated on its kernel fact (§4.15).
+        self._container.append_network_menu(menu, pane=self)
         return menu
 
     def _on_encoding_chosen(self, codec):
@@ -1326,6 +1324,7 @@ class SftpPaneViewerMixin:
             self.viewer_label.setToolTip("")
         except RuntimeError:
             pass  # the C++ object was already destroyed (a close race) — nothing to hide
+        self.close_viewer_find(restore_focus=False)   # v1.14.1: the bar goes; the focus stays
         # v1.7rc3: this pane may have been the CARRYING one while the panel belonged to its
         # sibling — its own path row and key hints come back with the panel's closing.
         if getattr(self, "_viewer_borrowed", False):
