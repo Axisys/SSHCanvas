@@ -237,7 +237,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 181 test files and the parallel runner |
+| `tests/` | 182 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

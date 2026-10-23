@@ -146,6 +146,7 @@ of the file itself.
 | `test_followups_v11363.py` | — | `v1.13.6.3` — the ceiling that keeps itself: ONE clamp on both sides of the reader's cap. |
 | `test_followups_v11402.py` | — | The silence that says why: the swallowed-error audit's first batch (v1.14rc2). |
 | `test_followups_v11412.py` | — | v1.14.1.2 — THE READER, FOLLOWED: the state, the bounds and the vocabulary of the shipped reader. |
+| `test_followups_v11413.py` | — | v1.14.1.3 — THE FIND BAR, CLOSED: the empty bar, the step that outran the scan, the one name. |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |

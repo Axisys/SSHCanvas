@@ -807,12 +807,12 @@ class SftpTab(SftpContainerPanesMixin, SftpContainerSessionMixin, SftpContainerV
         "_highlight_range", "_blocked", "_blocked_icon_cache", "_op_tasks",
         "_pending_batches", "_drag_source", "_normalize_tasks", "_completer_lists",
         "_completer_dir", "_op_batches", "_batches", "_batch_seq", "_pending_drops",
-        # the listing's sort and the reader's ceiling / encoding / preview path (v1.7.5, v1.9.3),
-        # v1.13.4.3's ARCHIVE view, v1.13.6.2's SEARCH run and v1.14.1's find state + hue
-        "_sort_column", "_sort_desc", "_viewer_cap", "_viewer_encoding_choice", "_viewer_path",
+        # the listing's sort and the reader's ceiling / encoding / preview path / hue (v1.7.5, v1.9.3),
+        # v1.13.4.3's ARCHIVE view, v1.13.6.2's SEARCH run and v1.14.1's find state
+        "_sort_column", "_sort_desc", "_viewer_cap", "_viewer_encoding_choice", "_viewer_path", "_viewer_background",
         "_archive", "_archive_open", "_archive_tasks", "_archive_dropped", "_archive_legs",
         "_search_state", "_search_open", "_search_list_tasks", "_search_read_tasks",
-        "_viewer_find_matches", "_viewer_find_current", "_viewer_find_query", "_viewer_background",
+        "_viewer_find_matches", "_viewer_find_current", "_viewer_find_query", "_viewer_find_more",
     })
 
     # Local hints in the window's status bar (waiting for connection, no selection).

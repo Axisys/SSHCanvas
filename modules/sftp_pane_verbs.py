@@ -194,7 +194,7 @@ class ViewerFindBar(QWidget):
         layout.addWidget(self.btn_prev, 0)
         layout.addWidget(self.btn_next, 0)
         layout.addWidget(self.btn_close, 0)
-        self._count = (0, 0)
+        self._count = (0, None)   # no query yet — the first paint owes the EMPTY state, not "No matches"
         self.retranslate()
         self.hide()
 
@@ -415,6 +415,25 @@ class SftpViewerVerbsMixin:
         """The debounce's ONE pass — the timer stopped coalescing the keystrokes."""
         self._refresh_viewer_find_matches()
 
+    def _flush_viewer_find_scan(self):
+        """Run a PENDING debounced pass NOW — a step walks the field's query, not the last list.
+
+        Inside the window the query is already the new one while the match list is the previous
+        query's (`AGENTS.md` §4.15). A pane with no timer searches through its door instead.
+        """
+        timer = getattr(self, "_viewer_find_timer", None)
+        if timer is None:
+            return
+        try:
+            pending = timer.isActive()
+            if pending:
+                timer.stop()
+        except RuntimeError:
+            self._viewer_find_timer = None
+            return
+        if pending:
+            self._refresh_viewer_find_matches()
+
     def _refresh_viewer_find_matches(self):
         """Collect the matches of the query (bounded) and show the first one.
 
@@ -488,7 +507,12 @@ class SftpViewerVerbsMixin:
         return self._step_viewer_find(-1)
 
     def _step_viewer_find(self, delta: int) -> bool:
-        """Move by `delta` through the matches with WRAPAROUND (the terminal bar's rule)."""
+        """Move by `delta` through the matches with WRAPAROUND (the terminal bar's rule).
+
+        A pending debounced pass is FLUSHED first: `Enter` inside the debounce window would otherwise
+        walk the PREVIOUS query's list while the field shows the new one.
+        """
+        self._flush_viewer_find_scan()
         total = len(getattr(self, "_viewer_find_matches", None) or [])
         if total <= 0:
             self._sync_viewer_find_counter()

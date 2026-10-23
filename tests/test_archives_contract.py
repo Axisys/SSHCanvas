@@ -527,7 +527,8 @@ print("== §6 the lifetime: the deliveries, a provider change, the teardown, the
 
 check("§6 the delivery of a staged tree is the SHIPPED engine of the destination pane",
       _PANE_A.ship_staged_tree(os.path.join(WORK_TREE, "local"), "/srv", "local", set()) == "local"
-      and wait_for(lambda: "/srv/local/two.txt" in _REMOTE.files, timeout_ms=15000),
+      and wait_for(lambda: _PANE_A._staged_deliveries == {}, timeout_ms=15000)
+      and "/srv/local/two.txt" in _REMOTE.files,
       str(sorted(_REMOTE.files)))
 _ELEVATED_SEEN = []
 _PANE_A.message.connect(_ELEVATED_SEEN.append)
