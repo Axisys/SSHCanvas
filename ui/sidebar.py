@@ -464,9 +464,22 @@ def list_delimiter(fmt: str) -> str:
     return LIST_DELIMITERS.get(str(fmt or "").strip().lower(), ",")
 
 
+# A report is DATA, never a program: Excel / LibreOffice EVALUATE a cell whose FIRST character is one
+# of these six as a formula, so the writer prefixes the spreadsheet's own "this is text" mark (`'`).
+# Only the first character decides — a `-` inside a name, a `+` mid-cell and a typed `22` stay as typed.
+FORMULA_LEAD_CHARS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def is_formula_cell(value) -> bool:
+    """True when a spreadsheet would READ this cell as a formula (the six leading characters)."""
+    return str("" if value is None else value)[:1] in FORMULA_LEAD_CHARS
+
+
 def list_quote_cell(value, delimiter: str = ",") -> str:
-    """ONE field of the report, quoted only when it must be (RFC 4180)."""
+    """ONE field of the report: neutralised, then quoted only when it must be (RFC 4180)."""
     text = "" if value is None else str(value)
+    if is_formula_cell(text):
+        text = "'" + text
     if delimiter and delimiter in text:
         return '"' + text.replace('"', '""') + '"'
     if '"' in text or "\n" in text or "\r" in text:

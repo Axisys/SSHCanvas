@@ -87,6 +87,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Copy List as TSV / Export List:** (CSV or TSV) in current sorted order.
     *   **Export Connections:** One row per link with endpoint details and bidirectional flags.
     *   **Export Problems:** A report of all `warn`, `offline`, or `stale` nodes, including the reason and check age.
+    *   **Formula-safe:** a cell that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is exported as text (a leading apostrophe), so a report never runs as a spreadsheet formula.
 
 ### UI & UX
 *   **Theming:** Dark, Light, and Auto themes with customizable accent colors. Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style to ensure meaning is not reliant on color alone.
@@ -237,7 +238,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 182 test files and the parallel runner |
+| `tests/` | 183 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

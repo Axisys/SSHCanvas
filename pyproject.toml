@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sshcanvas"               # normalized APP_NAME from version.py ("SSH Canvas") — verified by tests/test_pyproject.py
-version = "1.14.1.3"                # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
+version = "1.14.1.4"                # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
 description = "SSH Canvas: visual infrastructure map with direct SSH connections to nodes"
 readme = "README.md"
 requires-python = ">=3.10"

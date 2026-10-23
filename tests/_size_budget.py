@@ -34,7 +34,7 @@ LINE_PINS = {
     "graphics/map_view.py": 1622,
     "ui/main_window_node_ops.py": 1482,
     "modules/plugin_manager.py": 1462,
-    "ui/sidebar.py": 1447,
+    "ui/sidebar.py": 1460,
     "ui/main_window_ssh.py": 1437,
     "modules/command_history.py": 1368,
     "graphics/node_group.py": 1327,
