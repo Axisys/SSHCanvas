@@ -726,8 +726,8 @@ check("the pin counted the SHIPPED release (692 + the fourteen of v1.5.5 + the t
 check("no new config key beyond the v1.6.2 cursor shape and v1.10rc1's auto-open (the hub collects 30)",
       len(__import__("ui.settings_dialog", fromlist=["SettingsDialog"])
           .SettingsDialog(None).collect()) == 30)
-check("no new theme field (60 in both palettes)",
-      len(dataclasses.fields(theme.DARK)) == 60 and len(dataclasses.fields(theme.LIGHT)) == 60)
+check("no new theme field (61 fields in both palettes — the note tone is a HUE choice)",
+      len(dataclasses.fields(theme.DARK)) == 61 and len(dataclasses.fields(theme.LIGHT)) == 61)
 check("no schema change (VERSION_FORMAT stays 0.9)",
       _version.VERSION_FORMAT == "0.9")
 check("the registry grew by EXACTLY the two inventory actions (and, later, "

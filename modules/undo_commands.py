@@ -545,9 +545,31 @@ class CmdAddRemoveNote(_MapCommand):
     def __init__(self, win, scene, raw: dict, mode: str = "add"):
         super().__init__(win, "Add note" if mode == "add" else "Delete note")
         self._scene = scene
-        self._raw = dict(raw)   # {text,x,y,width,height[,id]}
+        self._raw = dict(raw)   # {text,x,y,width,height[,id][,folded]}
         self._mode = mode
         self._note_id = raw.get("id")
+
+    def _spawn_note(self):
+        """Re-create the note from the record — the half both directions share.
+
+        `folded` travels with the record: a note deleted while folded comes back folded, and its
+        width/height are the EXPANDED geometry the record always carries (`StickyNote.to_dict`).
+        """
+        raw = self._raw
+        note = self._scene.add_note(
+            text=str(raw.get("text") or ""),
+            x=float(raw.get("x") or 0.0),
+            y=float(raw.get("y") or 0.0),
+            width=float(raw.get("width") or 240.0),
+            height=float(raw.get("height") or 160.0),
+            note_id=self._note_id,
+            folded=bool(raw.get("folded")),
+        )
+        self._note_id = note.note_id  # the id may have been generated on the first redo
+        try:
+            self._win._attach_note(note)  # signals + committed text
+        except Exception:  # noqa: BLE001 — the caller owns the fallback: the next redo attaches the note
+            pass
 
     def redo(self):
         # Idempotency: the window already created the note before push — don't duplicate
@@ -555,19 +577,7 @@ class CmdAddRemoveNote(_MapCommand):
             self._refresh()
             return
         if self._mode == "add":
-            note = self._scene.add_note(
-                text=str(self._raw.get("text") or ""),
-                x=float(self._raw.get("x") or 0.0),
-                y=float(self._raw.get("y") or 0.0),
-                width=float(self._raw.get("width") or 240.0),
-                height=float(self._raw.get("height") or 160.0),
-                note_id=self._note_id,
-            )
-            self._note_id = note.note_id  # id may have been generated on the first redo
-            try:
-                self._win._attach_note(note)  # signals + committed text
-            except Exception:  # noqa: BLE001 — the caller owns the fallback: the next redo attaches the note
-                pass
+            self._spawn_note()
         else:
             self._scene.remove_note(self._note_id)
         self._refresh()
@@ -576,19 +586,7 @@ class CmdAddRemoveNote(_MapCommand):
         if self._mode == "add":
             self._scene.remove_note(self._note_id)
         else:
-            note = self._scene.add_note(
-                text=str(self._raw.get("text") or ""),
-                x=float(self._raw.get("x") or 0.0),
-                y=float(self._raw.get("y") or 0.0),
-                width=float(self._raw.get("width") or 240.0),
-                height=float(self._raw.get("height") or 160.0),
-                note_id=self._note_id,
-            )
-            self._note_id = note.note_id
-            try:
-                self._win._attach_note(note)
-            except Exception:  # noqa: BLE001 — the caller owns the fallback: the next redo attaches the note
-                pass
+            self._spawn_note()
         self._refresh()
 
 

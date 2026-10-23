@@ -25,11 +25,14 @@ class SceneCommandMixin:
     """The notes, the groups and the background: the scene mutations that enter the undo stack."""
 
     def _connect_note_signals(self, note):
-        """Wire the note's signals to the dirty marker and undo (v0.8.3: text editing)."""
+        """Wire the note's signals to the dirty marker and undo (the text editing of a note)."""
         try:
             note.textEdited.connect(lambda *_a: self._on_note_text_edited(note))
             note.moved.connect(lambda *_a: self._mark_dirty())
-            # v1.2.4: attachment to a server (drag onto a node / drag of an attached one)
+            # the FOLD is saved in the project (an additive note key), so it is a dirty reason —
+            # it is NOT an undo step: it moves no card and it is view state (`AGENTS.md` §4.2)
+            note.foldChanged.connect(lambda *_a: self._mark_dirty())
+            # attachment to a server (drag onto a node / drag of an attached one)
             note.attachRequested.connect(
                 lambda node, n=note: self._attach_note_to_node(n, node))
             note.detachRequested.connect(

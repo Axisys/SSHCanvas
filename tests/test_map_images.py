@@ -399,7 +399,7 @@ check("§4 no new config key from this section (the hub collects 26)",
       len(_hub.collect()) == 30, str(len(_hub.collect())))
 _hub.close()
 check("§4 no new theme field (the palette is the v1.5rc1 one)",
-      len(dataclasses.fields(theme.Theme)) == 60)
+      len(dataclasses.fields(theme.Theme)) == 61)
 _deps = {"PySide6", "paramiko", "keyring", "wcwidth"}
 _req = _src("requirements.txt")
 check("§4 no new dependency (the four pinned ones and nothing else)",

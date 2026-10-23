@@ -534,8 +534,8 @@ for _key in ("menu.export", "empty.state.open_map"):
     check(f"§6 the key {_key} is present and non-empty in every discovered language",
           all(str(_langs[code].get(_key) or "").strip() for code in _langs),
           str({c: _langs[c].get(_key) for c in sorted(_langs)}))
-check("§6 no new colour field (60 in both themes — the tone is an existing tag colour)",
-      len(__import__("dataclasses").fields(theme.Theme)) == 60
+check("§6 no new colour field (61 fields in both themes — the tone is an existing tag colour)",
+      len(__import__("dataclasses").fields(theme.Theme)) == 61
       and theme.THEME.tag_colors["prod"] == theme.THEME.status_offline
       and theme.THEME.tag_colors["staging"] == theme.THEME.status_warn)
 _hub = SettingsDialog(make_main())

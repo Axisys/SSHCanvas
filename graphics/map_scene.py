@@ -536,16 +536,16 @@ class MapScene(QGraphicsScene):
 
     def add_note(self, text: str = "", x: float = 0.0, y: float = 0.0,
                  width: float = 240.0, height: float = 160.0,
-                 note_id: Optional[str] = None) -> StickyNote:
-        """Create a note on the scene (the position — the top-left corner)."""
+                 note_id: Optional[str] = None, folded: bool = False) -> StickyNote:
+        """Create a note on the scene (the top-left corner); `folded` restores the state silently."""
         if note_id is not None and any(n.note_id == note_id for n in self._notes):
             # a duplicate id when loading a corrupt file — generate a new one, do not lose the note
             note_id = None
-        note = StickyNote(text=text, x=x, y=y, width=width, height=height, note_id=note_id)
+        note = StickyNote(text=text, x=x, y=y, width=width, height=height, note_id=note_id,
+                          folded=folded)
         self.addItem(note)
         self._notes.append(note)
-        # the live drag geometry — the anchor line of an attached note follows
-        # it (for a free one the signal does nothing: on_note_drag_updated is a no-op)
+        # the anchor line of an attached note follows the live drag geometry (a free note — a no-op)
         try:
             note.dragUpdated.connect(self.on_note_drag_updated)
         except RuntimeError:  # Qt teardown

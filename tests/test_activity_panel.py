@@ -384,7 +384,8 @@ from ui.settings_dialog import load_theme_settings  # noqa: E402
 
 _theme = load_theme_settings()
 check("§3 a broken theme value falls back AND says so (the record the panel shows)",
-      _theme == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal"}
+      _theme == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
+               "note_tone": ""}
       and sum(1 for m in messages() if "theme" in m) >= 3, str(messages()))
 clear_cfg()
 check("§3 a language that cannot be loaded is a WARNING record (it was a DEBUG line before)",
@@ -662,7 +663,7 @@ import dataclasses  # noqa: E402
 from ui import theme  # noqa: E402
 
 check("§5 no new theme field (the palette is the v1.5rc1 one)",
-      len(dataclasses.fields(theme.Theme)) == 60)
+      len(dataclasses.fields(theme.Theme)) == 61)
 _deps = {"PySide6", "paramiko", "keyring", "wcwidth"}
 _req = _src("requirements.txt")
 check("§5 no new dependency (the four pinned ones and nothing else)",

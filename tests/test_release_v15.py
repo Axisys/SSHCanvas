@@ -118,7 +118,7 @@ check("§1 a collapsed card hides the chip (one line, no band) and keeps the TON
 _card.toggle_collapsed()
 
 check("§1 the badge reuses the tag colour — NO new colour field",
-      len(dataclasses.fields(theme.Theme)) == 60
+      len(dataclasses.fields(theme.Theme)) == 61
       and not any("env" in f.name or "badge" in f.name
                   for f in dataclasses.fields(theme.Theme)))
 _badge_body = _src("graphics", "server_node.py").split("def _apply_env_badge")[1].split(
@@ -326,7 +326,7 @@ check("§4 no new action and no new empty default of THIS release (the registry 
       "v1.5.5 inventory pair after it, and the v1.6.8 attention report at the end)",
       len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39)
 check("§4 no new theme field (the palette is the v1.5rc1 one)",
-      len(dataclasses.fields(theme.Theme)) == 60)
+      len(dataclasses.fields(theme.Theme)) == 61)
 _deps = {"PySide6", "paramiko", "keyring", "wcwidth"}
 _req = _src("requirements.txt")
 check("§4 no new dependency (the four pinned ones and nothing else)",

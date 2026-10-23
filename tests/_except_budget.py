@@ -36,7 +36,7 @@ _MARKER_RE = re.compile(r"noqa:\s*BLE001\b\s*(.*)$")
 _REASON_RE = re.compile(r"^(?:—|–|--|-|:)\s*(\S.*)$")
 
 # ── The pins (a ratchet: measure and paste, never raise by hand) ──────────────────────────────
-TARGET_PIN = 316       # pass-only handlers OUTSIDE the teardown family — marked or not
+TARGET_PIN = 315       # pass-only handlers OUTSIDE the teardown family — marked or not
 UNMARKED_PIN = 0       # of them, the ones that carry no marker — the goal state
 REASONLESS_PIN = 0     # markers with an EMPTY reason — the goal state
 

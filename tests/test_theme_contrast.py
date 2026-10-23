@@ -455,13 +455,13 @@ from ui.settings_dialog import (SettingsDialog, load_theme_settings, theme_from_
 clear_cfg()
 check("§7 no `theme` key → dark + the default accent + the motion ON + the normal card",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True,
-                                "density": "normal"}
+                                "density": "normal", "note_tone": ""}
       and theme_from_settings(load_theme_settings()) is theme.DARK,
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "auto", "accent": "#38bdf8", "motion": False}})
 check("§7 the round trip: `auto` + the motion flag come back unchanged",
       load_theme_settings() == {"mode": "auto", "accent": "#38bdf8", "motion": False,
-                                "density": "normal"},
+                                "density": "normal", "note_tone": ""},
       str(load_theme_settings()))
 try:
     theme.system_color_scheme = lambda: theme.MODE_LIGHT
@@ -473,7 +473,7 @@ check("§7 ...and the stored `auto` resolves to the platform's LIGHT (not to dar
 write_cfg({"theme": {"mode": "night", "accent": "#zzzzzz", "motion": "false"}})
 check("§7 a foreign mode, a broken accent and a STRING motion → the defaults (never a crash)",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True,
-                                "density": "normal"},
+                                "density": "normal", "note_tone": ""},
       str(load_theme_settings()))
 check("§7 motion_from_settings: only a real boolean counts, a broken value means ON",
       motion_from_settings({"motion": False}) is False

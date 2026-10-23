@@ -563,8 +563,8 @@ check("§4 no new registry action of THIS release (the lens and the plaque are c
       len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39,
       f"{len(HR.HOTKEY_ACTIONS)} / {len(HR.empty_default_action_ids())}")
 check("§4 no new colour field (the release reuses the status tones and the declared shapes)",
-      len(dataclasses.fields(theme.DARK)) == 60
-      and len(dataclasses.fields(theme.LIGHT)) == 60,
+      len(dataclasses.fields(theme.DARK)) == 61
+      and len(dataclasses.fields(theme.LIGHT)) == 61,
       f"{len(dataclasses.fields(theme.DARK))} / {len(dataclasses.fields(theme.LIGHT))}")
 check("§4 the schema does NOT change (a view fact is not a project-format field)",
       _version.VERSION_FORMAT == "0.9", _version.VERSION_FORMAT)

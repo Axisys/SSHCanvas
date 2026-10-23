@@ -289,9 +289,7 @@ class ProjectIOMixin:
         # background threads.
         self._sync_status_targets()
 
-        # v0.7.2: notes from the file. Backward-compat: projects before
-        # v0.7.2 have no "notes" key — raw.get(...) gives an empty list,
-        # everything stays as it was.
+        # notes from the file — an absent "notes" key is an empty list (nothing to restore).
         for raw_note in raw.get('notes', []):
             if not isinstance(raw_note, dict):
                 continue  # broken record — skip without failing the load
@@ -304,6 +302,8 @@ class ProjectIOMixin:
                     width=float(raw_note.get("width") or 240.0),
                     height=float(raw_note.get("height") or 160.0),
                     note_id=note_id,
+                    # the fold: an ADDITIVE key whose width/height above are the EXPANDED size
+                    folded=bool(raw_note.get("folded")),
                 )
             except (TypeError, ValueError):
                 continue

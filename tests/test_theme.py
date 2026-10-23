@@ -135,7 +135,7 @@ check("§2 SFTP_PREVIEW_BLOCKED is the warn tone (one value, not a second litera
       theme.DARK.sftp_preview_blocked == theme.DARK.status_warn == "#facc15")
 check("§2 the derived dicts are NOT fields — the values are declared exactly once",
       set(f.name for f in dataclasses.fields(theme.Theme)) == set(DARK_SNAPSHOT)
-      | {"accent_hue", "accent_hover", "accent_selected",
+      | {"accent_hue", "accent_hover", "accent_selected", "note_tone",
          # v1.5rc1: the STRONG accent family — three NEW fields that resolve to the
          # DARK values this snapshot already pins (the role is new, the bytes are not)
          "accent_strong", "accent_strong_hover", "accent_strong_selected"}
@@ -355,14 +355,16 @@ from ui.settings_dialog import (SettingsDialog, accent_swatches,  # noqa: E402
 
 clear_cfg()
 check("§6 no `theme` key → DARK + the default accent + the motion ON (the defaults ARE the behaviour)",
-      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal"}
+      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
+                                "note_tone": ""}
       and theme_from_settings(load_theme_settings()) is theme.DARK,
       str(load_theme_settings()))
 
 write_cfg({"theme": {"mode": "light", "accent": "#b838f8"}})
 _stored = load_theme_settings()
 check("§6 the round trip: a saved light theme + a custom accent come back unchanged",
-      _stored == {"mode": "light", "accent": "#b838f8", "motion": True, "density": "normal"}, str(_stored))
+      _stored == {"mode": "light", "accent": "#b838f8", "motion": True, "density": "normal",
+                                "note_tone": ""}, str(_stored))
 _instance = theme_from_settings(_stored)
 check("§6 ...and become the LIGHT instance with that hue (the hex is a hue in disguise)",
       _instance.canvas_bg == theme.LIGHT.canvas_bg
@@ -372,23 +374,28 @@ check("§6 ...and become the LIGHT instance with that hue (the hex is a hue in d
 
 write_cfg({"theme": "not-an-object"})
 check("§6 a broken `theme` value (a string) → the defaults, and the app still starts",
-      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal"})
+      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
+                                "note_tone": ""})
 write_cfg({"theme": {"mode": 42, "accent": "#zzzzzz"}})
 check("§6 a foreign mode + an invalid colour → the defaults (per value, never a crash)",
-      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal"},
+      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
+                                "note_tone": ""},
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "LIGHT", "accent": "38BDF8"}})
 check("§6 the mode is case-insensitive and a missing '#' is tolerated",
-      load_theme_settings() == {"mode": "light", "accent": "#38bdf8", "motion": True, "density": "normal"},
+      load_theme_settings() == {"mode": "light", "accent": "#38bdf8", "motion": True, "density": "normal",
+                                "note_tone": ""},
       str(load_theme_settings()))
 # v1.5rc1: the third mode + the motion flag of the same nested key.
 write_cfg({"theme": {"mode": "auto", "accent": "#38bdf8", "motion": False}})
 check("§6 v1.5rc1: 'auto' is a valid mode and a real `motion` boolean round-trips",
-      load_theme_settings() == {"mode": "auto", "accent": "#38bdf8", "motion": False, "density": "normal"},
+      load_theme_settings() == {"mode": "auto", "accent": "#38bdf8", "motion": False, "density": "normal",
+                                "note_tone": ""},
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "dark", "accent": "#38bdf8", "motion": "yes"}})
 check("§6 v1.5rc1: a broken motion value → the motion ON (today's behaviour)",
-      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal"},
+      load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
+                                "note_tone": ""},
       str(load_theme_settings()))
 clear_cfg()
 

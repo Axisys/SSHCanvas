@@ -14,6 +14,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 
 ### Map & Canvas
 *   **Infinite Canvas:** A zoomable canvas (0.1–5.0) featuring draggable/resizable server cards, sticky notes, and custom backgrounds.
+*   **Sticky Notes:** Pin a note to a card (the anchor line follows), **fold** it to a header strip by double-clicking that header, and give **every** note one tone from Settings → Appearance (the hue shades its paper, frame and ink).
 *   **Connection Types:** Supports `ssh`, `vpn`, `http`, `database`, `nfs`, and `kubernetes`.
 *   **Smart Connections:** Create links via `Shift`+drag or the "Connect to…" dialog. Both include autocomplete for names and addresses.
 *   **Group Management:**
@@ -21,8 +22,8 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Arrangement:** Use "Arrange group" or "Arrange Map" to align members or the entire map in one undoable step.
 *   **Selection & Bulk Editing:** Drag groups, connect/delete nodes, or bulk-edit tags/comments using `Ctrl`+click or rubber-band selection. Tags filter the sidebar; a card's primary tag colors its icon and is displayed on the card.
 *   **Quick Launch:** Launch URLs in a browser or execute commands as the first line of an SSH session directly from a card.
-*   **Impact Analysis:** `Ctrl`+click a card to highlight all transitive dependencies ("what breaks if I stop this?"). This is a non-destructive view change that does not affect the undo stack.
-*   **Density Switch:** Toggle between **Comfortable** and **Compact** modes. Compact mode shortens cards and hides info blocks while maintaining consistent text eliding.
+*   **Impact Analysis:** `Ctrl`+click a card to highlight all transitive dependencies ("what breaks if I stop this?"). The change is view-only and touches no undo step.
+*   **Density Switch:** Toggle between **Comfortable** and **Compact** modes. Compact shortens cards and hides info blocks, with the same text eliding.
 *   **Navigation Aids:** A minimap mirrors the whole map, and a legend displays all connection styles and status shapes.
 *   **Export & Documentation:** Export to PNG, JPEG, PDF, SVG, or `.drawio`. It is print-friendly by default, with a one-click option to use the current theme. Includes a "Save Documentation Image" option for a fixed 1600×900 @2× poster.
 *   **Shared Bookmarks:** Access a dedicated bookmarks panel (wiki, dashboards, etc.). Filter by typing (`Esc` or the clear button empties the filter) and manage in place. Bookmarks are stored globally in `~/.sshmap/bookmarks.json` to keep project maps clean.
@@ -55,11 +56,11 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Window Management:** Sessions can be tabs in separate windows, in a detachable "Terminals" dock, or in a single shared window.
     *   **Merge Windows:** Consolidates sessions into one window while preserving scrollback and history.
     *   **Split Terminal:** Create a second shell of the same node below the current tabs.
-*   **Standalone Terminal Mode:** `python main.py --only-terminal` runs the terminal alone. It opens to the **Servers** list; selecting a project file lists its servers, and choosing one opens a full-featured session. Passwords are never stored in project files and are requested if unknown.
+*   **Standalone Terminal Mode:** `python main.py --only-terminal` runs the terminal alone: it opens on the **Servers** list; selecting a project file lists its servers, and choosing one opens a full-featured session. Passwords are never stored in project files and are requested if unknown.
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf` or `reboot`.
-*   **Command Library:** Convert historical commands into macros with version history (ring of 10) and JSON import/export. The side panel contains two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, with Open map/Profiles). This allows starting new sessions without returning to the map. Right-clicking a server provides **Connect to SSH** and **Quick Launch** options. A command can be marked **Requires confirmation**, so sending it asks for a Yes/No first (No is the default).
+*   **Command Library:** Historical commands become macros (version history ring of 10, JSON import/export). The side panel contains two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, with Open map/Profiles). Sessions start without returning to the map; right-clicking a server gives **Connect to SSH** and **Quick Launch**. A command can be marked **Requires confirmation**, so sending it asks for a Yes/No first (No is the default).
 *   **Command History:** A `History` tab per server is kept between sessions. Import from disk or `~/.bash_history`, filter/sort, and merge duplicates. Secrets are marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position during output. An external `ssh` terminal is available as an alternative, supporting per-server **jump hosts** via `~/.ssh/config`.
 *   **SFTP & Files Commander:**
@@ -67,13 +68,13 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Row Verbs:** Right-click a row to **Download** (file or folder) or **Upload** into the current directory.
     *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete).
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort. Folders and `..` remain grouped at the top.
-    *   **Content Search:** Right-click to **Find text…** — or click **Find text** in the button row — to search the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
+    *   **Content Search:** **Find text…** in the row menu — or the row's button — searches the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
     *   **Preview Limits:** Reads 1 MB by default (up to 250 MB in Settings). Larger files open with a header indicating the first megabyte.
     *   **Preview Background:** Tint the preview with a colour hue that keeps the theme's brightness, so highlighted code stays readable. The header chip offers the theme and eight presets.
     *   **Find in Preview:** `Ctrl`+`F` opens a find bar over the preview: a match counter, `Enter` / `Shift`+`Enter` to step (wrapping) and `Esc` to close.
-    *   **`Network ▸`:** Select an IPv4 address (`10.0.0.5`) or `IPv4:PORT` (`10.0.0.5:5432`), right-click and pick **Ping**, **Trace route** or **Reverse lookup** — the command runs in a new split terminal of the same server. Linux servers only, and the row appears after the server's facts are collected (a connect collects them once); a non-address selection is refused.
+    *   **`Network ▸`:** Select an IPv4 address (`10.0.0.5`) or `IPv4:PORT` (`10.0.0.5:5432`), right-click and pick **Ping**, **Trace route** or **Reverse lookup** — the command runs in a new split terminal of the same server. Linux only; the row appears once the facts are collected, and a non-address selection is refused.
     *   **Encodings:** Supports eight encodings (automatic, UTF-8, CP1251, etc.). The choice is per-pane and is remembered per session, so a CP1251 pane and a Latin-1 pane come back as you left them.
-    *   **Archive Viewer:** Right-click archives (`zip`, `tar`, `jar`, etc.) to **Open Archive**, viewing contents in the other pane. Members open in the read-only preview. **Extract** unpacks the archive into the destination folder (merging files on overwrite). Encrypted archives are listed but not read or extracted.
+    *   **Archive Viewer:** Right-click archives (`zip`, `tar`, `jar`, etc.) to **Open Archive**, viewing contents in the other pane. Members open in the read-only preview. **Extract** unpacks the archive into the destination folder (merging files on overwrite). Encrypted archives are listed but never read or extracted.
     *   **Local Pane:** Access your local filesystem within the Files Commander using the same UI.
     *   **Elevated Pane:** Provides read-only access to a server using `sudo` via a secure password channel.
     *   **Cross-Session Transfer:** Send files between different servers via temporary relay through the local machine.
@@ -157,7 +158,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **Connections:** Types: `ssh|vpn|http|database|nfs|kubernetes`.
 *   **Groups:** Membership is inferred by the card's position relative to the group rectangle.
 *   **Tags/Launch:** Broken arrays are emptied; broken records are dropped.
-*   **Notes:** `server_id` is optional; if absent, the note is "free."
+*   **Notes:** `server_id` and `folded` are optional; `width`/`height` are always the unfolded size.
 *   **Background:** Stores the image path; move the file with the project.
 
 ---
@@ -182,7 +183,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **Undo/Redo:** Covers map elements but **not** node statuses.
 *   **Unmanaged Cards:** All monitoring, terminals, and SFTP features are disabled.
 *   **File Transfers:** Folder copies are bounded (5000 entries/32 levels). Symlinks are not followed. Both panes share one SFTP channel per session.
-*   **Local Pane:** Deletions go to the OS trash (Recycle Bin on Windows, `gio trash` on Linux) and can be restored from there. A platform without a trash backend falls back to a permanent delete, and the confirmation says which one will happen. Filesystems that cannot trash an item report an error instead of deleting it.
+*   **Local Pane:** Deletions go to the OS trash (Recycle Bin on Windows, `gio trash` on Linux) and can be restored from there. Without a trash backend the confirmation names the permanent delete, and a filesystem that cannot trash reports an error instead of deleting.
 *   **Elevated Pane:** Strictly read-only for the remote user's permissions.
 *   **Command History:** Stored as plain-text per server under `~/.sshmap/history/`. The padlock marks secrets but does not redact them.
 *   **Profile Store:** Profiles live in `~/.sshmap_profiles.json`. Broken files are reported rather than overwritten.
@@ -238,7 +239,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 183 test files and the parallel runner |
+| `tests/` | 184 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

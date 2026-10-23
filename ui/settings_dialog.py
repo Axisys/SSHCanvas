@@ -144,18 +144,13 @@ def _import_error_detail(reason: str) -> str:
 
 
 def load_ui_settings():
-    """v1.1.1: reads and validates the ui_* keys from ~/.sshmap/config.json.
+    """Reads and validates the ui_* keys from ~/.sshmap/config.json; a broken value → its default.
 
-    The same pattern as get_status_settings()/get_autosave_settings() — each
-    domain reads its own keys; the source is i18n.load_config() (never
-    fails). Returns:
-      {"font_family": str,            # "" — not set (the system font)
-       "font_size": int | None,       # None — not set (the system size; 0 = the same)
-       "node_double_click": str,      # "properties" (default) | "connect"
-       "show_sidebar_buttons": bool,  # default True — the sidebar button block is visible
-       "show_connection_type": bool,  # default False — the type on the connection plaque is not drawn
-       "reopen_last_project": bool}   # default False — the project of the last run is NOT reopened
-    Invalid values (foreign type, out of range) → default. Never raises.
+    Each domain reads its own keys from `i18n.load_config()` (never fails) and every read is
+    defensive. One QKeySequenceEdit row per action lives in the hotkeys tab, so nothing here counts
+    rows; the values are `font_family` ("" = the system font), `font_size` (None = system, 6..72),
+    `node_double_click` ("properties" | "connect"), `show_sidebar_buttons`,
+    `show_connection_type` and `reopen_last_project`. Never raises.
     """
     defaults = {"font_family": "", "font_size": None,
                 "node_double_click": "properties",
@@ -222,21 +217,16 @@ def swatch_style(fill: str, selected: bool = False) -> str:
 
 
 def load_theme_settings() -> dict:
-    """The validated `theme` key: {"mode", "accent", "motion", "density"} (v1.4.3).
+    """The validated `theme` key: {"mode", "accent", "motion", "density", "note_tone"}.
 
-    ``mode`` is one of ``theme.MODES`` — ``dark`` (the default), ``light`` or
-    ``auto`` (v1.5rc1: the platform's own colour scheme decides, and the window
-    follows a live ``colorSchemeChanged``). ``motion`` is the "Reduce motion"
-    switch of the same tab. ``density`` (v1.6) is the card density of the map —
-    ``normal`` (the historical card) or ``compact`` — validated by
-    ``theme.resolve_density``.
-
-    Broken / missing / foreign values fall back to the dark theme, the default
-    accent, the motion ON and the normal card — the config is hand-editable, so every
-    read is defensive. Never raises.
+    ``mode`` is one of ``theme.MODES`` (``dark``, ``light`` or ``auto`` — the platform's own colour
+    scheme); ``motion`` is the "Reduce motion" switch, ``density`` the card density and ``note_tone``
+    the ONE tone of every note on the map (the ``"#rrggbb"`` colour the Appearance tab stores; ``""``
+    is the shipped family). Broken / missing / foreign values fall back to the defaults — the config
+    is hand-editable, so every read is defensive. Never raises.
     """
     result = {"mode": theme.MODE_DARK, "accent": theme.accent_hex(), "motion": True,
-              "density": theme.DENSITY_NORMAL}
+              "density": theme.DENSITY_NORMAL, "note_tone": ""}
     try:
         from i18n import load_config
     except Exception:
@@ -256,6 +246,11 @@ def load_theme_settings() -> dict:
         result["accent"] = "#" + accent.strip().lstrip("#").lower()
     elif accent is not None:
         _log_dialog(f"theme.accent {accent!r} is not a #rrggbb colour — using the default")
+    tone = raw.get("note_tone")
+    if theme.is_valid_hex(tone):
+        result["note_tone"] = "#" + tone.strip().lstrip("#").lower()
+    elif tone:
+        _log_dialog(f"theme.note_tone {tone!r} is not a #rrggbb colour — using the shipped tone")
     # v1.5rc1: the motion switch. Only a real boolean counts — a string "false"
     # or a 0 is a broken value, and a broken value means TODAY'S behaviour (on).
     motion = raw.get("motion")
@@ -325,14 +320,14 @@ def apply_motion_setting(settings) -> bool:
 
 
 def theme_from_settings(settings) -> "theme.Theme":
-    """The `Theme` instance of a stored `theme` dict (v1.4.3).
+    """The `Theme` instance of a stored `theme` dict — mode + accent hue + note tone.
 
     Never raises and never returns None: the caller gets DARK (or LIGHT) with the
     requested hue, which is exactly what the settings hub writes into the app.
     """
     settings = settings if isinstance(settings, dict) else {}
     hue = theme.hex_hue(settings.get("accent") or theme.accent_hex())
-    return theme.theme_for_mode(settings.get("mode"), hue)
+    return theme.theme_for_mode(settings.get("mode"), hue, settings.get("note_tone"))
 
 
 class SettingsDialog(QDialog):
@@ -417,12 +412,10 @@ class SettingsDialog(QDialog):
     # guessed from the widget tree (`_register_form_rows()` / `_register_search_entry()`).
 
     def _register_search_entry(self, page, label_widget, widgets=None, text=None) -> None:
-        """Add ONE searchable row of ``page`` to the index.
+        """Add ONE searchable row of ``page`` to the index (``widgets`` hide/show together).
 
-        ``widgets`` are the pieces that hide/show together (the label and its field).
-        A row whose text is empty (a separator line, a button row of its own) is NOT
-        indexed: it cannot be searched for, and hiding it would leave a hole the user
-        cannot explain.
+        A row whose text is empty (a separator, a button row of its own) is NOT indexed: it cannot
+        be searched for, and hiding it would leave a hole the user cannot explain.
         """
         if page is None:
             return
@@ -444,12 +437,11 @@ class SettingsDialog(QDialog):
         })
 
     def _register_form_rows(self, page, form) -> None:
-        """Index every row of a QFormLayout (v1.5rc4).
+        """Index every row of a QFormLayout.
 
-        A row is its label + its field; a row whose field is a LAYOUT (the language
-        manager's two buttons) contributes all of that layout's widgets. A row added with
-        an empty label (the checkbox rows) is named by the CHECKBOX's own text — that is
-        the sentence the user reads.
+        A row is its label plus its field; a field that is a LAYOUT (the language manager's two
+        buttons) contributes all of that layout's widgets, and an empty label (the checkbox rows) is
+        named by the CHECKBOX's own text — the sentence the user reads.
         """
         for index in range(form.rowCount()):
             label_item = form.itemAt(index, QFormLayout.ItemRole.LabelRole)
@@ -688,16 +680,13 @@ class SettingsDialog(QDialog):
     # ── "Appearance" tab (v1.4.3): the theme — mode + accent ────────────────────
 
     def _build_appearance_tab(self):
-        """The theme of the application: dark/light + the accent hue (v1.4.3).
+        """The theme of the application: mode, motion, density, accent hue and the note tone.
 
-        LIVE apply without a restart: the hub pattern (the "Language" tab
-        precedent) — every control pushes the choice through ``theme_changed``
-        immediately, so the user SEES the result while the dialog is open, and
-        ``collect()`` writes it to config.json on OK. ``reject()`` restores the
-        theme the dialog opened with (a rejected dialog changes nothing).
-
-        The accent is a HUE, not a palette: the swatches and the hex field both
-        end up as one hue through ``theme.hex_hue``.
+        LIVE apply without a restart (the "Language" tab precedent): every control pushes the
+        choice through ``theme_changed`` immediately, and ``collect()`` writes it to config.json on
+        OK; ``reject()`` restores the theme the dialog opened with, so a rejected dialog changes
+        nothing. The accent and the note tone are HUE values — the fields hold the colour the user
+        picked and ``theme.hex_hue`` derives the hue back.
         """
         current = load_theme_settings()
         self._accent_hex = current["accent"]
@@ -786,6 +775,27 @@ class SettingsDialog(QDialog):
         own_row.addStretch(1)
         layout.addLayout(own_row)
 
+        # ── the NOTE TONE: ONE tone for every note of the map ──────────────────
+        # The value is a #rrggbb COLOUR whose HUE shades the note family (paper, frame, ink —
+        # `theme.note_tone`); an EMPTY field is the shipped tone, so the default needs no control.
+        self._note_tone_value = current["note_tone"]
+        tone_row = QHBoxLayout()
+        self._lbl_note_tone = QLabel(_t("settings.appearance.note_tone"))
+        self.note_tone_edit = QLineEdit(self._note_tone_value)
+        self.note_tone_edit.setMaxLength(7)
+        self.note_tone_edit.setFixedWidth(90)
+        self.note_tone_edit.editingFinished.connect(self._on_note_tone_edited)
+        self.note_tone_pick_btn = QPushButton(_t("settings.appearance.pick_color"))
+        self.note_tone_pick_btn.clicked.connect(self._on_pick_note_tone)
+        tone_row.addWidget(self._lbl_note_tone)
+        tone_row.addWidget(self.note_tone_edit)
+        tone_row.addWidget(self.note_tone_pick_btn)
+        tone_row.addStretch(1)
+        layout.addLayout(tone_row)
+        self._lbl_note_tone_hint = QLabel(_t("settings.appearance.note_tone.hint"))
+        self._lbl_note_tone_hint.setWordWrap(True)
+        layout.addWidget(self._lbl_note_tone_hint)
+
         self._lbl_theme_hint = QLabel(_t("settings.appearance.hint"))
         self._lbl_theme_hint.setWordWrap(True)
         layout.addWidget(self._lbl_theme_hint)
@@ -813,6 +823,10 @@ class SettingsDialog(QDialog):
         self._register_search_entry(tab, self._lbl_theme_own,
                                     [self._lbl_theme_own, self.accent_hex_edit,
                                      self.accent_pick_btn])
+        self._register_search_entry(tab, self._lbl_note_tone,
+                                    [self._lbl_note_tone, self.note_tone_edit,
+                                     self.note_tone_pick_btn])
+        self._register_search_entry(tab, self._lbl_note_tone_hint, [self._lbl_note_tone_hint])
         self._register_search_entry(tab, self._lbl_theme_hint, [self._lbl_theme_hint])
 
         self.tabs.addTab(tab, _t("settings.tab.appearance"))
@@ -827,9 +841,10 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown — a button is already destroyed
 
     def _current_theme(self):
-        """The Theme the tab currently describes (mode + hue)."""
+        """The Theme the tab currently describes (mode + hue + note tone)."""
         mode = self.theme_mode_combo.currentData() or theme.MODE_DARK
-        return theme.theme_for_mode(mode, theme.hex_hue(self._accent_hex))
+        return theme.theme_for_mode(mode, theme.hex_hue(self._accent_hex),
+                                    self._note_tone_value)
 
     def _on_accent_hue(self, hue):
         """A swatch was clicked: adopt its colour and apply live."""
@@ -864,21 +879,61 @@ class SettingsDialog(QDialog):
         except RuntimeError:
             pass
 
-    def _on_pick_accent_color(self):
-        """The colour picker — the same value as the hex field, chosen visually."""
+    def _pick_color(self, initial_hex: str):
+        """The OS colour dialog of ONE field → ``"#rrggbb"`` or None (cancel / no dialog)."""
         try:
             from PySide6.QtWidgets import QColorDialog
-        except Exception:  # noqa: BLE001 — without the dialog the field still works
-            return
+        except Exception:  # noqa: BLE001 — without the dialog the hex fields still work
+            return None
         try:
-            initial = QColor(self._accent_hex)
-            chosen = QColorDialog.getColor(initial, self, _t("settings.appearance.pick_color"))
+            chosen = QColorDialog.getColor(QColor(initial_hex or theme.accent_hex()), self,
+                                           _t("settings.appearance.pick_color"))
         except Exception as e:  # noqa: BLE001 — a broken picker must not break the tab
             _log_dialog(f"appearance: the colour dialog failed: {e!r}")
+            return None
+        return chosen.name().lower() if chosen.isValid() else None
+
+    def _on_note_tone_edited(self):
+        """The tone field lost focus: a colour or an EMPTY field, otherwise the last value.
+
+        Empty means "the shipped family" (`theme.note_tone`), which is why the default needs no
+        second control; a typo is refused and the field returns to the value that is applied.
+        """
+        try:
+            value = (self.note_tone_edit.text() or "").strip()
+        except RuntimeError:
+            return  # Qt teardown
+        if not value:
+            self._note_tone_value = ""
+        elif theme.is_valid_hex(value):
+            self._note_tone_value = "#" + value.lstrip("#").lower()
+        else:
+            _log_dialog(f"appearance: {value!r} is not a #rrggbb colour — keeping "
+                        f"{self._note_tone_value!r}")
+        try:
+            self.note_tone_edit.setText(self._note_tone_value)
+        except RuntimeError:
             return
-        if not chosen.isValid():
-            return  # the user cancelled
-        self._accent_hex = chosen.name().lower()
+        self._emit_theme()
+
+    def _on_pick_note_tone(self):
+        """The colour picker of the note tone — the same value as the field, chosen visually."""
+        chosen = self._pick_color(self._note_tone_value)
+        if chosen is None:
+            return
+        self._note_tone_value = chosen
+        try:
+            self.note_tone_edit.setText(chosen)
+        except RuntimeError:
+            return
+        self._emit_theme()
+
+    def _on_pick_accent_color(self):
+        """The colour picker — the same value as the hex field, chosen visually."""
+        chosen = self._pick_color(self._accent_hex)
+        if chosen is None:
+            return  # the user cancelled / the dialog is unavailable
+        self._accent_hex = chosen
         try:
             self.accent_hex_edit.setText(self._accent_hex)
         except RuntimeError:
@@ -892,11 +947,10 @@ class SettingsDialog(QDialog):
         self._emit_theme()
 
     def _on_motion_toggled(self, checked):
-        """The "Reduce motion" box moved (v1.5rc1) — applied to `ui/motion.py` live.
+        """The "Reduce motion" box moved — applied to `ui/motion.py` live, never raising.
 
-        The checkbox reads "Reduce motion", so CHECKED means the animations are
-        OFF (`motion.set_motion_enabled(not checked)`). Never raises: the switch is
-        cosmetic and a missing module must not break the dialog.
+        The checkbox reads "Reduce motion", so CHECKED means the animations are OFF
+        (`motion.set_motion_enabled(not checked)`); a missing module must not break the dialog.
         """
         self._motion_enabled = not bool(checked)
         try:
@@ -1458,33 +1512,17 @@ class SettingsDialog(QDialog):
     # ── "Hotkeys" tab (v1.3.2: the configurable hotkeys — the action registry) ──────
 
     def _build_hotkeys_tab(self):
-        """v1.3.2: a table [action | hotkey] over the action registry.
+        """A table [action | hotkey] over the action registry — navigable and resettable.
 
-        The action's NAME reuses the existing menu i18n key (no new strings for the list
-        itself). An EMPTY sequence = the hotkey is disabled, the action stays available
-        from the menu. Two actions with the same sequence are BOTH marked + the warning
-        label appears — saving is still possible (Qt resolves the ambiguity at runtime,
-        and the user may be mid-edit).
-
-        v1.3.3.3: the registry grew, most of its actions with an
-        EMPTY default (assignable, no hotkey out of the box), so "clearing a field is the
-        documented way" stops being a reasonable answer to "I want the defaults back" —
-        the "Reset to defaults" button (`_on_reset_hotkeys`) restores every registry
-        default through the same merge-write.
-
-        v1.5rc4: the tab became NAVIGABLE — the plan's own words:
-          * a **filter field** above the table (by the action's name OR its current
-            sequence, so "ctrl+s" finds "Save" too);
-          * **grouping by family** — a caption row per family (File / Edit / View / Node /
-            Plugins / Help) and the registry's declaration order INSIDE it. The spine is
-            `hotkey_registry.actions_by_family()`, so the registry stays the only source of
-            the list and a new action joins its family by being named `<family>.*`;
-          * a **header with the counts** ("with a key" vs "assignable") that follows every
-            edit, and a **hint on assigning a key** next to the older "clear it to disable"
-            one.
-        The table still owns ONE QKeySequenceEdit per action (`self.hotkey_edits`), and
-        `hotkey_row()` / `hotkey_action_rows()` are the public way to find a row — the
-        caption rows shifted the arithmetic, so no caller should count rows by hand.
+        The action's NAME reuses its menu i18n key (no new strings); an EMPTY sequence means the
+        action has no hotkey, though it stays available from the menu. The tab carries a FILTER field
+        (name OR current sequence), CAPTION rows per family in the registry's declaration order
+        (`hotkey_registry.actions_by_family()`), a header with the counts that follows every edit,
+        the "Reset to defaults" button (`_on_reset_hotkeys`) and the two hints. Two actions sharing
+        one sequence are BOTH marked and the warning appears — saving is still possible, because Qt
+        resolves an ambiguity at runtime and the user may be mid-edit. `hotkey_row()` /
+        `hotkey_action_rows()` are the public row lookups: caption rows shifted the arithmetic, so no
+        caller counts rows by hand.
         """
         try:
             from ui.hotkey_registry import (
@@ -2060,12 +2098,11 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def reject(self):
-        """Cancel: put the theme back the way the dialog found it (v1.4.3).
+        """Cancel: put the theme back the way the dialog found it.
 
-        The "Appearance" tab applies LIVE (the "Language" tab precedent) — that
-        is what makes the choice meaningful — so a rejected dialog must undo the
-        preview. Nothing else in the hub is applied before OK, so nothing else
-        has to be restored. Never raises.
+        The "Appearance" tab applies LIVE (that is what makes the choice meaningful), so a rejected
+        dialog must undo the preview — the theme instance, the motion flag and the card density.
+        Nothing else in the hub is applied before OK. Never raises.
         """
         try:
             initial = getattr(self, "_initial_theme", None)
@@ -2107,49 +2144,11 @@ class SettingsDialog(QDialog):
         """The tab values → the ~/.sshmap/config.json keys (all valid by construction:
         the combos give fixed ids, the spinboxes — their own range).
 
-        v1.1.1: +7 keys — the UI/terminal fonts (ui_font_family/ui_font_size/
-        terminal_font), the terminal limit (terminal_max_open), the node
-        double click (ui_node_double_click), the sidebar buttons
-        (ui_show_sidebar_buttons) and the type on the connection plaque
-        (ui_show_connection_type). ui_font_size = 0 — the system size
-        (the load_ui_settings() validator reads the range 6..72, otherwise
-        the default).
-        v1.1.2 final: +1 key — status_max_parallel (the cap on parallel
-        probes; the spinbox range = the validator clamp of
-        get_status_settings()).
-        v1.2.2: +1 key — terminal_mode ("windows"|"tabs"; the combo gives
-        fixed ids).
-        v1.3.2: +1 key — hotkeys (a nested dict action_id → sequence string;
-        "" = the hotkey is disabled). The values come from the QKeySequenceEdit
-        cells; MainWindow._apply_hotkeys() installs them live after the
-        applied signal (no restart). Conflict rows are saved as-is by design.
-        v1.3.3.8: +1 key — terminal_wheel ("scrollback"|"off", the combo gives
-        fixed ids). This closes the LAST config-only key: the hub's 20 UI-facing
-        keys become 21 and every setting now lives in the hub.
-        v1.4.3: +1 key — theme ({mode, accent} of the
-        "Appearance" tab). The value is NESTED like `hotkeys` — one config key
-        carrying the whole appearance choice — and `i18n.save_config` merges at
-        the TOP level, so `_on_accept` re-merges the stored object (a mode change
-        must not drop the accent of a foreign version).
-        v1.6.2: +1 key — terminal_cursor_style ("bar"|"block"|
-        "underline" of the "Terminal" tab; the combo gives fixed ids, so the value
-        is valid by construction). 22 → 23 UI-facing keys.
-        v1.7.1.1: +1 key — terminal_files_mode ("tab"|"panel"
-        of the same "Terminal" tab, the row below the display mode; the combo gives
-        fixed ids). It owns the Files panel's MODE, which the terminal window would
-        otherwise write for itself as the legacy `ui_files_panel` (read once as the
-        migration source, never written again). 23 → 24 UI-facing keys.
-        v1.7.5: +1 key — ui_viewer_max_bytes (the reader's
-        CEILING, in BYTES, of the new "Files" tab; the slider and the value box give a
-        value inside the module's declared range, so it is valid by construction).
-        24 → 25 UI-facing keys.
-        v1.10rc2: +1 key — terminal_term (the PTY's `TERM` of the "Terminal" tab; the field is
-        editable and the reader's OWN allowlist (`resolve_term()`) judges what it carries, so a
-        value the field cannot express is impossible by construction). 26 → 27 UI-facing keys.
-        v1.13.2: +3 keys — the terminal WALLPAPER of the "Terminal" tab:
-        terminal_background (the path field), terminal_background_mode (the combo's fixed ids) and
-        terminal_background_opacity (the slider + the box, inline 0..100 by construction).
-        27 → 30 UI-facing keys.
+        **30 UI-facing keys.** The nested `theme` object is ONE key carrying the whole appearance
+        choice ({mode, accent, motion, density, note_tone}) and `hotkeys` is the same shape, because
+        `i18n.save_config` merges at the TOP level — `_on_accept` re-merges the stored object, so a
+        mode change never drops a value a foreign version wrote (the accent, a note tone). The nested
+        `note_tone` is written only when a tone is chosen: an absent key IS the shipped family.
         """
         try:  # the field's OWN allowlist — the SAME reader the key is validated by at load time
             from ..modules.ssh_terminal import resolve_term
@@ -2184,18 +2183,16 @@ class SettingsDialog(QDialog):
             "terminal_background": self.background_edit.text().strip(),
             "terminal_background_mode": self.background_mode_combo.currentData() or "cover",
             "terminal_background_opacity": int(self.background_opacity_spin.value()),
-            # v1.4.3: the appearance — the mode + the accent hue,
-            # stored as the colour the user actually picked (the hue is derived
-            # back). v1.5rc1: +`motion` — the "Reduce motion" switch of the same
-            # tab, so the appearance choice stays ONE nested key (the hub's
-            # collect() key count is unchanged).
+            # v1.4.3: the appearance — the mode + the accent hue, stored as the colour the user
+            # actually picked (the hue is derived back); motion, density and the note tone are
+            # further VALUES of the SAME nested key, so the hub's key count never moves.
             "theme": {"mode": self.theme_mode_combo.currentData() or theme.MODE_DARK,
                       "accent": self._accent_hex,
                       "motion": bool(self._motion_enabled),
-                      # v1.6: the card density — a fourth VALUE of the
-                      # SAME nested key, so the hub's collect() key count stays 22.
                       "density": (self.density_combo.currentData()
-                                  or theme.DENSITY_NORMAL)},
+                                  or theme.DENSITY_NORMAL),
+                      # the ONE tone of every note — written ONLY when chosen (absent = shipped)
+                      **({"note_tone": self._note_tone_value} if self._note_tone_value else {})},
             # v1.6.6: the DECLARED `0` sentinel is what the manual-only
             # checkbox writes — the spinbox itself is never zeroed, so the user's interval is
             # still there when the box is un-ticked (the row is a VIEW of the state).

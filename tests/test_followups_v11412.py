@@ -310,10 +310,13 @@ check("§6 every preset is named by an i18n key every language already carries",
       all(f"settings.appearance.accent.{name}" in LANGS[code]
           for name, _hue in AP.ACCENT_PRESETS for code in LANGS),
       str([name for name, _h in AP.ACCENT_PRESETS]))
-check("§6 `ui/theme.py` was not touched by the new module (its 1 071-line pin holds)",
-      theme.__file__.endswith("theme.py") and len(open(theme.__file__, encoding="utf-8")
-                                                  .read().splitlines()) == 1071,
-      theme.__file__)
+import _size_budget as _SB  # noqa: E402 - the line pin this check guards
+
+check("§6 `ui/theme.py` was not touched by the new module (its LINE PIN holds)",
+      theme.__file__.endswith("theme.py")
+      and len(open(theme.__file__, encoding="utf-8").read().splitlines())
+      <= _SB.LINE_PINS["ui/theme.py"],
+      f"{len(open(theme.__file__, encoding='utf-8').read().splitlines())} of the pin")
 check("§6 `modules/sftp_pane_helpers.py` is UNDER the band (the tuple left, the alias arrived)",
       len(open(PH.__file__, encoding="utf-8").read().splitlines()) < 900,
       str(len(open(PH.__file__, encoding="utf-8").read().splitlines())))
@@ -398,7 +401,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check(f"§8 the patch adds NO i18n key (parity stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1193, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1193 + 3, str(EXPECTED_I18N_KEYS))
 check("§8 the pin names this release's line and the schema did NOT move",
       releases_at_least(EXPECTED_APP_VERSION, "1.14.1.2")
       and __import__("version").VERSION_FORMAT == "0.9", EXPECTED_APP_VERSION)

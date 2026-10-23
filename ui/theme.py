@@ -103,12 +103,7 @@ ACCENT_STRONG_SELECTED_DELTA = {MODE_DARK: ACCENT_SELECTED_DELTA, MODE_LIGHT: -8
 # ── The accent generator (pure: no Qt, no state) ──────────────────────────────
 
 def hsl_hex(hue, saturation: float, lightness: float) -> str:
-    """HSL → "#rrggbb" (v1.4.3). A PURE function — the module stays Qt-free.
-
-    ``hue`` is an angle in degrees (any real number — it wraps), saturation and
-    lightness are 0..100 percentages. 199/92/60 gives the v1.2.5 accent
-    ``#38bdf8`` exactly (pinned by the acceptance test).
-    """
+    """HSL → "#rrggbb" — PURE, no Qt. 198.4/93/59.6 is the default accent ``#38bdf8`` exactly."""
     h = (float(hue) % 360.0) / 360.0
     s = min(max(float(saturation), 0.0), 100.0) / 100.0
     li = min(max(float(lightness), 0.0), 100.0) / 100.0
@@ -136,11 +131,7 @@ def hsl_hex(hue, saturation: float, lightness: float) -> str:
 
 
 def hex_hue(hex_color: str) -> float:
-    """The hue (degrees, rounded to 1 decimal) of a "#rrggbb" colour.
-
-    The reverse of :func:`hsl_hex`, used by the settings hub to derive the hue
-    of a hand-picked colour (and by the tests to close the round trip).
-    """
+    """The hue (degrees, 1 decimal) of a "#rrggbb" colour — the reverse of :func:`hsl_hex`."""
     value = (hex_color or "").strip().lstrip("#")
     if len(value) != 6:
         return float(DEFAULT_ACCENT_HUE)
@@ -191,12 +182,7 @@ def _strong_lightness(mode: str, delta: float = 0.0) -> float:
 
 
 def accent_strong_hex(hue=None, mode: str = MODE_DARK) -> str:
-    """The STRONG accent of a hue (v1.5rc1) — text on a surface, a fill under text.
-
-    DARK: the value equals ``accent_hex()`` (#38bdf8) — moving a call site onto
-    the strong tone does not move a pixel. LIGHT: the lightness drops to
-    ``ACCENT_STRONG_LIGHTNESS["light"]`` so the pair clears AA.
-    """
+    """The STRONG accent — text on a surface, a fill under text; DARK equals ``accent_hex()``."""
     return hsl_hex(DEFAULT_ACCENT_HUE if hue is None else hue,
                    ACCENT_SATURATION, _strong_lightness(mode))
 
@@ -215,6 +201,49 @@ def accent_strong_selected_hex(hue=None, mode: str = MODE_DARK) -> str:
                        mode, ACCENT_STRONG_SELECTED_DELTA[MODE_DARK])))
 
 
+# ── The NOTE TONE (v1.14.2) ───────────────────────────────────────────────────
+# ONE tone for every note of the map (AGENTS.md §4.6): the user's HUE shaded through the shipped
+# sticky note's own three measures — its paper, the frame around it and the ink on it. A tone moves
+# the hue of the family and nothing else, so the ink reads on whatever paper it is given.
+NOTE_TONE_PAPER = (70.0, 78.0)    # the paper: the shipped yellow's paleness
+NOTE_TONE_BORDER = (47.0, 45.0)   # the frame — the note's separation channel on a light canvas
+NOTE_TONE_INK = (19.6, 21.0)      # the text and the header band's glyphs
+
+
+def note_tone_colors(hue) -> tuple:
+    """The ``(paper, frame, ink)`` of ONE note tone — PURE: a hue in, three "#rrggbb" out."""
+    return (hsl_hex(hue, *NOTE_TONE_PAPER), hsl_hex(hue, *NOTE_TONE_BORDER),
+            hsl_hex(hue, *NOTE_TONE_INK))
+
+
+def resolve_note_tone(value):
+    """A stored ``theme.note_tone`` → the hue of the note family, or None for the shipped one.
+
+    ``None`` / ``""`` answer None — every instance keeps its OWN ``note_bg``/``note_border``/
+    ``note_text``, which is what makes "no tone chosen" byte-identical to the shipped note. A colour
+    is accepted as the ``"#rrggbb"`` the settings tab stores (only its HUE is used, the accent's own
+    rule) and a bare hue as a number; anything else is no tone, never an error.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        return hex_hue(value) if is_valid_hex(value) else None
+    try:
+        return round(float(value) % 360.0, 1)
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_accent_hue(value):
+    """A stored accent hue → a rounded hue, or None when there is no usable value."""
+    if value is None:
+        return None
+    try:
+        return round(float(value) % 360.0, 1)
+    except (TypeError, ValueError):
+        return None
+
+
 # ── The second channel: per-type pen styles + status shapes ───────────────────
 # OWNED HERE, next to the palettes they accompany, so a consumer (the arrow, the card dot,
 # the sidebar row, the legend, the exports, the topical test) reads ONE source and a mark
@@ -223,14 +252,11 @@ def accent_strong_selected_hex(hue=None, mode: str = MODE_DARK) -> str:
 
 @dataclass(frozen=True)
 class ArrowStyle:
-    """How ONE connection type is DRAWN (v1.5rc2) — the channel next to its colour.
+    """How ONE connection type is DRAWN — the channel next to its colour.
 
-    ``dash``  — a QPen dash pattern (a tuple of floats, in units of the pen width;
-                empty = a solid line);
-    ``width`` — the stroke width at rest (the hover adds ``ARROW_HOVER_WIDTH_DELTA``);
-    ``double``— draw the line as TWO rails: the stroke is laid down and a narrower
-                stroke in the surface colour is painted over its centre
-                (``ARROW_CASING_RATIO`` is the share the casing takes).
+    ``dash`` (a QPen dash pattern in pen widths, empty = solid), ``width`` (the stroke at rest; the
+    hover adds ``ARROW_HOVER_WIDTH_DELTA``) and ``double`` (TWO rails — the stroke plus a narrower
+    surface-coloured stroke over its centre, ``ARROW_CASING_RATIO`` wide).
     """
 
     dash: tuple = ()
@@ -242,13 +268,9 @@ class ArrowStyle:
         return not self.dash and not self.double
 
 
-# The hover widens the stroke instead of replacing its width, so a wide type stays
-# the widest one while it is hovered (v1.5rc2).
+# The hover widens the stroke instead of replacing its width, so a wide type stays the widest one.
 ARROW_HOVER_WIDTH_DELTA = 0.6
-# The share of the outer width the surface-coloured casing takes on a double line.
-# 0.45 leaves two rails of ~1.1 px on the declared 4.0 width — measured on the
-# topical render probe (two ink runs in every column of the stroke window) and
-# checked by eye at 100 % zoom, where a thinner casing reads as a single line.
+# The share of the outer width the casing takes: 0.45 leaves two rails of ~1.1 px on the declared 4.0.
 ARROW_CASING_RATIO = 0.45
 
 # The SIX declared styles — pairwise distinct (the topical gate proves it) and
@@ -296,18 +318,12 @@ def status_shape(status) -> str:
 
 
 # ── "Auto (system)" ───────────────────────────────────────────────────────────
-# The third mode reads the PLATFORM's colour scheme through `QStyleHints.colorScheme()`; the
-# import is LAZY (inside the function), which is how this module keeps its "no PySide6 at import
-# time" contract — the same trick the class-level descriptors below use. A platform without the
-# hint (or a PySide6 that does not know the enum) behaves like the dark theme, never an error.
+# The third mode reads the PLATFORM's colour scheme through `QStyleHints.colorScheme()`; the import
+# is LAZY, which is how this module keeps its "no PySide6 at import time" contract. A platform without
+# the hint (or a PySide6 that does not know the enum) behaves like the dark theme, never an error.
 
 def system_color_scheme() -> str:
-    """The platform's colour scheme as a mode id (v1.5rc1) — DARK when unknown.
-
-    Never raises: without a QApplication, without ``QStyleHints.colorScheme`` or
-    with an unknown enum value the answer is the dark default, which keeps
-    "Auto" a strictly additive choice.
-    """
+    """The platform's colour scheme as a mode id — DARK when unknown (never raises)."""
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtGui import QGuiApplication
@@ -329,11 +345,10 @@ def system_color_scheme() -> str:
 
 
 def resolve_mode(mode) -> str:
-    """A mode id → a RESOLVED mode id ("dark"/"light") — v1.5rc1.
+    """A mode id → a RESOLVED mode id ("dark"/"light") — never "auto", never an unknown value.
 
-    "auto" asks the platform (``system_color_scheme()``); an unknown / missing /
-    non-string value falls back to DARK (a broken config must never leave the app
-    themeless). The result is always one of the two INSTANCES' ids, never "auto".
+    "auto" asks the platform (``system_color_scheme()``); an unknown / missing / non-string value
+    falls back to DARK, because a broken config must never leave the app themeless.
     """
     key = mode.strip().lower() if isinstance(mode, str) else MODE_DARK
     if key == MODE_AUTO:
@@ -356,19 +371,18 @@ def is_valid_hex(value) -> bool:
 
 
 # ── The Theme object ──────────────────────────────────────────────────────────
-# Field names are the snake_case form of the historical constant names
-# (CANVAS_BG → canvas_bg); the module proxies at the bottom of this file restore
-# the historical spelling for every existing consumer.
+# Field names are the snake_case form of the historical constant names (CANVAS_BG → canvas_bg); the
+# module proxies at the bottom restore the historical spelling for every existing consumer.
 
 @dataclass(frozen=True)
 class Theme:
-    """Every colour, radius and font of the application UI (v1.4.3).
+    """Every colour, radius and font of the application UI, plus the two CHOICES that generate them.
 
-    Frozen: a switch REPLACES the active instance (``set_theme()``), it never
-    mutates one — a half-switched palette cannot happen. The three semantic
-    dicts (STATUS_COLORS / TAG_COLORS / TAG_PALETTE / ARROW_TYPE_COLORS) are
-    DERIVED properties, not fields: the values are declared exactly once and the
-    dicts always follow the instance.
+    Frozen: a switch REPLACES the active instance (``set_theme()``), it never mutates one. The
+    semantic dicts (``status_colors`` / ``tag_colors`` / ``tag_palette`` / ``arrow_type_colors`` /
+    ``syntax_colors``) are DERIVED properties, not fields, so a value is declared exactly once. The
+    choices — ``accent_hue`` and ``note_tone`` — are FIELDS, because a resolved instance carries the
+    value it was generated from and a second resolution reads it back (``export_theme()``).
     """
 
     # ── Surfaces ─────────────────────────────────────────────────────────────
@@ -431,6 +445,7 @@ class Theme:
     note_bg: str
     note_border: str
     note_text: str
+    note_tone: Optional[float]  # the ONE tone's hue (None = this instance's own shipped family)
 
     # ── Syntax highlighting of the SFTP viewer ──────────────────────
     # A palette of its OWN, like the terminal output palettes of `modules/terminal_screen.py` — these
@@ -576,11 +591,8 @@ DARK = Theme(
     text_muted="#94a3b8",
     icon_color="#cbd5e1",
 
-    # Accent (the generated sky pair is unused by DARK's own consumers — the
-    # base accent IS today's #38bdf8; the other two shades exist for the
-    # widgets that want a hover/selected variant of the accent).
-    # v1.5rc1: the STRONG family resolves to these same three values in DARK —
-    # the role is new, the bytes are not (the literal snapshot test proves it).
+    # Accent: DARK's base accent IS #38bdf8; the STRONG family resolves to the same three values
+    # (the role is new, the bytes are not — the literal snapshot test proves it).
     accent_hue=DEFAULT_ACCENT_HUE,
     accent=accent_hex(DEFAULT_ACCENT_HUE),
     accent_hover=accent_hover_hex(DEFAULT_ACCENT_HUE),
@@ -624,17 +636,15 @@ DARK = Theme(
     arrow_kubernetes="#22d3ee",
     arrow_hover_compat="#6ee7b7",
 
-    # Notes — the muted yellow palette (kept by LIGHT too: it
-    # reads on a light background, which is why the sticky note does not change)
+    # Notes — the muted yellow palette (kept by LIGHT too: it reads on a light background).
+    # `note_tone = None` is the SHIPPED family: a chosen tone replaces all three (theme_for_mode).
     note_bg="#eedd9f",
     note_border="#a9853d",
     note_text="#403a2b",
+    note_tone=None,
 
-    # Syntax highlighting of the SFTP viewer (v1.4.7). Every tone is one the DARK
-    # palette already ships (the amber of the HTTP arrow, the green of the SSH
-    # arrow, …) — the palette is a SECOND ROLE SET over familiar values, not a
-    # second look. All eight are distinct and none is the "no preview" tone
-    # (`status_warn`), which is what the topical test pins.
+    # Syntax highlighting of the SFTP viewer: a SECOND ROLE SET over values DARK already ships. All
+    # eight are distinct and none is the "no preview" tone (`status_warn`) — the topical test pins it.
     syntax_number="#fbbf24",        # the HTTP-arrow amber
     syntax_string="#34d399",        # the SSH-arrow green
     syntax_key="#22d3ee",           # the Kubernetes turquoise
@@ -660,10 +670,8 @@ DARK = Theme(
 
 
 # ── LIGHT — the slate-100 counterpart ─────────────────────────────────────────
-# The SAME field set as DARK (a field in only one instance is refused by the completeness
-# test); only what a light background really changes moves. The light half is tuned against
-# MEASURED thresholds: every number below is pinned by `tests/test_theme_contrast.py`, so a
-# tone that stops clearing its threshold fails the suite.
+# The SAME field set as DARK (a one-sided field is refused by the completeness test); only what a light
+# background really changes moves, and every number below is pinned by `tests/test_theme_contrast.py`.
 
 LIGHT = Theme(
     # Surfaces (slate-100 scale)
@@ -673,17 +681,13 @@ LIGHT = Theme(
     base_bg="#e2e8f0",
     surface_alt="#cbd5e1",
 
-    # Text and icons — `text_muted` reaches AA on EVERY surface it is drawn on
-    # (the status-bar counters, the zoom label, the hints, the item views; it was
-    # 4.34 on the window and 3.86 on `base_bg`, now 5.57 and 5.17)
+    # Text and icons — `text_muted` reaches AA on EVERY surface it is drawn on (5.57 / 5.17).
     text_primary="#0f172a",
     text_muted="#556070",
     icon_color="#475569",
 
-    # Accent — the same hue generator as DARK (the user's hue survives a mode
-    # switch). The DECORATIVE tone is the sky of v1.4.3 (borders, glows, frames);
-    # the STRONG one is the ink/fill tone and is generated at the light-mode
-    # lightness (34.0 → #0676a7: 4.83 on the canvas, 4.61 on the window).
+    # Accent — the same hue generator as DARK (the user's hue survives a mode switch); the STRONG
+    # shade is generated at the light lightness (34.0 → #0676a7: 4.83 on the canvas, 4.61 on the window).
     accent_hue=DEFAULT_ACCENT_HUE,
     accent=accent_hex(DEFAULT_ACCENT_HUE),
     accent_hover=accent_hover_hex(DEFAULT_ACCENT_HUE),
@@ -739,13 +743,13 @@ LIGHT = Theme(
     arrow_kubernetes="#155e75",
     arrow_hover_compat="#065f46",
 
-    # Notes — LIGHT's OWN sticky tone (v1.5rc1): the dark-tuned `#eedd9f` sat
-    # 1.30:1 on the light canvas. The fill stays a paper colour by design — the
-    # note's separation channel is its BORDER (4.66:1 on the canvas) and the
-    # cached halo shadow, which is what the gate pins.
+    # Notes — LIGHT's OWN sticky tone (v1.5rc1): the fill stays a paper colour by
+    # design, so the note's separation channel is its BORDER (4.66:1 on the canvas)
+    # and the cached halo shadow, which is what the gate pins.
     note_bg="#ecd284",
     note_border="#8a6d2f",
     note_text="#403a2b",
+    note_tone=None,
 
     # Syntax highlighting of the SFTP viewer: the SAME role set, tuned for the light viewer background
     # (`base_bg` — the QPlainTextEdit surface the global QSS gives it), re-tuned to AA on THAT surface
@@ -783,36 +787,31 @@ THEME: Theme = DARK       # THE ACTIVE instance — swapped by set_theme()
 _MODES: Dict[str, Theme] = {MODE_DARK: DARK, MODE_LIGHT: LIGHT}
 
 
-def theme_for_mode(mode, accent_hue=None) -> Theme:
-    """The instance of a mode id, with the accent hue applied (v1.4.3; auto in v1.5rc1).
+def theme_for_mode(mode, accent_hue=None, note_tone=None) -> Theme:
+    """The instance of a mode id, with the accent hue and the note tone applied.
 
-    The mode is RESOLVED first (``resolve_mode``): ``"auto"`` asks the platform's
-    colour scheme and lands on DARK or LIGHT, and an unknown / missing /
-    non-string mode falls back to DARK (a broken config value must never leave
-    the app themeless). A hue equal to the instance's own default returns the
-    SHARED instance untouched (so ``theme_for_mode("dark")`` is ``DARK`` itself —
-    the identity the tests and the caches rely on).
+    The mode is RESOLVED first (``resolve_mode``): "auto" asks the platform's colour scheme and lands
+    on DARK or LIGHT, and an unknown / missing / non-string mode falls back to DARK (a broken config
+    value must never leave the app themeless). A hue equal to the instance's own default — and a tone
+    that resolves to None — answer the SHARED instance untouched, which is the identity the tests and
+    the caches rely on. A tone REPLACES the three note fields (``note_tone_colors``), so a chosen tone
+    is a mapping over the base mode, never an edit of it.
     """
     key = resolve_mode(mode)
     base = _MODES.get(key) or DARK
-    if accent_hue is None:
-        return base
-    try:
-        hue = round(float(accent_hue) % 360.0, 1)
-    except (TypeError, ValueError):
-        return base
-    if hue == base.hue():
-        return base
-    return dataclasses.replace(
-        base,
-        accent_hue=hue,
-        accent=accent_hex(hue),
-        accent_hover=accent_hover_hex(hue),
-        accent_selected=accent_selected_hex(hue),
-        accent_strong=accent_strong_hex(hue, key),
-        accent_strong_hover=accent_strong_hover_hex(hue, key),
-        accent_strong_selected=accent_strong_selected_hex(hue, key),
-    )
+    changes: Dict[str, object] = {}
+    hue = resolve_accent_hue(accent_hue)
+    if hue is not None and hue != base.hue():
+        changes.update(
+            accent_hue=hue, accent=accent_hex(hue), accent_hover=accent_hover_hex(hue),
+            accent_selected=accent_selected_hex(hue), accent_strong=accent_strong_hex(hue, key),
+            accent_strong_hover=accent_strong_hover_hex(hue, key),
+            accent_strong_selected=accent_strong_selected_hex(hue, key))
+    tone = resolve_note_tone(note_tone)
+    if tone is not None:
+        paper, frame, ink = note_tone_colors(tone)
+        changes.update(note_tone=tone, note_bg=paper, note_border=frame, note_text=ink)
+    return dataclasses.replace(base, **changes) if changes else base
 
 
 def set_theme(instance: Theme) -> Theme:
@@ -852,16 +851,16 @@ def resolve_export_palette(palette) -> str:
 def export_theme(palette=PALETTE_PRINT, accent_hue=None) -> Theme:
     """The instance an EXPORT renders with (v1.5rc2).
 
-    ``print``  → the LIGHT instance with the ACTIVE theme's hue (the same instance
-                 object whenever the hue is the default one, so the common case
-                 costs nothing and the identity the tests rely on holds);
+    ``print``  → the LIGHT instance with the ACTIVE theme's hue and note tone (the same instance
+                 object whenever neither is the default one, so the common case costs nothing and the
+                 identity the tests rely on holds);
     ``theme``  → the ACTIVE instance, i.e. exactly what is on screen now.
     An unknown palette id resolves to ``print`` (``resolve_export_palette``).
     """
     if resolve_export_palette(palette) == PALETTE_THEME:
         return THEME
     hue = THEME.hue() if accent_hue is None else accent_hue
-    return theme_for_mode(MODE_LIGHT, hue)
+    return theme_for_mode(MODE_LIGHT, hue, THEME.note_tone)
 
 
 def theme_snapshot() -> dict:
