@@ -101,7 +101,7 @@ check("the window owns ONE controller and hands the shipped names to it",
       and win1._v_splitter.widget(1) is win1.split_host)
 check("the shipped action/button pair belongs to the controller (ONE source of truth)",
       win1.act_split is win1.split.act and win1.btn_split is win1.split.btn
-      and win1.commander.isAncestorOf(win1.btn_split))
+      and win1.corner.isAncestorOf(win1.btn_split))
 check("no split is open yet and the host is hidden",
       win1.split.pane is None and win1.split.on is False and win1.split_host.isHidden())
 
@@ -140,7 +140,7 @@ check("the dock's session area is the SAME construct (V[session_tabs | split_hos
       and content._v_splitter.widget(1) is content.split_host
       and content.split_host.isHidden())
 check("the dock's corner holds the split BUTTON beside the Commander control",
-      isinstance(content.btn_split, QPushButton) and content.commander.isAncestorOf(content.btn_split)
+      isinstance(content.btn_split, QPushButton) and content.corner.isAncestorOf(content.btn_split)
       and content.act_split.isCheckable() and content.act_split.shortcut().isEmpty()
       and content.act_split.text() == i18n.t("terminal.split")
       and content.act_split.toolTip() == i18n.t("terminal.split_tooltip"))
@@ -342,9 +342,11 @@ check("the merge is ONE context-menu action (no registry sequence, no fourth cor
       hasattr(w_a, "act_merge") and w_a.act_merge in w_a._build_context_menu().actions()
       and w_a.act_merge.text() == i18n.t("terminal.merge_windows")
       and w_a.act_merge.shortcut().isEmpty())
-check("the corner keeps exactly its two controls (the split button + the Commander)",
-      len(w_a.commander.findChildren(QPushButton)) == 2,
-      str([b.text() for b in w_a.commander.findChildren(QPushButton)]))
+check("the corner keeps its declared ROWS — the split button + the Commander, icon-only",
+      len(w_a.corner.findChildren(QPushButton)) == 2
+      and w_a.corner.keys() == ["split", "commander"]
+      and all(button.text() == "" for button in w_a.corner.controls()),
+      str([b.text() for b in w_a.corner.findChildren(QPushButton)]))
 mw5._shutdown_background_threads()
 app.processEvents()
 

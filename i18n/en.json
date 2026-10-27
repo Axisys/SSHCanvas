@@ -267,6 +267,8 @@
   "terminal.attach_tmux_sent": "Attaching to tmux session {name}",
   "terminal.split": "Split Terminal",
   "terminal.split_tooltip": "Show a second shell of the same node in a pane below",
+  "terminal.corner_tooltip": "Icon-only corner: up to {max} session controls",
+  "terminal.corner_accessible": "{action} — corner control",
   "terminal.files_panel": "Files Panel",
   "terminal.files_panel_tooltip": "Show the files of the active session in the panel on the right",
   "terminal.files_panel_collapse_tooltip": "Collapse the files panel",

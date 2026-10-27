@@ -30,6 +30,12 @@ try:
 except ImportError:
     from modules.sftp_tab import CommanderCorner
 
+# The dock's tab-bar CORNER — the SAME owner of the composition the window builds.
+try:
+    from .terminal_corner import CornerBar
+except ImportError:
+    from modules.terminal_corner import CornerBar
+
 # v1.6.4: the ACTIVITY mark of an inactive session — the SAME renderer the
 # terminal window uses (the page module owns it, both containers call it). v1.9.1: the session
 # rows (Reconnect / Attach tmux) are shared the same way — ONE state rule, two surfaces.
@@ -121,7 +127,7 @@ class TerminalDockContent(QWidget):
         self.session_tabs.currentChanged.connect(self._on_current_tab_changed)
         # v1.9.1: the dock's tab bar carries the SESSION rows (Reconnect / Attach tmux) for the tab
         # a user right-clicks — the very pair the dock's own context menu shows for the session in
-        # front (the window's rule, §4.3; the corner keeps its two controls, §4.12).
+        # front (the window's rule, §4.3; the corner is a budgeted icon-only row, §4.32.2).
         self.session_tabs.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.session_tabs.tabBar().customContextMenuRequested.connect(self._on_tab_context_menu)
 
@@ -133,13 +139,17 @@ class TerminalDockContent(QWidget):
         self._v_splitter = self.split.splitter
         self.act_split, self.btn_split = self.split.build_action()
 
-        # v1.7rc1: the Files Commander control in the corner of the
-        # dock's tab bar, with the split BUTTON beside it (v1.7.2: the dock is a
-        # container too). The mode a session shows is the SESSION's (`SftpTab.commander`), kept
-        # in step by `_sync_commander()`.
-        self.commander = CommanderCorner(self, split_button=self.btn_split)
+        # The Files Commander control in the corner of the dock's tab bar, with the split BUTTON
+        # beside it (v1.7.2: the dock is a container too). The mode a session shows is the SESSION's
+        # (`SftpTab.commander`), kept in step by `_sync_commander()`.
+        self.commander = CommanderCorner(self)
         self.commander.act.toggled.connect(self._on_commander_toggled)
-        self.session_tabs.setCornerWidget(self.commander, Qt.Corner.TopRightCorner)
+        # The dock's CORNER is the same owner as the window's (`modules/terminal_corner.py`): the
+        # split button and the Commander arrive as ROWS, so both containers compose ONE way.
+        self.corner = CornerBar(self)
+        self.corner.add_control("split", self.btn_split, tooltip=self.split.split_tooltip_text)
+        self.corner.add_control("commander", self.commander.btn)
+        self.session_tabs.setCornerWidget(self.corner, Qt.Corner.TopRightCorner)
 
         # The "Terminal Macros" panel to the left of the tabs — the same one as in SSHTerminalWindow
         # (QSplitter [cmdlib_panel | V(session_tabs | split_host)]; a single config key
@@ -212,14 +222,14 @@ class TerminalDockContent(QWidget):
         # v1.6.4: the activity mark is a PIXMAP — a VALUE (§4.6): re-render it
         # in the new theme tone instead of keeping the old colour on the tab.
         refresh_session_activity(self)
-        # v1.9.8: the corner's two controls (the split button and the Files Commander).
-        for corner in (getattr(self, "split", None), getattr(self, "commander", None)):
-            hook = getattr(corner, "refresh_theme", None)
-            if callable(hook):
-                try:
-                    hook()
-                except RuntimeError:
-                    pass  # Qt teardown — the control is already destroyed
+        # The corner's controls own a stylesheet and a glyph each — the bar's ONE walk re-applies both.
+        corner = getattr(self, "corner", None)
+        hook = getattr(corner, "refresh_theme", None)
+        if callable(hook):
+            try:
+                hook()
+            except RuntimeError:
+                pass  # Qt teardown — the control is already destroyed
 
     def retranslate(self):
         """v1.3.3.1: re-text the content and its sessions in the current language.
@@ -245,10 +255,15 @@ class TerminalDockContent(QWidget):
         # v1.6.4: the activity mark's TOOLTIP is translated text — re-render
         # the tabs so an inactive session's sentence follows the language switch.
         refresh_session_activity(self)
-        # v1.7rc1: the Files Commander control of the corner (its label and its tooltip).
+        # The corner: the Commander's action word and the split's tooltip by their owners, then the
+        # bar's ONE walk over both rows.
         commander = getattr(self, "commander", None)
         if commander is not None:
             commander.retranslate()
+        corner = getattr(self, "corner", None)
+        hook = getattr(corner, "retranslate", None)
+        if callable(hook):
+            hook()
         # v1.7.2: the dock's own split action and its corner button.
         self.split.retranslate()
         # v1.3.3.1: the "Terminal macros" panel belongs to the CONTAINER (the dock

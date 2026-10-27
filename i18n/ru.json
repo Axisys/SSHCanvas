@@ -258,6 +258,8 @@
   "terminal.attach_tmux_sent": "Подключение к сеансу tmux {name}",
   "terminal.split": "Разделить терминал",
   "terminal.split_tooltip": "Показать вторую оболочку того же узла на панели ниже",
+  "terminal.corner_tooltip": "Угол только с иконками: до {max} элементов сеанса",
+  "terminal.corner_accessible": "{action} — элемент угла",
   "terminal.files_panel": "Панель файлов",
   "terminal.files_panel_tooltip": "Показать файлы активной сессии на панели справа",
   "terminal.files_panel_collapse_tooltip": "Свернуть панель файлов",

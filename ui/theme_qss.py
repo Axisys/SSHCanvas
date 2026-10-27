@@ -455,15 +455,15 @@ QToolButton#UndoOfferButton:hover {{
     # v1.9.8: the terminal's two CORNER controls (Split Terminal / Files Commander) and
     # the session tab's close mark. The shipped buttons wore the global QPushButton rule, which
     # paints no :checked state at all — a checkable control looked the same on and off. The padding
-    # stays TIGHT on purpose: the corner sits on the session tab bar, whose width is part of the
-    # terminal window's own 640 px floor.
+    # fits ONE 20 px glyph into the 28 px square `modules/terminal_corner.py` fixes: the row's width
+    # is the corner's declared budget, never the platform style's.
     "corner.button": lambda t: f"""
 QPushButton {{
     background-color: {t.surface_alt};
     color: {t.text_primary};
     border: 1px solid {t.surface_alt};
     border-radius: {CONTROL_RADIUS_PX}px;
-    padding: 2px 6px;
+    padding: 3px;
 }}
 QPushButton:hover {{
     border: 1px solid {t.accent};

@@ -221,7 +221,7 @@ check_i18n_parity(_langs)
 check("§5 the parity pin did NOT move for the rename (a rename adds no key)",
       # the rename left the pin at 1114; the LATER follow-ups of the line add their own keys
       # (v1.12.3's THREE), so the claim is anchored on the count the rename itself left.
-      EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3, EXPECTED_I18N_KEYS)
+      EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2, EXPECTED_I18N_KEYS)
 check("§5 the project JSON schema did NOT move",
       'VERSION_FORMAT = "0.9"' in _read("version.py"))
 

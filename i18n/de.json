@@ -258,6 +258,8 @@
   "terminal.attach_tmux_sent": "tmux-Sitzung {name} wird angehängt",
   "terminal.split": "Terminal teilen",
   "terminal.split_tooltip": "Eine zweite Shell desselben Knotens in einem Bereich darunter anzeigen",
+  "terminal.corner_tooltip": "Nur-Symbol-Ecke: bis zu {max} Sitzungssteuerelemente",
+  "terminal.corner_accessible": "{action} — Ecksteuerelement",
   "terminal.files_panel": "Dateibereich",
   "terminal.files_panel_tooltip": "Die Dateien der aktiven Sitzung im Bereich rechts anzeigen",
   "terminal.files_panel_collapse_tooltip": "Dateibereich einklappen",

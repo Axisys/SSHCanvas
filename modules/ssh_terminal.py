@@ -36,6 +36,13 @@ try:
 except ImportError:
     from modules.sftp_tab import COMMANDER_CONFIG_BOOL, CommanderCorner, SftpTab, format_size
 
+# The tab-bar CORNER — ONE owner of its composition (`modules/terminal_corner.py`): the split
+# button and the Commander control are ROWS of it, so a third control is a row there.
+try:
+    from .terminal_corner import CornerBar
+except ImportError:
+    from modules.terminal_corner import CornerBar
+
 # The window is a thin wrapper over a reusable session page (`terminal_page` does NOT
 # import this module at module level — it fetches it lazily via `_st_module()`).
 # The session area is a vertical QSplitter [session_tabs | split_host] and the host may
@@ -524,47 +531,21 @@ class SSHTerminalThread(QThread):
 
 
 class SSHTerminalWindow(QMainWindow):
-    """v1.2.1: a terminal window with a QTabWidget of sessions.
+    """The terminal CONTAINER of `terminal_mode = "windows"`: a QTabWidget of session pages.
 
-    Each tab is one TerminalSessionPage (modules/terminal_page.py): an SSH
-    session (thread + pyte screen + canvas + status line + SFTP tab). A new
-    session = a new tab via the existing "connect to the node" path
-    (MainWindow._spawn_terminal_window): if the node already has a live terminal
-    window, the session opens there as a new tab; otherwise a new window with a
-    single tab is created. The tab title is the node alias.
+    Each tab is one `TerminalSessionPage` (thread + pyte screen + canvas + status line + SFTP tab). A
+    node that already has a live window opens there as its next tab; otherwise a new window is created
+    and the tab title is the node alias. The window keeps `WA_DeleteOnClose`, the title, the geometry
+    (`ui_window_geometry_terminal`) and the status bar with the SFTP progress — a bridge of the ACTIVE
+    tab's signals. The session state and every teardown live on the page: `page.confirm_close()` is the
+    ask, `page.shutdown()` the ONE teardown, and closing the LAST tab closes the window.
 
-    Kept on the window: WA_DeleteOnClose, the title, geometry save/restore
-    (modules/window_geometry.py, key ui_window_geometry_terminal) and the status
-    bar with the SFTP progress bar — a bridge of the ACTIVE tab's signals
-    (sticky text + progress; when switching tabs the bridge is reconnected —
-    the v1.1.x look). The session state and ALL cleanup logic live on the page:
-    teardown goes through the SINGLE page.shutdown() method, the "ask" gate —
-    page.confirm_close(). Closing a tab = the page's existing cleanup logic
-    (close_page); closing the LAST tab closes the window (WA_DeleteOnClose —
-    current behaviour).
-
-    v1.2 compatibility: session attributes are available on the window as live
-    properties of the active tab (self.widget is self.page.widget etc.) — existing
-    code/tests reading them via the window work unchanged.
-
-    v1.3.3.5: the session area is a VERTICAL splitter
-    [session_tabs | split_host] — the ONE checkable action `act_split`
-    (`terminal.split`, the BUTTON in the right corner of the tab bar + the window's
-    context-menu item) opens a
-    SECOND full session of the same node in the host under the tabs (default 25% of
-    the height). The host is hidden while the split is off (a hidden splitter member
-    costs no geometry — the single-pane look is unchanged), the pane is an ordinary
-    page created through add_session(split=True) and therefore carries the same
-    set_host_window()/close_page()/shutdown() contract — except that a pane is built
-    WITHOUT the SFTP tab (it is a command line: `with_sftp=False` in §14b). The pane
-    is NOT a tab: it is
-    marked `_is_split_pane` (the terminal_max_open limit and
-    _find_terminal_window_for skip it, while the green dot and the multi-input
-    provider still count it — ui/main_window_ssh.py).
-
-    A window may be born EMPTY: `server_data=None` means "this container holds no node" and
-    `ALLOWS_NO_SESSIONS` decides whether the LAST tab closes it (a map-backed window) or leaves an
-    empty container that can open the next session (`TERMINAL_STANDALONE.md` §6).
+    The session area is the vertical `[session_tabs | split_host]` splitter. The ONE checkable action
+    `act_split` (`terminal.split`) opens a SECOND full session of the same node beside it: hidden while
+    off (a hidden splitter member costs no geometry), built without the SFTP tab and marked
+    `_is_split_pane` — the session limit and the window lookup skip it, while the green dot and the
+    multi-input provider count it. `ALLOWS_NO_SESSIONS` decides what a LAST tab closing means: a
+    map-backed window ends, the standalone container stays open (`TERMINAL_STANDALONE.md` §6).
     """
 
     #: The container KIND a session registry can filter on (`terminal_split.container_windows`):
@@ -678,17 +659,10 @@ class SSHTerminalWindow(QMainWindow):
         self.files_panel.hide()
         self.setCentralWidget(splitter)
 
-        # ONE checkable action (`terminal.split`) drives BOTH surfaces — the BUTTON in the
-        # right corner of the tab bar and the window's context-menu item — and carries NO
-        # keyboard shortcut. The action, the button and their wiring belong to the controller
-        # (`modules/terminal_split.py`), so a second container builds the same construct
-        # (`DOCUMENTATION.md` §14g).
+        # ONE checkable action (`terminal.split`) drives BOTH surfaces — the corner BUTTON and the
+        # window's context-menu item — with NO keyboard shortcut; the controller owns the wiring.
         self.act_split, self.btn_split = self.split.build_action()
-        # The right corner of the session tab bar — the natural place of a per-session
-        # action (the left side belongs to the command panel). A tab bar has ONE corner
-        # widget, so the corner is a container holding the shipped PAIR: the split button
-        # and the Files Commander action of the ACTIVE session. The control is a VIEW of the
-        # session's state (`_sync_commander()` re-reads it on a tab switch), `SFTP_PANES.md`.
+        # The right corner of the session tab bar: ONE corner widget, composed by `CornerBar`.
         self.act_files_panel = QAction(t("terminal.files_panel"), self)
         self.act_files_panel.setCheckable(True)
         self.act_files_panel.setToolTip(t("terminal.files_panel_tooltip"))
@@ -697,9 +671,14 @@ class SSHTerminalWindow(QMainWindow):
         # THIS one (context-menu item only; no registry sequence, no fourth corner button).
         self.act_merge = QAction(t("terminal.merge_windows"), self)
         self.act_merge.triggered.connect(self._on_merge_windows)
-        self.commander = CommanderCorner(self, split_button=self.btn_split)
+        self.commander = CommanderCorner(self)
         self.commander.act.toggled.connect(self._on_commander_toggled)
-        self.session_tabs.setCornerWidget(self.commander, Qt.Corner.TopRightCorner)
+        # The CORNER itself — ONE owner of the composition (`modules/terminal_corner.py`): the two
+        # per-session controls arrive as ROWS of it, so a third one is a row and never a re-decision.
+        self.corner = CornerBar(self)
+        self.corner.add_control("split", self.btn_split, tooltip=self.split.split_tooltip_text)
+        self.corner.add_control("commander", self.commander.btn)
+        self.session_tabs.setCornerWidget(self.corner, Qt.Corner.TopRightCorner)
 
         # The "status bar" of a session is BRIDGED into the window's status bar — sticky text +
         # the SFTP progress widget (hidden while there are no transfers). Only the ACTIVE tab is
@@ -839,10 +818,16 @@ class SSHTerminalWindow(QMainWindow):
                 files_panel.retranslate()
             except RuntimeError:
                 pass  # Qt teardown — the panel is already destroyed
-        # v1.7rc1: the Files Commander control of the same corner (its label and tooltip).
+        # The corner's two controls: the Commander's ACTION word and the split's owner-aware
+        # tooltip by their own owners, then the bar's ONE walk over both rows (glyph sentence,
+        # tooltip and accessible name).
         commander = getattr(self, "commander", None)
         if commander is not None:
             commander.retranslate()
+        corner = getattr(self, "corner", None)
+        hook = getattr(corner, "retranslate", None)
+        if callable(hook):
+            hook()
         try:
             for i in range(self.session_tabs.count()):
                 self.session_tabs.setTabToolTip(i, t("terminal.tab_close_tooltip"))
@@ -922,15 +907,15 @@ class SSHTerminalWindow(QMainWindow):
         # v1.6.4: the activity mark is a PIXMAP — a VALUE (§4.6): re-render it
         # in the new theme tone instead of leaving the old colour on the tab.
         refresh_session_activity(self)
-        # v1.9.8: the tab-bar CORNER's two controls (the split button and the Files
-        # Commander) own a stylesheet and a glyph each — both are values of the ACTIVE theme.
-        for corner in (getattr(self, "split", None), getattr(self, "commander", None)):
-            hook = getattr(corner, "refresh_theme", None)
-            if callable(hook):
-                try:
-                    hook()
-                except RuntimeError:
-                    pass  # Qt teardown — the control is already destroyed
+        # The tab-bar CORNER's controls own a stylesheet and a glyph each — both are values of the
+        # ACTIVE theme, so the bar's ONE walk re-applies them (it owns the composition).
+        corner = getattr(self, "corner", None)
+        hook = getattr(corner, "refresh_theme", None)
+        if callable(hook):
+            try:
+                hook()
+            except RuntimeError:
+                pass  # Qt teardown — the control is already destroyed
         # v1.7.1: the Files panel's hand-painted chrome (its strip and its fold button).
         files_panel = getattr(self, "files_panel", None)
         if files_panel is not None:
@@ -1131,7 +1116,8 @@ class SSHTerminalWindow(QMainWindow):
         Built per right click, which is what makes the Reconnect row's state a READ of the session
         (`can_reconnect()`) instead of something an action has to keep in step. The window's own
         menu (`_build_context_menu`) carries the same pair for the session ON SCREEN; the tab-bar
-        CORNER keeps its two controls (`AGENTS.md` §4.12), which is why the pair is a menu row.
+        CORNER is a budgeted row of ICON-ONLY controls (`AGENTS.md` §4.32.2), which is why the pair
+        is a menu row.
         Answers None for a stale index. Never raises.
         """
         page = self._tab_page(index)
@@ -1982,7 +1968,7 @@ class SSHTerminalWindow(QMainWindow):
         if act_panel is not None:
             menu.addAction(act_panel)
         # v1.7.2: the MERGE — this window collects the sessions of the other ones. A
-        # context-menu item only: the corner's budget is three labels (AGENTS.md §4.12) and the
+        # context-menu item only: the corner is a budgeted row (`AGENTS.md` §4.32.2) and the
         # action carries no registry sequence.
         act_merge = getattr(self, "act_merge", None)
         if act_merge is not None:

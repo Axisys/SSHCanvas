@@ -57,13 +57,17 @@ ICON_SIZE = 20
 _ICON_CACHE = {}
 
 
-def _canvas(size: int = ICON_SIZE):
-    """Transparent QPixmap + prepared QPainter (antialiasing, outline style)."""
+def _canvas(size: int = ICON_SIZE, color=None):
+    """Transparent QPixmap + prepared QPainter (antialiasing, outline style).
+
+    `color` overrides the ACTIVE theme's `icon_color` — the corner controls' CHECKED tone is the ink
+    a checked label wears (`canvas_bg`), and a QIcon's pixels do not follow a QSS `color`.
+    """
     pm = QPixmap(size, size)
     pm.fill(QColor(0, 0, 0, 0))
     p = QPainter(pm)
     p.setRenderHint(QPainter.Antialiasing, True)
-    pen = QPen(QColor(theme.ICON_COLOR), 1.6)   # live: the ACTIVE theme's outline tone
+    pen = QPen(QColor(color or theme.ICON_COLOR), 1.6)   # live: the ACTIVE theme's outline tone
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
     p.setPen(pen)
@@ -646,6 +650,48 @@ def draw_icon(name: str) -> QIcon:
     return _paint(QIcon(), drawer)
 
 
+# ── The corner controls' glyphs: ONE icon, TWO tones ─────────────────────────
+# A corner control is icon-only, so the glyph IS the control — and Qt asks a checked QIcon for its
+# ON state (`QIcon::State::On`) by itself. Two states on ONE cached icon therefore give the two
+# tones their own ink without a second icon and without a `:checked` rule for the pixels.
+_CORNER_CACHE = {}
+
+
+def _paint_toned(icon: QIcon, drawer, color, state) -> QIcon:
+    """Draw `drawer` in ONE explicit tone and store it on `icon` under `state`."""
+    pm, painter = _canvas(color=color)
+    try:
+        drawer(painter)
+    except Exception:  # noqa: BLE001 — an icon must not crash the UI
+        painter.end()
+        return icon
+    painter.end()
+    try:
+        icon.addPixmap(pm, QIcon.Mode.Normal, state)
+    except RuntimeError:
+        pass  # Qt teardown — the dead C++ object of a closed window's icon
+    return icon
+
+
+def get_corner_icon(name: str) -> QIcon:
+    """The corner control's glyph in BOTH tones, cached by name like `get_icon()`.
+
+    `QIcon.State.Off` is the shipped outline (`icon_color`), `.On` the ink the CHECKED control
+    wears — the label's own tone (`canvas_bg`), because a checked corner control is a strong-accent
+    fill carrying an inverted glyph.
+    """
+    drawer = _DRAWERS.get(name)
+    if drawer is None:
+        return QIcon()
+    icon = _CORNER_CACHE.get(name)
+    if icon is None:
+        icon = QIcon()
+        _CORNER_CACHE[name] = icon
+    _paint_toned(icon, drawer, theme.ICON_COLOR, QIcon.State.Off)
+    _paint_toned(icon, drawer, theme.CANVAS_BG, QIcon.State.On)
+    return icon
+
+
 def set_action_icon(action, name) -> bool:
     """Give a QAction the icon of `name` and REMEMBER the name on it .
 
@@ -681,6 +727,12 @@ def refresh_all() -> int:
             continue
         try:
             _paint(icon, drawer)
+            count += 1
+        except RuntimeError:
+            continue  # Qt teardown — the C++ object behind this icon is gone
+    for name in list(_CORNER_CACHE):
+        try:
+            get_corner_icon(name)      # re-paints the cached icon in place, both modes
             count += 1
         except RuntimeError:
             continue  # Qt teardown — the C++ object behind this icon is gone
@@ -732,3 +784,8 @@ def refresh_button_icon(button, name) -> bool:
 def cached_icon_names() -> list:
     """The names in the cache (the topical test's seam)."""
     return sorted(_ICON_CACHE)
+
+
+def corner_icon_names() -> list:
+    """The names in the corner cache (the topical test's seam)."""
+    return sorted(_CORNER_CACHE)

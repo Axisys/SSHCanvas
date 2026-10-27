@@ -258,6 +258,8 @@
   "terminal.attach_tmux_sent": "正在接入 tmux 会话 {name}",
   "terminal.split": "拆分终端",
   "terminal.split_tooltip": "在下方窗格中打开同一节点的第二个 shell",
+  "terminal.corner_tooltip": "仅图标的角落：最多 {max} 个会话控件",
+  "terminal.corner_accessible": "{action} — 角落控件",
   "terminal.files_panel": "文件面板",
   "terminal.files_panel_tooltip": "在右侧面板中显示当前会话的文件",
   "terminal.files_panel_collapse_tooltip": "折叠文件面板",

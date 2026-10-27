@@ -405,7 +405,7 @@ try:
     # The terminal CANVAS itself still contains no QPushButton.
     _stray = [b for b in win2.findChildren(QPushButton)
               if not (win2.sftp_tab.isAncestorOf(b) or win2.cmdlib_panel.isAncestorOf(b))
-              and not win2.commander.isAncestorOf(b)]
+              and not win2.corner.isAncestorOf(b)]
     check("the 'Close terminal' button is removed: a QPushButton only on the SFTP tab, "
           "the cmdlib panel and the tab-bar corner (the split + the Files Commander)",
           not _stray and not win2.widget.findChildren(QPushButton),

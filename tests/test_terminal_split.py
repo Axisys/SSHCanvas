@@ -16,7 +16,7 @@ from _common import (bootstrap, check, finish, wait_until, load_i18n_langs, chec
 
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (the HOME isolation and faulthandler inside)
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QSplitter
 
@@ -25,6 +25,7 @@ app = QApplication(sys.argv)
 import i18n
 import modules.ssh_terminal as ST
 import modules.multi_input as MI
+import modules.terminal_corner as TCORNER
 from modules.terminal_page import TerminalSessionPage
 from models.server import ServerData
 import ui.main_window as MW
@@ -100,13 +101,16 @@ check("ONE checkable action terminal.split drives the tab-bar BUTTON",
       win_a.act_split.isCheckable() and win_a.act_split.isChecked() is False
       and win_a.act_split.text() == i18n.t("terminal.split")
       and win_a.act_split.toolTip() == i18n.t("terminal.split_tooltip")
-      and win_a.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win_a.commander
-      and win_a.commander.isAncestorOf(win_a.btn_split))
-check("the button is a REAL QPushButton in the RIGHT corner (not a toolbar label)",
+      and win_a.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win_a.corner
+      and win_a.corner.isAncestorOf(win_a.btn_split))
+check("the button is a REAL QPushButton in the RIGHT corner — ICON-ONLY (the v1.14.3 policy)",
       isinstance(win_a.btn_split, QPushButton)
       and win_a.btn_split.isCheckable() and win_a.btn_split.isChecked() is False
-      and win_a.btn_split.text() == i18n.t("terminal.split")
+      and win_a.btn_split.text() == ""
       and win_a.btn_split.toolTip() == i18n.t("terminal.split_tooltip")
+      and win_a.btn_split.accessibleName()
+      == i18n.t("terminal.corner_accessible", action=i18n.t("terminal.split"))
+      and win_a.btn_split.size() == QSize(TCORNER.CORNER_BUTTON_PX, TCORNER.CORNER_BUTTON_PX)
       and win_a.session_tabs.cornerWidget(Qt.Corner.TopLeftCorner) is None)
 check("... and the context-menu item is the SAME action (one action, two views)",
       # v1.7.1: the window's context menu also carries the Files panel toggle

@@ -9,46 +9,17 @@ the same construct instead of one of them keeping the furniture on the window. T
 floor arithmetic and the owner rule are `DOCUMENTATION.md` §14g; the contract is `AGENTS.md` §4.3.
 """
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QSplitter, QPushButton, QVBoxLayout, QWidget
 
-try:  # v1.9.8: the vector icon set (the split button wears its own glyph)
-    from ..ui.icons import get_icon
-except ImportError:
+try:  # the ONE owner of the tab-bar corner's shape (`modules/terminal_corner.py`)
+    from .terminal_corner import shape_control
+except ImportError:  # flat launch from the project root
     try:
-        from ui.icons import get_icon
-    except ImportError:  # a stripped build — the buttons stay text-only
-        def get_icon(name):
-            from PySide6.QtGui import QIcon
-            return QIcon()
-
-try:  # v1.9.8: the ONE registry of the widget stylesheets (the corner controls' feedback)
-    from ..ui import theme_qss
-except ImportError:
-    try:
-        from ui import theme_qss
-    except ImportError:  # a stripped build — the global QPushButton rule stands
-        theme_qss = None
-
-
-def apply_corner_style(*buttons) -> int:
-    """Apply the ONE corner-button stylesheet to the checkable corner controls (never raises).
-
-    The `ui/theme_qss.py` pattern: `style()` at construction and `refresh()` from a theme walk, so a
-    QSS string is never a value captured once (`AGENTS.md` §4.6). Returns how many were styled.
-    """
-    if theme_qss is None:
-        return 0
-    done = 0
-    for button in buttons:
-        if button is None:
-            continue
-        try:
-            theme_qss.refresh(button, "corner.button")
-            done += 1
-        except RuntimeError:
-            continue  # Qt teardown — this button is already destroyed
-    return done
+        from terminal_corner import shape_control
+    except ImportError:  # a stripped build — the button keeps the text it is built with
+        def shape_control(button, glyph, tooltip, label):
+            return False
 
 
 def get_translator():
@@ -189,57 +160,29 @@ class TerminalSplit:
         The window adds the action to its context menu and the button to its tab-bar corner; the
         dock does the same through its own corner. A QPushButton has no `setDefaultAction` in
         PySide6, so the button is wired by hand and the ACTION stays the single source of truth.
+        The button is ICON-ONLY from the start (`modules/terminal_corner.py` shapes it), so it is
+        the same control whether a corner bar has claimed it yet or not.
         """
         t = get_translator()
         act = QAction(t("terminal.split"), self.container)
         act.setCheckable(True)
         act.setToolTip(t("terminal.split_tooltip"))
-        btn = QPushButton(t("terminal.split"))
+        btn = QPushButton()
         btn.setCheckable(True)
-        btn.setToolTip(t("terminal.split_tooltip"))
-        # v1.9.8: the corner control wears its own GLYPH beside the label, and the theme's
-        # own hover/checked feedback comes from the ONE registry (`ui/theme_qss.py: corner.button`).
-        try:
-            btn.setIcon(get_icon("split"))
-        except RuntimeError:
-            pass  # Qt teardown — the button is already gone
-        apply_corner_style(btn)
+        btn.setText(t("terminal.split"))    # the word the STRIPPED build keeps
+        shape_control(btn, "split", t("terminal.split_tooltip"), t("terminal.split"))
         btn.clicked.connect(self.on_button_clicked)
         act.toggled.connect(self.on_toggled)
         self.act, self.btn = act, btn
         return act, btn
 
-    def refresh_theme(self):
-        """Re-apply the corner control's own stylesheet and glyph (a theme switch). Never raises.
-
-        The `AGENTS.md` §4.6 rule for a QSS captured at construction: the string follows the ACTIVE
-        theme, and the painted icon is re-applied because a widget keeps its own render of it.
-        """
-        try:
-            self.btn.setIcon(QIcon())
-            self.btn.setIcon(get_icon("split"))
-        except (RuntimeError, AttributeError):
-            pass  # Qt teardown — the button is already destroyed
-        apply_corner_style(self.btn)
-
-    def retranslate(self):
-        """Re-text the action and its button (one label, one tooltip, two views). Never raises."""
-        t = get_translator()
-        for widget in (self.act, self.btn):
-            if widget is None:
-                continue
-            try:
-                widget.setText(t("terminal.split"))
-            except RuntimeError:
-                continue   # Qt teardown — this view is gone
-        self.update_tooltip()
-
-    def update_tooltip(self):
-        """The tooltip names the OWNER of the pane — the second channel, no third checkmark.
+    def split_tooltip_text(self) -> str:
+        """The owner-aware sentence of the split control — the tooltip's second channel.
 
         A pane belongs to the session it was opened for, and the alias of that session is the one
         fact the checkmark cannot show while the pane is off screen: the sentence gains it whenever a
-        pane is open. Reuses the shipped `terminal.split_tooltip` key (no new string).
+        pane is open. Reuses the shipped `terminal.split_tooltip` key (no new string), and the
+        corner bar re-reads it after a language switch.
         """
         t = get_translator()
         text = t("terminal.split_tooltip")
@@ -247,8 +190,21 @@ class TerminalSplit:
         if self.pane is not None:
             data = getattr(self.owner_page, "server_data", None)
             alias = str(getattr(data, "alias", "") or "")
-        if alias:
-            text = f"{text} — {alias}"
+        return f"{text} — {alias}" if alias else text
+
+    def retranslate(self):
+        """Re-text the action (its word is the context-menu row) and the split tooltip. Never raises."""
+        t = get_translator()
+        if self.act is not None:
+            try:
+                self.act.setText(t("terminal.split"))
+            except RuntimeError:
+                pass   # Qt teardown — the action is gone
+        self.update_tooltip()
+
+    def update_tooltip(self):
+        """Put the owner-aware sentence on BOTH views of the split (the action and the button)."""
+        text = self.split_tooltip_text()
         for widget in (self.act, self.btn):
             if widget is None:
                 continue

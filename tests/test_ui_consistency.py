@@ -46,7 +46,7 @@ from _fakes import FakeSSHThread as _FakeThread  # noqa: E402
 _orig_thread_cls = ST.SSHTerminalThread
 ST.SSHTerminalThread = _FakeThread
 from ui.activity_panel import ActivityPanel  # noqa: E402
-from ui.icons import draw_icon, get_icon  # noqa: E402
+from ui.icons import draw_icon, get_corner_icon, get_icon  # noqa: E402
 from ui.settings_dialog import SettingsDialog  # noqa: E402
 from ui.sidebar import CONTEXT_MENU_ACTIONS, CONTEXT_MENU_ITEMS  # noqa: E402
 
@@ -340,11 +340,13 @@ check("§3 the header's glyphs come from the ONE icon set (a theme switch can re
                                                                       "command_library.py"))
 _lib.deleteLater()
 
-check("§3 `Split Terminal` and `Files Commander` wear a glyph and the corner stylesheet",
+check("§3 `Split Terminal` and `Files Commander` wear a TWO-TONE glyph and the corner stylesheet",
       not get_icon("split").isNull() and not get_icon("files").isNull()
+      and not get_corner_icon("split").isNull()
+      and not get_corner_icon("files").isNull()
       and ":checked" in TQ.style("corner.button") and ":hover" in TQ.style("corner.button")
-      and "apply_corner_style(btn)" in _src("modules", "terminal_split.py")
-      and "apply_corner_style(self.btn)" in _src("modules", "sftp_commander_corner.py"),
+      and "shape_control(" in _src("modules", "terminal_corner.py")
+      and "get_corner_icon(glyph)" in _src("modules", "terminal_corner.py"),
       TQ.style("corner.button")[:60])
 
 _win2 = MW.MainWindow() if False else make_window()

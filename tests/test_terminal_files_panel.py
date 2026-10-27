@@ -27,6 +27,7 @@ import i18n
 import modules.ssh_terminal as ST
 import modules.command_library as CL
 import modules.sftp_tab as SFTP
+import modules.terminal_corner as TCORNER
 from modules.terminal_page import TerminalSessionPage
 from models.server import ServerData
 from ui.settings_dialog import SettingsDialog  # noqa: E402 — the hub's own row of the mode
@@ -127,18 +128,22 @@ check("ONE checkable action terminal.files_panel IS the switch of a live window"
       win.act_files_panel.isCheckable() and win.act_files_panel.isChecked() is False
       and win.act_files_panel.text() == i18n.t("terminal.files_panel")
       and win.act_files_panel.toolTip() == i18n.t("terminal.files_panel_tooltip"))
-check("...and the corner keeps the shipped PAIR — no third control, no Files panel button",
-      win.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win.commander
-      and win.commander.isAncestorOf(win.btn_split)
-      and win.commander.isAncestorOf(win.commander.btn)
+check("...and the corner keeps its DECLARED ROWS — no third control, no Files panel button",
+      win.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win.corner
+      and win.corner.keys() == ["split", "commander"]
+      and win.corner.isAncestorOf(win.btn_split)
+      and win.corner.isAncestorOf(win.commander.btn)
       and not hasattr(win, "btn_files_panel")
-      and not any(b.text() == i18n.t("terminal.files_panel")
-                  for b in win.commander.findChildren(QPushButton)))
-check("...which is what keeps the window's own floor at the shipped two-button width",
+      and not any(b.accessibleName()
+                  == i18n.t("terminal.corner_accessible", action=i18n.t("terminal.files_panel"))
+                  for b in win.corner.findChildren(QPushButton)))
+check("...which is what keeps the window's own floor at the declared icon-only budget",
       not hasattr(SFTP, "CORNER_BUTTON_MIN_WIDTH")
-      and "panel_button" not in inspect.signature(SFTP.CommanderCorner.__init__).parameters
-      and len(win.commander.findChildren(QPushButton)) == 2,
-      f"floor={win.minimumSizeHint().width()}")
+      and "split_button" not in inspect.signature(SFTP.CommanderCorner.__init__).parameters
+      and len(win.corner.controls()) == 2
+      and win.corner.budget() == (2, TCORNER.CORNER_MAX_CONTROLS)
+      and win.corner.width() == TCORNER.corner_width(2),
+      f"floor={win.minimumSizeHint().width()} corner={win.corner.width()}")
 check("...and the context-menu item is the ONLY surface of that action left",
       win.act_files_panel in win._build_context_menu().actions()
       and win.act_split in win._build_context_menu().actions())
@@ -713,8 +718,8 @@ check("§11 the pin counts the shipped release (863 + the 4 keys of the Files pa
       " + the 1 of v1.7.4rc2: the refusal of a move that would cross the two sources"
       " + the 4 of v1.7.5: the Files settings page, its ceiling row and warning, and the"
       " truncation notice + the 20 of v1.8: the elevated pane + the 41 of v1.8.1: the trust surface,"
-      " and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row, and v1.12.4.1 adds ONE: `sftp.opening`",
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3, str(EXPECTED_I18N_KEYS))
+      " and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row, and v1.12.4.1 adds ONE: `sftp.opening`, and v1.14.3 adds TWO: the corner's MAX hint and the accessible name a label-less control needs",
+      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
 check("§11 VERSION_FORMAT stays `0.9` (the mode lives in config.json, not in the project file)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§11 no new dependency was added for the panel (the four pinned ones)",

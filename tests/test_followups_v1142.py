@@ -474,7 +474,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check(f"§7 the three new strings exist in every language (parity is {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1196
+      EXPECTED_I18N_KEYS == 1196 + 2
       and all(code in LANGS and all(key in LANGS[code] for key in
                                     ("settings.appearance.note_tone",
                                      "settings.appearance.note_tone.hint", "note.fold.tooltip"))

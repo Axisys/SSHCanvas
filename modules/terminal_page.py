@@ -419,7 +419,7 @@ def refresh_session_activity(container) -> int:
 # A session whose channel died is a page the user would otherwise close and open again;
 # `TerminalSessionPage.reconnect()` is the ONE re-arm path that brings it back. The row that fires
 # it belongs to the SESSION, so its label, tooltip and STATE RULE ("enabled iff the session can be
-# re-armed") are declared ONCE here — the tab-bar CORNER keeps its two controls (AGENTS.md §4.12).
+# re-armed") are declared ONCE here — the tab-bar CORNER is a budgeted icon-only row (AGENTS.md §4.32.2).
 
 
 def tmux_attach_command(name) -> str:

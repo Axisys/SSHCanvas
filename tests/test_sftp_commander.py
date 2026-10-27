@@ -497,17 +497,20 @@ msgs5 = []
 page5.sftp_tab.message.connect(msgs5.append)
 
 check("the corner of the session tab bar is ONE container holding BOTH per-session controls",
-      win5.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win5.commander
-      and win5.commander.isAncestorOf(win5.btn_split)
-      and win5.commander.isAncestorOf(win5.commander.btn))
+      win5.session_tabs.cornerWidget(Qt.Corner.TopRightCorner) is win5.corner
+      and win5.corner.isAncestorOf(win5.btn_split)
+      and win5.corner.isAncestorOf(win5.commander.btn))
 check("the action is checkable, labelled and ENABLED for a session with a Files tab",
       win5.commander.act.isCheckable() and win5.commander.act.isChecked() is False
       and win5.commander.act.isEnabled() is True
       and win5.commander.act.text() == i18n.t("sftp.commander")
       and win5.commander.act.toolTip() == i18n.t("sftp.commander_tooltip"))
-check("the corner BUTTON mirrors the action (one source of truth)",
+check("the corner BUTTON mirrors the action (one source of truth) and is ICON-ONLY",
       win5.commander.btn.isCheckable() and win5.commander.btn.isChecked() is False
-      and win5.commander.btn.text() == i18n.t("sftp.commander"))
+      and win5.commander.btn.text() == ""
+      and win5.commander.btn.toolTip() == i18n.t("sftp.commander_tooltip")
+      and win5.commander.btn.accessibleName()
+      == i18n.t("terminal.corner_accessible", action=i18n.t("sftp.commander")))
 
 win5.commander.btn.click()   # the real click path of the corner button
 app.processEvents()

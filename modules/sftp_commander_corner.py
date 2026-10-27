@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-"""The tab-bar CORNER control of the Files Commander — the checkable switch of the two-pane view.
+"""The Files Commander's ROW of the tab-bar corner — the checkable switch of the two-pane view.
 
 It belongs to the CONTAINER (the corner is the tab bar's) while the mode is the SESSION's, so the
-control is a VIEW over an action the container reads (`is_commander()`), drawn beside the split
-button. Its own module keeps `modules/sftp_tab.py` — the pane FACADE — under the line budget the
-two split waves won (`tests/test_sftp_pane_split.py`), and the facade RE-EXPORTS the class, so
-`modules.sftp_tab.CommanderCorner` stays the shipped name. Mechanism — `DOCUMENTATION.md` §14g."""
+control is a VIEW over an action the container reads (`is_commander()`); its button is a ROW of
+`modules/terminal_corner.py`, which owns the label-less shape and the two walks. This module keeps
+`modules/sftp_tab.py` — the pane FACADE — under the line budget the two split waves won
+(`tests/test_sftp_pane_split.py`), and the facade RE-EXPORTS the class, so
+`modules.sftp_tab.CommanderCorner` stays the shipped name. Mechanism — `DOCUMENTATION.md` §65."""
 
-from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QPushButton
 
 try:
     from i18n import t as _t
@@ -16,68 +18,39 @@ except Exception:  # noqa: BLE001 — a build without i18n keeps the keys, not a
     def _t(key, **kwargs):  # type: ignore
         return key
 
-try:  # v1.9.8: the vector glyph of the corner control
-    from ..ui.icons import get_icon
-except ImportError:
-    try:
-        from ui.icons import get_icon
-    except ImportError:  # a stripped build — the corner button stays text-only
-        def get_icon(name):
-            return QIcon()
-
-try:  # v1.9.8: the shared corner-button stylesheet of the split controller
-    from .terminal_split import apply_corner_style
+try:  # the ONE owner of the corner's shape (`modules/terminal_corner.py`)
+    from .terminal_corner import shape_control
 except ImportError:  # flat launch from the project root
     try:
-        from terminal_split import apply_corner_style
-    except ImportError:  # a stripped build — the global QPushButton rule stands
-        def apply_corner_style(*buttons):
-            return 0
+        from terminal_corner import shape_control
+    except ImportError:  # a stripped build — the button keeps the text it is built with
+        def shape_control(button, glyph, tooltip, label):
+            return False
 
 
-class CommanderCorner(QWidget):
-    """The corner control of the two-pane view: ONE checkable action, a button that views it.
+class CommanderCorner(QObject):
+    """The corner's Commander row: ONE checkable action, a button that views it.
 
     The `act_split` pattern: the action is the single source of truth and the button is a view of
     it, so the checkmark and the pane state can never diverge. The container calls `set_state()`
     whenever the active session changes, and the action is DISABLED while the active session has no
-    Files tab (a split pane). The corner holds exactly TWO controls — the split button and this one
-    — and the Files panel of the WINDOW is NOT a third: since v1.7.1.1 that mode is a SETTING
-    (`terminal_files_mode`), so the pair keeps the floor the window's own minimum width is built on.
+    Files tab (a split pane). The ROW — the order, the width, the glyph, the tooltip and the
+    accessible name — is `modules/terminal_corner.py`'s (`CornerBar.add_control("commander", …)`).
     Never raises — the corner is chrome.
     """
 
-    def __init__(self, parent=None, split_button=None):
-        super().__init__(parent)
-        self.setObjectName("sftpCommanderCorner")
-        row = QHBoxLayout(self)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(4)
-
+    def __init__(self, host=None):
+        super().__init__(host if isinstance(host, QObject) else None)
         self.act = QAction(_t("sftp.commander"), self)
         self.act.setCheckable(True)
         self.act.setToolTip(_t("sftp.commander_tooltip"))
-        self.btn = QPushButton(_t("sftp.commander"))
+        self.btn = QPushButton()
         self.btn.setCheckable(True)
-        self.btn.setToolTip(_t("sftp.commander_tooltip"))
-        # v1.9.8: the second corner control of the session tab bar — its own GLYPH (two
-        # listings) and the SAME checkable feedback as the split button (`corner.button`).
-        self.refresh_theme()
+        self.btn.setText(_t("sftp.commander"))    # the word the STRIPPED build keeps
+        shape_control(self.btn, "files", _t("sftp.commander_tooltip"), _t("sftp.commander"))
         self.btn.clicked.connect(self._on_button_clicked)
         self.act.toggled.connect(self._sync_button)
-        if split_button is not None:
-            row.addWidget(split_button)
-        row.addWidget(self.btn)
         self.set_enabled(False)   # until a session tells us what it has
-
-    def refresh_theme(self):
-        """Re-apply the corner control's glyph and stylesheet (construction and a theme switch)."""
-        try:
-            self.btn.setIcon(QIcon())
-            self.btn.setIcon(get_icon("files"))
-        except RuntimeError:
-            return  # Qt teardown — the button is already destroyed
-        apply_corner_style(self.btn)
 
     def _on_button_clicked(self, _checked=False):
         """The BUTTON asks the ACTION (one source of truth), exactly like `btn_split`."""
@@ -120,11 +93,9 @@ class CommanderCorner(QWidget):
         self._sync_button(on)
 
     def retranslate(self):
-        """Re-text the label and the tooltip of both views (one key each)."""
+        """Re-text the ACTION (its word is the menu row); the button's sentence is the bar's."""
         try:
             self.act.setText(_t("sftp.commander"))
             self.act.setToolTip(_t("sftp.commander_tooltip"))
-            self.btn.setText(_t("sftp.commander"))
-            self.btn.setToolTip(_t("sftp.commander_tooltip"))
         except RuntimeError:
             pass  # Qt teardown — the corner is already destroyed
