@@ -1197,5 +1197,12 @@
   "sftp.network.menu": "Сеть",
   "sftp.network.ping": "Ping {host}",
   "sftp.network.trace": "Трассировка до {host}",
-  "sftp.network.reverse": "Обратный поиск {host}"
+  "sftp.network.reverse": "Обратный поиск {host}",
+  "settings.appearance.pack": "Набор темы:",
+  "settings.appearance.pack.default": "По умолчанию",
+  "settings.appearance.pack.hint": "Набор темы — это JSON-файл в папке themes: он перекрашивает поверхности, текст, карточки, группы, стрелки, заметки и палитру подсветки. Файл с тем же именем в вашей папке themes заменяет встроенный.",
+  "settings.appearance.pack.locked": "Тона статусов, выделения и тегов, радиусы и шрифты заблокированы: набор не может их изменить.",
+  "settings.appearance.pack.folder": "Открыть папку themes",
+  "settings.appearance.pack.skipped": "Файл темы {name} пропущен: {reason}",
+  "settings.appearance.pack.contrast": "Файл темы {name} пропущен: проверка контраста отклонила {pairs}"
 }

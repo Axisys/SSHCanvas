@@ -12,10 +12,11 @@ the statuses and the live options) and `language_changed(str)` (fired immediatel
 
 The key inventory and the live-application rule of each row are the DOCUMENTATION section's."""
 
+import os
 import sys
 
-from PySide6.QtCore import Qt, QRegularExpression, Signal
-from PySide6.QtGui import QColor, QKeySequence, QRegularExpressionValidator
+from PySide6.QtCore import Qt, QRegularExpression, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QKeySequence, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QCheckBox,
@@ -30,6 +31,14 @@ except ImportError:
         from ui import theme
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         import theme
+
+try:  # v1.14.4: the theme PACK store — the schema, the folder door and the reason codes
+    from . import theme_store
+except ImportError:
+    try:
+        from ui import theme_store
+    except ImportError:
+        theme_store = None
 
 try:  # v1.4.3: the widget-level stylesheets are the ONE registry (ui/theme_qss.py, AGENTS.md §4.6)
     from . import theme_qss
@@ -217,16 +226,16 @@ def swatch_style(fill: str, selected: bool = False) -> str:
 
 
 def load_theme_settings() -> dict:
-    """The validated `theme` key: {"mode", "accent", "motion", "density", "note_tone"}.
+    """The validated `theme` key: {"mode", "accent", "motion", "density", "note_tone", "pack"}.
 
     ``mode`` is one of ``theme.MODES`` (``dark``, ``light`` or ``auto`` — the platform's own colour
     scheme); ``motion`` is the "Reduce motion" switch, ``density`` the card density and ``note_tone``
-    the ONE tone of every note on the map (the ``"#rrggbb"`` colour the Appearance tab stores; ``""``
-    is the shipped family). Broken / missing / foreign values fall back to the defaults — the config
-    is hand-editable, so every read is defensive. Never raises.
+    the ONE tone of every note (the ``"#rrggbb"`` colour the tab stores; ``""`` is the shipped family).
+    ``pack`` is the id of a theme FILE (``""`` = the mode's own look), judged as a file name here and
+    resolved against the registry by `theme_from_settings()`. Broken values fall back to the defaults.
     """
     result = {"mode": theme.MODE_DARK, "accent": theme.accent_hex(), "motion": True,
-              "density": theme.DENSITY_NORMAL, "note_tone": ""}
+              "density": theme.DENSITY_NORMAL, "note_tone": "", "pack": ""}
     try:
         from i18n import load_config
     except Exception:
@@ -264,6 +273,13 @@ def load_theme_settings() -> dict:
     if density is not None and resolved != str(density).strip().lower():
         _log_dialog(f"theme.density {density!r} is not one of {theme.DENSITIES} — using 'normal'")
     result["density"] = resolved
+    # v1.14.4: the theme PACK — an id is a FILE NAME before it is a path (§4.6)
+    pack = raw.get("pack")
+    if isinstance(pack, str) and pack.strip():
+        if theme_store is not None and theme_store.is_safe_pack_id(pack):
+            result["pack"] = pack.strip()
+        else:
+            _log_dialog(f"theme.pack {pack!r} is not a usable theme id — using the default look")
     return result
 
 
@@ -320,14 +336,24 @@ def apply_motion_setting(settings) -> bool:
 
 
 def theme_from_settings(settings) -> "theme.Theme":
-    """The `Theme` instance of a stored `theme` dict — mode + accent hue + note tone.
+    """The `Theme` instance of a stored `theme` dict — mode + accent hue + note tone + pack.
 
-    Never raises and never returns None: the caller gets DARK (or LIGHT) with the
-    requested hue, which is exactly what the settings hub writes into the app.
+    Never raises and never returns None: the caller gets DARK (or LIGHT) with the requested hue.
+    A pack the registry does not hold — or one whose base is not the mode the request RESOLVES to —
+    answers the mode's own look plus ONE log line, because a dark pack over a light base is not a
+    theme (`AGENTS.md` §4.6).
     """
     settings = settings if isinstance(settings, dict) else {}
     hue = theme.hex_hue(settings.get("accent") or theme.accent_hex())
-    return theme.theme_for_mode(settings.get("mode"), hue, settings.get("note_tone"))
+    pack_id = settings.get("pack") or ""
+    if pack_id:
+        pack = theme.pack_by_id(pack_id)
+        if pack is None:
+            _log_dialog(f"theme.pack {pack_id!r} is no loaded theme file — using the mode's own look")
+        elif pack.base != theme.resolve_mode(settings.get("mode")):
+            _log_dialog(f"theme.pack {pack_id!r} belongs to the {pack.base!r} base — the request "
+                        f"resolves to {theme.resolve_mode(settings.get('mode'))!r}, using its own look")
+    return theme.theme_for_mode(settings.get("mode"), hue, settings.get("note_tone"), pack_id)
 
 
 class SettingsDialog(QDialog):
@@ -680,13 +706,12 @@ class SettingsDialog(QDialog):
     # ── "Appearance" tab (v1.4.3): the theme — mode + accent ────────────────────
 
     def _build_appearance_tab(self):
-        """The theme of the application: mode, motion, density, accent hue and the note tone.
+        """The theme of the application: mode, pack, motion, density, accent hue and the note tone.
 
-        LIVE apply without a restart (the "Language" tab precedent): every control pushes the
-        choice through ``theme_changed`` immediately, and ``collect()`` writes it to config.json on
-        OK; ``reject()`` restores the theme the dialog opened with, so a rejected dialog changes
-        nothing. The accent and the note tone are HUE values — the fields hold the colour the user
-        picked and ``theme.hex_hue`` derives the hue back.
+        LIVE apply without a restart (the "Language" tab precedent): every control pushes the choice
+        through ``theme_changed`` immediately, and ``collect()`` writes it to config.json on OK;
+        ``reject()`` restores the theme the dialog opened with. The accent and the note tone are HUE
+        values — the fields hold the colour the user picked and ``theme.hex_hue`` derives the hue back.
         """
         current = load_theme_settings()
         self._accent_hex = current["accent"]
@@ -711,6 +736,31 @@ class SettingsDialog(QDialog):
         mode_row.addWidget(self._lbl_theme_mode)
         mode_row.addWidget(self.theme_mode_combo, 1)
         layout.addLayout(mode_row)
+
+        # ── v1.14.4: the theme PACK — a FILE of declared overrides, per RESOLVED base ─────────
+        # The registry is re-read HERE (the user drops a file and reopens Settings) and the combo
+        # offers the packs of the mode the switch resolves to: a dark pack never crosses over.
+        self._pack_id = current["pack"]
+        if theme_store is not None:
+            theme.packs(reload=True)
+        pack_row = QHBoxLayout()
+        self._lbl_theme_pack = QLabel(_t("settings.appearance.pack"))
+        self.pack_combo = QComboBox()
+        self.pack_combo.setToolTip(_t("settings.appearance.pack.hint"))
+        self.pack_folder_btn = QPushButton(_t("settings.appearance.pack.folder"))
+        self.pack_folder_btn.clicked.connect(self._on_open_theme_folder)
+        pack_row.addWidget(self._lbl_theme_pack)
+        pack_row.addWidget(self.pack_combo, 1)
+        pack_row.addWidget(self.pack_folder_btn)
+        layout.addLayout(pack_row)
+        self._lbl_pack_locked = QLabel(_t("settings.appearance.pack.locked"))
+        self._lbl_pack_locked.setWordWrap(True)
+        layout.addWidget(self._lbl_pack_locked)
+        # ONE sentence about the LAST skipped theme file (the loader logs every one of them)
+        self.pack_status = QLabel("")
+        self.pack_status.setWordWrap(True)
+        self.pack_status.setVisible(False)
+        layout.addWidget(self.pack_status)
 
         # ── v1.5rc1: the motion switch ("Reduce motion") ──────────────────────
         # Read by `ui/motion.py`: with it off every gesture applies its FINAL
@@ -804,6 +854,8 @@ class SettingsDialog(QDialog):
         # The live application — wired AFTER the initial values are in place
         # (the "Language" tab precedent: otherwise the construction echo would
         # apply the theme onto itself).
+        self._fill_pack_combo()
+        self.pack_combo.currentIndexChanged.connect(self._on_pack_changed)
         self.theme_mode_combo.currentIndexChanged.connect(self._on_theme_changed)
         self.density_combo.currentIndexChanged.connect(self._on_density_changed)
         self._mark_current_swatch()
@@ -814,6 +866,10 @@ class SettingsDialog(QDialog):
         # colour row and the hint. Each entry names the pieces that hide together.
         self._register_search_entry(tab, self._lbl_theme_mode,
                                     [self._lbl_theme_mode, self.theme_mode_combo])
+        self._register_search_entry(tab, self._lbl_theme_pack,
+                                    [self._lbl_theme_pack, self.pack_combo,
+                                     self.pack_folder_btn])
+        self._register_search_entry(tab, self._lbl_pack_locked, [self._lbl_pack_locked])
         self._register_search_entry(tab, self.motion_chk, [self.motion_chk])
         self._register_search_entry(
             tab, self._lbl_theme_density, [self._lbl_theme_density, self.density_combo])
@@ -840,11 +896,94 @@ class SettingsDialog(QDialog):
         except RuntimeError:
             pass  # Qt teardown — a button is already destroyed
 
+    def _fill_pack_combo(self):
+        """The pack combo of the RESOLVED base: `Default` first, then that base's files by name.
+
+        A stored id the list does not hold — an uninstalled pack, or one of the OTHER base, which
+        a mode switch produces — falls back to `Default` with ONE log line, so the row can never
+        show a choice that would not be applied.
+        """
+        try:
+            self.pack_combo.blockSignals(True)
+            self.pack_combo.clear()
+            self.pack_combo.addItem(_t("settings.appearance.pack.default"), "")
+            mode = self.theme_mode_combo.currentData() or theme.MODE_DARK
+            for pack in theme.packs_for(mode):
+                self.pack_combo.addItem(pack.display(), pack.id)
+            index = next((i for i in range(self.pack_combo.count())
+                          if self.pack_combo.itemData(i) == self._pack_id), 0)
+            self.pack_combo.setCurrentIndex(index)
+            if self._pack_id and index == 0:
+                _log_dialog(f"theme.pack {self._pack_id!r} is not a theme of the resolved base "
+                            f"({theme.resolve_mode(mode)!r}) — using the mode's own look")
+                self._pack_id = ""
+        except (AttributeError, RuntimeError):
+            return  # Qt teardown / a dialog built without the tab
+        finally:
+            try:
+                self.pack_combo.blockSignals(False)
+            except RuntimeError:
+                pass
+        self._show_pack_problems()
+
+    def _show_pack_problems(self):
+        """ONE sentence about the LAST skipped theme file — the loader logged the rest."""
+        try:
+            problems = list(theme.PACK_PROBLEMS)
+            if not problems:
+                self.pack_status.setVisible(False)
+                return
+            problem = problems[0]
+            contrast = getattr(theme_store, "REASON_CONTRAST", "contrast")
+            key = ("settings.appearance.pack.contrast" if problem.reason == contrast
+                   else "settings.appearance.pack.skipped")
+            self.pack_status.setText(_t(key, name=problem.id, reason=problem.detail,
+                                       pairs=problem.detail))
+            self.pack_status.setStyleSheet(theme_qss.style("status.muted")
+                                           if theme_qss is not None else "")
+            self.pack_status.setVisible(True)
+        except (AttributeError, RuntimeError):
+            pass  # Qt teardown / a build without the row
+
+    def _on_pack_changed(self, *_args):
+        """A pack was chosen: its SUGGESTIONS (accent, terminal palette) apply, then the theme."""
+        try:
+            self._pack_id = self.pack_combo.currentData() or ""
+        except (AttributeError, RuntimeError):
+            return  # Qt teardown / a build without the row
+        pack = theme.pack_by_id(self._pack_id) if self._pack_id else None
+        if pack is not None:
+            # a pack DECLARES, the user still owns both fields (`AGENTS.md` §4.6)
+            if pack.accent_hue is not None:
+                self._accent_hex = theme.accent_hex(pack.accent_hue)
+                self.accent_hex_edit.setText(self._accent_hex)
+                self._mark_current_swatch()
+            combo = getattr(self, "palette_combo", None)
+            index = combo.findData(pack.terminal_palette) if (combo and pack.terminal_palette) else -1
+            if index >= 0:
+                combo.setCurrentIndex(index)
+        self._emit_theme()
+
+    def _on_open_theme_folder(self):
+        """The folder door: create `~/.sshmap/themes` on demand and open it in the OS file manager."""
+        if theme_store is None:
+            return
+        folder = theme_store.user_dir()
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except OSError:  # noqa: BLE001 — the OS refuses a path we only probe
+            _log_dialog(f"themes: cannot create {folder!r}")
+            return
+        try:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+        except Exception as e:  # noqa: BLE001 — a broken file manager is not a dialog failure
+            _log_dialog(f"themes: cannot open {folder!r}: {e!r}")
+
     def _current_theme(self):
-        """The Theme the tab currently describes (mode + hue + note tone)."""
+        """The Theme the tab currently describes (mode + hue + note tone + pack)."""
         mode = self.theme_mode_combo.currentData() or theme.MODE_DARK
         return theme.theme_for_mode(mode, theme.hex_hue(self._accent_hex),
-                                    self._note_tone_value)
+                                    self._note_tone_value, self._pack_id)
 
     def _on_accent_hue(self, hue):
         """A swatch was clicked: adopt its colour and apply live."""
@@ -942,7 +1081,8 @@ class SettingsDialog(QDialog):
         self._emit_theme()
 
     def _on_theme_changed(self, *_args):
-        """The mode combo moved (the accent has its own two slots)."""
+        """The mode combo moved (the accent has its own two slots) — the pack list follows it."""
+        self._fill_pack_combo()
         self._mark_current_swatch()
         self._emit_theme()
 
@@ -973,12 +1113,10 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown
 
     def _on_density_changed(self, *_args):
-        """The card-density combo moved (v1.6) — applied LIVE.
+        """The card-density combo moved — applied LIVE (`theme.set_card_density`, module state).
 
-        The density is module state (`theme.set_card_density`) rather than a Theme
-        field, so it is installed here and the cards follow through the ordinary
-        refresh walk the emitted `theme_changed` triggers (the `_on_motion_toggled`
-        pattern, one level down). Never raises: the switch is cosmetic.
+        The cards follow through the ordinary refresh walk the emitted `theme_changed` triggers (the
+        `_on_motion_toggled` pattern, one level down). Never raises: the switch is cosmetic.
         """
         try:
             self._density = self.density_combo.currentData() or theme.DENSITY_NORMAL
@@ -1244,14 +1382,14 @@ class SettingsDialog(QDialog):
     # ── "Files" tab (v1.7.5: the reader's ceiling) ────────────────────────────
 
     def _build_files_tab(self):
-        """The Files surface's own settings — the READER'S CEILING (v1.7.5).
+        """The Files surface's own settings — the READER'S CEILING.
 
-        The cap is a SETTING and not a control of the pane (the `terminal_files_mode` precedent):
-        it belongs to every pane of every session at once, so it lives in the hub. The slider and
-        the value box are ONE number — each is a view of the other, written through ONE slot with
-        the signals guarded — and the WARNING above `VIEWER_MAX_BYTES_WARN` says why a big cap is
-        a cost: the reader is a `QPlainTextEdit`, and tens of megabytes of text are seconds of
-        freeze. The range and the default come from the module that READS them, never from here.
+        The cap is a SETTING and not a control of the pane (the `terminal_files_mode` precedent): it
+        belongs to every pane of every session at once. The slider and the value box are ONE number —
+        each a view of the other, written through ONE slot with the signals guarded — and the WARNING
+        above `VIEWER_MAX_BYTES_WARN` says why a big cap costs: the reader is a `QPlainTextEdit`, and
+        tens of megabytes of text are seconds of freeze. The range and the default come from the
+        module that READS them, never from here.
         """
         sftp = _viewer_max_module()
         tab = QWidget()
@@ -1426,12 +1564,11 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(tab, _t("settings.tab.statuses"))
 
     def _on_manual_only_toggled(self, checked: bool) -> None:
-        """v1.6.6: the manual-only row follows its checkbox.
+        """The manual-only row follows its checkbox — a torn-down Qt object is a silent no-op.
 
-        The interval spinbox is DISABLED and keeps its value (the user's number is remembered,
-        not zeroed — the sentinel is written by `collect()`, never by the spinbox), and the
-        sentence explaining what the mode means appears with it. A torn-down Qt object is a
-        silent no-op.
+        The interval spinbox is DISABLED and keeps its value (the user's number is remembered, not
+        zeroed — the sentinel is written by `collect()`, never by the spinbox), and the sentence
+        explaining what the mode means appears with it.
         """
         checked = bool(checked)
         try:
@@ -1785,19 +1922,12 @@ class SettingsDialog(QDialog):
                 for aid, edit in getattr(self, "hotkey_edits", {}).items()}
 
     def _on_reset_hotkeys(self):
-        """v1.3.3.3: restore every registry default in the table AND on disk.
+        """Restore every registry default in the table AND on disk — idempotent, never raises.
 
-        The mapping comes from the registry (``default_hotkeys``) — no default is
-        duplicated here, so a new action in ``ui/hotkey_registry.py`` is reset for free.
-        It goes through the ordinary merge-write (``save_hotkeys`` → ``i18n.save_config``),
-        which is what keeps the FOREIGN keys of ``config.json`` (language, fonts, …)
-        untouched; an unknown id in the stored config stays ignored (the v1.3.2 rule
-        lives in the registry, not here).
-
-        The write is deliberate — the button says what it does, and the table already
-        showed the current values; the ``applied`` signal then reinstalls the sequences
-        on the live window without a restart. Idempotent: a second click writes the same
-        bytes. Never raises.
+        The mapping comes from the registry (``default_hotkeys``) — no default is duplicated here —
+        and it goes through the ordinary merge-write (``save_hotkeys`` → ``i18n.save_config``), which
+        keeps the FOREIGN keys of ``config.json`` untouched; the ``applied`` signal reinstalls the
+        sequences on the live window.
         """
         try:
             try:
@@ -1916,14 +2046,11 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown — the label is already destroyed
 
     def _on_import_language(self):
-        """v1.3.3.8: "Import a language file…".
+        """Import a language file…: validate + copy into `~/.sshmap/languages/`, then activate it.
 
-        Validate + copy the chosen `.json` into `~/.sshmap/languages/`
-        (`i18n.import_language_file()` does the validation and the atomic write — a
-        broken / non-JSON / key-less file never reaches the folder), report the key
-        count (plus the English-fallback note for an incomplete file, which is
-        imported with `"partial": true`) and make the imported language ACTIVE
-        immediately. Never raises.
+        `i18n.import_language_file()` does the validation and the atomic write — a broken / non-JSON /
+        key-less file never reaches the folder; the report names the key count (plus the English
+        fallback note of a file imported with `"partial": true`).
         """
         try:
             from i18n import import_language_file
@@ -1995,13 +2122,11 @@ class SettingsDialog(QDialog):
         self._set_language_status(_t("language.exported", path=result["path"]))
 
     def _activate_language(self, code: str):
-        """Select `code` in the combo and APPLY it (v1.3.3.8).
+        """Select `code` in the combo and APPLY it.
 
-        The ordinary path is `setCurrentIndex` → `currentIndexChanged` →
-        `_on_language_changed` (the immediate application of the tab). When the combo
-        already sits on that code — the import SHADOWED the active language — no
-        signal would fire, so the slot is called directly: the point of that case is
-        precisely to re-read the freshly copied file. Never raises.
+        The ordinary path is `setCurrentIndex` → `currentIndexChanged` → `_on_language_changed`. When
+        the combo already sits on that code — the import SHADOWED the active language — no signal would
+        fire, so the slot is called directly: that case exists to re-read the freshly copied file.
         """
         combo = getattr(self, "language_combo", None)
         if combo is None or not code:
@@ -2018,15 +2143,12 @@ class SettingsDialog(QDialog):
             pass  # Qt teardown — the combo is already destroyed
 
     def _refresh_language_combo(self, force: bool = False):
-        """v1.3.3.1: re-read the discovered languages at dialog open.
+        """Re-read the discovered languages at dialog open (`showEvent` calls this).
 
-        The combo was built once at dialog construction; a language file placed into
-        `i18n/` (or into the user folder since v1.3.3.8) afterwards must not need a
-        restart — `showEvent` calls this. The current language is preselected, so the
-        refresh does not fire `currentIndexChanged` for the already active language.
-        `force=True` (the import path) rebuilds even when the code list is unchanged,
-        because a SHADOWING import changes the displayed NAME of an existing code.
-        Never raises.
+        A language file placed into `i18n/` or into the user folder afterwards needs no restart; the
+        current language is preselected, so the refresh does not fire `currentIndexChanged` for the
+        already active language. `force=True` (the import path) rebuilds even when the code list is
+        unchanged, because a SHADOWING import changes the displayed NAME of an existing code.
         """
         combo = getattr(self, "language_combo", None)
         if combo is None:
@@ -2141,14 +2263,13 @@ class SettingsDialog(QDialog):
     # ── Collecting values (config.json keys; language is NOT included — it is immediate) ───────
 
     def collect(self) -> dict:
-        """The tab values → the ~/.sshmap/config.json keys (all valid by construction:
-        the combos give fixed ids, the spinboxes — their own range).
+        """The tab values → the ~/.sshmap/config.json keys (all valid by construction).
 
         **30 UI-facing keys.** The nested `theme` object is ONE key carrying the whole appearance
-        choice ({mode, accent, motion, density, note_tone}) and `hotkeys` is the same shape, because
-        `i18n.save_config` merges at the TOP level — `_on_accept` re-merges the stored object, so a
-        mode change never drops a value a foreign version wrote (the accent, a note tone). The nested
-        `note_tone` is written only when a tone is chosen: an absent key IS the shipped family.
+        choice ({mode, accent, motion, density, note_tone, pack}) and `hotkeys` is the same shape,
+        because `i18n.save_config` merges at the TOP level — `_on_accept` re-merges the stored object,
+        so a mode change never drops a value a foreign version wrote. `note_tone` and `pack` are
+        written ONLY when chosen: an absent key IS the shipped note / the mode's own look.
         """
         try:  # the field's OWN allowlist — the SAME reader the key is validated by at load time
             from ..modules.ssh_terminal import resolve_term
@@ -2192,7 +2313,9 @@ class SettingsDialog(QDialog):
                       "density": (self.density_combo.currentData()
                                   or theme.DENSITY_NORMAL),
                       # the ONE tone of every note — written ONLY when chosen (absent = shipped)
-                      **({"note_tone": self._note_tone_value} if self._note_tone_value else {})},
+                      **({"note_tone": self._note_tone_value} if self._note_tone_value else {}),
+                      # the theme FILE — written ONLY when chosen (absent = the mode's own look)
+                      **({"pack": self._pack_id} if self._pack_id else {})},
             # v1.6.6: the DECLARED `0` sentinel is what the manual-only
             # checkbox writes — the spinbox itself is never zeroed, so the user's interval is
             # still there when the box is un-ticked (the row is a VIEW of the state).
@@ -2224,19 +2347,13 @@ class SettingsDialog(QDialog):
     # ── i18n: retranslating the dialog's own strings (a language change in the open dialog) ───
 
     def refresh_theme(self):
-        """v1.4.3: re-apply the theme to the dialog's own strings.
+        """Re-apply the theme to the dialog's own strings.
 
-        The hub is the ONE dialog that can be on screen WHILE the theme changes (its own
-        "Appearance" tab applies live), so it owns the hook like every other container:
-        the hotkey table's conflict marks are repainted and the table's row colours
-        re-read (`_refresh_hotkey_conflicts` sets them from the theme). The tab's own
-        swatches are painted from their FIXED preset colours — they deliberately do
-        not follow the theme (a swatch shows the accent it would install).
-
-        The other dialogs (AddServer, SSHConnection, …) build their small QSS strings
-        from the live module constants at CONSTRUCTION time and are modal — a theme
-        switch cannot happen while one of them is open — so they are outside this
-        audit list by design (DOCUMENTATION.md §3).
+        The hub is the ONE dialog that can be on screen WHILE the theme changes (its own "Appearance"
+        tab applies live), so it owns the hook like every other container. Its swatches keep their
+        FIXED preset colours — a swatch shows the accent it would install. The other dialogs build
+        their small QSS strings at CONSTRUCTION time and are modal, so a switch cannot happen while
+        one of them is open (`DOCUMENTATION.md` §3).
         """
         try:
             self._refresh_hotkey_conflicts()
@@ -2280,6 +2397,14 @@ class SettingsDialog(QDialog):
                    "auto": "settings.appearance.mode.auto"}.get(mid)
             if key:
                 self.theme_mode_combo.setItemText(i, _t(key))
+        # v1.14.4: the pack row — its label, its `Default` row and its folder door
+        self._lbl_theme_pack.setText(_t("settings.appearance.pack"))
+        self.pack_combo.setToolTip(_t("settings.appearance.pack.hint"))
+        self.pack_folder_btn.setText(_t("settings.appearance.pack.folder"))
+        self._lbl_pack_locked.setText(_t("settings.appearance.pack.locked"))
+        if self.pack_combo.count():
+            self.pack_combo.setItemText(0, _t("settings.appearance.pack.default"))
+        self._show_pack_problems()
         # v1.5rc1: the motion switch of the same tab
         self.motion_chk.setText(_t("settings.appearance.motion"))
         self.motion_chk.setToolTip(_t("settings.appearance.motion.tooltip"))

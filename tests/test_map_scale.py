@@ -178,7 +178,7 @@ from ui.settings_dialog import (apply_density_setting, density_from_settings,  #
 
 _stored = load_theme_settings()
 check("density: the nested theme object carries the fourth value with 'normal' as the default",
-      set(_stored) == {"mode", "accent", "motion", "density", "note_tone"}
+      set(_stored) == {"mode", "accent", "motion", "density", "note_tone", "pack"}
       and _stored["density"] == "normal", str(_stored))
 check("density: density_from_settings validates like the rest (a broken value = normal)",
       density_from_settings({"density": "compact"}) == "compact"

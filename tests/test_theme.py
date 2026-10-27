@@ -37,7 +37,7 @@ for _node in ast.walk(_tree):
     elif isinstance(_node, ast.ImportFrom) and _node.module:
         _modules.add(_node.module.split(".")[0])
 check("§1 theme.py imports only the standard library (no third-party, no Qt)",
-      _modules <= {"copy", "dataclasses", "typing", "PySide6"},
+      _modules <= {"copy", "dataclasses", "typing", "PySide6", "importlib"},
       str(sorted(_modules)))
 check("§1 ...and the only PySide6 import is INSIDE a function (lazy, for the descriptors)",
       "from PySide6.QtGui import QColor" in _src
@@ -356,7 +356,7 @@ from ui.settings_dialog import (SettingsDialog, accent_swatches,  # noqa: E402
 clear_cfg()
 check("§6 no `theme` key → DARK + the default accent + the motion ON (the defaults ARE the behaviour)",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
-                                "note_tone": ""}
+                                "note_tone": "", "pack": ""}
       and theme_from_settings(load_theme_settings()) is theme.DARK,
       str(load_theme_settings()))
 
@@ -364,7 +364,7 @@ write_cfg({"theme": {"mode": "light", "accent": "#b838f8"}})
 _stored = load_theme_settings()
 check("§6 the round trip: a saved light theme + a custom accent come back unchanged",
       _stored == {"mode": "light", "accent": "#b838f8", "motion": True, "density": "normal",
-                                "note_tone": ""}, str(_stored))
+                                "note_tone": "", "pack": ""}, str(_stored))
 _instance = theme_from_settings(_stored)
 check("§6 ...and become the LIGHT instance with that hue (the hex is a hue in disguise)",
       _instance.canvas_bg == theme.LIGHT.canvas_bg
@@ -375,27 +375,27 @@ check("§6 ...and become the LIGHT instance with that hue (the hex is a hue in d
 write_cfg({"theme": "not-an-object"})
 check("§6 a broken `theme` value (a string) → the defaults, and the app still starts",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
-                                "note_tone": ""})
+                                "note_tone": "", "pack": ""})
 write_cfg({"theme": {"mode": 42, "accent": "#zzzzzz"}})
 check("§6 a foreign mode + an invalid colour → the defaults (per value, never a crash)",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
-                                "note_tone": ""},
+                                "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "LIGHT", "accent": "38BDF8"}})
 check("§6 the mode is case-insensitive and a missing '#' is tolerated",
       load_theme_settings() == {"mode": "light", "accent": "#38bdf8", "motion": True, "density": "normal",
-                                "note_tone": ""},
+                                "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 # v1.5rc1: the third mode + the motion flag of the same nested key.
 write_cfg({"theme": {"mode": "auto", "accent": "#38bdf8", "motion": False}})
 check("§6 v1.5rc1: 'auto' is a valid mode and a real `motion` boolean round-trips",
       load_theme_settings() == {"mode": "auto", "accent": "#38bdf8", "motion": False, "density": "normal",
-                                "note_tone": ""},
+                                "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "dark", "accent": "#38bdf8", "motion": "yes"}})
 check("§6 v1.5rc1: a broken motion value → the motion ON (today's behaviour)",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True, "density": "normal",
-                                "note_tone": ""},
+                                "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 clear_cfg()
 

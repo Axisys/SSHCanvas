@@ -24,7 +24,7 @@ PIN_SLACK_LINES = 60
 # the band that has NO line here is a module the release had to pin.
 LINE_PINS = {
     "modules/ssh_terminal.py": 2469,
-    "ui/settings_dialog.py": 2452,
+    "ui/settings_dialog.py": 2574,
     "modules/command_library.py": 2362,
     "modules/terminal_page.py": 2017,
     "graphics/server_node.py": 2009,

@@ -371,7 +371,7 @@ check("this file describes v1.14.3 (the corner-icons slot, or a later release)",
       releases_at_least(EXPECTED_APP_VERSION, "1.14.3"),
       EXPECTED_APP_VERSION)
 check(f"the parity pin counts the two new keys ({EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1196 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1196 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("both new keys exist in EVERY language, with the same placeholders",
       all(key in LANGS[code] for code in LANGS
           for key in ("terminal.corner_tooltip", "terminal.corner_accessible"))

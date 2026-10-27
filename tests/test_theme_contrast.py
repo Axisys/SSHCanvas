@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """v1.5rc1 — the CONTRAST GATE: the LIGHT palette, the two accent roles and the numbers that pin them.
 
-The gate the release asked for: NUMBERS, not taste — it reads the DECLARED table of pairs, computes the
-WCAG ratio for DARK, LIGHT and "auto" (both resolutions) and fails when a tone drops below its threshold.
+The gate the release asked for: NUMBERS, not taste — it reads the DECLARED table of pairs (`ui/theme_contrast.py`
+is its ONE home since v1.14.4, imported back here), computes the WCAG ratio for DARK, LIGHT and "auto"
+(both resolutions) and fails when a tone drops below its threshold.
 §1 the WCAG arithmetic; §2 the declared pairs and the exemptions; §3 completeness (every field of
 `Theme` is gated or explained); §4 the gate itself; §5 DARK did not move a pixel; §6 the LIGHT re-tuning
 and the arrow derivation; §7 "Auto (system)" resolved live; §8 the two roles at the call sites
@@ -22,37 +23,27 @@ from _common import (bootstrap, check, finish, load_i18n_langs, check_i18n_parit
 ROOT, WORK = bootstrap()  # BEFORE the app module imports (HOME isolation, offscreen, faulthandler)
 
 import ui.theme as theme  # noqa: E402  — pure data, no PySide6 needed for §1-§7
+from ui.theme_contrast import (CONTRAST_PAIRS, DECORATIVE,  # noqa: E402
+                               contrast_ratio, gated_fields, relative_luminance)
 
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _FIELD_NAMES = {f.name for f in dataclasses.fields(theme.Theme)}
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# §1 The WCAG arithmetic — the formula, with answers that are not opinions
+# §1 The WCAG arithmetic and the ONE home of the table
 # ════════════════════════════════════════════════════════════════════════════
 print("== §1 the WCAG relative-luminance formula ==")
 
+import ui.theme_contrast as theme_contrast  # noqa: E402
 
-def _channel(value: int) -> float:
-    """One 0..255 sRGB channel → its linear value (the WCAG 2.x definition)."""
-    c = value / 255.0
-    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-
-
-def relative_luminance(color: str) -> float:
-    """The relative luminance of a "#rrggbb" colour (0 = black, 1 = white)."""
-    value = str(color).strip().lstrip("#")
-    if len(value) != 6:
-        raise ValueError(f"not a #rrggbb colour: {color!r}")
-    r, g, b = (int(value[i:i + 2], 16) for i in (0, 2, 4))
-    return 0.2126 * _channel(r) + 0.7152 * _channel(g) + 0.0722 * _channel(b)
-
-
-def contrast_ratio(foreground: str, background: str) -> float:
-    """The WCAG contrast ratio between two colours (1.0 … 21.0)."""
-    a, b = relative_luminance(foreground), relative_luminance(background)
-    return (max(a, b) + 0.05) / (min(a, b) + 0.05)
-
+check("§1 the arithmetic the test computes with IS the module's (ONE home, imported back)",
+      theme_contrast.relative_luminance is relative_luminance
+      and theme_contrast.contrast_ratio is contrast_ratio,
+      f"{theme_contrast.contrast_ratio} / {contrast_ratio}")
+check("§1 the table is PURE data — no Qt, no state in the module",
+      "PySide6" not in open(os.path.join(ROOT, "ui", "theme_contrast.py"),
+                            encoding="utf-8").read())
 
 check("§1 black on white is exactly 21:1 (the top of the scale)",
       abs(contrast_ratio("#000000", "#ffffff") - 21.0) < 0.001,
@@ -91,100 +82,11 @@ check("§1 a malformed colour raises instead of returning a silent ratio",
 # ════════════════════════════════════════════════════════════════════════════
 print("== §2 the declared pairs and the decorative exemptions ==")
 
-# (label, foreground field, background field, threshold)
-#   4.5 = text (WCAG AA, normal size)
-#   3.0 = a non-text graphic that carries meaning, and the bold/large text case
-# The BACKGROUND is the surface the tone is really drawn on — a status dot sits on
-# the CARD (`node_bg`), not on the canvas, which is what the review measured.
-CONTRAST_PAIRS = [
-    # ── text on the chrome ────────────────────────────────────────────────────
-    ("body text on the window", "text_primary", "window_bg", 4.5),
-    ("body text on a card surface", "text_primary", "base_bg", 4.5),
-    ("body text on a button", "text_primary", "surface_alt", 4.5),
-    ("body text on the canvas", "text_primary", "canvas_bg", 4.5),
-    ("muted text on the window (the status bar, the hints)", "text_muted", "window_bg", 4.5),
-    ("muted text on a card surface (the item views)", "text_muted", "base_bg", 4.5),
-    ("muted text on the canvas", "text_muted", "canvas_bg", 4.5),
-    ("a vector icon on the chrome", "icon_color", "window_bg", 3.0),
-    ("a vector icon on a card surface", "icon_color", "base_bg", 3.0),
-    # ── the STRONG accent: the ink and the fill that carries text ─────────────
-    ("the strong accent as text on the window", "accent_strong", "window_bg", 4.5),
-    ("the strong accent as text on the canvas", "accent_strong", "canvas_bg", 4.5),
-    ("canvas text ON the strong accent (a selected row)", "canvas_bg", "accent_strong", 4.5),
-    ("the strong hover as text on the window", "accent_strong_hover", "window_bg", 4.5),
-    ("canvas text ON the strong hover (a hovered button)", "canvas_bg", "accent_strong_hover", 4.5),
-    ("the strong selected as text on the window", "accent_strong_selected", "window_bg", 4.5),
-    # ── the amber selection (it is INK as well: the multi-input counter) ──────
-    ("the amber selection as text on the window", "selection_amber", "window_bg", 4.5),
-    ("the amber selection as a mark on the canvas", "selection_amber", "canvas_bg", 3.0),
-    ("the amber selection as a mark on a card", "selection_amber", "node_bg", 3.0),
-    # ── the server card ───────────────────────────────────────────────────────
-    ("the card text", "node_text", "node_bg", 4.5),
-    ("the card label", "node_label", "node_bg", 4.5),
-    ("the server glyph ON the icon plate", "node_text", "node_icon_bg", 3.0),
-    ("the card outline on the canvas", "node_border", "canvas_bg", 3.0),
-    ("the card outline on the card", "node_border", "node_bg", 3.0),
-    ("the hover outline on the canvas (also the `vpn` arrow)", "node_hover", "canvas_bg", 3.0),
-    ("the hover outline on the card", "node_hover", "node_bg", 3.0),
-    ("the not-yet-checked dot on the card", "dot_idle", "node_bg", 3.0),
-    # ── the three statuses: ON THE CARD (where the dot is) and on the canvas ──
-    ("online on the card", "status_online", "node_bg", 3.0),
-    ("online on the canvas", "status_online", "canvas_bg", 3.0),
-    ("warn on the card", "status_warn", "node_bg", 3.0),
-    ("warn on the canvas", "status_warn", "canvas_bg", 3.0),
-    ("the 'no preview' marker of the SFTP rows", "status_warn", "base_bg", 3.0),
-    ("offline on the card", "status_offline", "node_bg", 3.0),
-    ("offline on the canvas", "status_offline", "canvas_bg", 3.0),
-    # ── the tag strip (the card's own bottom bar) ─────────────────────────────
-    ("the test tag on the card", "tag_test", "node_bg", 3.0),
-    ("the backup tag on the card", "tag_backup", "node_bg", 3.0),
-    ("the dmz tag on the card", "tag_dmz", "node_bg", 3.0),
-    ("the pink tag on the card", "tag_pink", "node_bg", 3.0),
-    ("the test tag on the canvas", "tag_test", "canvas_bg", 3.0),
-    ("the backup tag on the canvas", "tag_backup", "canvas_bg", 3.0),
-    ("the dmz tag on the canvas", "tag_dmz", "canvas_bg", 3.0),
-    ("the pink tag on the canvas", "tag_pink", "canvas_bg", 3.0),
-    # ── the groups ────────────────────────────────────────────────────────────
-    ("the group frame", "group_border", "canvas_bg", 3.0),
-    ("the group hover frame (also the `database` arrow)", "group_hover", "canvas_bg", 3.0),
-    ("the group title", "group_title", "canvas_bg", 4.5),
-    ("the selected group title", "group_title_selected", "canvas_bg", 4.5),
-    ("the hovered group title", "group_title_hover", "canvas_bg", 4.5),
-    # ── the six connection types: a 2 px stroke on the canvas ─────────────────
-    ("the ssh arrow", "arrow_ssh", "canvas_bg", 4.5),
-    ("the http arrow", "arrow_http", "canvas_bg", 4.5),
-    ("the nfs arrow", "arrow_nfs", "canvas_bg", 4.5),
-    ("the kubernetes arrow", "arrow_kubernetes", "canvas_bg", 4.5),
-    ("the vpn arrow (derived from `node_hover`)", "node_hover", "canvas_bg", 4.5),
-    ("the database arrow (derived from `group_hover`)", "group_hover", "canvas_bg", 4.5),
-    ("the arrow hover tone", "arrow_hover_compat", "canvas_bg", 3.0),
-    # ── the sticky note ───────────────────────────────────────────────────────
-    ("the note text", "note_text", "note_bg", 4.5),
-    ("the note outline on the canvas", "note_border", "canvas_bg", 3.0),
-    ("the note outline on a card", "note_border", "node_bg", 3.0),
-    # ── the SFTP viewer's syntax palette (on the QPlainTextEdit surface) ──────
-    ("syntax: a number", "syntax_number", "base_bg", 4.5),
-    ("syntax: a string", "syntax_string", "base_bg", 4.5),
-    ("syntax: a key", "syntax_key", "base_bg", 4.5),
-    ("syntax: a keyword", "syntax_keyword", "base_bg", 4.5),
-    ("syntax: a comment", "syntax_comment", "base_bg", 4.5),
-    ("syntax: a tag", "syntax_tag", "base_bg", 4.5),
-    ("syntax: an attribute", "syntax_attribute", "base_bg", 4.5),
-    ("syntax: punctuation", "syntax_punctuation", "base_bg", 4.5),
-]
+# The table and the exemptions live in ONE home — `ui/theme_contrast.py`, imported above —
+# because a theme PACK is judged by the same rows at LOAD time (`ui/theme_store.py`), so a
+# second copy here would be a second truth.
 
-# A tone that carries NO meaning on its own is EXEMPT — with the reason written
-# down. The rule of the line ("no new meaning only in a colour") is what makes the
-# list this short: every element the user must TELL APART is gated above.
-DECORATIVE = {
-    "render_bg": "the fill of the export pixmap — drawBackground paints canvas_bg over it",
-    "accent": "decoration: borders, focus outlines, the search-bar frame, the minimap frame, "
-              "the rubber band, the reveal glow (v1.5rc1 keeps it decorative on purpose)",
-    "accent_hover": "the hover shade of the same decoration",
-    "accent_selected": "the selected shade of the same decoration",
-}
-
-_gated = {name for _label, fg, bg, _t in CONTRAST_PAIRS for name in (fg, bg)}
+_gated = set(gated_fields())   # the module own reader of the rows (ONE home)
 check(f"§2 the table declares {len(CONTRAST_PAIRS)} pairs and no tone is both gated and exempt",
       not (_gated & set(DECORATIVE)),
       str(sorted(_gated & set(DECORATIVE))))
@@ -455,13 +357,13 @@ from ui.settings_dialog import (SettingsDialog, load_theme_settings, theme_from_
 clear_cfg()
 check("§7 no `theme` key → dark + the default accent + the motion ON + the normal card",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True,
-                                "density": "normal", "note_tone": ""}
+                                "density": "normal", "note_tone": "", "pack": ""}
       and theme_from_settings(load_theme_settings()) is theme.DARK,
       str(load_theme_settings()))
 write_cfg({"theme": {"mode": "auto", "accent": "#38bdf8", "motion": False}})
 check("§7 the round trip: `auto` + the motion flag come back unchanged",
       load_theme_settings() == {"mode": "auto", "accent": "#38bdf8", "motion": False,
-                                "density": "normal", "note_tone": ""},
+                                "density": "normal", "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 try:
     theme.system_color_scheme = lambda: theme.MODE_LIGHT
@@ -473,7 +375,7 @@ check("§7 ...and the stored `auto` resolves to the platform's LIGHT (not to dar
 write_cfg({"theme": {"mode": "night", "accent": "#zzzzzz", "motion": "false"}})
 check("§7 a foreign mode, a broken accent and a STRING motion → the defaults (never a crash)",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True,
-                                "density": "normal", "note_tone": ""},
+                                "density": "normal", "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 check("§7 motion_from_settings: only a real boolean counts, a broken value means ON",
       motion_from_settings({"motion": False}) is False

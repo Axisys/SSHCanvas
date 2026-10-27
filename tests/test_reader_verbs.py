@@ -444,7 +444,7 @@ check(f"§6 the release adds its TWELVE keys (the reader's find bar four, the ba
       and all(all(key in LANGS[code] for key in NEW_KEYS) for code in LANGS),
       str([c for c in LANGS if not all(k in LANGS[c] for k in NEW_KEYS)]))
 check(f"§6 the pin is the sum of the line's chain ({EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1181 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1181 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("§6 the placeholders travel with their sentence in every language",
       all(set(__import__("re").findall(r"\{(\w+)\}", LANGS[c]["sftp.network.ping"])) == {"host"}
           and set(__import__("re").findall(r"\{(\w+)\}", LANGS[c]["sftp.find.count"]))

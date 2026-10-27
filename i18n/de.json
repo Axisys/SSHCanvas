@@ -1197,5 +1197,12 @@
   "sftp.network.menu": "Netzwerk",
   "sftp.network.ping": "Ping {host}",
   "sftp.network.trace": "Route verfolgen zu {host}",
-  "sftp.network.reverse": "Reverse-Lookup {host}"
+  "sftp.network.reverse": "Reverse-Lookup {host}",
+  "settings.appearance.pack": "Themenpaket:",
+  "settings.appearance.pack.default": "Standard",
+  "settings.appearance.pack.hint": "Ein Themenpaket ist eine JSON-Datei im Ordner themes: es färbt Flächen, Text, Karten, Gruppen, Pfeile, Notizen und die Syntaxpalette neu. Eine gleichnamige Datei im eigenen themes-Ordner überschreibt die mitgelieferte.",
+  "settings.appearance.pack.locked": "Die Töne für Status, Auswahl und Tags, die Radien und die Schriften sind gesperrt: ein Paket darf sie nicht ändern.",
+  "settings.appearance.pack.folder": "themes-Ordner öffnen",
+  "settings.appearance.pack.skipped": "Themendatei {name} übersprungen: {reason}",
+  "settings.appearance.pack.contrast": "Themendatei {name} übersprungen: die Kontrastprüfung lehnt {pairs} ab"
 }

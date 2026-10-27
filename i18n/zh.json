@@ -1197,5 +1197,12 @@
   "sftp.network.menu": "网络",
   "sftp.network.ping": "Ping {host}",
   "sftp.network.trace": "路由跟踪到 {host}",
-  "sftp.network.reverse": "反向查询 {host}"
+  "sftp.network.reverse": "反向查询 {host}",
+  "settings.appearance.pack": "主题包：",
+  "settings.appearance.pack.default": "默认",
+  "settings.appearance.pack.hint": "主题包是 themes 文件夹中的 JSON 文件：它重新着色界面、文字、卡片、分组、箭头、便笺和语法配色。您自己的 themes 文件夹中的同名文件会覆盖内置文件。",
+  "settings.appearance.pack.locked": "状态、选中和标签色调、圆角与字体已锁定：主题包不能更改它们。",
+  "settings.appearance.pack.folder": "打开 themes 文件夹",
+  "settings.appearance.pack.skipped": "已跳过主题文件 {name}：{reason}",
+  "settings.appearance.pack.contrast": "已跳过主题文件 {name}：对比度检查拒绝了 {pairs}"
 }

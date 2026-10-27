@@ -401,7 +401,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check(f"§8 the patch adds NO i18n key (parity stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1193 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1193 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("§8 the pin names this release's line and the schema did NOT move",
       releases_at_least(EXPECTED_APP_VERSION, "1.14.1.2")
       and __import__("version").VERSION_FORMAT == "0.9", EXPECTED_APP_VERSION)

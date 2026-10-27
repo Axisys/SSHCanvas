@@ -658,7 +658,7 @@ check_release_state(ROOT)
 check("§7 the pin names this release's line", releases_at_least(EXPECTED_APP_VERSION, "1.13.1"),
       EXPECTED_APP_VERSION)
 check("§7 the archive surface's NINE keys are the whole of what it adds to the pin",
-      EXPECTED_I18N_KEYS == 1118 + 9 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1118 + 9 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("§7 the project schema did NOT move (an extraction is not project state)",
       'VERSION_FORMAT = "0.9"' in open(os.path.join(ROOT, "version.py"), encoding="utf-8").read())
 

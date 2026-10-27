@@ -366,7 +366,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check(f"§7 the patch adds NO key — the parity stays {EXPECTED_I18N_KEYS}",
-      EXPECTED_I18N_KEYS == 1181 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1181 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("§7 the pin names this release's line",
       releases_at_least(EXPECTED_APP_VERSION, "1.14.1"),
       EXPECTED_APP_VERSION)

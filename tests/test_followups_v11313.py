@@ -485,7 +485,7 @@ for _key in ("sftp.archive.list_cut", "sftp.archive.merge_facts"):
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check("§6 the pin is the released 1 125 plus the slot's TWO keys — and nothing else",
-      EXPECTED_I18N_KEYS == 1127 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1127 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 check("§6 the version is the THIRD patch of the released line",
       releases_at_least(EXPECTED_APP_VERSION, "1.13.1.3"), EXPECTED_APP_VERSION)
 

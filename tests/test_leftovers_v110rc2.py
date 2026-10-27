@@ -378,7 +378,7 @@ check("§4 the schema did NOT move and no new dependency arrived (three code tas
       and all(f"{d}>=" in _read("requirements.txt")
               for d in ("PySide6", "paramiko", "keyring", "wcwidth")))
 check("§4 the ONE new key is on the pin (1093 + the TERM row) and the hub collects 30",
-      EXPECTED_I18N_KEYS == 1093 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2)
+      EXPECTED_I18N_KEYS == 1093 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7)
 check_i18n_parity(_langs)
 check_i18n_format(_langs)
 check("§4 the topical file is listed by the suite map (tests/INDEX.md regenerated)",

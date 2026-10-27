@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sshcanvas"               # normalized APP_NAME from version.py ("SSH Canvas") — verified by tests/test_pyproject.py
-version = "1.14.3"                # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
+version = "1.14.4"                # MUST match APP_VERSION in version.py — verified by tests/test_pyproject.py
 description = "SSH Canvas: visual infrastructure map with direct SSH connections to nodes"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,11 +29,12 @@ dependencies = [
 sshcanvas = "main:main"          # console entry point → the existing main() in main.py (QApplication + MainWindow)
 sshmap = "main:main"             # legacy alias — the SAME main(); both commands ship
 
-# Flat layout: 10 top-level packages + 2 modules in the root — auto-discovery would not
+# Flat layout: 11 top-level packages + 2 modules in the root — auto-discovery would not
 # work here, so the list is explicit. tests/ and _tmp_testdata*/ are NOT included in the distribution.
 # third_party.pyte — a managed pyte fork (v1.3rc1): without an explicit list the fork would
 # not make it into `pip install .` / PyInstaller (MANIFEST.md). pyte-patches/ is data,
 # not a package (no __init__.py) — not included in the build.
+# themes/ — the shipped theme PACKS: DATA, not code (one <id>.json per pack, `ui/theme_store.py`).
 [tool.setuptools]
 py-modules = ["main", "version"]
 packages = [
@@ -44,6 +45,7 @@ packages = [
     "modules",
     "services",
     "storage",
+    "themes",
     "third_party",
     "third_party.pyte",
     "ui",
@@ -51,3 +53,4 @@ packages = [
 
 [tool.setuptools.package-data]
 i18n = ["*.json"]                # en/ru/zh/de translations — part of the distribution
+themes = ["*.json"]              # the shipped theme packs — part of the distribution

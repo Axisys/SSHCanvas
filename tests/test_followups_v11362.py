@@ -255,7 +255,7 @@ check("§5 ...and its only placeholder is the bound",
       all(placeholders(LANGS[code][_KEY]) == {"limit"} for code in LANGS),
       str({code: sorted(placeholders(LANGS[code][_KEY])) for code in sorted(LANGS)}))
 check("§5 the pin counts it beside the previous release (1179 + 1)",
-      EXPECTED_I18N_KEYS == 1179 + 1 + 1 + 12 + 3 + 2, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1179 + 1 + 1 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
 _VIEWER_SRC = open(os.path.join(ROOT, "modules", "sftp_pane_viewer.py"), encoding="utf-8").read()
 check("§5 ...and the pane really reads it (a key nobody reads is dead weight)",
       _KEY in _VIEWER_SRC)

@@ -263,7 +263,7 @@ check("§5 this release adds NO key (the row changed its head, not its words)",
       # the 1114 the panel release left + the keys the LATER follow-ups of the line added
       # (v1.12.3's THREE: the jump host's label, its hint and the import picker's column,
       # v1.13.2's EIGHT: the wallpaper row, v1.13.3's NINE: the row verbs and the Servers menu).
-      and EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2,
+      and EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7,
       str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
 check("§5 the sentences the row shows are the SHIPPED keys of v1.11 / v1.12",
       all(LANGS["en"].get(k) for k in ("terminal.cmdlib.open_map", "terminal.cmdlib.profiles",

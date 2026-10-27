@@ -60,7 +60,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Guardrails:**
     *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
     *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf` or `reboot`.
-*   **Command Library:** Historical commands become macros (version history ring of 10, JSON import/export). The side panel contains two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, with Open map/Profiles). Sessions start without returning to the map; right-clicking a server gives **Connect to SSH** and **Quick Launch**. A command can be marked **Requires confirmation**, so sending it asks for a Yes/No first (No is the default).
+*   **Command Library:** Historical commands become macros (version history ring of 10, JSON import/export). The side panel holds two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, Open map/Profiles). Sessions start without returning to the map; right-clicking a server gives **Connect to SSH** and **Quick Launch**. A command can be marked **Requires confirmation** (Yes/No first, No the default).
 *   **Command History:** A `History` tab per server is kept between sessions. Import from disk or `~/.bash_history`, filter/sort, and merge duplicates. Secrets are marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position during output. An external `ssh` terminal is available as an alternative, supporting per-server **jump hosts** via `~/.ssh/config`.
 *   **SFTP & Files Commander:**
@@ -80,7 +80,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Cross-Session Transfer:** Send files between different servers via temporary relay through the local machine.
     *   **Per-Server Memory:** Both panes remember each server's last directory.
 *   **Files Display Mode:** Keep the Files tree in its `Files` tab or as a right-hand panel beside the shell.
-*   **Diff:** Right-click a tab to **Diff** a local file or a file from any open session. This provides a line-based, synchronized-scroll comparison with character-level changes highlighted. It is a read-only view; files are truncated if they exceed size limits and binary files are refused.
+*   **Diff:** Right-click a tab to **Diff** a local file or a file of any open session: a line-based, synchronized-scroll comparison with character-level changes highlighted. Read-only; over-limit files are truncated and binary files refused.
 
 ### Reports & Exports
 *   **Table View:** Collapsing the map converts the sidebar into a 13-column sortable table (Alias, IP, Port, User, Status, OS, CPU, RAM, Disk, Comment, Tags).
@@ -91,7 +91,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Formula-safe:** a cell that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is exported as text (a leading apostrophe), so a report never runs as a spreadsheet formula.
 
 ### UI & UX
-*   **Theming:** Dark, Light, and Auto themes with customizable accent colors. Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style to ensure meaning is not reliant on color alone.
+*   **Theming:** Dark, Light, and Auto themes with customizable accent colors, plus **theme packs**: a JSON file in `themes` recolors the surfaces, text, cards, groups, arrows, notes and syntax palette; statuses, selection, tags, radii and fonts stay the project's. Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style to ensure meaning is not reliant on color alone.
 *   **Motion:** Camera flights and scale-in animations can be interrupted by mouse wheel or dragging.
 *   **Navigation:** Command palette (`Ctrl`+K), searchable settings, and 62 assignable hotkeys (`?` or `F1`). The map is fully navigable via keyboard.
 
@@ -239,7 +239,8 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `dialogs/` | All UI dialogs (Add/Edit, Connect, Profiles, Export) |
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
-| `tests/` | 185 test files and the parallel runner |
+| `themes/` | Theme packs: one JSON file per pack |
+| `tests/` | 186 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

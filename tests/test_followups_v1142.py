@@ -151,7 +151,7 @@ print("== §2 the key and the Appearance row ==")
 
 check("§2 no `theme.note_tone` → the shipped family, and the dict still names it",
       load_theme_settings() == {"mode": "dark", "accent": "#38bdf8", "motion": True,
-                                "density": "normal", "note_tone": ""},
+                                "density": "normal", "note_tone": "", "pack": ""},
       str(load_theme_settings()))
 clear_cfg()
 from _common import write_cfg  # noqa: E402 — the config writer of the isolated HOME
@@ -474,7 +474,7 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
 check(f"§7 the three new strings exist in every language (parity is {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1196 + 2
+      EXPECTED_I18N_KEYS >= 1196 + 2      # this release's three, and every later slot's on top
       and all(code in LANGS and all(key in LANGS[code] for key in
                                     ("settings.appearance.note_tone",
                                      "settings.appearance.note_tone.hint", "note.fold.tooltip"))

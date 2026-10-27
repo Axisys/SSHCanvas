@@ -13,6 +13,8 @@ the gates — ``DOCUMENTATION.md`` (the "Central UI theme" chapter) and ``AGENTS
 
 import copy
 import dataclasses
+import importlib
+import importlib.util
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -220,9 +222,8 @@ def resolve_note_tone(value):
     """A stored ``theme.note_tone`` → the hue of the note family, or None for the shipped one.
 
     ``None`` / ``""`` answer None — every instance keeps its OWN ``note_bg``/``note_border``/
-    ``note_text``, which is what makes "no tone chosen" byte-identical to the shipped note. A colour
-    is accepted as the ``"#rrggbb"`` the settings tab stores (only its HUE is used, the accent's own
-    rule) and a bare hue as a number; anything else is no tone, never an error.
+    ``note_text``, so "no tone chosen" is byte-identical to the shipped note. A colour is accepted as
+    the ``"#rrggbb"`` the settings tab stores (only its HUE is used) and a bare hue as a number.
     """
     if value is None or isinstance(value, bool):
         return None
@@ -524,11 +525,9 @@ class Theme:
     def status_shapes(self) -> Dict[str, str]:
         """status → the declared SHAPE beside its colour (v1.5rc2).
 
-        The second channel of the three availability statuses: the card's status
-        dot, the sidebar row marker and the legend all draw the shape of this map,
-        so a status survives greyscale / colour-vision deficiencies. The side
-        effect is deliberate: the shape is drawn in the SAME colour the status has
-        always had (`status_colors`), never in a new tone.
+        The second channel of the three availability statuses: the card's status dot, the sidebar row
+        marker and the legend draw it, so a status survives greyscale / colour-vision deficiencies —
+        in the SAME colour the status has always had (`status_colors`), never in a new tone.
         """
         return dict(STATUS_SHAPES)
 
@@ -541,11 +540,9 @@ class Theme:
     def syntax_colors(self) -> Dict[str, str]:
         """The SFTP viewer's syntax palette by ROLE (v1.4.7).
 
-        The role vocabulary is ``modules/syntax_highlight.py``'s
-        (``number | string | key | keyword | comment | tag | attribute |
-        punctuation``); the field of a role is ``syntax_<role>``, which is what
-        ``syntax_highlight.syntax_field()`` answers and what the topical test
-        pins against this dict — the two halves of the contract can not drift.
+        The role vocabulary is ``modules/syntax_highlight.py``'s; the field of a role is
+        ``syntax_<role>``, which is what ``syntax_highlight.syntax_field()`` answers and what the
+        topical test pins against this dict — the two halves cannot drift.
         """
         return {"number": self.syntax_number,
                 "string": self.syntax_string,
@@ -559,9 +556,8 @@ class Theme:
     def hue(self) -> float:
         """The resolved accent hue (``accent_hue`` or the default 198.4).
 
-        A float on purpose: the default IS fractional, and rounding it here
-        would move the default accent off ``#38bdf8`` (see the module note).
-        A broken value (a string, None handled above) falls back to the default.
+        A float on purpose: the default IS fractional, and rounding it here would move the default
+        accent off ``#38bdf8``. A broken value falls back to the default.
         """
         value = self.accent_hue
         if value is None:
@@ -787,42 +783,103 @@ THEME: Theme = DARK       # THE ACTIVE instance — swapped by set_theme()
 _MODES: Dict[str, Theme] = {MODE_DARK: DARK, MODE_LIGHT: LIGHT}
 
 
-def theme_for_mode(mode, accent_hue=None, note_tone=None) -> Theme:
-    """The instance of a mode id, with the accent hue and the note tone applied.
+# ── The PACK REGISTRY ────────────────────────────────────────────────────────
+# A pack is a FILE of declared overrides over ONE base mode (its schema, guard and discovery are
+# `ui/theme_store.py`). ``PACKS`` is the registry the LOADER fills — never a hand-written dict — and
+# `theme_for_mode(..., pack=…)` is the ONE resolution order: a pack is a `replace()` over one mode.
 
-    The mode is RESOLVED first (``resolve_mode``): "auto" asks the platform's colour scheme and lands
-    on DARK or LIGHT, and an unknown / missing / non-string mode falls back to DARK (a broken config
-    value must never leave the app themeless). A hue equal to the instance's own default — and a tone
-    that resolves to None — answer the SHARED instance untouched, which is the identity the tests and
-    the caches rely on. A tone REPLACES the three note fields (``note_tone_colors``), so a chosen tone
-    is a mapping over the base mode, never an edit of it.
+PACKS: Dict[str, object] = {}
+PACK_PROBLEMS: List[object] = []      # the skipped files of the last load (the Appearance row says ONE)
+_PACK_CACHE: Dict[tuple, Theme] = {}
+
+
+def _pack_store():
+    """`ui/theme_store.py` — imported LAZILY, so this module stays pure data at import time."""
+    name = (__package__ + "." if __package__ else "") + "theme_store"
+    if importlib.util.find_spec(name) is None:   # a stripped build: no packs, never a crash
+        return None
+    return importlib.import_module(name)
+
+
+def packs(reload: bool = False) -> Dict[str, object]:
+    """The loaded pack registry (id → pack): the loader runs ONCE; ``reload`` re-reads both folders."""
+    if reload or not PACKS:
+        PACKS.clear()
+        del PACK_PROBLEMS[:]
+        _PACK_CACHE.clear()
+        store = _pack_store()
+        if store is not None:
+            loaded, problems = store.discover()
+            PACKS.update(loaded)
+            PACK_PROBLEMS.extend(problems)
+    return PACKS
+
+
+def pack_by_id(pack_id):
+    """The pack of a stored id — a blank / foreign / unsafe id is NO pack (the mode's own look)."""
+    store = _pack_store()
+    if store is None or not store.is_safe_pack_id(pack_id):
+        return None
+    return packs().get(pack_id.strip())
+
+
+def packs_for(mode) -> List[object]:
+    """Every pack whose base IS the resolved mode, by display name — a dark pack never crosses over."""
+    key = resolve_mode(mode)
+    found = [pack for pack in packs().values() if getattr(pack, "base", None) == key]
+    return sorted(found, key=lambda pack: str(pack.display()).lower())
+
+
+def _pack_of(request, mode: str):
+    """The pack a resolution names, or None — an unknown id and a FOREIGN base answer None."""
+    entry = request if request is None or not isinstance(request, str) else pack_by_id(request)
+    return entry if getattr(entry, "base", None) == mode else None
+
+
+def theme_for_mode(mode, accent_hue=None, note_tone=None, pack=None) -> Theme:
+    """The instance of a mode id with the pack's overrides, the accent hue and the note tone applied.
+
+    The order is the DECLARED one: the base MODE is resolved first (``auto`` asks the platform), the
+    pack's `colors` are a `dataclasses.replace()` over it, and only THEN the accent hue and the note
+    tone — the user's two choices WIN over the file, and a pack's own `accent_hue` is the DEFAULT of an
+    absent choice. Nothing to change answers the SHARED instance (the identity the tests and the caches
+    rely on); a resolved pack is cached by its own id.
     """
     key = resolve_mode(mode)
     base = _MODES.get(key) or DARK
-    changes: Dict[str, object] = {}
+    entry = _pack_of(pack, key)
     hue = resolve_accent_hue(accent_hue)
-    if hue is not None and hue != base.hue():
-        changes.update(
-            accent_hue=hue, accent=accent_hex(hue), accent_hover=accent_hover_hex(hue),
-            accent_selected=accent_selected_hex(hue), accent_strong=accent_strong_hex(hue, key),
-            accent_strong_hover=accent_strong_hover_hex(hue, key),
-            accent_strong_selected=accent_strong_selected_hex(hue, key))
+    if hue is None and entry is not None:
+        hue = resolve_accent_hue(getattr(entry, "accent_hue", None))
     tone = resolve_note_tone(note_tone)
-    if tone is not None:
-        paper, frame, ink = note_tone_colors(tone)
-        changes.update(note_tone=tone, note_bg=paper, note_border=frame, note_text=ink)
-    return dataclasses.replace(base, **changes) if changes else base
+    if entry is None and (hue is None or hue == base.hue()) and tone is None:
+        return base
+    cache_key = (key, hue, tone, getattr(entry, "id", None))
+    if len(_PACK_CACHE) > 128:            # a slider never grows the cache without a bound
+        _PACK_CACHE.clear()
+    if cache_key not in _PACK_CACHE:
+        changes: Dict[str, object] = dict(getattr(entry, "colors", None) or {})
+        if hue is not None and hue != base.hue():
+            changes.update(
+                accent_hue=hue, accent=accent_hex(hue), accent_hover=accent_hover_hex(hue),
+                accent_selected=accent_selected_hex(hue),
+                accent_strong=accent_strong_hex(hue, key),
+                accent_strong_hover=accent_strong_hover_hex(hue, key),
+                accent_strong_selected=accent_strong_selected_hex(hue, key))
+        if tone is not None:
+            paper, frame, ink = note_tone_colors(tone)
+            changes.update(note_tone=tone, note_bg=paper, note_border=frame, note_text=ink)
+        _PACK_CACHE[cache_key] = dataclasses.replace(base, **changes) if changes else base
+    return _PACK_CACHE[cache_key]
 
 
 def set_theme(instance: Theme) -> Theme:
     """Make ``instance`` the ACTIVE theme and return it (v1.4.3).
 
-    Every live proxy / descriptor in the application resolves against this
-    pointer at ACCESS time, so a switch is visible immediately — and it costs
-    nothing else: no widget is rebuilt, no signal is emitted. The repaint is the
-    caller's half (``ui/theme_qss.py apply_theme()`` does the palette + the QSS
-    + a scene repaint); a non-Theme argument is IGNORED rather than raising, so
-    a broken caller cannot leave the app half-switched.
+    Every live proxy / descriptor resolves against this pointer at ACCESS time, so a switch is visible
+    immediately: no widget is rebuilt, no signal is emitted (the repaint is `ui/theme_qss.py`'s half).
+    A non-Theme argument is IGNORED rather than raising, so a broken caller cannot leave the app
+    half-switched.
     """
     global THEME
     if not isinstance(instance, Theme):
@@ -837,10 +894,9 @@ def current_theme() -> Theme:
 
 
 # ── The export palette ────────────────────────────────────────────────────────
-# An export renders PRINT-FRIENDLY by default and "print-friendly" is not a third palette:
-# it IS `LIGHT` (the white page and the strokes the contrast gate already measured at AA),
-# asked for with the ACTIVE theme's accent hue so the user's accent survives the switch.
-# `theme` keeps the current look; both are addressed by the two ids above — ONE vocabulary.
+# An export renders PRINT-FRIENDLY by default and "print-friendly" is not a third palette: it IS
+# `LIGHT`, asked for with the ACTIVE theme's accent hue. `theme` keeps the current look; both are
+# addressed by the two ids above — ONE vocabulary. A theme PACK never reaches this resolver.
 
 def resolve_export_palette(palette) -> str:
     """An export palette id → a KNOWN id (an unknown / missing value → `print`)."""
@@ -849,11 +905,10 @@ def resolve_export_palette(palette) -> str:
 
 
 def export_theme(palette=PALETTE_PRINT, accent_hue=None) -> Theme:
-    """The instance an EXPORT renders with (v1.5rc2).
+    """The instance an EXPORT renders with (v1.5rc2) — a pack is never asked for here.
 
     ``print``  → the LIGHT instance with the ACTIVE theme's hue and note tone (the same instance
-                 object whenever neither is the default one, so the common case costs nothing and the
-                 identity the tests rely on holds);
+                 object whenever neither is the default one, so the common case costs nothing);
     ``theme``  → the ACTIVE instance, i.e. exactly what is on screen now.
     An unknown palette id resolves to ``print`` (``resolve_export_palette``).
     """
@@ -869,17 +924,14 @@ def theme_snapshot() -> dict:
 
 
 # ── Live descriptors for CLASS-LEVEL constants (the `DOCUMENTATION.md` theme chapter) ──
-# A class attribute CACHING a colour (``ServerNode.COLOR_BG = QColor(theme.NODE_BG)``) would
-# capture the value at IMPORT time and keep the old theme forever, so the class-level
-# constants are `ThemeColor` / `ThemeMap` / `ThemeValue` descriptors resolving the ACTIVE
-# instance on every access — a FRESH QColor each time (Qt implicit sharing is the trap).
+# A class attribute CACHING a colour (``ServerNode.COLOR_BG = QColor(theme.NODE_BG)``) would capture
+# the value at IMPORT time and keep the old theme forever, so the class-level constants are the three
+# descriptors below — a FRESH QColor per access (Qt implicit sharing is the trap).
 
 class ThemeColor:
-    """A class attribute that is ``QColor(theme.<field>)`` of the ACTIVE theme.
+    """``QColor(theme.<field>)`` of the ACTIVE theme — a theme field or a derived name.
 
-    ``field`` may be a theme field (``"node_bg"``) or a derived one
-    (``"sftp_preview_blocked"``). A class read returns the colour WITHOUT
-    storing it, so a switch is picked up on the next paint.
+    A class read returns the colour WITHOUT storing it, so a switch is picked up on the next paint.
     """
 
     __slots__ = ("_field", "_alpha")
@@ -902,10 +954,8 @@ class ThemeColor:
 class ThemeMap:
     """A class attribute that is a map (or a list) of one theme field.
 
-    ``QColor`` values by default (``STATUS_COLORS`` / ``TAG_COLORS`` /
-    ``TAG_PALETTE`` — the way the paint code and the tests read them); with
-    ``as_hex=True`` the values stay the raw ``"#rrggbb"`` strings of the theme
-    (a consumer that needs the QSS spelling).
+    ``QColor`` values by default (``STATUS_COLORS`` / ``TAG_COLORS`` / ``TAG_PALETTE`` — the way the
+    paint code and the tests read them); with ``as_hex=True`` the values stay the raw ``"#rrggbb"``.
     """
 
     __slots__ = ("_field", "_as_list", "_as_hex")
@@ -931,11 +981,8 @@ class ThemeMap:
 class ThemeValue:
     """A class attribute computed from the ACTIVE theme on every access.
 
-    The escape hatch for a colour that is not a plain field: a tinted fill
-    (``_tint(t.group_border, 16)``), a value derived from another module
-    (``ConnectionArrow.COLOR_IDLE`` = the default type's colour). The factory is
-    called LAZILY, so the descriptor can be declared above the function or the
-    module constant it uses — the look-up happens when the value is read.
+    The escape hatch for a colour that is not a plain field (a tinted fill, a value derived from
+    another module). The factory is called LAZILY, so it may name a module constant declared later.
     """
 
     __slots__ = ("_factory",)
@@ -957,81 +1004,31 @@ class ThemeValue:
 # reach a consumer that only wrote `theme.NODE_BG`. `THEME` stays a real `Theme` object, and
 # a `from ui.theme import NODE_BG` would capture ONE value, so the project imports the module.
 
-_LIVE_FIELDS: Dict[str, str] = {
-    # surfaces
-    "CANVAS_BG": "canvas_bg",
-    "RENDER_BG": "render_bg",
-    "WINDOW_BG": "window_bg",
-    "BASE_BG": "base_bg",
-    "SURFACE_ALT": "surface_alt",
-    # text and icons
-    "TEXT_PRIMARY": "text_primary",
-    "TEXT_MUTED": "text_muted",
-    "ICON_COLOR": "icon_color",
+_LIVE_FIELDS: Dict[str, str] = {name: name.lower() for name in (
+    # surfaces, text and icons
+    "CANVAS_BG", "RENDER_BG", "WINDOW_BG", "BASE_BG", "SURFACE_ALT",
+    "TEXT_PRIMARY", "TEXT_MUTED", "ICON_COLOR",
     # accent and selection
-    "ACCENT": "accent",
-    "ACCENT_HOVER": "accent_hover",
-    "ACCENT_SELECTED": "accent_selected",
-    "ACCENT_STRONG": "accent_strong",
-    "ACCENT_STRONG_HOVER": "accent_strong_hover",
-    "ACCENT_STRONG_SELECTED": "accent_strong_selected",
-    "SELECTION_AMBER": "selection_amber",
+    "ACCENT", "ACCENT_HOVER", "ACCENT_SELECTED", "ACCENT_STRONG", "ACCENT_STRONG_HOVER",
+    "ACCENT_STRONG_SELECTED", "SELECTION_AMBER",
     # server node (card)
-    "NODE_BG": "node_bg",
-    "NODE_BORDER": "node_border",
-    "NODE_HOVER": "node_hover",
-    "NODE_ICON_BG": "node_icon_bg",
-    "NODE_TEXT": "node_text",
-    "NODE_LABEL": "node_label",
-    "DOT_IDLE": "dot_idle",
-    # availability statuses
-    "STATUS_ONLINE": "status_online",
-    "STATUS_WARN": "status_warn",
-    "STATUS_OFFLINE": "status_offline",
-    # tags / environment roles
-    "TAG_TEST": "tag_test",
-    "TAG_BACKUP": "tag_backup",
-    "TAG_DMZ": "tag_dmz",
-    "TAG_PINK": "tag_pink",
-    # groups
-    "GROUP_BORDER": "group_border",
-    "GROUP_HOVER": "group_hover",
-    "GROUP_TITLE": "group_title",
-    "GROUP_TITLE_SELECTED": "group_title_selected",
-    "GROUP_TITLE_HOVER": "group_title_hover",
-    # connection arrows
-    "ARROW_SSH": "arrow_ssh",
-    "ARROW_HTTP": "arrow_http",
-    "ARROW_NFS": "arrow_nfs",
-    "ARROW_KUBERNETES": "arrow_kubernetes",
-    "ARROW_HOVER_COMPAT": "arrow_hover_compat",
-    # notes
-    "NOTE_BG": "note_bg",
-    "NOTE_BORDER": "note_border",
-    "NOTE_TEXT": "note_text",
-    # syntax highlighting of the SFTP viewer (v1.4.7)
-    "SYNTAX_NUMBER": "syntax_number",
-    "SYNTAX_STRING": "syntax_string",
-    "SYNTAX_KEY": "syntax_key",
-    "SYNTAX_KEYWORD": "syntax_keyword",
-    "SYNTAX_COMMENT": "syntax_comment",
-    "SYNTAX_TAG": "syntax_tag",
-    "SYNTAX_ATTRIBUTE": "syntax_attribute",
-    "SYNTAX_PUNCTUATION": "syntax_punctuation",
-    # corner radii
-    "RADIUS_NODE": "radius_node",
-    "RADIUS_NOTE": "radius_note",
-    "RADIUS_GROUP": "radius_group",
-    "RADIUS_SEARCH_BAR": "radius_search_bar",
-    "RADIUS_ARROW_LABEL": "radius_arrow_label",
-    "RADIUS_RESIZE_MARK": "radius_resize_mark",
-    "RADIUS_NODE_GLYPH_UNIT": "radius_node_glyph_unit",
-    # fonts
-    "FONT_UI": "font_ui",
-    "FONT_MONO": "font_mono",
+    "NODE_BG", "NODE_BORDER", "NODE_HOVER", "NODE_ICON_BG", "NODE_TEXT", "NODE_LABEL", "DOT_IDLE",
+    # availability statuses, tags, groups
+    "STATUS_ONLINE", "STATUS_WARN", "STATUS_OFFLINE",
+    "TAG_TEST", "TAG_BACKUP", "TAG_DMZ", "TAG_PINK",
+    "GROUP_BORDER", "GROUP_HOVER", "GROUP_TITLE", "GROUP_TITLE_SELECTED", "GROUP_TITLE_HOVER",
+    # connection arrows and notes
+    "ARROW_SSH", "ARROW_HTTP", "ARROW_NFS", "ARROW_KUBERNETES", "ARROW_HOVER_COMPAT",
+    "NOTE_BG", "NOTE_BORDER", "NOTE_TEXT",
+    # syntax highlighting of the SFTP viewer
+    "SYNTAX_NUMBER", "SYNTAX_STRING", "SYNTAX_KEY", "SYNTAX_KEYWORD", "SYNTAX_COMMENT",
+    "SYNTAX_TAG", "SYNTAX_ATTRIBUTE", "SYNTAX_PUNCTUATION",
+    # corner radii and fonts
+    "RADIUS_NODE", "RADIUS_NOTE", "RADIUS_GROUP", "RADIUS_SEARCH_BAR", "RADIUS_ARROW_LABEL",
+    "RADIUS_RESIZE_MARK", "RADIUS_NODE_GLYPH_UNIT",
+    "FONT_UI", "FONT_MONO",
     # derived single values
-    "SFTP_PREVIEW_BLOCKED": "sftp_preview_blocked",
-}
+    "SFTP_PREVIEW_BLOCKED")}
 
 # The DERIVED dict/list names — a fresh object per access (so a consumer that
 # holds one sees the values of the theme it asked of; a consumer that re-reads

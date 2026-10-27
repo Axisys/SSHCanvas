@@ -1197,5 +1197,12 @@
   "sftp.network.menu": "Network",
   "sftp.network.ping": "Ping {host}",
   "sftp.network.trace": "Trace route to {host}",
-  "sftp.network.reverse": "Reverse lookup {host}"
+  "sftp.network.reverse": "Reverse lookup {host}",
+  "settings.appearance.pack": "Theme pack:",
+  "settings.appearance.pack.default": "Default",
+  "settings.appearance.pack.hint": "A theme pack is a JSON file in the themes folder: it recolours the surfaces, the text, the cards, the groups, the arrows, the notes and the syntax palette. A file of the same name in your own themes folder overrides the shipped one.",
+  "settings.appearance.pack.locked": "The status, selection and tag tones, the radii and the fonts are locked: a pack may not change them.",
+  "settings.appearance.pack.folder": "Open themes folder",
+  "settings.appearance.pack.skipped": "Skipped the theme file {name}: {reason}",
+  "settings.appearance.pack.contrast": "Skipped the theme file {name}: the contrast gate refuses {pairs}"
 }
