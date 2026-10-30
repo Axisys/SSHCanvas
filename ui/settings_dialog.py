@@ -93,11 +93,7 @@ def _t(key: str, **kw) -> str:
 
 
 def _log_dialog(message: str) -> None:
-    """A lazy logger for the dialog's non-fatal failures (the hotkey reset path).
-
-    Mirrors the `_log` of ui/hotkey_registry.py: a broken registry / a failed save
-    must be visible in ~/.sshmap/logs without ever breaking the open dialog.
-    """
+    """A non-fatal failure goes to ~/.sshmap/logs; the open dialog never breaks on it."""
     try:
         from modules.logger import get_logger
         get_logger("ui.settings_dialog").warning(message)
@@ -106,11 +102,7 @@ def _log_dialog(message: str) -> None:
 
 
 def _viewer_max_module():
-    """`modules.sftp_tab` — the ONE home of the reader's ceiling and its range (v1.7.5).
-
-    Imported lazily (the module imports `ui.theme`, never this dialog) and answered as `None`
-    when the build has no Files surface at all: the "Files" tab then simply does not exist.
-    """
+    """`modules.sftp_tab` — the reader's ceiling and range (v1.7.5); None without that surface."""
     try:
         from ..modules import sftp_tab
     except ImportError:
@@ -121,11 +113,8 @@ def _viewer_max_module():
     return sftp_tab
 
 
-# v1.3.3.8: the technical detail behind a refused language file.
-# `language.import_failed` / `language.exported` carry it as {error} — exactly like
-# `msg.save_failed{error=…}` and `msg.import_servers_failed{error=…}` carry a path or
-# an exception text: a reason is a diagnostic, not a translatable UI sentence. The
-# reason CODES come from i18n.import_language_file()/export_language_file().
+# v1.3.3.8: the {error} detail of a refused language file is a CODE, never a translated UI
+# sentence; the reason codes come from `i18n.import_language_file()` / `export_language_file()`.
 _IMPORT_ERROR_DETAIL = {
     "unreadable": "the file cannot be read",
     "not_json": "not a JSON file",
@@ -145,8 +134,7 @@ _EXPORT_ERROR_DETAIL = {
 
 
 def _import_error_detail(reason: str) -> str:
-    """The {error} text of a refused import (v1.3.3.8) — the one reason that is a real
-    UI sentence instead of a diagnostic is translated (`language.name_missing`)."""
+    """The {error} text of a refused import — the ONE translated reason is `language.name_missing`."""
     if reason == "name_missing":
         return _t("language.name_missing")
     return _IMPORT_ERROR_DETAIL.get(reason, reason or "unknown error")
@@ -715,6 +703,11 @@ class SettingsDialog(QDialog):
         """
         current = load_theme_settings()
         self._accent_hex = current["accent"]
+        self._own_accent_hex = current["accent"]   # the user's accent — a pack only SUGGESTS one
+        self._pack_id = current["pack"]
+        _pack_hue = self._pack_accent_hue()
+        if _pack_hue is not None and self._accent_hex == theme.accent_hex(_pack_hue):
+            self._own_accent_hex = theme.accent_hex()   # the pack's suggestion was baked in
 
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -740,7 +733,6 @@ class SettingsDialog(QDialog):
         # ── v1.14.4: the theme PACK — a FILE of declared overrides, per RESOLVED base ─────────
         # The registry is re-read HERE (the user drops a file and reopens Settings) and the combo
         # offers the packs of the mode the switch resolves to: a dark pack never crosses over.
-        self._pack_id = current["pack"]
         if theme_store is not None:
             theme.packs(reload=True)
         pack_row = QHBoxLayout()
@@ -896,6 +888,31 @@ class SettingsDialog(QDialog):
         except RuntimeError:
             pass  # Qt teardown — a button is already destroyed
 
+    def _pack_accent_hue(self):
+        """The hue the chosen pack DECLARES (its suggestion), or None."""
+        pack = theme.pack_by_id(self._pack_id) if self._pack_id else None
+        return None if pack is None else pack.accent_hue
+
+    def _show_accent(self, value, own: bool = False):
+        """`value` becomes the row's accent — the field, the swatch frame and the live theme.
+
+        `own` marks it the USER's: a pack's suggestion is shown with `own=False`, so leaving the pack
+        gives the field back — a pack DECLARES, the user OWNS (`AGENTS.md` §4.6).
+        """
+        if own:
+            self._own_accent_hex = value
+        self._accent_hex = value
+        try:
+            self.accent_hex_edit.setText(value)
+        except (AttributeError, RuntimeError):
+            return                      # Qt teardown / a build without the row
+        self._mark_current_swatch()
+
+    def _apply_pack_accent(self):
+        """The pack's suggestion when it declares one, else the accent the user owns."""
+        hue = self._pack_accent_hue()
+        self._show_accent(theme.accent_hex(hue) if hue is not None else self._own_accent_hex)
+
     def _fill_pack_combo(self):
         """The pack combo of the RESOLVED base: `Default` first, then that base's files by name.
 
@@ -917,6 +934,7 @@ class SettingsDialog(QDialog):
                 _log_dialog(f"theme.pack {self._pack_id!r} is not a theme of the resolved base "
                             f"({theme.resolve_mode(mode)!r}) — using the mode's own look")
                 self._pack_id = ""
+                self._show_accent(self._own_accent_hex)
         except (AttributeError, RuntimeError):
             return  # Qt teardown / a dialog built without the tab
         finally:
@@ -953,15 +971,11 @@ class SettingsDialog(QDialog):
             return  # Qt teardown / a build without the row
         pack = theme.pack_by_id(self._pack_id) if self._pack_id else None
         if pack is not None:
-            # a pack DECLARES, the user still owns both fields (`AGENTS.md` §4.6)
-            if pack.accent_hue is not None:
-                self._accent_hex = theme.accent_hex(pack.accent_hue)
-                self.accent_hex_edit.setText(self._accent_hex)
-                self._mark_current_swatch()
             combo = getattr(self, "palette_combo", None)
             index = combo.findData(pack.terminal_palette) if (combo and pack.terminal_palette) else -1
             if index >= 0:
                 combo.setCurrentIndex(index)
+        self._apply_pack_accent()
         self._emit_theme()
 
     def _on_open_theme_folder(self):
@@ -987,12 +1001,7 @@ class SettingsDialog(QDialog):
 
     def _on_accent_hue(self, hue):
         """A swatch was clicked: adopt its colour and apply live."""
-        self._accent_hex = theme.accent_hex(hue)
-        try:
-            self.accent_hex_edit.setText(self._accent_hex)
-        except RuntimeError:
-            return  # Qt teardown
-        self._mark_current_swatch()
+        self._show_accent(theme.accent_hex(hue), own=True)
         self._emit_theme()
 
     def _on_accent_hex_edited(self):
@@ -1002,12 +1011,7 @@ class SettingsDialog(QDialog):
         except RuntimeError:
             return  # Qt teardown
         if theme.is_valid_hex(value):
-            self._accent_hex = "#" + value.lstrip("#").lower()
-            try:
-                self.accent_hex_edit.setText(self._accent_hex)
-            except RuntimeError:
-                return
-            self._mark_current_swatch()
+            self._show_accent("#" + value.lstrip("#").lower(), own=True)
             self._emit_theme()
             return
         # An unusable value is not applied and not kept: the field returns to the
@@ -1072,12 +1076,7 @@ class SettingsDialog(QDialog):
         chosen = self._pick_color(self._accent_hex)
         if chosen is None:
             return  # the user cancelled / the dialog is unavailable
-        self._accent_hex = chosen
-        try:
-            self.accent_hex_edit.setText(self._accent_hex)
-        except RuntimeError:
-            return
-        self._mark_current_swatch()
+        self._show_accent(chosen, own=True)
         self._emit_theme()
 
     def _on_theme_changed(self, *_args):

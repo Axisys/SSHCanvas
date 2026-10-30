@@ -64,7 +64,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Command History:** A `History` tab per server is kept between sessions. Import from disk or `~/.bash_history`, filter/sort, and merge duplicates. Secrets are marked with a padlock.
 *   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position during output. An external `ssh` terminal is available as an alternative, supporting per-server **jump hosts** via `~/.ssh/config`.
 *   **SFTP & Files Commander:**
-    *   **SFTP:** Integrated over the live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews.
+    *   **SFTP:** Integrated over the live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews (JSON, XML and YAML structure; numbers and IPv4 addresses in plain text).
     *   **Row Verbs:** Right-click a row to **Download** (file or folder) or **Upload** into the current directory.
     *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete).
     *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort. Folders and `..` remain grouped at the top.
@@ -240,7 +240,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 187 test files and the parallel runner |
+| `tests/` | 188 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

@@ -4,13 +4,13 @@ honesty rule and the ONE lazily built highlighter.
 
 `detect_syntax(path, text)` is the PURE verdict — the EXTENSION is a hint, the CONTENT is the
 verdict: a `.json`/`.xml` is coloured only after a real parse accepted it, otherwise it degrades to
-the language-agnostic number-only mode; YAML has no standard-library parser, so it is a documented
-HEURISTIC (`sftp.viewer.syntax_heuristic`). Foreground tones only — never bold/italic — which is what
-lets the FORMATTING be applied lazily to the blocks around the viewport while the STATE stays complete.
-`tokenize_line(...)` returns sorted, non-overlapping `(start, length, role)` spans over `SYNTAX_ROLES`
-(the palette field of a role is `syntax_<role>` on `ui.theme.Theme`); `create_highlighter(document)`
-builds the ONE thin `QSyntaxHighlighter` subclass LAZILY, keeping this module — and the tokenizers —
-importable and testable without Qt."""
+the language-agnostic numbers-AND-addresses mode; YAML has no standard-library parser, so it is a
+documented HEURISTIC (`sftp.viewer.syntax_heuristic`). Foreground tones only — never bold/italic —
+which is what lets the FORMATTING be applied lazily to the blocks around the viewport while the STATE
+stays complete. `tokenize_line(...)` returns sorted, non-overlapping `(start, length, role)` spans over
+`SYNTAX_ROLES` (the palette field of a role is `syntax_<role>` on `ui.theme.Theme`);
+`create_highlighter(document)` builds the ONE thin `QSyntaxHighlighter` subclass LAZILY, keeping this
+module — and the tokenizers — importable and testable without Qt."""
 
 import json
 import posixpath
@@ -29,6 +29,10 @@ ROLE_COMMENT = "comment"
 ROLE_TAG = "tag"
 ROLE_ATTRIBUTE = "attribute"
 ROLE_PUNCTUATION = "punctuation"
+
+# An address is NOT a ninth colour: the palette is closed at EIGHT tones, so an IPv4 wears the KEY's
+# cyan (`ROLE_IP is ROLE_KEY`) — a cool tone distinct from the amber numerals, already gated.
+ROLE_IP = ROLE_KEY
 
 SYNTAX_ROLES = (ROLE_NUMBER, ROLE_STRING, ROLE_KEY, ROLE_KEYWORD,
                 ROLE_COMMENT, ROLE_TAG, ROLE_ATTRIBUTE, ROLE_PUNCTUATION)
@@ -173,6 +177,12 @@ def _parses_xml(text) -> bool:
 _NUMBER_RE = re.compile(
     r"(?<![\w.\-])([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?![\w.\-])")
 
+# The ADDRESS rule (`ipv4_spans()`): four octets in 0..255, no leading zeros, and neither a word
+# character nor a `.digit` may touch the token. One span per token is the tokenizers' contract, so an
+# address is collected BEFORE the numbers and a number that would overlap it is dropped.
+_IPV4_OCTET = r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d?|0)"
+_IPV4_RE = re.compile(rf"(?<![\w.])(?:{_IPV4_OCTET}\.){{3}}{_IPV4_OCTET}(?!\w|\.\d)")
+
 # A JSON string with escapes; an unterminated one runs to the end of the block.
 _JSON_STRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
 _JSON_NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
@@ -219,16 +229,52 @@ def tokenize_line(language, line, state=STATE_NORMAL,
 
 
 def number_spans(line, max_tokens=MAX_TOKENS_PER_BLOCK):
-    """The number spans of a plain line (the shared `"numbers"` fallback)."""
+    """The plain-text fallback's spans: the IPv4 addresses (the key's tone) and the numbers."""
     return _tokenize_numbers(line, max(1, int(max_tokens)))
 
 
-def _tokenize_numbers(line, max_tokens):
+def ipv4_spans(line, max_tokens=MAX_TOKENS_PER_BLOCK):
+    """The IPv4 addresses of a plain line, in the KEY's tone (`ROLE_IP is ROLE_KEY`).
+
+    The predicate is PURE and STRICT: four octets in `0..255`, no leading zeros, and the boundaries
+    `(?<![\\w.])` / `(?!\\w|\\.\\d)` — `256.1.1.1`, `010.0.0.1`, `1.2.3.4.5` and `abc1.2.3.4` are NOT
+    addresses, while `10.0.0.14:51822`, `10.0.0.0/8`, `[10.0.0.1]` and a sentence-final `10.0.0.14.`
+    are (the port, the prefix and every other number keep `ROLE_NUMBER`). `1.2.3.4` is BOTH a
+    four-part version and an address and is painted as an address — the declared ambiguity beside
+    the `1.2.3` rule above. `max_tokens` is the SAME per-block budget the numbers obey.
+    """
+    if not isinstance(line, str):
+        return []
     spans = []
-    for match in _NUMBER_RE.finditer(line):
-        if len(spans) >= max_tokens:
+    limit = max(1, int(max_tokens))
+    for match in _IPV4_RE.finditer(line):
+        if len(spans) >= limit:
             break
-        spans.append((match.start(1), match.end(1) - match.start(1), ROLE_NUMBER))
+        spans.append((match.start(), match.end() - match.start(), ROLE_IP))
+    return spans
+
+
+def _tokenize_numbers(line, max_tokens):
+    """Plain text: the addresses in the key's tone, then the numbers, as ONE sorted span list.
+
+    The address list is collected FIRST and a number that would overlap it is dropped, so the two
+    families never paint the same bytes; the merge is linear (both lists are already by `start`) and
+    both share the caller's `max_tokens`, so a hostile line cannot cost more than the shipped bound.
+    """
+    limit = max(1, int(max_tokens))
+    addresses = ipv4_spans(line, limit)
+    spans = list(addresses)
+    index = 0
+    for match in _NUMBER_RE.finditer(line):
+        if len(spans) >= limit:
+            break
+        start, end = match.start(1), match.end(1)
+        while index < len(addresses) and addresses[index][0] + addresses[index][1] <= start:
+            index += 1
+        if index < len(addresses) and addresses[index][0] < end:
+            continue                    # the address owns these bytes (never two spans)
+        spans.append((start, end - start, ROLE_NUMBER))
+    spans.sort(key=lambda span: span[0])
     return spans
 
 
