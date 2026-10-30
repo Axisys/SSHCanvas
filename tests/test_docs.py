@@ -345,11 +345,15 @@ for _m in _SIZE_PAREN.finditer(_roadmap_text):
     _size_read += 1
     if _size_int(_m.group(1)) != _real[0]:
         _size_problems.append(f"`{_paths[-1]}`: plan {_size_int(_m.group(1))} lines, measured {_real[0]}")
+_VERSION_SECTION = re.compile(r"^## v\d", re.M)
+_N_SECTIONS = len(_VERSION_SECTION.findall(_roadmap_text))
 check("§2 ROADMAP.md sizes its files with REAL figures (a guard over nothing is useless)",
       # A plan with NO version section left (every planned version shipped) has no size to quote; the
       # moment a `## vN` section exists it must size its files, so the reader cannot go blind unseen.
-      _size_read >= 5 or (_size_read == 0 and not re.search(r"^## v\d", _roadmap_text, re.M)),
-      f"figures read={_size_read}")
+      # The floor is ONE figure per REMAINING version section — a one-slot plan has one file to size,
+      # and demanding a flat count would ask for figures the slot does not have.
+      _size_read >= max(1, _N_SECTIONS) or (_size_read == 0 and not _N_SECTIONS),
+      f"figures read={_size_read} version sections={_N_SECTIONS}")
 check("§2 every file size quoted by the plan is the measurement today (AUDIT N62)",
       not _size_problems, _size_problems)
 _size_total = 0

@@ -91,7 +91,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
     *   **Formula-safe:** a cell that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is exported as text (a leading apostrophe), so a report never runs as a spreadsheet formula.
 
 ### UI & UX
-*   **Theming:** Dark, Light, and Auto themes with customizable accent colors, plus **theme packs**: a JSON file in `themes` recolors the surfaces, text, cards, groups, arrows, notes and syntax palette; statuses, selection, tags, radii and fonts stay the project's. Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style to ensure meaning is not reliant on color alone.
+*   **Theming:** Dark, Light, and Auto themes with customizable accent colors, plus **theme packs**: a JSON file in `themes` recolors the surfaces, text, cards, groups, arrows, notes and syntax palette; statuses, selection, tags, radii and fonts stay the project's. A green-phosphor **Matrix** pack ships in `themes`. Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style to ensure meaning is not reliant on color alone.
 *   **Motion:** Camera flights and scale-in animations can be interrupted by mouse wheel or dragging.
 *   **Navigation:** Command palette (`Ctrl`+K), searchable settings, and 62 assignable hotkeys (`?` or `F1`). The map is fully navigable via keyboard.
 
@@ -240,7 +240,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 186 test files and the parallel runner |
+| `tests/` | 187 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

@@ -1,0 +1,51 @@
+{
+  "name": "Matrix",
+  "base": "dark",
+  "version": 1,
+  "accent_hue": 140,
+  "terminal_palette": "default",
+  "colors": {
+    "canvas_bg": "#000a04",
+    "render_bg": "#000502",
+    "window_bg": "#01110a",
+    "base_bg": "#062112",
+    "surface_alt": "#104020",
+
+    "text_primary": "#ccffd9",
+    "text_muted": "#7fbf94",
+    "icon_color": "#8affb0",
+
+    "node_bg": "#072a19",
+    "node_border": "#33ff77",
+    "node_hover": "#66ffa0",
+    "node_icon_bg": "#0f4020",
+    "node_text": "#d6ffe3",
+    "node_label": "#8fce9f",
+    "dot_idle": "#6fae82",
+
+    "group_border": "#1f9e57",
+    "group_hover": "#4ade80",
+    "group_title": "#8affb0",
+    "group_title_selected": "#ffe066",
+    "group_title_hover": "#c8ffd9",
+
+    "arrow_ssh": "#33ff66",
+    "arrow_http": "#ffd23f",
+    "arrow_nfs": "#ff7ab8",
+    "arrow_kubernetes": "#33f5cc",
+    "arrow_hover_compat": "#8affb0",
+
+    "note_bg": "#d9ffcf",
+    "note_border": "#4f9e63",
+    "note_text": "#0a2413",
+
+    "syntax_number": "#ffe066",
+    "syntax_string": "#7dff9e",
+    "syntax_key": "#5ff0ff",
+    "syntax_keyword": "#b48cff",
+    "syntax_comment": "#7fbf94",
+    "syntax_tag": "#ff85c0",
+    "syntax_attribute": "#66b3ff",
+    "syntax_punctuation": "#c8ffd9"
+  }
+}
