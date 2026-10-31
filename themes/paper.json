@@ -1,0 +1,50 @@
+{
+  "name": "Paper",
+  "base": "light",
+  "version": 1,
+  "accent_hue": 218,
+  "colors": {
+    "canvas_bg": "#fdfaf3",
+    "render_bg": "#fffefa",
+    "window_bg": "#fbf7ee",
+    "base_bg": "#f6f1e6",
+    "surface_alt": "#eae2d1",
+
+    "text_primary": "#1b1a17",
+    "text_muted": "#57524a",
+    "icon_color": "#45403a",
+
+    "node_bg": "#fffefa",
+    "node_border": "#6f6757",
+    "node_hover": "#494439",
+    "node_icon_bg": "#ded4bd",
+    "node_text": "#1b1a17",
+    "node_label": "#57524a",
+    "dot_idle": "#7a7264",
+
+    "group_border": "#8a7a5a",
+    "group_hover": "#6b5a2e",
+    "group_title": "#494439",
+    "group_title_selected": "#7a3a0f",
+    "group_title_hover": "#332f27",
+
+    "arrow_ssh": "#2f5d3a",
+    "arrow_http": "#8a5a12",
+    "arrow_nfs": "#a33a5a",
+    "arrow_kubernetes": "#1f5f6b",
+    "arrow_hover_compat": "#494439",
+
+    "note_bg": "#fff3c4",
+    "note_border": "#866817",
+    "note_text": "#3d3320",
+
+    "syntax_number": "#7d4e0d",
+    "syntax_string": "#2f5d3a",
+    "syntax_key": "#1f5f6b",
+    "syntax_keyword": "#5b3f8c",
+    "syntax_comment": "#57524a",
+    "syntax_tag": "#a33a5a",
+    "syntax_attribute": "#2d4f8a",
+    "syntax_punctuation": "#45403a"
+  }
+}

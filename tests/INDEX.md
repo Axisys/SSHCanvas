@@ -151,6 +151,7 @@ of the file itself.
 | `test_followups_v1142.py` | — | v1.14.2 — THE NOTE: ONE tone for every note on the map, and a fold like a card's. |
 | `test_followups_v1145.py` | — | v1.14.5 — THE MATRIX: the first theme pack is a FILE of DATA — green phosphor over black. |
 | `test_followups_v1146.py` | — | v1.14.6 — THE ADDRESSES: an IPv4 in the plain-text reader wears the key's tone, and a theme pack |
+| `test_followups_v1147.py` | — | v1.14.7 — PAPER: the second theme pack, and the FIRST one over the LIGHT base — warm stock, graphite ink. |
 | `test_freshness.py` | — | v1.5.3 — freshness everywhere: the collected facts get an age, and a red card answers "why". |
 | `test_groups.py` | — | Node groups on the map v0.8.1 (the "v0.8.1 groups" part of the old smoke test). |
 | `test_hardening_v11221.py` | — | The v1.12.2.1 hardening patch: the five ledger entries whose failure is a WRITE or a TRUST decision. |

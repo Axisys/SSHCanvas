@@ -335,7 +335,7 @@ write(store.user_dir(), "sunrise.json",
       light_doc(name="Sunrise", colors={"canvas_bg": "#fffdf5"}))
 theme.packs(reload=True)
 check("§6 the LIVE registry is loaded from the user folder (one id → one pack)",
-      sorted(theme.PACKS) == ["matrix", "sunrise"] and not theme.PACK_PROBLEMS,
+      sorted(theme.PACKS) == ["matrix", "paper", "sunrise"] and not theme.PACK_PROBLEMS,
       f"{sorted(theme.PACKS)} / {[p.sentence() for p in theme.PACK_PROBLEMS]}")
 
 _dlg = SettingsDialog(None)
@@ -366,10 +366,11 @@ check("§6 the store round trip: the written key re-reads and re-resolves to the
                                pack="matrix")).canvas_bg == "#001100")
 _dlg.theme_mode_combo.setCurrentIndex(1)   # light: the dark pack cannot cross over
 check("§6 a mode switch drops the pack of the OTHER base and says so ONCE",
-      _dlg._pack_id == "" and _dlg.pack_combo.count() == 2
-      and _dlg.pack_combo.itemData(1) == "sunrise"
+      _dlg._pack_id == "" and _dlg.pack_combo.count() == 3
+      and _dlg.pack_combo.itemData(1) == "paper"
+      and _dlg.pack_combo.itemData(2) == "sunrise"
       and "pack" not in _dlg.collect()["theme"],
-      f"{_dlg._pack_id} / {[_dlg.pack_combo.itemData(i) for i in range(2)]}")
+      f"{_dlg._pack_id} / {[_dlg.pack_combo.itemData(i) for i in range(_dlg.pack_combo.count())]}")
 _dlg.reject()
 check("§6 the row is SEARCHABLE like the rest of the tab, and Cancel restores the theme",
       any(entry["label"] is _dlg._lbl_theme_pack for entry in _dlg._search_entries)

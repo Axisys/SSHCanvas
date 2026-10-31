@@ -843,7 +843,7 @@ def theme_for_mode(mode, accent_hue=None, note_tone=None, pack=None) -> Theme:
     pack's `colors` are a `dataclasses.replace()` over it, and only THEN the accent hue and the note
     tone — the user's two choices WIN over the file, and a pack's own `accent_hue` is the DEFAULT of an
     absent choice. Nothing to change answers the SHARED instance (the identity the tests and the caches
-    rely on); a resolved pack is cached by its own id.
+    rely on); a resolved pack is cached by its id AND its content (the shadowing rule).
     """
     key = resolve_mode(mode)
     base = _MODES.get(key) or DARK
@@ -854,7 +854,10 @@ def theme_for_mode(mode, accent_hue=None, note_tone=None, pack=None) -> Theme:
     tone = resolve_note_tone(note_tone)
     if entry is None and (hue is None or hue == base.hue()) and tone is None:
         return base
-    cache_key = (key, hue, tone, getattr(entry, "id", None))
+    # An id is NOT a content: a user file SHADOWS the shipped pack under the same id, so the key names
+    # the override set too — else the shipped instance answers for the user's file.
+    cache_key = (key, hue, tone, getattr(entry, "id", None),
+                 tuple(sorted((getattr(entry, "colors", None) or {}).items())))
     if len(_PACK_CACHE) > 128:            # a slider never grows the cache without a bound
         _PACK_CACHE.clear()
     if cache_key not in _PACK_CACHE:

@@ -64,8 +64,10 @@ check("§1 `themes/matrix.json` is the FIRST shipped pack — the loader reads t
 check("§1 the file passes the store and lands in the registry as a BUILT-IN",
       _PACK is not None and _PACK.builtin is True and not _PROBLEMS,
       str([p.sentence() for p in _PROBLEMS]))
-check("§1 ONE pack ships — a second one is another FILE, never another mechanism",
-      sorted(_PACKS) == ["matrix"], str(sorted(_PACKS)))
+check("§1 every shipped pack is ONE file in the package folder — a pack is data, never a mechanism",
+      sorted(_PACKS) == ["matrix", "paper"]
+      and all(pack.builtin and os.path.isfile(pack.path) for pack in _PACKS.values()),
+      str(sorted(_PACKS)))
 check("§1 the schema: base `dark`, `version` 1, and the display name comes from the file",
       _PACK is not None and _PACK.base == "dark" and _PACK.version == store.PACK_VERSION
       and _PACK.name == "Matrix" and _PACK.display() == "Matrix" and _PACK.id == "matrix",
@@ -216,12 +218,12 @@ print("== §6 the Appearance value: the combo, the suggested hue and palette, `c
 
 theme.packs(reload=True)
 check("§6 the LIVE registry holds the shipped pack, so the row offers it with no user file",
-      sorted(theme.PACKS) == ["matrix"] and not theme.PACK_PROBLEMS,
+      sorted(theme.PACKS) == ["matrix", "paper"] and not theme.PACK_PROBLEMS,
       f"{sorted(theme.PACKS)} / {[p.sentence() for p in theme.PACK_PROBLEMS]}")
-check("§6 `packs_for()` answers the DARK base only (a green-black pack has no light twin)",
+check("§6 `packs_for()` answers the DARK base only (the other shipped pack is the LIGHT one)",
       [pack.id for pack in theme.packs_for("dark")] == ["matrix"]
-      and theme.packs_for("light") == [],
-      f"{[p.id for p in theme.packs_for('dark')]} / {theme.packs_for('light')}")
+      and [pack.id for pack in theme.packs_for("light")] == ["paper"],
+      f"{[p.id for p in theme.packs_for('dark')]} / {[p.id for p in theme.packs_for('light')]}")
 
 clear_cfg()
 _DLG = SettingsDialog(None)
@@ -252,10 +254,11 @@ check("§6 the store round trip: the written key re-reads and re-resolves to the
       theme_from_settings(dict(load_theme_settings(), mode="dark", accent=_DLG._accent_hex,
                                pack="matrix")).canvas_bg == "#000a04")
 _DLG.theme_mode_combo.setCurrentIndex(1)   # light: the dark pack cannot cross over
-check("§6 a mode switch drops the dark pack and offers no light one",
-      _DLG._pack_id == "" and _DLG.pack_combo.count() == 1
+check("§6 a mode switch drops the dark pack and offers the LIGHT one alone",
+      _DLG._pack_id == "" and _DLG.pack_combo.count() == 2
+      and _DLG.pack_combo.itemData(1) == "paper"
       and "pack" not in _DLG.collect()["theme"],
-      f"{_DLG._pack_id} / {_DLG.pack_combo.count()}")
+      f"{_DLG._pack_id} / {[_DLG.pack_combo.itemData(i) for i in range(_DLG.pack_combo.count())]}")
 _DLG.reject()
 check("§6 Cancel restores the theme the dialog OPENED with", theme.THEME is theme.DARK)
 _DLG.close()
