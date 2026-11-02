@@ -236,8 +236,8 @@ def resolve_note_tone(value):
 
 
 def resolve_accent_hue(value):
-    """A stored accent hue → a rounded hue, or None when there is no usable value."""
-    if value is None:
+    """A stored accent hue → a rounded hue, or None when there is no usable value (a `bool` included)."""
+    if value is None or isinstance(value, bool):
         return None
     try:
         return round(float(value) % 360.0, 1)
@@ -784,13 +784,12 @@ _MODES: Dict[str, Theme] = {MODE_DARK: DARK, MODE_LIGHT: LIGHT}
 
 
 # ── The PACK REGISTRY ────────────────────────────────────────────────────────
-# A pack is a FILE of declared overrides over ONE base mode (its schema, guard and discovery are
-# `ui/theme_store.py`). ``PACKS`` is the registry the LOADER fills — never a hand-written dict — and
-# `theme_for_mode(..., pack=…)` is the ONE resolution order: a pack is a `replace()` over one mode.
+# A pack FILE overrides ONE base mode (`ui/theme_store.py` owns the schema, the guard, the discovery).
 
 PACKS: Dict[str, object] = {}
 PACK_PROBLEMS: List[object] = []      # the skipped files of the last load (the Appearance row says ONE)
 _PACK_CACHE: Dict[tuple, Theme] = {}
+_PACK_LOADED = False                  # ONE scan per run — a registry that holds NO pack is a RESULT
 
 
 def _pack_store():
@@ -802,8 +801,9 @@ def _pack_store():
 
 
 def packs(reload: bool = False) -> Dict[str, object]:
-    """The loaded pack registry (id → pack): the loader runs ONCE; ``reload`` re-reads both folders."""
-    if reload or not PACKS:
+    """The loaded pack registry (id → pack): ONE scan per run; ``reload`` re-reads both folders."""
+    global _PACK_LOADED
+    if reload or not _PACK_LOADED:
         PACKS.clear()
         del PACK_PROBLEMS[:]
         _PACK_CACHE.clear()
@@ -812,6 +812,7 @@ def packs(reload: bool = False) -> Dict[str, object]:
             loaded, problems = store.discover()
             PACKS.update(loaded)
             PACK_PROBLEMS.extend(problems)
+        _PACK_LOADED = True
     return PACKS
 
 

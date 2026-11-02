@@ -214,7 +214,9 @@ def tokenize_line(language, line, state=STATE_NORMAL,
 
     `max_tokens` is the per-block budget: the scan stops once it is reached, so
     the caller gets the first `max_tokens` spans and no freeze (see
-    `MAX_TOKENS_PER_BLOCK`). An unknown language tokenizes as `"numbers"`.
+    `MAX_TOKENS_PER_BLOCK`) — XML and YAML are sliced, because their scanners
+    append several spans per step, so a stop alone overshoots the budget.
+    An unknown language tokenizes as `"numbers"`.
     """
     if not isinstance(line, str):
         return [], STATE_NORMAL
@@ -222,9 +224,11 @@ def tokenize_line(language, line, state=STATE_NORMAL,
     if language == LANG_JSON:
         return _tokenize_json(line, limit), STATE_NORMAL
     if language == LANG_XML:
-        return _tokenize_xml(line, state, limit)
+        spans, next_state = _tokenize_xml(line, state, limit)
+        return spans[:limit], next_state     # the two state-carrying scanners append several per step
     if language == LANG_YAML:
-        return _tokenize_yaml(line, state, limit)
+        spans, next_state = _tokenize_yaml(line, state, limit)
+        return spans[:limit], next_state
     return _tokenize_numbers(line, limit), STATE_NORMAL
 
 

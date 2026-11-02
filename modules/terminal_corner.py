@@ -134,16 +134,18 @@ def apply_corner_style(*buttons) -> int:
 def shape_control(button, glyph, tooltip, label) -> bool:
     """Give ONE corner control the label-less shape: glyph, tooltip, accessible name, square size.
 
-    The word is NOT drawn (`AGENTS.md` §4.32.2): the tooltip and the accessible name are what is
-    left to teach the control, and the square is FIXED so the row's width is the budget's own and
-    not the platform style's. Never raises — the corner is chrome.
+    The word is cleared ONLY when a glyph exists (`AGENTS.md` §4.32.2): the tooltip and the accessible
+    name are what is left to teach the control beside the square FIXED so the row's width is the
+    budget's own and not the platform style's. A stripped build (no `ui/icons.py`) keeps the caller's
+    word. Never raises — the corner is chrome.
     """
     if button is None:
         return False
     try:
-        button.setText("")
         button.setIcon(QIcon())
         button.setIcon(get_corner_icon(glyph))
+        if not button.icon().isNull():
+            button.setText("")            # the glyph carries the control; nothing else names it
         button.setIconSize(QSize(CORNER_GLYPH_PX, CORNER_GLYPH_PX))
         button.setToolTip(str(tooltip or ""))
         button.setAccessibleName(_t("terminal.corner_accessible", action=str(label or "")))

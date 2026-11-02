@@ -244,8 +244,12 @@ def parse_pack(data, pack_id: str, path: str = "", builtin: bool = False
     hue = None
     if "accent_hue" in data:
         raw = data["accent_hue"]
-        hue = (theme.hex_hue(raw) if theme.is_valid_hex(raw)
-               else theme.resolve_accent_hue(raw))    # a HUE number OR a #rrggbb colour
+        # STRICT: a HUE number (never a `bool`) OR a `#rrggbb` colour — a typo refuses the file whole.
+        is_colour = isinstance(raw, str) and theme.is_valid_hex(raw)
+        is_hue = isinstance(raw, (int, float)) and not isinstance(raw, bool)
+        if not (is_colour or is_hue):
+            return bad(REASON_BAD_ACCENT, f"accent_hue {raw!r} is not a hue")
+        hue = theme.hex_hue(raw) if is_colour else theme.resolve_accent_hue(raw)
         if hue is None:
             return bad(REASON_BAD_ACCENT, f"accent_hue {raw!r} is not a hue")
     palette = data.get("terminal_palette")
@@ -286,14 +290,22 @@ def discover(root=None, user_dir_path=None) -> Tuple[Dict[str, ThemePack], List[
 
     A user file that cannot be applied costs the user NOTHING but its own override: the shipped pack
     of the same id stays in the registry (the i18n fallback), and every skipped file is logged ONCE
-    here, so the caller only has to say ONE sentence.
+    here, so the caller only has to say ONE sentence. A folder that cannot be LISTED is ONE problem
+    of its own and the other folder is still read — `theme.packs()` never raises, so the start and
+    the Settings hub survive a broken `~/.sshmap/themes`.
     """
     packs: Dict[str, ThemePack] = {}
     problems: List[PackProblem] = []
     for folder, builtin in ((package_dir(root), True), (user_dir_path or user_dir(), False)):
-        if not os.path.isdir(folder):
+        try:
+            if not os.path.isdir(folder):
+                continue
+            names = sorted(os.listdir(folder))
+        except OSError as exc:   # an ACL grants FILE_READ_ATTRIBUTES: isdir() passes, listdir() raises
+            problems.append(_problem("", folder, REASON_UNREADABLE,
+                                     f"the folder cannot be read ({exc.strerror or exc})"))
             continue
-        for fname in sorted(os.listdir(folder)):
+        for fname in names:
             if not fname.endswith(PACK_SUFFIX):
                 continue
             pack_id = fname[:-len(PACK_SUFFIX)]

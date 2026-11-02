@@ -102,7 +102,7 @@ class StickyNote(QGraphicsProxyWidget):
         # the fold: the flag (the SAVED state) and the size to return to (a session snapshot —
         # the file always stores the EXPANDED geometry, so a folded note's save loses nothing)
         self._folded = bool(folded)
-        self._expanded_size: Tuple[float, float] = (float(width), float(height))
+        self._expanded_size: Tuple[float, float] = self._clamp_size(width, height)
 
         # ── Editor look (the sticker) ────────────────────────
         # the background/border/rounding is drawn by this item's paint() (see it),
@@ -276,7 +276,8 @@ class StickyNote(QGraphicsProxyWidget):
         if not self._folded:
             return False
         self._folded = False
-        w, h = self._expanded_size
+        w, h = self._clamp_size(*self._expanded_size)   # the second belt: a foreign record is repaired
+        self._expanded_size = (w, h)
         self._resize_to(w, h)
         self._set_editor_active(True)
         self._apply_editor_margins()
@@ -616,7 +617,7 @@ class StickyNote(QGraphicsProxyWidget):
         no new key, and `VERSION_FORMAT` stays "0.9").
         """
         if self._folded:
-            width, height = self._expanded_size
+            width, height = self._clamp_size(*self._expanded_size)   # saved REPAIRED, never past MAX
         else:
             width, height = float(self.rect().width()), float(self.rect().height())
         d = {

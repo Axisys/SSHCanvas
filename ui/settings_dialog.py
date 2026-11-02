@@ -2264,11 +2264,11 @@ class SettingsDialog(QDialog):
     def collect(self) -> dict:
         """The tab values → the ~/.sshmap/config.json keys (all valid by construction).
 
-        **30 UI-facing keys.** The nested `theme` object is ONE key carrying the whole appearance
-        choice ({mode, accent, motion, density, note_tone, pack}) and `hotkeys` is the same shape,
-        because `i18n.save_config` merges at the TOP level — `_on_accept` re-merges the stored object,
-        so a mode change never drops a value a foreign version wrote. `note_tone` and `pack` are
-        written ONLY when chosen: an absent key IS the shipped note / the mode's own look.
+        **30 UI-facing keys.** The nested `theme` object carries the whole appearance choice
+        ({mode, accent, motion, density, note_tone, pack}) and `hotkeys` is the same shape:
+        `i18n.save_config` merges the TOP level only, so this object is REPLACED whole — the
+        omission DELETES a cleared `note_tone`/`pack`, and an unknown nested key of a foreign
+        version is dropped with it. Both are written ONLY when chosen (absent = the shipped look).
         """
         try:  # the field's OWN allowlist — the SAME reader the key is validated by at load time
             from ..modules.ssh_terminal import resolve_term
