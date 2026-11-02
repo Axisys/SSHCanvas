@@ -257,8 +257,10 @@ check("§2 a repeated id is REGENERATED — the answer carries no duplicate",
 check("§2 the rule has ONE home (`models/server.py`) and the map's load asks the same one",
       "def unique_id(" in _read("models", "server.py")
       and "unique_id(data, self._nodes)" in _read("graphics", "map_scene.py")
-      and "unique_id(data, taken)" in _func_body("read_project_servers", "storage", "project.py")
-      and "uuid" not in _func_body("read_project_servers", "storage", "project.py"))
+      and "unique_id(data, taken)" in _func_body("servers_from_project", "storage", "project.py")
+      and "uuid" not in _func_body("servers_from_project", "storage", "project.py")
+      and "servers_from_project(load_project(path))" in
+      _func_body("read_project_servers", "storage", "project.py"))
 
 mw = MW.MainWindow()
 mw.show()

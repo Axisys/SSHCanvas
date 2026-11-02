@@ -32,55 +32,16 @@ except ImportError:
     from graphics.connection_arrow import DEFAULT_CONNECTION_TYPE
 
 
-# v1.3.3.6: the MRU list of the project files. ``config.json`` key,
-# newest first, deduplicated by the normalized absolute path, missing files pruned on
-# read. The cap is deliberately small: the File menu is a way back to yesterday's map,
-# not a file browser (a welcome screen with a longer list is NOT in v1.3.3.6).
-RECENT_PROJECTS_KEY = "recent_projects"
-RECENT_PROJECTS_MAX = 10
-
-# v1.10rc1: the AUTO-OPEN option — the CONFIG boolean `ui_reopen_last_project` (OFF by default) and
-# the path of the project the window was CLOSED on ("" for a NAMELESS one). They are the MRU's
-# siblings and this module owns both writers; the read is the PURE pair below.
-REOPEN_LAST_PROJECT_KEY = "ui_reopen_last_project"
-LAST_PROJECT_PATH_KEY = "last_project_path"
-
-
-def reopen_last_project_enabled(cfg=None) -> bool:
-    """Is the auto-open option ON? — the PURE reader of `ui_reopen_last_project`, OFF by default.
-
-    CONFIG and never the project (the `guard_commands` rule): a missing key, a foreign type and an
-    unreadable store all answer False, so only a real JSON `true` asks for the restore.
-    """
-    if cfg is None:
-        try:
-            from i18n import load_config
-            cfg = load_config()
-        except Exception:  # noqa: BLE001 — an unreadable store is the declared default
-            return False
-    try:
-        return cfg.get(REOPEN_LAST_PROJECT_KEY) is True
-    except Exception:  # noqa: BLE001 — a foreign config object is "off"
-        return False
-
-
-def last_project_path(cfg=None) -> str:
-    """The path the application was CLOSED on ("" — nothing recorded, or a nameless project). PURE.
-
-    A HINT, not a promise: the caller checks that the file is still there, so a project moved or
-    deleted between two runs is a quiet "nothing to reopen" instead of a dialog at startup.
-    """
-    if cfg is None:
-        try:
-            from i18n import load_config
-            cfg = load_config()
-        except Exception:  # noqa: BLE001 — an unreadable store restores nothing
-            return ""
-    try:
-        value = cfg.get(LAST_PROJECT_PATH_KEY)
-    except Exception:  # noqa: BLE001 — a foreign config object restores nothing
-        return ""
-    return value.strip() if isinstance(value, str) else ""
+# The project MEMORY (the MRU and the closed-on path) is `storage/project_recent.py` — ONE home for the
+# three config keys and their two pure readers; this mixin keeps the WRITERS and the lifecycle.
+try:
+    from ..storage.project_recent import (LAST_PROJECT_PATH_KEY, RECENT_PROJECTS_KEY,
+                                          RECENT_PROJECTS_MAX, REOPEN_LAST_PROJECT_KEY,
+                                          last_project_path, reopen_last_project_enabled)
+except ImportError:  # flat launch from the project root
+    from storage.project_recent import (LAST_PROJECT_PATH_KEY, RECENT_PROJECTS_KEY,  # type: ignore
+                                        RECENT_PROJECTS_MAX, REOPEN_LAST_PROJECT_KEY,
+                                        last_project_path, reopen_last_project_enabled)
 
 
 class ProjectIOMixin:

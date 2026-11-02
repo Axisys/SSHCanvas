@@ -38,6 +38,7 @@ LANGS = load_i18n_langs(ROOT)
 
 CM_LOG = "sshmap.services.credential_manager"
 SC_LOG = "sshmap.services.status_checker"
+SP_LOG = "sshmap.services.status_probe"   # the PURE half's readers log under their own module name
 SW_LOG = "sshmap.modules.sftp_worker"
 LFW_LOG = "sshmap.modules.local_fs_worker"
 HKP_LOG = "sshmap.modules.host_key_policy"
@@ -169,7 +170,7 @@ print("== §1b the probe's parsing: a corrupt value and a crashed probe say so =
 _real_load_config = I18N.load_config
 I18N.load_config = _raise(RuntimeError)
 try:
-    with _records(SC_LOG) as sink:
+    with _records(SC_LOG, SP_LOG) as sink:
         SC.get_status_settings()
 finally:
     I18N.load_config = _real_load_config
@@ -178,7 +179,7 @@ check("§1b an unreadable config names itself instead of silently answering the 
 
 I18N.load_config = lambda: {"status_probe_timeout_sec": "not-a-number"}
 try:
-    with _records(SC_LOG) as sink:
+    with _records(SC_LOG, SP_LOG) as sink:
         _settings = SC.get_status_settings()
 finally:
     I18N.load_config = _real_load_config
@@ -186,7 +187,7 @@ check("§1b a corrupt config VALUE is named with the value and the default that 
       _settings["probe_timeout_sec"] == SC.PROBE_TIMEOUT_S and "not-a-number" in sink.text(),
       f"settings={_settings} log={sink.text()!r}")
 
-with _records(SC_LOG) as sink:
+with _records(SC_LOG, SP_LOG) as sink:
     _targets = SC._build_targets([("sid-1", "example.test", "not-a-port")])
 check("§1b a target with an unreadable port falls back to 22 AND names the server",
       _targets and _targets[0][2] == 22 and "sid-1" in sink.text(),

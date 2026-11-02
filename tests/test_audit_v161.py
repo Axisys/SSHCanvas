@@ -303,10 +303,24 @@ check("N11: pyflakes reports no `undefined name` in the application code",
       [ln for ln in _pf_lines if "undefined name" in ln] == [],
       str([ln for ln in _pf_lines if "undefined name" in ln]))
 
-check("N11: the ONLY reports left are the documented ssh_terminal live-namespace seams",
-      all("ssh_terminal.py" in ln and "imported but unused" in ln for ln in _pf_lines),
-      str([ln for ln in _pf_lines if not ("ssh_terminal.py" in ln
-                                          and "imported but unused" in ln)]))
+#: The DELIBERATE re-export seams: a module whose public names live in a PURE home the GUI imports
+#: THROUGH it keeps the LIVE NAMESPACE of its family — `ssh_terminal` (the terminal config), the two
+#: probe homes (`services/reachability.py`, `services/status_probe.py`), the widget/config pair the split
+#: pins (`modules/terminal_widget.py`) and the three GUI homes whose names the suite imports through them.
+_SEAM_FILES = ("ssh_terminal.py", "services/diagnostics.py", "services/status_checker.py",
+               "modules/terminal_widget.py", "graphics/node_group.py", "ui/sidebar.py",
+               "ui/main_window_project_io.py")
+
+
+def _is_seam_report(line):
+    """Is this line an `imported but unused` report of ONE of the declared re-export seams?"""
+    normalised = str(line).replace("\\", "/")
+    return "imported but unused" in normalised and any(name in normalised for name in _SEAM_FILES)
+
+
+check("N11: the ONLY reports left are the documented live-namespace seams (the re-export homes)",
+      all(_is_seam_report(ln) for ln in _pf_lines),
+      str([ln for ln in _pf_lines if not _is_seam_report(ln)]))
 
 
 # ════════════════════════════════════════════════════════════════════════════

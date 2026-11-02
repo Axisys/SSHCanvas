@@ -186,12 +186,12 @@ check("§2 ...and the facts the suite reads on the CLASS still resolve through t
       and TW.TerminalWidget.FIND_MATCH_COLOR == TW.TerminalWidget.__mro__[0].__dict__.get(
           "FIND_MATCH_COLOR", TW.TerminalWidget.FIND_MATCH_COLOR)
       and isinstance(TW.TerminalWidget.DOUBLE_CLICK_MS, int))
-check("§2 the cursor SHAPE and the glyph-grid gate STAY in `modules/terminal_widget.py` "
-      "(AGENTS.md §4.3 declares them there)",
+check("§2 the cursor GEOMETRY and the glyph-grid gate STAY in `modules/terminal_widget.py` "
+      "(the SHAPES and the font range are the PURE config module's — `AGENTS.md` §4.3, §4.35)",
       all(f"def {name}" in _FACADE_SRC or f"{name} = " in _FACADE_SRC
           for name in ("resolve_cursor_style", "cursor_shape_rect", "font_grid_problems",
                        "run_glyphs"))
-      and "CURSOR_STYLES = (CURSOR_STYLE_BLOCK" in _FACADE_SRC
+      and "CURSOR_STYLES" in _FACADE_SRC and "FONT_SIZE_MIN" in _FACADE_SRC
       and "FONT_GRID_SAMPLE = " in _FACADE_SRC
       and all(f"def {name}" not in src for rel, src in _FAMILY_SRC.items()
               if rel != "modules/terminal_widget.py"

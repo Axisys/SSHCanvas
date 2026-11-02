@@ -81,11 +81,11 @@ OUTCOME_CANCELLED = "cancelled"
 COPY_DATA_EXTENSION = "copy-data@openssh.com"
 SFTP_CMD_EXTENDED = 200     # paramiko's CMD_EXTENDED (paramiko/sftp.py, SFTP v3)
 
-# The bounds of ONE recursive operation — the "bounded walk" of the contract: the
-# walk is depth-first and every entry costs a round trip, so a tree over the bound is
-# refused with a sentence BEFORE anything is transferred instead of half-copying it.
-MAX_TREE_ENTRIES = 5000
-MAX_TREE_DEPTH = 32
+# The bounds of ONE recursive operation are declared ONCE, in the PURE `modules/sftp_limits.py`.
+try:
+    from .sftp_limits import MAX_TREE_DEPTH, MAX_TREE_ENTRIES
+except ImportError:  # flat layout: the modules/ directory itself is on sys.path
+    from sftp_limits import MAX_TREE_DEPTH, MAX_TREE_ENTRIES  # type: ignore
 
 # task_error payloads of the copy/move family: a MACHINE code with its fields, which
 # the tab turns into a translated sentence (the READ_ERROR_* pattern, with the numbers

@@ -452,17 +452,14 @@ def word_units(row_chars):
     return units
 
 
-# ── v1.6.2: the cursor SHAPES (pure geometry, no Qt) ─────────────────────────
-# The cursor was a full-cell block. It is one of three DECLARED shapes now, and the
-# default is the thin blink line of Windows Terminal.
-CURSOR_STYLE_BLOCK = "block"          # the historical painting: the whole cell, glyph swapped
-CURSOR_STYLE_BAR = "bar"              # a thin vertical line at the LEFT edge of the cell
-CURSOR_STYLE_UNDERLINE = "underline"  # a thin horizontal line at the BOTTOM edge of the cell
-CURSOR_STYLES = (CURSOR_STYLE_BLOCK, CURSOR_STYLE_BAR, CURSOR_STYLE_UNDERLINE)
-
-#: The shape a canvas uses when nothing else says otherwise (the `terminal_cursor_style`
-#: default of `modules/ssh_terminal.py` refers to THIS constant, so the two cannot drift).
-CURSOR_STYLE_DEFAULT = CURSOR_STYLE_BAR
+try:  # the DECLARED shapes and the font range: a CONFIG fact, owned by the pure config module
+    from .terminal_config import (CURSOR_STYLE_BAR, CURSOR_STYLE_BLOCK, CURSOR_STYLE_DEFAULT,
+                                  CURSOR_STYLE_UNDERLINE, CURSOR_STYLES, FONT_SIZE_MAX,
+                                  FONT_SIZE_MIN)
+except ImportError:  # flat layout: the modules/ directory itself is on sys.path
+    from terminal_config import (CURSOR_STYLE_BAR, CURSOR_STYLE_BLOCK, CURSOR_STYLE_DEFAULT,
+                                 CURSOR_STYLE_UNDERLINE, CURSOR_STYLES, FONT_SIZE_MAX,
+                                 FONT_SIZE_MIN)
 
 #: The thickness of the two line shapes, in device pixels (the cell's own height/width for
 #: the other dimension). 2 px is the Windows Terminal look at the usual 100 % scaling; the
@@ -483,12 +480,9 @@ def resolve_cursor_style(style) -> str:
     return CURSOR_STYLE_DEFAULT
 
 
-# ── v1.6.4: Ctrl+wheel = the FONT ZOOM ──────────────────────────────────────
-# The DECLARED point-size range of the canvas font. `terminal_font_size` validates a stored
-# value against exactly this range (`modules/ssh_terminal.py: load_terminal_settings()`), so a
-# zoom can never step outside what the settings hub can show and what a restart can restore.
-FONT_SIZE_MIN = 6
-FONT_SIZE_MAX = 72
+# ── Ctrl+wheel = the FONT ZOOM ──────────────────────────────────────────────
+# The point-size range is `modules/terminal_config.py`'s declaration (imported above), so the zoom,
+# the stored `terminal_font_size` and the settings hub all clamp to the SAME pair.
 
 
 def cursor_shape_rect(style, x, y, width, height):

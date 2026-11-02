@@ -94,7 +94,8 @@ check("§1 requirements.txt names the SAME release in its header",
 print("== §2 the FROZEN spellings: what the rename never touches ==")
 
 _frozen = {
-    "the config directory": ('os.path.join(os.path.expanduser("~"), ".sshmap")', "i18n/__init__.py"),
+    "the config directory": ('os.path.join(os.path.expanduser("~"), ".sshmap")',
+                             "storage/app_config.py"),
     "the project suffix": ('PROJECT_SUFFIXES = (".json", ".sshmap")', "storage/project.py"),
     "the log file name": ('"sshmap.log"', "modules/logger.py"),
     "the logger tree": ('logging.getLogger("sshmap")', "modules/logger.py"),

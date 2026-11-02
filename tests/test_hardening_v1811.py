@@ -31,6 +31,7 @@ import modules.bookmarks as BKM  # noqa: E402
 import modules.command_history as CH  # noqa: E402
 import modules.host_key_policy as HKP  # noqa: E402
 import modules.sftp_send as SEND  # noqa: E402
+import storage.app_config as APP_CONFIG  # noqa: E402
 import storage.atomic as ATOMIC  # noqa: E402
 import storage.autosave as ASAUTOSAVE  # noqa: E402
 from modules.sftp_tab import SftpTab  # noqa: E402
@@ -186,8 +187,8 @@ check("`save_config()` keeps every concurrent merge (the same 0 lost / 0 False i
       and _cfg.get("language") == "ru",
       "lost=%d false=%d keys=%d" % (len(_cfg_lost), len(_cfg_false), len(_cfg)))
 check("...and the config folder holds no provisional file",
-      tmp_files(os.path.dirname(i18n._CONFIG_FILE)) == [],
-      str(tmp_files(os.path.dirname(i18n._CONFIG_FILE))))
+      tmp_files(os.path.dirname(APP_CONFIG.CONFIG_FILE)) == [],
+      str(tmp_files(os.path.dirname(APP_CONFIG.CONFIG_FILE))))
 
 # The SECOND merge-writer: four sessions of one node folding their own commands into ONE file.
 _hist_dir = os.path.join(WORK, "history")

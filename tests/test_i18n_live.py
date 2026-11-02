@@ -702,6 +702,17 @@ check("the README counter regex really matches the public page",
       bool(TEST_FILE_COUNTER_RE.search(_read_doc("README.md"))),
       f"counter={TEST_FILE_COUNTER_RE.search(_read_doc('README.md'))}")
 
+# The public page's OWN budget (`AGENTS.md` §13.4): the ONE gate over a figure that was prose until a
+# page crossed it. Both halves are measured, because a line limit alone lets a single row grow unbounded.
+README_MAX_BYTES = 25000
+README_MAX_LINES = 250
+_README_TEXT = _read_doc("README.md")
+_README_BYTES = len(_README_TEXT.encode("utf-8"))
+_README_LINES = len(_README_TEXT.splitlines())
+check(f"README.md is inside its declared budget ({README_MAX_BYTES} bytes / {README_MAX_LINES} lines)",
+      _README_BYTES <= README_MAX_BYTES and _README_LINES <= README_MAX_LINES,
+      f"{_README_BYTES} bytes / {_README_LINES} lines")
+
 
 # ════════════════════════════════════════════════════════════════════════════
 print("== §7 zh.json's missing line break + the release state ==")

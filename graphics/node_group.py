@@ -32,6 +32,14 @@ except ImportError:
     except ImportError:  # flat layout: the ui/ directory itself is on sys.path
         status_shape = None
 
+try:  # the ONE attention vocabulary — the PURE half of the status checks owns it (`AGENTS.md` §4.8.2)
+    from ..services.status_probe import (PROBLEM_STATUSES, STATUS_ORDER, is_in_trouble)
+except ImportError:
+    try:
+        from services.status_probe import (PROBLEM_STATUSES, STATUS_ORDER, is_in_trouble)
+    except ImportError:  # flat layout: the services/ directory itself is on sys.path
+        from status_probe import (PROBLEM_STATUSES, STATUS_ORDER, is_in_trouble)  # type: ignore
+
 
 def _tint(hex_color: str, alpha: int) -> "QColor":
     """v1.2.5: a central theme color with opacity (the group fills)."""
@@ -50,12 +58,11 @@ def _t(key: str, **kw) -> str:
 
 
 # ── the DECLARED severity of an availability status ──────
-# The group aggregate and the "problems only" lens answer one question ("what needs attention here?") and
-# therefore share ONE declaration: the severity order is ASCENDING (the LAST entry is the worst) and
-# `PROBLEM_STATUSES` names what "in trouble" means. A status outside the tuple is not a datum at all — a
-# card that was never probed carries "" and neither wins the aggregate nor counts.
-STATUS_SEVERITY = ("online", "warn", "offline")
-PROBLEM_STATUSES = ("warn", "offline")
+# The group aggregate, the trouble lens and the attention report answer one question ("what needs
+# attention here?") and therefore share ONE declaration with `services/status_probe.py`: the severity
+# order is ASCENDING (the LAST entry is the worst), `PROBLEM_STATUSES` names what "in trouble" means and
+# `is_in_trouble()` is the predicate. This name is kept for the paint code and the topical tests.
+STATUS_SEVERITY = STATUS_ORDER
 
 
 def worst_status(statuses) -> str:
@@ -97,18 +104,6 @@ def aggregate_status(statuses) -> dict:
             total += 1
     return {"worst": worst_status(values), "counts": counts, "total": total,
             "members": len(values)}
-
-
-def is_in_trouble(status, stale: bool = False) -> bool:
-    """Does this card need attention? — the ONE predicate of the release (v1.5.4).
-
-    `warn` / `offline`, or a status whose datum has grown STALE (a result nothing
-    refreshed is exactly the "the map is lying to me" case the lens exists for). An
-    UNCHECKED card is deliberately not trouble: there is no measurement to call a
-    problem, and dimming "never probed" as an incident would be a false alarm. The
-    predicate is pure, so the topical test pins it without a window.
-    """
-    return bool(stale) or str(status or "") in PROBLEM_STATUSES
 
 
 def status_caption(summary, translate=None) -> str:

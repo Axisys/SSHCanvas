@@ -33,9 +33,10 @@ _translations: Dict[str, str] = {}
 
 
 # ── Config file helpers ───────────────────────────────────────
+# The store itself (the path, the reader, the atomic merge-write) is `storage/app_config.py` — ONE home,
+# so a process without a GUI reads the same file without importing this package.
 
-_CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".sshmap")
-_CONFIG_FILE = os.path.join(_CONFIG_DIR, "config.json")
+from storage.app_config import CONFIG_DIR as _CONFIG_DIR, load_config, save_config
 
 # v1.3.3: the root meta keys of a language file. They describe the FILE,
 # they are not UI strings — excluded from the parity checks and from t() (see the
@@ -262,47 +263,6 @@ def is_partial(language: str) -> bool:
     except (ValueError, IOError, OSError):
         return False
     return isinstance(data, dict) and data.get("partial") is True
-
-
-def _ensure_config_dir() -> bool:
-    """Create ~/.sshmap if it doesn't exist."""
-    try:
-        os.makedirs(_CONFIG_DIR, exist_ok=True)
-        return True
-    except OSError:
-        return False
-
-
-def load_config() -> dict:
-    """Load user config from ~/.sshmap/config.json.
-    
-    Returns an empty dict on any error (missing file, bad JSON, etc.).
-    Never raises.
-    """
-    if not os.path.isfile(_CONFIG_FILE):
-        return {}
-    try:
-        with open(_CONFIG_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            return data
-    except (json.JSONDecodeError, IOError, OSError):  # noqa: BLE001 — the caller owns the fallback: a broken store reads as empty
-        pass
-    return {}
-
-
-def save_config(partial_update: dict) -> bool:
-    """Atomically save partial config update to ~/.sshmap/config.json.
-
-    Preserves existing keys — only overwrites the ones in partial_update. The WHOLE
-    read-merge-write runs inside the lock of `storage/atomic.py` (`DOCUMENTATION.md` §71), so two
-    writers cannot publish each other's stale snapshot, and the publish uses a unique provisional
-    name + `fsync` + `os.replace`. Returns False on any I/O error.
-    """
-    if not _ensure_config_dir():
-        return False
-    return _atomic.write_json_atomic(_CONFIG_FILE, dict(partial_update or {}), merge=True,
-                                     reader=load_config)
 
 
 # ── Available languages ───────────────────────────────────────

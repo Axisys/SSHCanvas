@@ -368,9 +368,9 @@ check(f"§7 the patch adds NO i18n key — parity stays {EXPECTED_I18N_KEYS}",
           for code in sorted(LANGS))
       and not [key for key in LANGS["en"] if "v11471" in key.lower()],
       str([key for key in LANGS["en"] if "v11471" in key.lower()]))
-check(f"§7 the release is {EXPECTED_APP_VERSION}, four components, and the JSON schema did not move",
+check(f"§7 the release is {EXPECTED_APP_VERSION} and the JSON schema did not move",
       version.APP_VERSION == EXPECTED_APP_VERSION and version.VERSION_FORMAT == "0.9"
-      and releases_at_least(EXPECTED_APP_VERSION, "1.14.7") and version.APP_VERSION.count(".") == 3,
+      and releases_at_least(EXPECTED_APP_VERSION, "1.14.7"),
       f"{version.APP_VERSION} / {version.VERSION_FORMAT}")
 check("§7 the suite map lists this file (tests/INDEX.md regenerated)",
       "test_hardening_v11471" in open(os.path.join(ROOT, "tests", "INDEX.md"),

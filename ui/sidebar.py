@@ -156,22 +156,14 @@ STATUS_NOT_MONITORED = "not_monitored"
 # Collapsing the map gives the sidebar the whole window width; without the list the container
 # stretched with a single-column tree inside it and left a dead strip — the "wide window" for
 # the server parameters existed and only the tree ignored it. The table gets one column per
-# field, and `LIST_COLUMNS` is the SINGLE declaration the table, the sort and the export read.
-LIST_COLUMNS = (
-    ("alias", "sidebar.list.alias"),
-    ("host", "sidebar.list.host"),
-    ("port", "sidebar.list.port"),
-    ("user", "sidebar.list.user"),
-    ("status", "sidebar.list.status"),
-    ("status_age", "sidebar.list.status_age"),
-    ("os", "sidebar.list.os"),
-    ("cpu", "sidebar.list.cpu"),
-    ("ram", "sidebar.list.ram"),
-    ("disk", "sidebar.list.disk"),
-    ("info_age", "sidebar.list.info_age"),
-    ("comment", "sidebar.list.comment"),
-    ("tags", "sidebar.list.tags"),
-)
+# field: the ONE declaration of those columns is `storage/export_inventory.py` (the report's).
+try:  # the INVENTORY report's schema and cells — the headless surface prints the same rows
+    from ..storage.export_inventory import INVENTORY_COLUMNS, inventory_cell_values
+except ImportError:  # flat layout: the project root itself is on sys.path
+    from storage.export_inventory import INVENTORY_COLUMNS, inventory_cell_values  # type: ignore
+
+#: The columns of the LIST mode — the shipped name of the report's `INVENTORY_COLUMNS`.
+LIST_COLUMNS = INVENTORY_COLUMNS
 # The `status` column of the table: a probe result must refresh its TEXT (and its SORT
 # KEY) in place (`update_status_marker` — a full rebuild of the rows would lose the
 # scroll position). Derived from the ONE declaration above, so moving the column cannot
@@ -403,100 +395,22 @@ def list_sort_keys(data, status: str = "", status_age=None, info_age=None) -> li
 
 def list_cell_values(data, status_text: str = "", status_age_text: str = "",
                      info_age_text: str = "") -> list:
-    """v1.4.6: the LIST-mode cells of ONE row, one per `LIST_COLUMNS`.
-
-    Pure (a `ServerData` in, strings out — no Qt, no scene, no scene item), so the
-    topical test can pin the mapping headlessly. The rules:
-
-      * an empty field is an EMPTY cell — never the string "None" (the v0.9.4 tag
-        caption and the card formatting are the only places allowed to invent text);
-      * the host cell carries the IP in parentheses when the model has one and it
-        differs (`host (ip)`) — this is the "host (IP)" column of the plan, one column
-        instead of two near-identical ones;
-      * the port and the user are shown as they are (`ssh_port` is a real field of the
-        model with the default 22, so the column answers "which port does this entry
-        use" without opening the editor);
-      * the CPU cell falls back to `cpu_model`: the auto-collected data of
-        SystemInfoCollector fills `cpu_model` while a manually typed one fills `cpu`;
-      * the status cell is the caller's already TRANSLATED text (`""` = not checked yet
-        — a status is a fact of the probe round, not of the project file);
-      * the two age cells are the caller's `list_age_text()` texts (`""` = undated — an
-        emulated demo status can never carry one), because a sentence is i18n and this
-        function is not;
-      * the tags cell is the same comma-joined list the map cards show.
-    """
-    def _s(value) -> str:
-        return str(value or "").strip()
-
-    host, ip = _s(getattr(data, "host", "")), _s(getattr(data, "ip", ""))
-    if ip and ip != host:
-        host = f"{host} ({ip})" if host else ip
-    cpu = _s(getattr(data, "cpu", "")) or _s(getattr(data, "cpu_model", ""))
-    tags = getattr(data, "tags", None) or []
-    return [
-        _s(getattr(data, "alias", "")),
-        host,
-        _s(getattr(data, "ssh_port", "")),
-        _s(getattr(data, "user", "")),
-        str(status_text or ""),
-        str(status_age_text or ""),
-        _s(getattr(data, "os_name", "")),
-        cpu,
-        _s(getattr(data, "ram", "")),
-        _s(getattr(data, "disk", "")),
-        str(info_age_text or ""),
-        _s(getattr(data, "comment", "")),
-        ", ".join(str(t).strip() for t in tags if str(t).strip()),
-    ]
+    """The LIST-mode cells of ONE row — the report's `inventory_cell_values()`, re-exported."""
+    return inventory_cell_values(data, status_text, status_age_text, info_age_text)
 
 
 # ── the export — the table leaves the application ───
 # The visible table IS the report: the caller hands over the rows it displays
-# (`SidebarPanel.list_report_rows()`) and gets CSV/TSV text back. Quoting is RFC 4180 (`"` doubled, a
-# field quoted when it carries the delimiter, a quote or a line break), so a comma, a quote or a `\n`
-# inside a comment round-trips through any spreadsheet and through Python's own `csv` module.
-LIST_DELIMITERS = {"csv": ",", "tsv": "\t"}
-_LIST_EXPORT_ROW_END = "\r\n"   # RFC 4180: CRLF, and no translation on the way out
-
-
-def list_delimiter(fmt: str) -> str:
-    """The delimiter of a format id ("csv" / "tsv"); anything else = comma."""
-    return LIST_DELIMITERS.get(str(fmt or "").strip().lower(), ",")
-
-
-# A report is DATA, never a program: Excel / LibreOffice EVALUATE a cell whose FIRST character is one
-# of these six as a formula, so the writer prefixes the spreadsheet's own "this is text" mark (`'`).
-# Only the first character decides — a `-` inside a name, a `+` mid-cell and a typed `22` stay as typed.
-FORMULA_LEAD_CHARS = ("=", "+", "-", "@", "\t", "\r")
-
-
-def is_formula_cell(value) -> bool:
-    """True when a spreadsheet would READ this cell as a formula (the six leading characters)."""
-    return str("" if value is None else value)[:1] in FORMULA_LEAD_CHARS
-
-
-def list_quote_cell(value, delimiter: str = ",") -> str:
-    """ONE field of the report: neutralised, then quoted only when it must be (RFC 4180)."""
-    text = "" if value is None else str(value)
-    if is_formula_cell(text):
-        text = "'" + text
-    if delimiter and delimiter in text:
-        return '"' + text.replace('"', '""') + '"'
-    if '"' in text or "\n" in text or "\r" in text:
-        return '"' + text.replace('"', '""') + '"'
-    return text
-
-
-def list_table_text(rows, delimiter: str = ",") -> str:
-    """v1.5.5: the WHOLE table as CSV/TSV text — the header row first, `\\r\\n` endings.
-
-    Pure: a list of rows of strings in, one string out. The header row is the caller's
-    (it comes from the live tree, so it follows a language switch), which is what keeps
-    this function free of i18n.
-    """
-    sep = str(delimiter or ",")
-    return "".join(sep.join(list_quote_cell(cell, sep) for cell in row) + _LIST_EXPORT_ROW_END
-                   for row in rows)
+# (`SidebarPanel.list_report_rows()`) and gets CSV/TSV text back. The writer is the PURE
+# `storage/table_text.py` — Qt-free, so a headless surface prints the SAME table — and it is re-exported
+# here for the GUI's shipped surface (`AGENTS.md` §4.13, §4.35).
+try:
+    from ..storage.table_text import (FORMULA_LEAD_CHARS, LIST_DELIMITERS, list_delimiter,
+                                      list_quote_cell, list_table_text, is_formula_cell)
+except ImportError:  # flat layout: the project root itself is on sys.path
+    from storage.table_text import (FORMULA_LEAD_CHARS, LIST_DELIMITERS,  # type: ignore
+                                    list_delimiter, list_quote_cell, list_table_text,
+                                    is_formula_cell)
 
 
 # ── the sortable row ────────────────────────────────

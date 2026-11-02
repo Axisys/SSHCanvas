@@ -2,21 +2,23 @@
 """The ATTENTION report — "what needs a look" as a table (DOCUMENTATION.md §58; AGENTS.md §4.19).
 
 The third DATA report, next to the inventory table of the LIST mode and the CONNECTION report of
-`storage/export_connections.py`. The map already DECLARES which cards need attention
-(`graphics.node_group.is_in_trouble()`), but that SET had no way out of the application: the lens dims
-the CANVAS and the inventory leaves with whatever the search and the tag filter kept. This module answers
-what a dimmed map cannot be pasted into a ticket: the servers that are not fine, and WHY each is listed.
+`storage/export_connections.py`: the servers that are not fine, and WHY each is listed — the set the trouble
+lens dims the CANVAS for, taken OUT of the application as a table a ticket can be pasted from.
 
-The writer is NOT here on purpose (the connection report's rule): the RFC-4180 quoting lives in ONE place
-(`ui/sidebar.list_table_text()`) and this module only produces ROWS — the columns are declared once
-(`PROBLEM_COLUMNS`) and `problem_report_rows()` builds the header plus one row per card in trouble. The
-predicate is IMPORTED, never restated: `problem_nodes()` calls `is_in_trouble(status, stale)` for every node (with the card's own `ServerNode.is_stale`), so the report, the group aggregate and the lens can never disagree about who is on the list. An UNMANAGED card is never a problem — it is never probed, so `is_in_trouble("", False)` answers False and that falls out of the predicate instead of being a special case. The header cells are TRANSLATED (the caller hands its translator in, the `node_group.status_caption()` precedent), because a report is read by a human."""
+The writer is NOT here (the connection report's rule): the RFC-4180 quoting lives in ONE place,
+`storage/table_text.list_table_text()`, and this module produces ROWS — `PROBLEM_COLUMNS` declares the
+columns and `problem_report_rows()` builds the header plus one row per card in trouble. The predicate is
+IMPORTED from `services/status_probe.py`, never restated, so the report, the group aggregate and the lens
+cannot disagree; an UNMANAGED card falls out of it (never probed → `is_in_trouble("", False)` is False).
+The header cells are TRANSLATED (the caller hands its translator in) — a human reads a report."""
 from typing import List
 
-try:  # the ONE predicate of "needs attention" (v1.5.4) — imported, never restated
-    from ..graphics.node_group import PROBLEM_STATUSES, STATUS_SEVERITY, is_in_trouble
+try:  # the ONE attention vocabulary — the PURE status module owns it, so this report stays Qt-free
+    from ..services.status_probe import (PROBLEM_STATUSES, STATUS_ORDER as STATUS_SEVERITY,
+                                         is_in_trouble)
 except ImportError:  # flat layout: the project root itself is on sys.path
-    from graphics.node_group import PROBLEM_STATUSES, STATUS_SEVERITY, is_in_trouble
+    from services.status_probe import (PROBLEM_STATUSES,  # type: ignore
+                                       STATUS_ORDER as STATUS_SEVERITY, is_in_trouble)
 
 #: (field id, i18n key) — the column order of the report, declared ONCE. It is the
 #: report's OWN list: the inventory's `LIST_COLUMNS` is a different subject (every
@@ -160,14 +162,11 @@ def problem_report_text(nodes, delimiter: str = ",", translate=None) -> str:
     """The report as CSV/TSV text — the SAME `list_table_text()` writer the other two use.
 
     Kept here (and not in the window) so the topical gate can measure the quoting of an
-    alias or a host without a window: the writer is imported from `ui/sidebar.py`, never
-    copied, which is what "no second copy of it" means literally.
+    alias or a host without a window: the writer is imported from the PURE
+    `storage/table_text.py`, never copied, so the text of a report needs no Qt.
     """
     try:
-        from ..ui.sidebar import list_table_text
-    except ImportError:
-        try:
-            from ui.sidebar import list_table_text
-        except ImportError:  # flat layout: the ui/ directory itself is on sys.path
-            from sidebar import list_table_text
+        from .table_text import list_table_text
+    except ImportError:  # flat layout: the storage/ directory itself is on sys.path
+        from table_text import list_table_text  # type: ignore
     return list_table_text(problem_report_rows(nodes, translate), delimiter)

@@ -119,7 +119,12 @@ class _LiveConnectionTypes:
 
 CONNECTION_TYPES = _LiveConnectionTypes()
 
-DEFAULT_CONNECTION_TYPE = "ssh"
+#: The type a record without a `type` key reads as — the FORMAT's default, declared once in
+#: `storage/project.py` (the loader and the connection report import the same value).
+try:
+    from ..storage.project import DEFAULT_CONNECTION_TYPE
+except ImportError:  # flat layout: the project root itself is on sys.path
+    from storage.project import DEFAULT_CONNECTION_TYPE  # type: ignore
 
 
 def type_style(ctype: str):

@@ -6,12 +6,17 @@ answers the question a picture cannot be searched for — every link of the map 
 declared type and its direction, as a CSV/TSV a spreadsheet can sort.
 
 The writer is NOT here on purpose: the RFC-4180 quoting (a doubled `"`, a field quoted only when it must
-be) lives in ONE place, `ui/sidebar.list_table_text()`, and this module only produces ROWS for it. The
-columns are declared once (`CONNECTION_COLUMNS`) and `connection_report_rows()` builds the header plus one
-row per link, so a label carrying a comma, a quote or a line break leaves the application exactly the way
-the inventory's comment does.
- The header cells are TRANSLATED (the caller hands its translator in, the `node_group.status_caption()` precedent), because a report is read by a human and a language switch moves it with the window."""
+be) lives in ONE place, `storage/table_text.list_table_text()`, and this module only produces ROWS for it.
+The columns are declared once (`CONNECTION_COLUMNS`) and `connection_report_rows()` builds the header plus
+one row per link, so a label carrying a comma, a quote or a line break leaves the application exactly the
+way the inventory's comment does.
+ The header cells are TRANSLATED (the caller hands its translator in), because a report is read by a human and a language switch moves it with the window."""
 from typing import List
+
+try:  # the FORMAT's default type (`storage/project.py`) — ONE declaration for the loader and this report
+    from .project import DEFAULT_CONNECTION_TYPE
+except ImportError:  # flat layout: the storage/ directory itself is on sys.path
+    from project import DEFAULT_CONNECTION_TYPE  # type: ignore
 
 #: (field id, i18n key) — the column order of the report, declared ONCE.
 CONNECTION_COLUMNS = (
@@ -28,6 +33,10 @@ CONNECTION_COLUMNS = (
 #: The two words of the "bidirectional" cell (a flag is still a sentence for a reader).
 BIDIRECTIONAL_YES_KEY = "report.conn.yes"
 BIDIRECTIONAL_NO_KEY = "report.conn.no"
+
+#: The machine spelling of the flag — the cell a report a script reads carries (the GUI translates it).
+BIDIRECTIONAL_TRUE = "true"
+BIDIRECTIONAL_FALSE = "false"
 
 
 def _translate_default(key: str, **kw) -> str:
@@ -75,22 +84,82 @@ def connection_headers(translate=None) -> List[str]:
     return [t(key) for _field, key in CONNECTION_COLUMNS]
 
 
+def connection_column_ids() -> List[str]:
+    """The column IDS of the report, in order — the schema's machine half (a headless header row)."""
+    return [field for field, _key in CONNECTION_COLUMNS]
+
+
+def connection_cells(record: dict) -> List[str]:
+    """ONE link as its RAW cells — the direction text and the flag in the MACHINE spelling.
+
+    This is the translation-free half of `connection_row()`: a report a script reads keeps
+    `true` / `false` in the flag column, while the GUI replaces that ONE cell with its translated
+    Yes / No. A missing field is an empty cell, never the string "None".
+    """
+    record = record or {}
+
+    def _text(field: str) -> str:
+        return str(record.get(field) or "")
+
+    cells: List[str] = []
+    for field, _key in CONNECTION_COLUMNS:
+        if field == "direction":
+            source = _text("source_alias") or _text("source_host")
+            target = _text("target_alias") or _text("target_host")
+            cells.append(f"{source} \u2192 {target}")
+        elif field == "bidirectional":
+            cells.append(BIDIRECTIONAL_TRUE if record.get("bidirectional") else BIDIRECTIONAL_FALSE)
+        else:
+            cells.append(_text(field))
+    return cells
+
+
 def connection_row(record: dict, translate=None) -> List[str]:
     """ONE link as the cells of `CONNECTION_COLUMNS` (a MISSING field is an empty cell)."""
     t = translate if callable(translate) else _translate_default
     record = record or {}
-    cells: List[str] = []
-    for field, _key in CONNECTION_COLUMNS:
-        if field == "direction":
-            source = str(record.get("source_alias") or record.get("source_host") or "")
-            target = str(record.get("target_alias") or record.get("target_host") or "")
-            cells.append(f"{source} \u2192 {target}")
-        elif field == "bidirectional":
-            cells.append(t(BIDIRECTIONAL_YES_KEY if record.get("bidirectional")
-                           else BIDIRECTIONAL_NO_KEY))
-        else:
-            cells.append(str(record.get(field) or ""))
+    cells = connection_cells(record)
+    for column, field in enumerate(field for field, _key in CONNECTION_COLUMNS):
+        if field == "bidirectional":
+            cells[column] = t(BIDIRECTIONAL_YES_KEY if record.get("bidirectional")
+                              else BIDIRECTIONAL_NO_KEY)
     return cells
+
+
+def connection_rows_from_records(records) -> List[List[str]]:
+    """One row per link record — the report's body, the header EXCLUDED (the caller owns its captions)."""
+    return [connection_cells(record) for record in (records or ())]
+
+
+def connection_records_from_project(project) -> List[dict]:
+    """The report records of a PROJECT JSON — each link's id references resolved against its servers.
+
+    READ-ONLY and pure: the `connections` array holds ids, so the `servers` array of the SAME file is the
+    index, and a link naming an id the project does not hold keeps its row with EMPTY endpoint cells — a
+    broken reference is a fact a report shows, never a reason to drop the row. A link without a `type`
+    reads as the format's own default, the rule the map's loader applies.
+    """
+    raw = project if isinstance(project, dict) else {}
+    index = {}
+    for entry in raw.get("servers") or []:
+        if isinstance(entry, dict):
+            index[str(entry.get("id") or "")] = entry
+    records: List[dict] = []
+    for entry in raw.get("connections") or []:
+        if not isinstance(entry, dict):
+            continue
+        source = index.get(str(entry.get("source_id") or ""), {})
+        target = index.get(str(entry.get("target_id") or ""), {})
+        records.append({
+            "source_alias": str(source.get("alias") or "").strip(),
+            "source_host": str(source.get("host") or "").strip(),
+            "target_alias": str(target.get("alias") or "").strip(),
+            "target_host": str(target.get("host") or "").strip(),
+            "type": str(entry.get("type") or DEFAULT_CONNECTION_TYPE),
+            "bidirectional": bool(entry.get("bidirectional", False)),
+            "label": str(entry.get("label") or ""),
+        })
+    return records
 
 
 def connection_report_rows(arrows, translate=None) -> List[List[str]]:
@@ -112,14 +181,11 @@ def connection_report_text(arrows, delimiter: str = ",", translate=None) -> str:
     """The report as CSV/TSV text — the SAME `list_table_text()` writer the inventory uses.
 
     Kept here (and not in the window) so the topical gate can measure the quoting of a
-    connection label without a window: the writer is imported from `ui/sidebar.py`, never
-    copied, which is what "no second copy of it" means literally.
+    connection label without a window: the writer is imported from the PURE
+    `storage/table_text.py`, never copied, so the text of a report needs no Qt.
     """
     try:
-        from ..ui.sidebar import list_table_text
-    except ImportError:
-        try:
-            from ui.sidebar import list_table_text
-        except ImportError:  # flat layout: the ui/ directory itself is on sys.path
-            from sidebar import list_table_text
+        from .table_text import list_table_text
+    except ImportError:  # flat layout: the storage/ directory itself is on sys.path
+        from table_text import list_table_text  # type: ignore
     return list_table_text(connection_report_rows(arrows, translate), delimiter)

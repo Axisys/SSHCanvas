@@ -37,19 +37,21 @@ def _log():
 #: dialog of the standalone terminal (`TERMINAL_STANDALONE.md` §3) read the same tuple.
 PROJECT_SUFFIXES = (".json", ".sshmap")
 
+#: The type of a connection whose record carries no `type` key — a property of the FORMAT (SSH), read by
+#: the map's loader (`graphics/connection_arrow.py` re-exports it) and by the connection report.
+DEFAULT_CONNECTION_TYPE = "ssh"
 
-def read_project_servers(path: str) -> list:
-    """The `ServerData` list of a project file — the standalone terminal's ONE reader (PURE, no Qt).
 
-    READ-ONLY and conversion-free: the file is parsed by `load_project()` and every entry of the
-    `servers` array is handed to `models/server.py`'s `server_data_from_dict()`, so the standalone and
-    the map turn a JSON record into a node the SAME way (`TERMINAL_STANDALONE.md` §3). The array's FILE
-    ORDER is kept, an entry that is not a JSON object is DROPPED, and a file without the array answers
-    `[]` — nothing here writes, repairs or re-serializes anything. An id two entries share is
-    REGENERATED for the second and every later one (`unique_id()` — the rule the map's own load asks),
-    because the id is the identity the `Servers` list resolves a row by.
+def servers_from_project(raw) -> list:
+    """The `ServerData` list of an ALREADY-PARSED project — the ONE conversion of the `servers` array.
+
+    READ-ONLY and conversion-free: every entry is handed to `models/server.py`'s
+    `server_data_from_dict()`, so the standalone, the map and the headless surface turn a JSON record into
+    a node the SAME way (`TERMINAL_STANDALONE.md` §3). The array's FILE ORDER is kept, an entry that is not
+    a JSON object is DROPPED, and a project without the array answers `[]` — nothing here writes, repairs
+    or re-serializes anything. An id two entries share is REGENERATED for the second and every later one
+    (`unique_id()` — the rule the map's own load asks), because the id is the identity a row resolves by.
     """
-    raw = load_project(path)
     entries = raw.get("servers") if isinstance(raw, dict) else None
     if not isinstance(entries, (list, tuple)):
         return []
@@ -61,6 +63,15 @@ def read_project_servers(path: str) -> list:
         taken.add(unique_id(data, taken))
         servers.append(data)
     return servers
+
+
+def read_project_servers(path: str) -> list:
+    """The `ServerData` list of a project file — the standalone terminal's ONE reader (PURE, no Qt).
+
+    READ-ONLY: the file is opened by `load_project()` and the conversion is `servers_from_project()`, so
+    the standalone and the map turn a JSON record into a node the SAME way (`TERMINAL_STANDALONE.md` §3).
+    """
+    return servers_from_project(load_project(path))
 
 
 def load_project(path: str) -> dict:

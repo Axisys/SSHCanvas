@@ -112,6 +112,11 @@ of the file itself.
 | `test_bookmarks.py` | — | v1.6.7 — The bookmarks: ONE application-level place for the links the team uses. |
 | `test_canvas_truth.py` | — | v1.6.3 — the canvas at the cell: the glyph grid, the mouse the TUI asks for, the Files tab that answers back. |
 | `test_chrome.py` | — | v1.5rc4 — Density, focus & findability: the chrome answers the same questions as the map. |
+| `test_cli.py` | — | v1.15rc2 — the HEADLESS SURFACE: the frozen `CLI.md`, the `cli/` skeleton and the two report verbs. |
+| `test_cli_contract.py` | — | v1.15 — `CLI.md` clause by clause: the headless surface as the regression file of the base release. |
+| `test_cli_exec.py` | — | v1.15rc4 — `exec`: the three policies (guard, credential, host key) and the REMOTE exit code. |
+| `test_cli_hardening.py` | — | v1.15rc5 — the hardening patch: the two channels' BYTES, the wire's gates and the output ceiling. |
+| `test_cli_probe.py` | — | v1.15rc3 — the HEADLESS probe verbs: `status` and `doctor` over the GUI's own PURE cores. |
 | `test_code_pointers.py` | — | The plan pointers — an ALWAYS-ON gate: the app tree names no plan, and a decision names its OWNER. |
 | `test_collapse.py` | — | Server card collapsing v0.8.4 (former DESIGN.md §D) (former tests/smoke_collapse.py). |
 | `test_command_confirm.py` | — | The command that asks first: the `confirm` flag of a library record and the ONE question |

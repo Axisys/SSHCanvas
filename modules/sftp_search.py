@@ -11,9 +11,9 @@ travels as a MACHINE code here and the pane renders it.
 Contract — `AGENTS.md` §4.3.6; mechanism — `DOCUMENTATION.md` §14f.
 """
 try:  # the SHIPPED walk bounds — the search adds no second ceiling for an entry or a depth
-    from .sftp_worker import MAX_TREE_DEPTH, MAX_TREE_ENTRIES
+    from .sftp_limits import MAX_TREE_DEPTH, MAX_TREE_ENTRIES
 except ImportError:
-    from sftp_worker import MAX_TREE_DEPTH, MAX_TREE_ENTRIES  # type: ignore
+    from sftp_limits import MAX_TREE_DEPTH, MAX_TREE_ENTRIES  # type: ignore
 
 #: The two SCOPES of a query: the directory on the screen alone, or its whole subtree.
 SEARCH_SCOPE_HERE = "here"

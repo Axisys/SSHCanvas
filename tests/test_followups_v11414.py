@@ -31,7 +31,8 @@ from storage import export_connections as EC  # noqa: E402
 from storage import export_problems as EPB  # noqa: E402
 
 LANGS = load_i18n_langs(ROOT)
-SIDEBAR = os.path.join(ROOT, "ui", "sidebar.py")
+TABLE_TEXT = os.path.join(ROOT, "storage", "table_text.py")   # the ONE PURE home of the writer
+SIDEBAR = os.path.join(ROOT, "ui", "sidebar.py")              # the GUI surface that re-exports it
 _APOSTROPHE = chr(39)  # the spreadsheet's own "this is text" mark, spelled ONCE in this file
 
 _T = lambda key, **kw: key  # noqa: E731 — the report readers' injected translator
@@ -114,15 +115,15 @@ check("§1 TSV neutralises by the SAME rule (one writer, two delimiters)",
       SB.list_table_text([["-1"]], "\t") == "'-1\r\n" and _QUOTE("prod, db", "\t") == "prod, db",
       repr(SB.list_table_text([["-1"]], "\t")))
 check("§1 `list_table_text()` asks the ONE writer for every cell (no second quoting path)",
-      "list_quote_cell(cell, sep)" in open(SIDEBAR, encoding="utf-8").read())
+      "list_quote_cell(cell, sep)" in open(TABLE_TEXT, encoding="utf-8").read())
 
 _SOURCES = app_sources()
 _WRITERS = [rel for rel, src in _SOURCES if "\ndef list_quote_cell(" in src]
 check("§1 `list_quote_cell()` is defined ONCE in the application tree (a second writer is the defect)",
-      _WRITERS == ["ui/sidebar.py"], str(_WRITERS))
+      _WRITERS == ["storage/table_text.py"], str(_WRITERS))
 _DOUBLERS = [rel for rel, src in _SOURCES if """replace('"', '""')""" in src]
 check("§1 ...and no module carries a second RFC-4180 quoter (the doubling lives beside the prefix)",
-      _DOUBLERS == ["ui/sidebar.py"], str(_DOUBLERS))
+      _DOUBLERS == ["storage/table_text.py"], str(_DOUBLERS))
 _CONSUMERS = ("ui/main_window_exports.py", "storage/export_connections.py",
               "storage/export_problems.py")
 _CONSUMER_SOURCES = {rel: src for rel, src in _SOURCES if rel in _CONSUMERS}
@@ -276,10 +277,11 @@ check(f"§3 the patch adds NO i18n key (parity stays {EXPECTED_I18N_KEYS})",
 check("§3 the pin names this release's line and the schema did NOT move",
       releases_at_least(EXPECTED_APP_VERSION, "1.14.1.4") and version.VERSION_FORMAT == "0.9",
       f"{EXPECTED_APP_VERSION} / {version.VERSION_FORMAT}")
-check("§3 the writer's module rides its LINE PIN (the predicate is paid in THIS change)",
-      SBZ.LINE_PINS.get("ui/sidebar.py") == lines(SIDEBAR),
+check("§3 the writer's own module needs no pin, and the module it LEFT still rides its own",
+      "storage/table_text.py" not in SBZ.LINE_PINS
+      and SBZ.LINE_PINS.get("ui/sidebar.py") == lines(SIDEBAR),
       f"pin={SBZ.LINE_PINS.get('ui/sidebar.py')} measured={lines(SIDEBAR)}")
 check("§3 the connection report earned no pin (it calls the writer, it does not grow one)",
-      lines(EC.__file__) == 125 and "storage/export_connections.py" not in SBZ.LINE_PINS,
+      lines(EC.__file__) == 191 and "storage/export_connections.py" not in SBZ.LINE_PINS,
       f"{lines(EC.__file__)} lines")
 finish()

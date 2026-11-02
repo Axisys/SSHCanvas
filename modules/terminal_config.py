@@ -17,12 +17,21 @@ except ImportError:
 
 import re
 
-try:
-    from .terminal_widget import (CURSOR_STYLE_DEFAULT, CURSOR_STYLES,
-                                  FONT_SIZE_MAX, FONT_SIZE_MIN)
-except ImportError:
-    from modules.terminal_widget import (CURSOR_STYLE_DEFAULT, CURSOR_STYLES,
-                                         FONT_SIZE_MAX, FONT_SIZE_MIN)
+# ── the CURSOR SHAPES and the FONT range — declared HERE, in the pure module ─────
+# A value the settings hub offers, the reader validates and the canvas paints is a CONFIG fact: the
+# canvas imports these from this module, never the other way round (`AGENTS.md` §4.3, §4.35).
+CURSOR_STYLE_BLOCK = "block"          # the historical painting: the whole cell, glyph swapped
+CURSOR_STYLE_BAR = "bar"              # a thin vertical line at the LEFT edge of the cell
+CURSOR_STYLE_UNDERLINE = "underline"  # a thin horizontal line at the BOTTOM edge of the cell
+CURSOR_STYLES = (CURSOR_STYLE_BLOCK, CURSOR_STYLE_BAR, CURSOR_STYLE_UNDERLINE)
+
+#: The shape a canvas uses when nothing else says otherwise (the `terminal_cursor_style` default).
+CURSOR_STYLE_DEFAULT = CURSOR_STYLE_BAR
+
+#: The DECLARED point-size range of the canvas font: a zoom can never step outside what the settings
+#: hub can show and what a restart can restore (`Ctrl`+wheel clamps to exactly this pair).
+FONT_SIZE_MIN = 6
+FONT_SIZE_MAX = 72
 
 # v1.13.2: the wallpaper's three keys and their ONE validator. The module is Qt-free
 # and answers the declared defaults for anything unusable (`AGENTS.md` §4.3, `DOCUMENTATION.md` §78).

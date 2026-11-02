@@ -14,12 +14,11 @@ seam and a guard that cannot ask REFUSES. Rule and owner — `AGENTS.md` §4.30;
 
 import re
 
-try:  # pragma: no cover — Qt is a hard dependency of the application
-    from PySide6.QtWidgets import QMessageBox
-except ImportError:
-    QMessageBox = None
-
-from i18n import load_config, t
+#: The dialog class — this module attribute IS the seam a test replaces. `_UNLOADED` means "ask Qt
+#: once, on the first question", so importing the classifier never imports PySide6: the headless
+#: surface asks the SAME rule (`AGENTS.md` §4.30, §4.35).
+_UNLOADED = object()
+QMessageBox = _UNLOADED
 
 GUARD_COMMANDS_KEY = "guard_commands"   # the policy: the guard is ON unless the user turns it off
 MAX_COMMAND_CHARS = 4096                # the classification's input bound — over it the line is REFUSED
@@ -343,13 +342,36 @@ def dangerous_token(command) -> str:
     return _scan(text, 0)
 
 
+def _config() -> dict:
+    """The config store, imported on FIRST use — never at module load.
+
+    `import i18n` restores the user's saved language and may PRINT a fallback warning on stdout; a
+    headless run parses a machine report there, so the classifier stays import-clean and the store is
+    asked only when a policy question is really asked (`AGENTS.md` §4.35).
+    """
+    try:
+        from i18n import load_config
+        return load_config()
+    except Exception:  # noqa: BLE001 — the caller keeps the declared default of an unreadable store
+        return {}
+
+
+def _sentence(key, **kwargs) -> str:
+    """The translated sentence of a policy question, imported on FIRST use for the reason above."""
+    try:
+        from i18n import t as _translate
+        return _translate(key, **kwargs)
+    except Exception:  # noqa: BLE001 — a build without i18n answers the key, the honest fallback
+        return str(key)
+
+
 def guard_enabled(cfg=None) -> bool:
     """Is the command guard armed? — the CONFIG boolean `guard_commands`, ON by default.
 
     A missing key, a foreign type and an unreadable store all answer the declared default (True): the
     guard exists for the user who never read a document, so only an explicit `false` turns it off.
     """
-    cfg = load_config() if cfg is None else cfg
+    cfg = _config() if cfg is None else cfg
     try:
         value = cfg.get(GUARD_COMMANDS_KEY)
     except Exception:  # noqa: BLE001 — a broken store keeps the declared default
@@ -372,13 +394,26 @@ def excerpt(command) -> str:
 
 def confirmation_text(command, token, count=1) -> str:
     """The RUN's ONE sentence (`guard.command.text`). PURE."""
-    return t("guard.command.text", command=excerpt(command), token=str(token), count=int(count or 1))
+    return _sentence("guard.command.text", command=excerpt(command), token=str(token),
+                     count=int(count or 1))
 
 
 def broadcast_text(line, token, count=1) -> str:
     """The multi-input submission's ONE sentence (`guard.command.broadcast`). PURE."""
-    return t("guard.command.broadcast", command=excerpt(line), token=str(token),
-             count=int(count or 1))
+    return _sentence("guard.command.broadcast", command=excerpt(line), token=str(token),
+                     count=int(count or 1))
+
+
+def _message_box():
+    """The dialog class, imported on FIRST use — `None` when this build carries no Qt at all."""
+    global QMessageBox
+    if QMessageBox is _UNLOADED:
+        try:
+            from PySide6.QtWidgets import QMessageBox as _cls
+        except ImportError:  # pragma: no cover — Qt is a hard dependency of the GUI
+            _cls = None
+        QMessageBox = _cls
+    return QMessageBox
 
 
 def _ask(text: str, parent=None) -> bool:
@@ -387,16 +422,17 @@ def _ask(text: str, parent=None) -> bool:
     A build that cannot show a dialog answers False — the guard is a REFUSAL by default, never a silent
     pass; `parent=None` is legal Qt and therefore still asked.
     """
-    if QMessageBox is None:
+    box_cls = _message_box()
+    if box_cls is None:
         return False
     try:
-        box = QMessageBox(parent)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle(t("guard.title"))
+        box = box_cls(parent)
+        box.setIcon(box_cls.Icon.Warning)
+        box.setWindowTitle(_sentence("guard.title"))
         box.setText(str(text))
-        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        box.setDefaultButton(QMessageBox.StandardButton.No)
-        return box.exec() == QMessageBox.StandardButton.Yes
+        box.setStandardButtons(box_cls.StandardButton.Yes | box_cls.StandardButton.No)
+        box.setDefaultButton(box_cls.StandardButton.No)
+        return box.exec() == box_cls.StandardButton.Yes
     except Exception:  # noqa: BLE001 — a dialog that cannot open never green-lights a command
         return False
 

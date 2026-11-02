@@ -105,6 +105,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Plugins:** A system for custom monitors, commands, and menu rows. A broken plugin is reported rather than freezing the application.
 *   **Plugins Window:** Manage plugins, target servers, and view execution reports side-by-side.
 *   **Internationalization:** Supports English, Russian, Chinese, and German, with custom JSON language support.
+*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` answers five offline verbs over a project file — `inventory`, `connections`, `status`, `doctor` and `exec` — as text or one `--json` document, and exits with the code of the run's class (no GUI, no Qt).
 
 ---
 
@@ -117,7 +118,7 @@ pip install -r requirements.txt
 # Run the GUI
 python main.py
 
-# Install the command-line tool ('sshcanvas'; 'sshmap' is an alias)
+# Install ('sshcanvas' / 'sshmap': the GUI; 'sshcanvas-cli' / 'sshmap-cli': the headless command line)
 pipx install .
 ```
 
@@ -230,6 +231,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | Path | Description |
 |---|---|
 | `main.py` | Entry point: logging, QApplication, and plugin discovery |
+| `cli/` | The headless command line: argv, verbs, exit codes and the `--json` envelope (no Qt) |
 | `version.py` | Single source of truth for versioning |
 | `models/` | Data models for `ServerData` and SSH profiles |
 | `graphics/` | Scene rendering: cards, arrows, notes, groups, minimap |
@@ -240,10 +242,9 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 190 test files and the parallel runner |
+| `tests/` | 195 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |
 | `PLUGINS.md` | Plugin API contract (v1) |
-| `pyproject.toml`, `requirements.txt` | Project metadata and dependencies |
-| `LICENSE` | MIT License |
+| `pyproject.toml`, `requirements.txt`, `LICENSE` | Project metadata, dependencies and the MIT licence |

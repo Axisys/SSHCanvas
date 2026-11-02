@@ -204,17 +204,19 @@ check("§3 the reader is PURE, Qt-free and lives in `storage/project.py`",
       callable(SP.read_project_servers)
       and not any(name.startswith("PySide6") for name in imports_of(PROJECT_SRC)))
 check("§3 the node conversion keeps ONE home (`server_data_from_dict`)",
-      "server_data_from_dict(entry)" in _body("read_project_servers", PROJECT_SRC)
-      and "ServerData(" not in _body("read_project_servers", PROJECT_SRC))
+      "server_data_from_dict(entry)" in _body("servers_from_project", PROJECT_SRC)
+      and "ServerData(" not in _body("servers_from_project", PROJECT_SRC)
+      and "servers_from_project(load_project(path))" in _body("read_project_servers", PROJECT_SRC))
 check("§3 the FILE ORDER is kept and a junk entry is DROPPED (never repaired)",
-      "for entry in entries" in _body("read_project_servers", PROJECT_SRC)
-      and "isinstance(entry, dict)" in _body("read_project_servers", PROJECT_SRC)
+      "for entry in entries" in _body("servers_from_project", PROJECT_SRC)
+      and "isinstance(entry, dict)" in _body("servers_from_project", PROJECT_SRC)
       and clause(3, "an entry that is not a JSON object is DROPPED"))
 check("§3 a file without the array answers `[]` (an empty list is not an error)",
-      "isinstance(entries, (list, tuple))" in _body("read_project_servers", PROJECT_SRC)
+      "isinstance(entries, (list, tuple))" in _body("servers_from_project", PROJECT_SRC)
       and clause(3, "answers `[]` and is not an error"))
 check("§3 READ-ONLY: the reader writes nothing and the surface never saves the project",
-      "publish_atomic" not in _body("read_project_servers", PROJECT_SRC)
+      "publish_atomic" not in _body("servers_from_project", PROJECT_SRC)
+      and "publish_atomic" not in _body("read_project_servers", PROJECT_SRC)
       and not any(name.endswith("autosave") for name in TS_IMPORTS)
       and all(word not in TS_SRC for word in ("save_project", "write_project_json",
                                               "serialize_scene", "last_project_path"))
