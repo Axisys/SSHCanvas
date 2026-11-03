@@ -65,6 +65,31 @@ def entry_name_for(hostname: str, port) -> str:
     return f"[{name}]:{number}" if number != 22 else name
 
 
+def split_entry_name(entry_name):
+    """`[host]:port` / `host` → `(host, port)` — the ONE reader of the store's entry spelling.
+
+    PURE, and the inverse of `entry_name_for()`: a name without the bracket form is port 22 (the spelling
+    that function writes), and a bracket form whose port is not a number answers 22 rather than raising —
+    a hand-edited entry must never turn a report into a traceback.
+    """
+    text = str(entry_name or "")
+    if text.startswith("[") and "]:" in text:
+        host, _, port = text[1:].partition("]:")
+        try:
+            return host, int(port)
+        except (TypeError, ValueError):
+            return host, 22
+    return text, 22
+
+
+#: The verdicts of ONE pin check — the ONE vocabulary of the report, the exit code and the suite.
+VERIFY_OK = "ok"
+VERIFY_CHANGED = "changed"
+VERIFY_UNVERIFIED = "unverified"
+VERIFY_UNREACHABLE = "unreachable"
+VERIFY_VERDICTS = (VERIFY_OK, VERIFY_CHANGED, VERIFY_UNVERIFIED, VERIFY_UNREACHABLE)
+
+
 def _log():
     """Lazy-imported logger — does not break the module if the logger is unavailable."""
     try:
@@ -126,6 +151,71 @@ def fingerprint(key) -> str:
         return "<fingerprint unavailable>"
     digest = hashlib.sha256(blob).digest()
     return "SHA256:" + base64.b64encode(digest).decode("ascii")
+
+
+def host_key_rows(entries):
+    """`{host: {keytype: key}}` → `[{"host", "keytype", "fingerprint"}]`, sorted (PURE).
+
+    The ONE row model of the store, so the manager's table, the verification report and the suite read the
+    same three facts. A key whose fingerprint cannot be produced still gets a row — the entry EXISTS, and
+    hiding it would be the worse answer. A broken store object answers an empty list, never a crash.
+    """
+    rows = []
+    try:
+        items = dict(entries or {}).items()
+    except Exception:  # noqa: BLE001 — a broken store object is an empty list, never a crash
+        return rows
+    for host, keys in items:
+        try:
+            key_items = dict(keys or {}).items()
+        except Exception:  # noqa: BLE001
+            continue
+        for keytype, key in key_items:
+            rows.append({"host": str(host), "keytype": str(keytype),
+                         "fingerprint": fingerprint(key)})
+    rows.sort(key=lambda row: (row["host"].lower(), row["keytype"]))
+    return rows
+
+
+def verify_targets(rows):
+    """`[(hostname, port, [row, …])]` — ONE probe per ENDPOINT, in the rows' own order (PURE).
+
+    A key exchange answers ONE key, so every pin of one endpoint shares a single read; the grouping keeps
+    the order `host_key_rows()` already decided, which is what makes a report's row order stable.
+    """
+    groups, order = {}, []
+    for row in rows or ():
+        if not isinstance(row, dict):
+            continue
+        endpoint = split_entry_name(row.get("host"))
+        if endpoint not in groups:
+            groups[endpoint] = []
+            order.append(endpoint)
+        groups[endpoint].append(row)
+    return [(hostname, port, groups[(hostname, port)]) for hostname, port in order]
+
+
+def verify_record(row, presented_keytype="", presented_fingerprint="", error=""):
+    """ONE row of the verification report — the stored pin beside what the endpoint presents now (PURE).
+
+    `error` or a missing presented key is `unreachable`; the pin's OWN algorithm with another fingerprint
+    is `changed`; ANOTHER algorithm is `unverified`, because this pin was never exercised. `presented`
+    stays EMPTY in the last two cases — a fingerprint of a different algorithm in this row would be a fact
+    in the wrong column.
+    """
+    record = {"host": str(row.get("host") or ""), "keytype": str(row.get("keytype") or ""),
+              "verdict": VERIFY_UNREACHABLE, "stored": str(row.get("fingerprint") or ""),
+              "presented": "", "detail": ""}
+    if error or not presented_fingerprint:
+        record["detail"] = str(error or "the server presented no host key")
+        return record
+    if presented_keytype and presented_keytype != record["keytype"]:
+        record["verdict"] = VERIFY_UNVERIFIED
+        record["detail"] = f"the endpoint answered with {presented_keytype}"
+        return record
+    record["presented"] = str(presented_fingerprint)
+    record["verdict"] = VERIFY_OK if record["presented"] == record["stored"] else VERIFY_CHANGED
+    return record
 
 
 def read_server_host_key(host: str, port, timeout=PROBE_HOST_KEY_TIMEOUT_S):

@@ -5,10 +5,11 @@ The global parse stops at the verb (`cli/args.py`), so a verb's arguments arrive
 ONE reader of that tail. A TABLE verb declares its flags (`ARGUMENT_TABLE`: `--tag` repeats, `--format`
 takes its LAST value) and refuses a bare token; a POSITIONAL verb (`POSITIONAL_VERBS`: `status`, `doctor`)
 declares node tokens and refuses a flag-shaped one; an EXEC verb (`EXEC_VERBS`: `exec`) declares the five
-flags of the command policy (`--identity`, `--accept-new`, `--host-key`, `--allow-destructive`,
-`--dry-run`) beside a node and a VERBATIM command. An undeclared token is a USAGE error in every shape —
+flags of the command policy beside a node and a VERBATIM command; a SUBCOMMAND verb (`SUBCOMMANDS`:
+`hostkey`) declares the ONE token its tail names. An undeclared token is a USAGE error in every shape —
 the strictness the global parse already applies. The format ids come from the shipped writer
-(`storage/table_text.LIST_DELIMITERS`), never a second list. `AGENTS.md` §4.35; `CLI.md` §2, §3.1, §3.5.
+(`storage/table_text.LIST_DELIMITERS`), never a second list. `AGENTS.md` §4.35; `CLI.md` §2, §3.1, §3.5,
+§3.6.
 """
 from dataclasses import dataclass
 
@@ -58,6 +59,11 @@ EXEC_VALUE_FLAGS = (IDENTITY_OPTION, HOST_KEY_OPTION)
 
 #: The exec flags that carry NONE — a `=value` on one of them is a USAGE error, never a silent pass.
 EXEC_SWITCHES = (ACCEPT_NEW_OPTION, ALLOW_DESTRUCTIVE_OPTION, DRY_RUN_OPTION)
+
+#: verb name → the SUBCOMMAND tokens its tail may name. A subcommand verb takes exactly ONE token and no
+#: flag of its own: the flags of a family belong to the subcommand that would use them, and `verify`
+#: declares none (`CLI.md` §3.6).
+SUBCOMMANDS = {"hostkey": ("verify",)}
 
 
 @dataclass(frozen=True)
@@ -136,6 +142,27 @@ def read_nodes(verb, arguments) -> tuple:
             raise usage_error(f"{name} takes node ids or aliases, got {str(token)!r}")
         tokens.append(text)
     return tuple(tokens)
+
+
+def read_subcommand(verb, arguments) -> str:
+    """The ONE subcommand token a SUBCOMMAND verb's tail names — anything else is a USAGE error (PURE).
+
+    A subcommand verb takes its token and nothing else: a second token, a flag-shaped one or a name the
+    family does not declare is refused BEFORE any work (the grammar's own strictness), and the refusal
+    names the declared set, which is what a caller with a typo needs.
+    """
+    name = str(verb or "")
+    declared = SUBCOMMANDS.get(name)
+    if not declared:
+        raise usage_error(f"{name} takes no subcommand")
+    tokens = [str(token or "").strip() for token in (arguments or ())]
+    if len(tokens) != 1:
+        raise usage_error(f"{name} takes 1 subcommand ({' | '.join(declared)}), "
+                          f"got {len(tokens)} arguments")
+    if tokens[0] not in declared:
+        raise usage_error(f"{name} does not take {tokens[0]!r} — it takes {' | '.join(declared)}",
+                          late_option_hint(tokens[0]))
+    return tokens[0]
 
 
 def _exec_value(name, value, next_token) -> str:

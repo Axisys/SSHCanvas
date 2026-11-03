@@ -50,7 +50,8 @@ _REGISTERED_ORDER = []
 
 #: The built-in verb modules — imported ONCE and LAZILY, so `--help`, `--version` and a usage answer never
 #: pay for a project reader, and the entry module still parses argv before any of them loads.
-BUILTIN_VERB_MODULES = ("cli.inventory", "cli.connections", "cli.status", "cli.doctor", "cli.exec")
+BUILTIN_VERB_MODULES = ("cli.inventory", "cli.connections", "cli.status", "cli.doctor", "cli.exec",
+                        "cli.hostkey")
 
 _VERB_MODULES_LOADED = False
 

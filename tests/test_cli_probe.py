@@ -169,11 +169,12 @@ TWINS = fixture("probe-twins.json", [node("srv-1", "twin", ONLINE.port),
 print("== §1 the registry and the positional grammar ==")
 
 _ROWS = dict(DISPATCH.registered())
-check("§1 the lazy load registers the build's verbs (the two tables, the two probes, `exec`)",
-      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec"}, str(sorted(_ROWS)))
+check("§1 the lazy load registers the build's verbs (the two tables, the two probes, `exec`, `hostkey`)",
+      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+      str(sorted(_ROWS)))
 check("§1 the built-in modules are the ONE declaration of that load (loaded once, in order)",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec"),
+                                        "cli.doctor", "cli.exec", "cli.hostkey"),
       str(DISPATCH.BUILTIN_VERB_MODULES))
 check("§1 `status` declares 0..MAX_NODES node arguments and the round's verdict; `doctor` exactly ONE",
       DISPATCH.VERBS["status"].min_args == 0

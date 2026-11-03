@@ -1,4 +1,4 @@
-# SSHCanvas (Visual Node Map + SSH Terminal and SFTP manager)
+# SSHCanvas (Visual Node Map + SSH Terminal and SFTP manager + CLI)
 
 A Python-based desktop application (PySide6) providing an interactive map of your IT infrastructure with direct SSH connections to nodes.
 
@@ -105,7 +105,7 @@ A Python-based desktop application (PySide6) providing an interactive map of you
 *   **Plugins:** A system for custom monitors, commands, and menu rows. A broken plugin is reported rather than freezing the application.
 *   **Plugins Window:** Manage plugins, target servers, and view execution reports side-by-side.
 *   **Internationalization:** Supports English, Russian, Chinese, and German, with custom JSON language support.
-*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` answers five offline verbs over a project file — `inventory`, `connections`, `status`, `doctor` and `exec` — as text or one `--json` document, and exits with the code of the run's class (no GUI, no Qt).
+*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` answers five offline verbs over a project file — `inventory`, `connections`, `status`, `doctor` and `exec` — as text or one `--json` document, and exits with the code of the run's class (no GUI, no Qt). `hostkey verify` checks every pinned host key in `~/.sshmap/known_hosts` against the key its server presents now and reports the ones that changed; it never pins anything.
 
 ---
 
@@ -242,7 +242,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 195 test files and the parallel runner |
+| `tests/` | 196 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

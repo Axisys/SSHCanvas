@@ -7,11 +7,10 @@ serves the CHANGED case by showing the stored fingerprint beside the one the ser
 
 `KnownHostsManagerDialog` is the surface over `~/.sshmap/known_hosts`: the list of what is recorded,
 "delete this fingerprint" and "replace it with the key the server offers now" (an UNAUTHENTICATED key
-read, because a fingerprint cannot be turned back into a key).
+read, because a fingerprint cannot be turned back into a key). The row model and the `[host]:port` reader
+are the PURE ones of `modules/host_key_policy.py` (imported — the headless report reads the same two).
 
 Mechanism — `DOCUMENTATION.md` §16; the store itself — `modules/host_key_policy.py`."""
-
-from typing import List, Dict
 
 try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
     from ..ui import theme
@@ -20,8 +19,10 @@ except ImportError:
 
 try:
     from ..modules import host_key_policy as _hkp
+    from ..modules.host_key_policy import host_key_rows, split_entry_name
 except ImportError:
     from modules import host_key_policy as _hkp
+    from modules.host_key_policy import host_key_rows, split_entry_name
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -31,30 +32,6 @@ from PySide6.QtWidgets import (
 
 #: The budget of the unauthenticated key read the manager performs (one TCP connect + one KEX).
 PROBE_TIMEOUT_S = 10.0
-
-
-def host_key_rows(entries) -> List[Dict[str, str]]:
-    """`{host: {keytype: key}}` → `[{"host", "keytype", "fingerprint"}]`, sorted (PURE).
-
-    The ONE row model of the manager, so the table, the tests and any future export read the same
-    three facts. A key whose fingerprint cannot be produced still gets a row — the entry EXISTS, and
-    hiding it would be the worse answer.
-    """
-    rows: List[Dict[str, str]] = []
-    try:
-        items = dict(entries or {}).items()
-    except Exception:  # noqa: BLE001 — a broken store object is an empty list, never a crash
-        return rows
-    for host, keys in items:
-        try:
-            key_items = dict(keys or {}).items()
-        except Exception:  # noqa: BLE001
-            continue
-        for keytype, key in key_items:
-            rows.append({"host": str(host), "keytype": str(keytype),
-                         "fingerprint": _hkp.fingerprint(key)})
-    rows.sort(key=lambda r: (r["host"].lower(), r["keytype"]))
-    return rows
 
 
 class _HostKeyProbe(QThread):
@@ -273,7 +250,7 @@ class KnownHostsManagerDialog(QDialog):
         row = self.selected_row()
         if row is None:
             return
-        host, port = _split_entry(row["host"])
+        host, port = split_entry_name(row["host"])
         self.btn_replace.setEnabled(False)
         self.btn_delete.setEnabled(False)
         self.btn_refresh.setEnabled(False)
@@ -292,12 +269,12 @@ class KnownHostsManagerDialog(QDialog):
         row = self.selected_row()
         if row is None:
             return
-        host, _port = _split_entry(row["host"])
+        host, _port = split_entry_name(row["host"])
         if key is None:
             self.status.setText("")
             QMessageBox.warning(self, self.t("hostkey.manager_replace"),
                                 self.t("hostkey.manager_probe_failed",
-                                       host=host, port=_split_entry(row["host"])[1], error=error))
+                                       host=host, port=split_entry_name(row["host"])[1], error=error))
             return
         fresh = _hkp.fingerprint(key)
         if fresh == row["fingerprint"]:
@@ -324,15 +301,3 @@ class KnownHostsManagerDialog(QDialog):
         if probe is not None and probe.isRunning():
             probe.wait(int((PROBE_TIMEOUT_S + 2) * 1000))
         event.accept()
-
-
-def _split_entry(entry_name: str):
-    """`[host]:port` / `host` → `(host, port)` — the ONE reader of the store's entry spelling."""
-    text = str(entry_name or "")
-    if text.startswith("[") and "]:" in text:
-        host, _, port = text[1:].partition("]:")
-        try:
-            return host, int(port)
-        except ValueError:
-            return host, 22
-    return text, 22

@@ -116,6 +116,7 @@ of the file itself.
 | `test_cli_contract.py` | — | v1.15 — `CLI.md` clause by clause: the headless surface as the regression file of the base release. |
 | `test_cli_exec.py` | — | v1.15rc4 — `exec`: the three policies (guard, credential, host key) and the REMOTE exit code. |
 | `test_cli_hardening.py` | — | v1.15rc5 — the hardening patch: the two channels' BYTES, the wire's gates and the output ceiling. |
+| `test_cli_hostkey.py` | — | v1.15.1 — `hostkey verify`: the pins of `known_hosts` checked against the servers, and the rotation report. |
 | `test_cli_probe.py` | — | v1.15rc3 — the HEADLESS probe verbs: `status` and `doctor` over the GUI's own PURE cores. |
 | `test_code_pointers.py` | — | The plan pointers — an ALWAYS-ON gate: the app tree names no plan, and a decision names its OWNER. |
 | `test_collapse.py` | — | Server card collapsing v0.8.4 (former DESIGN.md §D) (former tests/smoke_collapse.py). |

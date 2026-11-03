@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """v1.15 — `CLI.md` clause by clause: the headless surface as the regression file of the base release.
-§1 naming and entry points; §2 the command line; §3.0 the verb table; §3.1–§3.5 the five verbs; §4 the
-`--json` envelope; §5.1–§5.3 the three security policies; §6 the Qt-free rule; §7 what the CLI does NOT
-do; §8 the configuration it reads; §9 the release state. Each check quotes the clause it pins — the
-contract is FROZEN, so this file is the shape a future change must meet. Rule — `AGENTS.md` §4.35;
-mechanism — `DOCUMENTATION.md` §80.
+§1 naming and entry points; §2 the command line; §3.0 the verb table; §3.1–§3.5 the five verbs of the
+base release; §3.6 the `hostkey verify` family; §4 the `--json` envelope; §5.1–§5.3 the three security
+policies; §6 the Qt-free rule; §7 what the CLI does NOT do; §8 the configuration it reads; §9 the release
+state. Each check quotes the clause it pins — the contract is FROZEN, so this file is the shape a future
+change must meet. Rule — `AGENTS.md` §4.35; mechanism — `DOCUMENTATION.md` §80.
 Run: python tests/test_cli_contract.py
 """
 import ast
@@ -312,14 +312,15 @@ print("== §3.0 the verb table ==")
 
 DISPATCH.load_verbs()
 VERBS = DISPATCH.VERBS
-check("§3.0 the registry is the contract's FIVE verbs, and nothing else",
-      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec"}, str(sorted(VERBS)))
+check("§3.0 the registry is the contract's verbs (the base FIVE plus the `hostkey` family), nothing else",
+      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+      str(sorted(VERBS)))
 check("§3.0 every row declares a summary, a handler and a renderer (two shapes of ONE fact set)",
       all(callable(row.handler) and callable(row.render) and row.summary.strip()
           for row in VERBS.values()))
 check("§3.0 the built-in list is the ONE declaration of the lazy load, in order",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec"))
+                                        "cli.doctor", "cli.exec", "cli.hostkey"))
 DISPATCH.register(DISPATCH.Verb("contract-dup", "the duplicate probe", handler=lambda c, a: {}))
 try:
     _DUPLICATE = raises(ValueError, lambda: DISPATCH.register(
@@ -869,6 +870,51 @@ check("§5.2 a CHANGED key is a REFUSAL (2) under every flag — a moved pin is 
 
 
 # ════════════════════════════════════════════════════════════════════════════
+print("== §3.6 hostkey verify ==")
+# ════════════════════════════════════════════════════════════════════════════
+
+import cli.hostkey as HOSTKEY  # noqa: E402 — the sixth row, asked of its own module
+
+check("§3.6 the contract declares the form, the four verdicts and the read-only rule",
+      "| `hostkey verify` |" in CONTRACT
+      and all(f"`{verdict}`" in CONTRACT for verdict in HKP.VERIFY_VERDICTS)
+      and "**Nothing is written, ever:**" in CONTRACT)
+_HK_ROW = VERBS["hostkey"]
+check("§3.6 the row takes its ONE subcommand token, draws a report and writes nothing",
+      (_HK_ROW.min_args, _HK_ROW.max_args) == (1, 1) and _HK_ROW.mutating is False
+      and callable(_HK_ROW.render) and callable(_HK_ROW.verdict)
+      and VERB_ARGS.SUBCOMMANDS == {"hostkey": ("verify",)}, str(_HK_ROW))
+check("§3.6 the payload is the contract's — store, count, timeout, entries — and a row its SIX columns",
+      HOSTKEY.DATA_KEYS == ("store", "count", "timeout", "entries")
+      and HOSTKEY.COLUMNS == ("host", "keytype", "verdict", "stored", "presented", "detail"))
+check("§3.6 ONE probe per ENDPOINT: the pins of one `[host]:port` share a single target",
+      [len(target[2]) for target in HKP.verify_targets(
+          [{"host": "[a]:22", "keytype": "ssh-rsa", "fingerprint": "SHA256:1"},
+           {"host": "[a]:22", "keytype": "ssh-ed25519", "fingerprint": "SHA256:2"},
+           {"host": "b", "keytype": "ssh-rsa", "fingerprint": "SHA256:3"}])] == [2, 1])
+check("§3.6 the process code is the ROUND's verdict: changed 2, else unreachable 4, else 0",
+      HOSTKEY.verdict({"entries": [{"verdict": HKP.VERIFY_OK}]}) == EX.EXIT_OK
+      and HOSTKEY.verdict({"entries": [{"verdict": HKP.VERIFY_UNVERIFIED}]}) == EX.EXIT_OK
+      and HOSTKEY.verdict({"entries": [{"verdict": HKP.VERIFY_UNREACHABLE}]}) == EX.EXIT_NETWORK
+      and HOSTKEY.verdict({"entries": [{"verdict": HKP.VERIFY_UNREACHABLE},
+                                       {"verdict": HKP.VERIFY_CHANGED}]}) == EX.EXIT_REFUSAL
+      and HOSTKEY.verdict({}) == EX.EXIT_OK)
+_BAD_STORE = os.path.join(str(WORK), "contract_bad_known_hosts")
+with open(_BAD_STORE, "w", encoding="utf-8") as _handle:
+    _handle.write("web-1 ssh-rsa AAAAnotbase64\n")
+_BAD_BYTES = open(_BAD_STORE, "rb").read()
+HKP.set_store(HKP.KnownHostsStore(_BAD_STORE))
+_CODE, _OUT, _ERR = run(["--json", "hostkey", "verify"])
+_BAD_DOC = json.loads(_OUT or "{}")
+check("§3.6 an unreadable store is a REFUSAL (2) naming the path, and the file is left as it was",
+      _CODE == EX.EXIT_REFUSAL and _BAD_DOC.get("ok") is False and _BAD_DOC.get("data") is None
+      and _BAD_DOC.get("error", {}).get("kind") == "refusal"
+      and _BAD_STORE in _BAD_DOC.get("error", {}).get("message", "")
+      and open(_BAD_STORE, "rb").read() == _BAD_BYTES, _OUT[:160])
+HKP.set_store(HKP.KnownHostsStore(os.path.join(WORK, "contract_known_hosts")))
+
+
+# ════════════════════════════════════════════════════════════════════════════
 print("== §4 the `--json` envelope ==")
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -1134,7 +1180,7 @@ finally:
     STATUS.probe_ssh = _STATUS_PROBE_SAVED
     DOCTOR.diagnose_reachability = _DOCTOR_SAVED
 check("§7 no file transfer in the base release (`put` / `get` are a follow-up slot)",
-      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec"})
+      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"})
 check("§7 no interactive prompt of any kind: `cli/` never reads stdin, an env var or argv for a secret",
       not [name for name, _file, source in _SOURCES if "input(" in source or "getpass" in source],
       [name for name, _file, source in _SOURCES if "input(" in source or "getpass" in source])

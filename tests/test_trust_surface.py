@@ -486,9 +486,12 @@ check("§6 the manager's row model is PURE and carries the three facts",
       str(_rows[:1]))
 check("§6 a broken store object answers an empty list (never a crash)",
       HKD.host_key_rows(None) == [] and HKD.host_key_rows({"h": None}) == [])
-check("§6 the `[host]:port` entry spelling is read back by ONE reader",
-      HKD._split_entry("[db]:2222") == ("db", 2222) and HKD._split_entry("web-1") == ("web-1", 22)
-      and HKD._split_entry("[db]:x") == ("db", 22))
+check("§6 the `[host]:port` entry spelling is read back by ONE reader (the PURE one, shared)",
+      HKP.split_entry_name("[db]:2222") == ("db", 2222)
+      and HKP.split_entry_name("web-1") == ("web-1", 22)
+      and HKP.split_entry_name("[db]:x") == ("db", 22)
+      and HKD.split_entry_name is HKP.split_entry_name
+      and HKD.host_key_rows is HKP.host_key_rows)
 
 _dlg = HKD.HostKeyDialog(None, host="web-1", port=22, keytype=KEY_A.get_name(),
                          fingerprint=HKP.fingerprint(KEY_A))

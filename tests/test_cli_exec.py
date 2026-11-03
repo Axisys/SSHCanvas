@@ -248,11 +248,12 @@ KEY_GONE = os.path.join(WORK, "id_missing")
 print("== §1 the `exec` grammar and the registry ==")
 
 _ROWS = dict(DISPATCH.registered())
-check("§1 the lazy load registers the FIVE verbs of this build (the exec row included)",
-      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec"}, str(sorted(_ROWS)))
+check("§1 the lazy load registers the SIX verbs of this build (the exec row included)",
+      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+      str(sorted(_ROWS)))
 check("§1 `cli.exec` is the fifth built-in module (ONE declaration of that load)",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec"),
+                                        "cli.doctor", "cli.exec", "cli.hostkey"),
       str(DISPATCH.BUILTIN_VERB_MODULES))
 check("§1 the row declares 2..MAX_ARGUMENTS, a verdict and the `raw_code` passthrough",
       DISPATCH.VERBS["exec"].min_args == 2
