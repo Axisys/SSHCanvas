@@ -31,7 +31,12 @@ def ensure_config_dir() -> bool:
 
 
 def load_config() -> dict:
-    """The user config as a dict — `{}` for a missing, unreadable or non-object file. Never raises."""
+    """The user config as a dict — `{}` for a missing, unreadable or non-object file. Never raises.
+
+    "Unreadable" includes a file that is not UTF-8: `UnicodeDecodeError` is a `ValueError`, so an
+    editor that saved the file in another encoding degrades to the defaults instead of escaping every
+    reader of this store.
+    """
     if not os.path.isfile(CONFIG_FILE):
         return {}
     try:
@@ -39,7 +44,7 @@ def load_config() -> dict:
             data = json.load(handle)
         if isinstance(data, dict):
             return data
-    except (json.JSONDecodeError, IOError, OSError):
+    except (json.JSONDecodeError, UnicodeDecodeError, IOError, OSError):
         return {}
     return {}
 

@@ -18,17 +18,18 @@ FINGERPRINT_PREFIX = "SHA256:"
 def normalize_fingerprint(value) -> str:
     """The fingerprint a value names, in the ONE spelling `fingerprint()` answers (`SHA256:<base64>`).
 
-    PURE: the `SHA256:` head is matched case-insensitively and kept in its shipped spelling, because the
-    value an operator pastes comes from `ssh-keygen -lf` (lower case) as often as from this application.
-    A value without the head is taken as the base64 body alone; "" is "no fingerprint named".
+    PURE: the `SHA256:` head is matched case-insensitively and kept in its shipped spelling, and the
+    base64 padding is stripped — `ssh-keygen -lf` prints the body UNPADDED, so a value pasted from it
+    must compare equal. A value without the head is taken as the base64 body alone; "" is "no
+    fingerprint named".
     """
     text = str(value or "").strip()
     if not text:
         return ""
     head, separator, body = text.partition(":")
     if separator and head.strip().upper() == "SHA256":
-        return FINGERPRINT_PREFIX + body.strip()
-    return text
+        return FINGERPRINT_PREFIX + body.strip().rstrip("=")
+    return text.rstrip("=")
 
 
 class CliHostKeyPolicy(SshKnownHostsPolicy):

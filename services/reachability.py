@@ -235,10 +235,11 @@ def diagnose_reachability(host: str, port: int = 22, timeout: float = REPORT_TIM
         sock, tcp_error = None, str(exc)
     if sock is None:
         kind = _TcpError.kind_for(tcp_error)
-        # "Is it the port or the host?" — the ONE question ICMP can still answer.
+        # "Is it the port or the host?" — the ONE question ICMP can still answer, and the ICMP stage has
+        # its OWN ceiling: `--timeout` is the TCP budget, never a licence to start a 300 s ping.
         answered = False
         try:
-            answered = bool(pinger(host, budget))
+            answered = bool(pinger(host, min(budget, PING_BUDGET_S)))
         except Exception:  # noqa: BLE001 — a report never raises
             answered = False
         return _report(kind, ip=ip, detail=tcp_error,

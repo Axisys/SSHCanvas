@@ -11,7 +11,8 @@ keep the selection order; the process code is the ROUND's verdict (`0` every nod
 import concurrent.futures
 
 from models.server import is_unmanaged
-from services.status_probe import DEFAULT_MAX_PARALLEL, STATUS_ONLINE, probe_ssh
+from services.status_probe import (DEFAULT_MAX_PARALLEL, STATUS_OFFLINE, STATUS_ONLINE,
+                                   probe_ssh)
 
 from . import project as PROJECT_SOURCE
 from . import verb_args
@@ -34,9 +35,12 @@ def split_unmanaged(nodes) -> tuple:
 
 
 def _probe(node, timeout) -> str:
-    """One node's status through the SHIPPED probe (the map's own rule)."""
-    return probe_ssh(str(getattr(node, "host", "") or ""),
-                     int(getattr(node, "ssh_port", 22) or 22), timeout)
+    """One node's status through the SHIPPED probe; an unusable RECORD is `offline`, never the round's."""
+    try:
+        return probe_ssh(str(getattr(node, "host", "") or ""),
+                         int(getattr(node, "ssh_port", 22) or 22), timeout)
+    except Exception:  # noqa: BLE001 — one broken record is a red cell, not an aborted report
+        return STATUS_OFFLINE
 
 
 def probe_nodes(nodes, timeout, workers=DEFAULT_MAX_PARALLEL) -> list:

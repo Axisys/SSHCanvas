@@ -137,6 +137,7 @@ class KnownHostsManagerDialog(QDialog):
 
         self.store = store if store is not None else _hkp.get_store()
         self._probe = None
+        self._probe_row = None      # the row the in-flight probe answers FOR (None — no probe)
         self.setWindowTitle(self.t("hostkey.manager_title"))
         self.setMinimumSize(680, 440)
         self._build_ui()
@@ -223,7 +224,7 @@ class KnownHostsManagerDialog(QDialog):
         return self.rows[index]
 
     def _sync_buttons(self):
-        enabled = self.selected_row() is not None
+        enabled = self.selected_row() is not None and self._probe_row is None
         self.btn_replace.setEnabled(enabled)
         self.btn_delete.setEnabled(enabled)
 
@@ -248,33 +249,42 @@ class KnownHostsManagerDialog(QDialog):
 
     def _on_replace(self):
         row = self.selected_row()
-        if row is None:
+        if row is None or self._probe_row is not None:
             return
         host, port = split_entry_name(row["host"])
+        # The probed row is CAPTURED: the answer belongs to what this click asked about, and a moved
+        # selection must never make a key presented by one host replace another host's pin.
+        self._probe_row = dict(row)
+        self.table.setEnabled(False)
         self.btn_replace.setEnabled(False)
         self.btn_delete.setEnabled(False)
         self.btn_refresh.setEnabled(False)
         self.status.setText(self.t("hostkey.manager_probing", host=host))
-        self._probe = _HostKeyProbe(host, port, self)
-        self._probe.probed.connect(self._on_probed)
-        self._probe.finished.connect(self._on_probe_done)
-        self._probe.start()
+        probe = _HostKeyProbe(host, port, self)
+        probe.probed.connect(self._on_probed)
+        probe.finished.connect(self._on_probe_done)
+        self._probe = probe
+        probe.start()
 
     def _on_probe_done(self):
-        self._probe = None
+        probe, self._probe = self._probe, None
+        self._probe_row = None
+        self.table.setEnabled(True)
         self.btn_refresh.setEnabled(True)
         self._sync_buttons()
+        if probe is not None:
+            probe.deleteLater()
 
     def _on_probed(self, key, error):
-        row = self.selected_row()
+        row = self._probe_row
         if row is None:
             return
-        host, _port = split_entry_name(row["host"])
+        host, port = split_entry_name(row["host"])
         if key is None:
             self.status.setText("")
             QMessageBox.warning(self, self.t("hostkey.manager_replace"),
                                 self.t("hostkey.manager_probe_failed",
-                                       host=host, port=split_entry_name(row["host"])[1], error=error))
+                                       host=host, port=port, error=error))
             return
         fresh = _hkp.fingerprint(key)
         if fresh == row["fingerprint"]:

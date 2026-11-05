@@ -32,10 +32,10 @@ CHAPTER_ORDER = (12, 8, 3, 10, 9, 13, 7, 4, 1, 2, 5, 6, 11)
 # Re-base a pin on the measurement after an edit ABOVE its marker (`python tests/_docs_budget.py`
 # prints them); what moved a pin in an earlier release is that release's changelog entry.
 SECTION_PINS = (
-    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 779),
-    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 9224),
-    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 12538),
-    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5223),
+    ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 781),
+    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 9226),
+    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 12540),
+    ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5225),
 )
 
 DOC = "AGENTS.md"

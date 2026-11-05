@@ -42,6 +42,23 @@ except ImportError:  # pragma: no cover — the package layout (sshmap.services.
 log = get_logger(__name__)
 
 
+def _hand_to_orphan_registry(thread) -> None:
+    """Hand a round that outlived its wait to the SHIPPED registry (`services/diagnostics.py`).
+
+    That door DETACHES the thread from its QObject parent FIRST (a parented `QThread` is destroyed with
+    it, however firmly a list holds the wrapper) and self-cleans it on `finished()`;
+    `services/exit_gate.py` joins the same registry at exit.
+    """
+    try:
+        try:
+            from .diagnostics import register_orphan_thread
+        except ImportError:  # a flat launch from the project root
+            from services.diagnostics import register_orphan_thread
+        register_orphan_thread(thread)
+    except Exception as e:  # noqa: BLE001 — best effort (declared): the close goes on
+        log.warning("The probe round could not be handed to the orphan registry (%s)", e)
+
+
 class _ProbeThread(QThread):
     """One check round: probes in parallel (ThreadPoolExecutor),
     results — as they complete."""
@@ -505,23 +522,24 @@ class StatusChecker(QObject):
         """Stop the periodic checks and the current round.
 
         An early return of the round is impossible — the cancel flag is set, the executor stops
-        accepting new probes (the submitted ones run out their network timeout); then the thread is
-        waited on with a margin of ceil(N/max_parallel) × timeout + 2 s (the round is parallel — the
-        margin is ceil(N/max_parallel) × timeout, not N × timeout).
+        accepting new probes, and `_probe_one()` asks the flag before a QUEUED probe starts, so only the
+        IN-FLIGHT batch (≤ `max_parallel`) can run out its network timeout. The wait is therefore ONE
+        timeout + 2 s whatever the map holds (a `ceil(N / max_parallel)` margin makes the close cost the
+        map, not the round). A thread that still outlives it is handed to the SHIPPED orphan registry
+        (`services.diagnostics.register_orphan_thread()` — parent detached, self-cleaned on `finished()`),
+        which the exit gate joins at exit.
         """
         self._enabled = False  # a stopped checker is not resumed by set_manual_only(False)
         self._timer.stop()
         self._cancel.set()
         thread = self._thread
         if thread is not None and thread.isRunning():
-            batches = (len(self._targets) + self._max_parallel - 1) // max(1, self._max_parallel)
-            wait_ms = int(self._probe_timeout * 1000) * max(1, batches) + 2000
+            wait_ms = int(self._probe_timeout * 1000) + 2000
             if not thread.wait(wait_ms):
+                _hand_to_orphan_registry(thread)
                 try:
-                    from modules.logger import get_logger as _gl
-                    _gl("services.status_checker").warning(
-                        f"Probe thread did not finish within {wait_ms} ms after cancel")
-                except Exception:  # noqa: BLE001 — the log is a side channel: the round already returned
+                    log.warning("Probe thread did not finish within %s ms after cancel", wait_ms)
+                except Exception:  # noqa: BLE001 — best effort (declared): the close goes on
                     pass
 
     def shutdown(self):

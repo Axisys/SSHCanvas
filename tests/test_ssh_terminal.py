@@ -294,7 +294,8 @@ from modules.host_key_policy import fingerprint
 import base64 as _b64
 
 def _sha256_fp(blob: bytes) -> str:
-    return "SHA256:" + _b64.b64encode(hashlib.sha256(blob).digest()).decode("ascii")
+    # the OpenSSH spelling: base64 padding stripped (what `ssh-keygen -lf` prints)
+    return "SHA256:" + _b64.b64encode(hashlib.sha256(blob).digest()).decode("ascii").rstrip("=")
 
 
 try:

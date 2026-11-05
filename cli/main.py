@@ -9,16 +9,31 @@ what `pyproject.toml` names: `sshcanvas-cli = "cli.main:main"` and its `sshmap-c
 must not swallow the code: `main()` answers the integer and the console script exits with it.
 `AGENTS.md` §4.35; contract — `CLI.md`.
 """
+import logging
 import sys
 
 from . import output as OUT
-from .args import parse_argv
+from .args import json_requested, parse_argv
 from .errors import CliError
+
+
+def silence_library_logs() -> None:
+    """Keep the SSH library's records OFF this surface's stderr (a run prints its OWN report).
+
+    paramiko logs through the root logger, whose `lastResort` handler writes a raw `Exception (client):
+    …` line beside the report of a failed handshake. Its logger gets a `NullHandler` and stops
+    propagating — the CLI translates its own failures, so a caller's logging setup stays untouched.
+    """
+    library = logging.getLogger("paramiko")
+    if not library.handlers:
+        library.addHandler(logging.NullHandler())
+        library.propagate = False
 
 
 def main(argv=None) -> int:
     """Run the command line in `argv` (default: `sys.argv[1:]`) and answer the process's exit code."""
     OUT.prepare_streams()
+    silence_library_logs()
     tokens = list(sys.argv[1:] if argv is None else argv)
     try:
         invocation = parse_argv(tokens)
@@ -27,7 +42,7 @@ def main(argv=None) -> int:
         # caller parses — the envelope when `--json` was on the line, a stderr sentence otherwise. The
         # verb is not named: a line this module could not read has no verb it can trust.
         from . import envelope as ENV
-        OUT.report(ENV.build("", error=exc.record()), (), "--json" in tokens)
+        OUT.report(ENV.build("", error=exc.record()), (), json_requested(tokens))
         return exc.code
     from .dispatch import dispatch
     return dispatch(invocation)

@@ -8,6 +8,7 @@ the three keys and `round_summary()` the ONE log line of a finished round. `serv
 runs a round in a QThread and re-exports this module because it is the GUI's live namespace; the headless
 surface imports it directly (`AGENTS.md` §4.8.2, §4.35; mechanism — `DOCUMENTATION.md` §19).
 """
+import math
 import socket
 
 try:  # the round summary (the activity history)
@@ -167,10 +168,14 @@ def get_status_settings() -> dict:
         try:
             if isinstance(value, bool):
                 return float(default)
-            return float(value)
+            number = float(value)
         except (TypeError, ValueError):
-            log.debug("The config value %r is not a number — %s answers", value, default)
+            number = None
+        if number is None or not math.isfinite(number):
+            # `1e999` parses as `inf` and `NaN` is a float: `int()` raises on both, so the gate is HERE.
+            log.debug("The config value %r is not a finite number — %s answers", value, default)
             return float(default)
+        return number
 
     interval = resolve_interval_sec(cfg.get("status_interval_sec"))
     timeout = _num(cfg.get("status_probe_timeout_sec"), PROBE_TIMEOUT_S)
@@ -187,7 +192,8 @@ def probe_ssh(host: str, port: int, timeout: float = PROBE_TIMEOUT_S) -> str:
     Connects to host:port and reads the first bytes: an SSH server sends the
     banner "SSH-x.y-" right after the TCP handshake. Got it — online; the
     connection was established but no data / foreign data — warn; cannot
-    connect — offline.
+    connect — offline. An unusable NAME (an IDNA label over 63 characters, a NUL) is as offline as a
+    refused port — the resolver raises before any socket exists.
     """
     if not host:
         return STATUS_OFFLINE
@@ -200,7 +206,7 @@ def probe_ssh(host: str, port: int, timeout: float = PROBE_TIMEOUT_S) -> str:
             if not banner:
                 return STATUS_WARN  # the server closed the connection without any bytes
             return STATUS_ONLINE if banner.lstrip().startswith(b"SSH-") else STATUS_WARN
-    except (socket.timeout, OSError):
+    except (socket.timeout, OSError, UnicodeError, ValueError):
         return STATUS_OFFLINE
 
 

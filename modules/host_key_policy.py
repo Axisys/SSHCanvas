@@ -122,12 +122,12 @@ class HostKeyRejected(paramiko.SSHException):
 
 
 def fingerprint(key) -> str:
-    """Host key fingerprint in OpenSSH format (SHA256:<base64>).
+    """Host key fingerprint in OpenSSH format (`SHA256:<base64>`, no base64 padding).
 
+    The ONE spelling of this codebase and of `ssh-keygen -lf` / `PKey.fingerprint`: the padding `=` is
+    stripped, so a fingerprint copied from the standard tool compares equal on every surface.
     paramiko < 5 — `PKey.asbytes()` returned a base64 *string*; in paramiko >= 5 the same function
-    returns the raw wire bytes of the key. The old code did b64decode on binary data: it either crashed
-    ("<fingerprint unavailable>"), or (worse) produced a WRONG SHA256 that could not be verified
-    out-of-band. Both formats are handled; the fallback is `get_base64()`.
+    returns the raw wire bytes of the key. Both formats are handled; the fallback is `get_base64()`.
     """
     blob = None
     for attr in ("asbytes", "get_base64"):
@@ -150,7 +150,7 @@ def fingerprint(key) -> str:
     if not blob:
         return "<fingerprint unavailable>"
     digest = hashlib.sha256(blob).digest()
-    return "SHA256:" + base64.b64encode(digest).decode("ascii")
+    return "SHA256:" + base64.b64encode(digest).decode("ascii").rstrip("=")
 
 
 def host_key_rows(entries):

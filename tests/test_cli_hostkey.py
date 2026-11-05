@@ -23,9 +23,9 @@ from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, bootstrap, check,
 
 ROOT, WORK = bootstrap()  # HOME isolation + sys.path (BEFORE any app import)
 
-# The harness's own peer sockets die on teardown, and paramiko reports that through `logging` — with no
-# handler installed in a test process it would reach stderr, which is the CLI's channel. The noise is the
-# HARNESS's, so it is silenced here rather than in the surface (a real run installs no logger at all).
+# The harness's own peer sockets die on teardown, and paramiko reports that through `logging` — the
+# surface installs its own guard (`cli.main:silence_library_logs()`), but a socket of THIS process may die
+# before the first `main()` call, so the silence is installed here too.
 logging.getLogger("paramiko").addHandler(logging.NullHandler())
 logging.getLogger("paramiko").propagate = False
 

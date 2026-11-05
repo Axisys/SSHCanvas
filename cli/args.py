@@ -122,6 +122,40 @@ def _split_option(token):
     return (name, value) if sep else (token, None)
 
 
+#: Every global option that CONSUMES the next token — the walk of `json_requested()` skips its value.
+TAKES_VALUE = frozenset(name for name, takes, _meta in OPTIONS if takes)
+
+
+def json_requested(tokens) -> bool:
+    """True when `--json` is an OPTION of the line, never a VALUE or a verb's argument (PURE).
+
+    The failure path answers before `parse_argv()` can hand back an `Invocation`, so the question "was
+    the envelope asked for?" is asked of the raw tokens — by walking the SAME grammar: an option that
+    takes a value consumes the next token (`--project --json` names a file), `--` ends the options and
+    the first bare token is the VERB, whose tail belongs to the verb.
+    """
+    tokens = [t for t in (tokens if tokens is not None else ()) if isinstance(t, str)]
+    index, asked = 0, False
+    while index < len(tokens):
+        token = tokens[index]
+        index += 1
+        if token == "--":
+            return asked          # everything after it is the verb's tail
+        if token in HELP_ALIASES or token in VERSION_ALIASES:
+            continue
+        if token.startswith("--"):
+            name, value = _split_option(token)
+            if name == OPTION_JSON and value in (None, ""):
+                asked = True
+            elif name in TAKES_VALUE and value is None:
+                index += 1        # its VALUE — a token that spells `--json` is data here
+            continue
+        if token.startswith("-") and token != "-":
+            continue
+        return asked              # the first bare token is the VERB: the parse STOPS there
+    return asked
+
+
 def parse_argv(tokens, base_dir=None) -> Invocation:
     """The ONE parse: options, the verb and its arguments — or a USAGE error naming what is wrong.
 
