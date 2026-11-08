@@ -35,6 +35,8 @@ try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §
 except ImportError:  # flat launch from the project root
     from storage import atomic as _atomic
 
+from modules.logger import optional_logger
+
 
 # ── i18n (the cached-translator pattern of modules/ssh_terminal.py) ─────────
 
@@ -53,15 +55,6 @@ def get_translator():
         except Exception:
             _t_cache = lambda k, **kw: f"[{k}]"
     return _t_cache
-
-
-def _log():
-    """The app logger (lazy, the command_library._log pattern)."""
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.command_history")
-    except Exception:
-        return None
 
 
 def _format_size(n) -> str:
@@ -582,12 +575,12 @@ class CommandHistoryStore:
             with open(self.path, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-            lg = _log()
+            lg = optional_logger("modules.command_history")
             if lg is not None:
                 lg.warning(f"command history: corrupt file {self.path} — starting empty")
             return []
         if not isinstance(data, dict) or not isinstance(data.get("commands"), list):
-            lg = _log()
+            lg = optional_logger("modules.command_history")
             if lg is not None:
                 lg.warning(
                     f"command history: unexpected document type in {self.path} — starting empty")
@@ -631,7 +624,7 @@ class CommandHistoryStore:
         with _atomic.atomic_lock(self.path):
             merged = merge_entries(self._read_entries(), entries)
             if not self._write(merged):
-                lg = _log()
+                lg = optional_logger("modules.command_history")
                 if lg is not None:
                     lg.warning(f"command history: write failed for {self.path}")
                 return self._read_entries()

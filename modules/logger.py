@@ -113,6 +113,17 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(f"sshmap.{name}")
 
 
+def optional_logger(name: str):
+    """The child logger while the tree HANDLES its records, else None.
+
+    `setup_logging()` installs the handlers AFTER the modules are imported, so a module that must also run
+    without the tree asks at the POINT OF USE. A handler-less record is not harmless: `logging.lastResort`
+    prints its raw WARNING line on stderr — beside a surface's own report (the CLI's diagnostics channel).
+    """
+    logger = get_logger(name)
+    return logger if logger.hasHandlers() else None
+
+
 def get_log_file_path() -> str:
     """Return path to the log file for display in status bar."""
     return LOG_FILE

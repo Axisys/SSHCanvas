@@ -16,6 +16,8 @@ from typing import Dict, List, Optional, Sequence
 
 from PySide6.QtGui import QKeySequence, QShortcut
 
+from modules.logger import optional_logger
+
 # ── The registry (declaration order = the order of the settings table's rows) ──────
 # `test_actions_keyboard.py` keeps the count and the completeness honest. An action may ship with an
 # EMPTY default (assignable, no behaviour change) — the counts and the shipped figures live in
@@ -353,7 +355,7 @@ def configured_hotkeys() -> Dict[str, str]:
             continue                      # an unknown id (another version) — ignored
         norm = normalize(value)
         if norm is None:
-            _log(f"broken hotkey value for {aid!r}: {value!r} — the default is used")
+            _warn(f"broken hotkey value for {aid!r}: {value!r} — the default is used")
             continue                      # broken → the default stays in the mapping
         mapping[aid] = norm
     return mapping
@@ -374,7 +376,7 @@ def save_hotkeys(mapping: dict) -> bool:
         from i18n import save_config
         return bool(save_config({CONFIG_KEY: clean}))
     except Exception as e:  # noqa: BLE001 — saving must not break the dialog
-        _log(f"save_hotkeys failed: {e!r}")
+        _warn(f"save_hotkeys failed: {e!r}")
         return False
 
 
@@ -424,10 +426,8 @@ def _set_sequence(obj, seqs: Sequence[str]) -> None:
         pass  # the C++ object is already destroyed (close race) — nothing to update
 
 
-def _log(message: str) -> None:
-    """A lazy logger (the module is imported very early — keep the import cost out)."""
-    try:
-        from modules.logger import get_logger
-        get_logger("ui.hotkey_registry").warning(message)
-    except Exception:  # noqa: BLE001 — logging must never break the config read
-        pass
+def _warn(message: str) -> None:
+    """ONE warning into the application log — skipped when no handler would take it."""
+    log = optional_logger("ui.hotkey_registry")
+    if log is not None:
+        log.warning(message)

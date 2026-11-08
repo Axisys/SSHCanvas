@@ -16,6 +16,8 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from modules.logger import optional_logger
+
 try:  # the base instances and the field vocabulary (pure data — no Qt either way)
     from . import theme
     from . import theme_contrast
@@ -94,16 +96,11 @@ REASONS = (REASON_UNREADABLE, REASON_TOO_BIG, REASON_NOT_JSON, REASON_NOT_OBJECT
            REASON_BAD_COLOR, REASON_BAD_ACCENT, REASON_BAD_PALETTE, REASON_CONTRAST)
 
 
-try:  # the application's own logger when the tree is importable (a bare script has none)
-    from modules.logger import get_logger as _get_logger
-except ImportError:  # noqa: BLE001 — optional import: the loader works without the app's logging
-    _get_logger = None
-
-
-def _log(message: str) -> None:
-    """ONE line into ~/.sshmap/logs/sshmap.log — skipped by a build without the logger."""
-    if _get_logger is not None:
-        _get_logger("theme").warning(message)
+def _warn(message: str) -> None:
+    """ONE line into the application log — skipped when no handler would take it."""
+    log = optional_logger("theme")
+    if log is not None:
+        log.warning(message)
 
 
 @dataclass(frozen=True)
@@ -317,5 +314,5 @@ def discover(root=None, user_dir_path=None) -> Tuple[Dict[str, ThemePack], List[
                 continue
             packs[pack_id] = pack
     for problem in problems:
-        _log(f"theme pack {problem.sentence()}")
+        _warn(f"theme pack {problem.sentence()}")
     return packs, problems

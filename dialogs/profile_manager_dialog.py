@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 
+from modules.logger import optional_logger
+
 
 #: The FIXED mask of a stored password in the profile table (v1.6.1).
 #: The cell still answers "a password is stored"; it deliberately does NOT answer HOW
@@ -41,15 +43,6 @@ def password_cell_text(password, translate_fn=None) -> str:
     return translate_fn("profile.password_empty") if translate_fn else "(empty)"
 
 
-def _log():
-    """The app logger (lazy — a build without the logger keeps the dialog working)."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("dialogs.profile_manager_dialog")
-    except Exception:  # noqa: BLE001 — a refused write is still answered on screen
-        return None
-
-
 def warn_store_refused(parent, translate, error) -> bool:
     """ONE warning box for a refused profiles WRITE — True when `error` is a refusal.
 
@@ -61,7 +54,7 @@ def warn_store_refused(parent, translate, error) -> bool:
     """
     if not isinstance(error, ProfileStoreError):
         return False
-    log = _log()
+    log = optional_logger("dialogs.profile_manager_dialog")
     if log is not None:
         log.warning("A profile write was refused: %s", error)
     try:

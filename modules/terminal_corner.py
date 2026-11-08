@@ -14,6 +14,8 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QHBoxLayout, QWidget
 
+from modules.logger import optional_logger
+
 try:  # the corner glyph in BOTH tones (ui/icons.py)
     from ..ui.icons import get_corner_icon
 except ImportError:
@@ -36,21 +38,6 @@ try:
 except Exception:  # noqa: BLE001 — a build without i18n keeps the keys, not a crash
     def _t(key, **kwargs):  # type: ignore
         return key
-
-
-def _log():
-    """The app logger (lazy — a stripped build logs nowhere)."""
-    try:
-        from .logger import get_logger
-    except ImportError:
-        try:
-            from modules.logger import get_logger
-        except ImportError:
-            return None
-    try:
-        return get_logger("modules.terminal_corner")
-    except Exception:  # noqa: BLE001 — a logger is never worth an exception
-        return None
 
 
 #: The declared budget of the corner: a control past it is REFUSED, so a row never grows silently.
@@ -189,7 +176,7 @@ class CornerBar(QWidget):
             return False        # ONE row per declared control — a second author is a defect
         if not corner_fits(len(self._controls) + 1):
             self._refused.append(key)
-            log = _log()
+            log = optional_logger("modules.terminal_corner")
             if log is not None:
                 log.warning("corner budget %d refused the control '%s'", CORNER_MAX_CONTROLS, key)
             return False

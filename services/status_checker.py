@@ -521,13 +521,10 @@ class StatusChecker(QObject):
     def stop(self):
         """Stop the periodic checks and the current round.
 
-        An early return of the round is impossible — the cancel flag is set, the executor stops
-        accepting new probes, and `_probe_one()` asks the flag before a QUEUED probe starts, so only the
-        IN-FLIGHT batch (≤ `max_parallel`) can run out its network timeout. The wait is therefore ONE
-        timeout + 2 s whatever the map holds (a `ceil(N / max_parallel)` margin makes the close cost the
-        map, not the round). A thread that still outlives it is handed to the SHIPPED orphan registry
-        (`services.diagnostics.register_orphan_thread()` — parent detached, self-cleaned on `finished()`),
-        which the exit gate joins at exit.
+        The cancel flag stops every QUEUED probe, so only the IN-FLIGHT batch can run out its network
+        timeout and the wait does not grow with the map. A thread that still outlives it is handed to
+        the SHIPPED orphan registry, which the exit gate joins at exit.
+        Mechanism — `DOCUMENTATION.md` §19.
         """
         self._enabled = False  # a stopped checker is not resumed by set_manual_only(False)
         self._timer.stop()

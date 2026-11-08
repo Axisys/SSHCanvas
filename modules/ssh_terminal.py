@@ -2,6 +2,8 @@ import re
 import threading
 from typing import List
 
+from modules.logger import optional_logger
+
 try:
     from ..models.server import ServerData
 except ImportError:
@@ -129,15 +131,6 @@ def get_translator():
         except Exception:
             _t_cache = lambda k, **kw: f"[{k}]"
     return _t_cache
-
-
-def _log():
-    """The module logger, imported lazily (the `command_library._log` pattern); None — no logger."""
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.ssh_terminal")
-    except Exception:  # noqa: BLE001 — a build without the logger keeps the code, not a crash
-        return None
 
 
 # ── the session that says it ended ────────────────────────────────────────────
@@ -1395,7 +1388,7 @@ class SSHTerminalWindow(QMainWindow):
             hook(node)
             return True
         except Exception as e:  # noqa: BLE001 — a refused connect must not break the panel
-            log = _log()
+            log = optional_logger("modules.ssh_terminal")
             if log is not None:
                 log.warning(f"The terminal panel could not start a session: {e}")
             return False
@@ -1436,7 +1429,7 @@ class SSHTerminalWindow(QMainWindow):
             hook(node, entry)
             return True
         except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
-            log = _log()
+            log = optional_logger("modules.ssh_terminal")
             if log is not None:
                 log.warning(f"The terminal panel could not run a quick launch entry: {e}")
             return False
@@ -1450,7 +1443,7 @@ class SSHTerminalWindow(QMainWindow):
             hook(node)
             return True
         except Exception as e:  # noqa: BLE001 — a dialog must not break the panel
-            log = _log()
+            log = optional_logger("modules.ssh_terminal")
             if log is not None:
                 log.warning(f"The terminal panel could not open the quick launch editor: {e}")
             return False

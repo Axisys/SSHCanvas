@@ -12,6 +12,8 @@ Mechanism — `DOCUMENTATION.md` §64."""
 import sys
 import time
 
+from modules.logger import optional_logger
+
 #: The TOTAL budget of the gate, in milliseconds — ONE deadline for every registered thread.
 EXIT_GATE_BUDGET_MS = 3000
 
@@ -37,15 +39,6 @@ PACKAGE_PREFIX = "sshmap."
 STOP_DOORS = ("stop", "cancel", "close", "requestInterruption")
 
 _installed = False
-
-
-def _log():
-    """The module logger, or None — the gate must work in a stripped build."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("services.exit_gate")
-    except Exception:  # noqa: BLE001
-        return None
 
 
 def _module(module_name: str):
@@ -103,7 +96,7 @@ def stop_thread(thread) -> str:
         except (RuntimeError, TypeError):
             continue   # the C++ object is gone, or the door wants an argument
         except Exception as e:  # noqa: BLE001 — a door that raises is tried no further
-            log = _log()
+            log = optional_logger("services.exit_gate")
             if log:
                 log.debug("The exit door %s() of %s raised (%s) — the next door answers",
                           name, _name_of(thread), e)
@@ -130,7 +123,7 @@ def _terminate(thread) -> bool:
         ended = bool(thread.wait(EXIT_GATE_TERMINATE_WAIT_MS))
     except (RuntimeError, TypeError):
         return True
-    log = _log()
+    log = optional_logger("services.exit_gate")
     if log:
         try:
             log.warning("Exit gate: thread '%s' ignored its own stop door and was TERMINATED "
@@ -178,7 +171,7 @@ def join_all(budget_ms: int = EXIT_GATE_BUDGET_MS) -> dict:
 def close_gate(*_args) -> dict:
     """The `aboutToQuit` slot: run the gate and write ONE line. Never raises."""
     report = join_all()
-    log = _log()
+    log = optional_logger("services.exit_gate")
     if log:
         try:
             detail = (" — terminated: " + ", ".join(report["terminated"])) \

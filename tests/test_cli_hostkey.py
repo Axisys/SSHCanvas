@@ -10,7 +10,6 @@ Run: python tests/test_cli_hostkey.py
 import contextlib
 import io
 import json
-import logging
 import os
 import socket
 import subprocess
@@ -21,13 +20,7 @@ from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, bootstrap, check,
                      check_release_state, finish, load_i18n_langs, releases_at_least,
                      translation_keys)
 
-ROOT, WORK = bootstrap()  # HOME isolation + sys.path (BEFORE any app import)
-
-# The harness's own peer sockets die on teardown, and paramiko reports that through `logging` — the
-# surface installs its own guard (`cli.main:silence_library_logs()`), but a socket of THIS process may die
-# before the first `main()` call, so the silence is installed here too.
-logging.getLogger("paramiko").addHandler(logging.NullHandler())
-logging.getLogger("paramiko").propagate = False
+ROOT, WORK = bootstrap()  # HOME isolation + sys.path (BEFORE any app import), paramiko silenced too
 
 import paramiko  # noqa: E402
 

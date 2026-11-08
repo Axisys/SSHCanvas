@@ -19,6 +19,8 @@ import tempfile
 import threading
 import time
 
+from modules.logger import optional_logger
+
 #: The suffix of the provisional file — a crash orphan reads as `<name>.<random>.tmp`.
 TEMP_SUFFIX = ".tmp"
 
@@ -47,15 +49,6 @@ def _default_mode() -> int:
 
 #: The mode of a published file — one answer for every writer of the family.
 TEMP_MODE = _default_mode()
-
-
-def _log():
-    """The app logger, lazily imported — the writer keeps working without the logger tree."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("storage.atomic")
-    except Exception:  # noqa: BLE001 — a build without the logger still writes files
-        return None
 
 
 def atomic_lock(path) -> threading.RLock:
@@ -110,7 +103,7 @@ def keep_unreadable(path, reason: str = "") -> str:
     "" answers "no copy" and the CALLER owns the consequence: `write_json_atomic()` refuses the
     publish, because the copy is what makes the write safe.
     """
-    logger = _log()
+    logger = optional_logger("storage.atomic")
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = f"{path}{BAD_SUFFIX}{stamp}"
     index = 1
@@ -167,7 +160,7 @@ def _remove(path) -> None:
     try:
         os.remove(path)
     except OSError as e:
-        logger = _log()
+        logger = optional_logger("storage.atomic")
         if logger is not None:
             logger.debug("The provisional file %s was not removed (%s)", path, e)
 
@@ -226,7 +219,7 @@ def write_json_atomic(path, data, merge: bool = False, reader=None, indent: int 
             publish_atomic(path, lambda temp: dump_json(temp, payload, indent=indent))
         return True
     except (OSError, TypeError, ValueError) as e:
-        logger = _log()
+        logger = optional_logger("storage.atomic")
         if logger is not None:
             logger.warning("The write of %s was refused: %s", path, e)
         return False

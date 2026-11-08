@@ -13,6 +13,8 @@ credential. Mechanism — `DOCUMENTATION.md` §16."""
 
 import threading
 
+from modules.logger import optional_logger
+
 #: The question kinds. The answerer renders a dialog per kind; a caller never inspects another's kind.
 KIND_HOST_KEY = "host_key"                # a NEW host key — accept + pin, or reject
 KIND_CHANGED_KEY = "changed_key"          # a CHANGED host key — replace the stored one, or refuse
@@ -22,15 +24,6 @@ KIND_SECOND_FACTOR = "second_factor"      # the keyboard-interactive prompt of a
 #: The budget of ONE ask. Generous on purpose (a human is reading a dialog) and bounded: a GUI that died
 #: mid-question must not park a connect thread for its lifetime.
 DEFAULT_ASK_TIMEOUT_S = 120.0
-
-
-def _log():
-    """A lazy logger — the module must import without the application (`_log()` pattern of §4.4)."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("modules.interactive_ask")
-    except Exception:  # noqa: BLE001
-        return None
 
 
 class AskRequest:
@@ -88,7 +81,7 @@ def _deliver(request, answerer=None):
     try:
         return fn(request)
     except Exception:  # noqa: BLE001 — a broken dialog must not kill the connect thread
-        log = _log()
+        log = optional_logger("modules.interactive_ask")
         if log:
             log.exception("The interactive answerer failed for %r", request.kind)
         return None
@@ -183,7 +176,7 @@ def ask(kind, timeout=None, **fields):
         return _deliver(request, answerer)
     budget = DEFAULT_ASK_TIMEOUT_S if timeout is None else float(timeout)
     if not request.done.wait(budget):
-        log = _log()
+        log = optional_logger("modules.interactive_ask")
         if log:
             log.error("No answer for %r within %.0f s — the caller's fallback applies",
                       request.kind, budget)

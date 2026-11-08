@@ -23,6 +23,8 @@ from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from modules.logger import optional_logger
+
 try:
     from modules.plugin_context import (PluginNode, build_context,
                                         node_record, node_records, run_result_from_dict)
@@ -93,18 +95,9 @@ COMMAND_TIMEOUT_S = 30.0              # the per-node budget of `ctx.run_command`
 CORE_RUN_ID = "core"
 
 
-def _log():
-    """The app logger (lazy — the discovery must work in a bare headless script)."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("modules.plugin_manager")
-    except Exception:  # noqa: BLE001
-        return None
-
-
 def _log_line(level: str, message: str) -> None:
     """Log without ever raising (the logger may be uninitialized)."""
-    logger = _log()
+    logger = optional_logger("modules.plugin_manager")
     if logger is None:
         return
     try:

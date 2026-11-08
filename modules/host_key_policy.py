@@ -27,6 +27,8 @@ except ImportError:  # paramiko <= 4.x
 
 import paramiko  # the exception types the policy raises (SSHException)
 
+from modules.logger import optional_logger
+
 try:
     from . import interactive_ask as _ask
 except ImportError:  # flat launch from the project root
@@ -88,21 +90,6 @@ VERIFY_CHANGED = "changed"
 VERIFY_UNVERIFIED = "unverified"
 VERIFY_UNREACHABLE = "unreachable"
 VERIFY_VERDICTS = (VERIFY_OK, VERIFY_CHANGED, VERIFY_UNVERIFIED, VERIFY_UNREACHABLE)
-
-
-def _log():
-    """Lazy-imported logger — does not break the module if the logger is unavailable."""
-    try:
-        from .logger import get_logger as _gl
-    except ImportError:
-        try:
-            from modules.logger import get_logger as _gl
-        except Exception:
-            return None
-    try:
-        return _gl("modules.host_key_policy")
-    except Exception:  # noqa: BLE001
-        return None
 
 
 def _t(key, **kwargs) -> str:
@@ -243,7 +230,7 @@ def read_server_host_key(host: str, port, timeout=PROBE_HOST_KEY_TIMEOUT_S):
     except Exception as e:  # noqa: BLE001 — every failure is data for the dialog
         return None, str(e)
     finally:
-        logger = _log()
+        logger = optional_logger("modules.host_key_policy")
         for closer in (transport, sock):
             if closer is not None:
                 try:
@@ -303,7 +290,7 @@ class KnownHostsStore:
             except Exception as e:  # noqa: BLE001 — a corrupt file must not break a connection
                 self.load_failed = True
                 self.load_error = str(e)
-                log = _log()
+                log = optional_logger("modules.host_key_policy")
                 if log:
                     log.error(
                         "known_hosts file not loaded from %s: %s — the session runs UNPINNED "
@@ -343,7 +330,7 @@ class KnownHostsStore:
                 store.add(name, keytype, key)
                 return self._write(store)
             except Exception as e:  # noqa: BLE001 — a pin failure never breaks a connection
-                log = _log()
+                log = optional_logger("modules.host_key_policy")
                 if log:
                     log.error("Failed to save known_hosts (%s): %s", self.path, e)
                 return False
@@ -373,7 +360,7 @@ class KnownHostsStore:
                 store.add(name, keytype, key)
                 return self._write(store)
             except Exception as e:  # noqa: BLE001 — a failed replacement is a reported False
-                log = _log()
+                log = optional_logger("modules.host_key_policy")
                 if log:
                     log.error("Failed to replace the host key in known_hosts (%s): %s", self.path, e)
                 return False
@@ -407,7 +394,7 @@ class KnownHostsStore:
                     store.add(name, kind, key)
                 return self._write(store)
             except Exception as e:  # noqa: BLE001 — a failed delete is a reported False
-                log = _log()
+                log = optional_logger("modules.host_key_policy")
                 if log:
                     log.error("Failed to update known_hosts (%s): %s", self.path, e)
                 return False
@@ -427,7 +414,7 @@ class KnownHostsStore:
 
     def _refuse_overwrite(self) -> bool:
         """The ONE answer (False) and the ONE log line of "this file is not ours to rewrite"."""
-        log = _log()
+        log = optional_logger("modules.host_key_policy")
         if log:
             log.error(
                 "Refusing to overwrite known_hosts: the file failed to load "
@@ -445,7 +432,7 @@ class KnownHostsStore:
             _atomic.publish_atomic(path, lambda temp: store.save(temp))
             return True
         except Exception as e:  # noqa: BLE001
-            log = _log()
+            log = optional_logger("modules.host_key_policy")
             if log:
                 log.error("Failed to publish known_hosts (%s): %s", path, e)
             return False
@@ -483,7 +470,7 @@ def ask_new_host_key(hostname: str, port, key) -> bool:
     """
     keytype = key.get_name() if hasattr(key, "get_name") else ""
     shown = fingerprint(key)
-    log = _log()
+    log = optional_logger("modules.host_key_policy")
     if not _ask.has_answerer():
         if log:
             log.warning("No interactive surface for the host key of %s:%s — the declared fallback "
@@ -525,7 +512,7 @@ def resolve_changed_key(exc, hostname: str, port) -> bool:
     # The REPLACEMENT writer, never `pin()`: a key of another algorithm must leave the store in the
     # same publish, or the retired key stays trusted (N120).
     pinned = bool(get_store().replace(name, keytype, got))
-    log = _log()
+    log = optional_logger("modules.host_key_policy")
     if log:
         if pinned:
             log.warning("Host key for %s replaced on the user's decision (%s → %s)",
@@ -582,7 +569,7 @@ class SshKnownHostsPolicy:
         try:
             return self.store.save()
         except Exception as e:  # noqa: BLE001
-            log = _log()
+            log = optional_logger("modules.host_key_policy")
             if log:
                 log.error(f"Failed to save known_hosts ({self.store.path}): {e}")
             return False
@@ -604,7 +591,7 @@ class SshKnownHostsPolicy:
                     else:  # paramiko <= 4.x fallback
                         client.add_host_key(host, keytype, key)
                 except Exception as e:  # noqa: BLE001
-                    log = _log()
+                    log = optional_logger("modules.host_key_policy")
                     if log:
                         log.warning(f"Skipped known_hosts entry {host} ({keytype}): {e}")
 
@@ -621,7 +608,7 @@ class SshKnownHostsPolicy:
         self.last_fingerprint = fingerprint(key)
         self.last_keytype = key.get_name() if hasattr(key, "get_name") else ""
         if not ask_new_host_key(self.hostname, self.port, key):
-            log = _log()
+            log = optional_logger("modules.host_key_policy")
             if log:
                 log.warning("Host key for %s:%s REJECTED (%s)",
                             self.hostname, self.port, self.last_fingerprint)
@@ -629,7 +616,7 @@ class SshKnownHostsPolicy:
                 _t("ssh.host_key_rejected", host=self.hostname, port=self.port,
                    fp=self.last_fingerprint))
         self.accepted_new_key = True
-        log = _log()
+        log = optional_logger("modules.host_key_policy")
         if log:
             log.warning(
                 f"New SSH host key accepted for {self.hostname}:{self.port} "

@@ -33,8 +33,8 @@ CHAPTER_ORDER = (12, 8, 3, 10, 9, 13, 7, 4, 1, 2, 5, 6, 11)
 # prints them); what moved a pin in an earlier release is that release's changelog entry.
 SECTION_PINS = (
     ("AGENTS.md: THE DOCUMENTATION RULES", "> **THE DOCUMENTATION RULES", 781),
-    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 9226),
-    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 12540),
+    ("AGENTS.md §8 Testing conventions", "## 8. Testing conventions", 9423),
+    ("AGENTS.md §9 Release conventions", "## 9. Release conventions", 12868),
     ("AGENTS.md §12 Agent checklist", "## 12. Agent checklist", 5225),
 )
 

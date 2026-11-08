@@ -17,6 +17,7 @@ from paramiko.ssh_exception import NoValidConnectionsError
 
 from models.server import is_unmanaged
 from modules.command_guard import dangerous_token, excerpt
+from modules.logger import optional_logger
 from modules.ssh_connect import (ConnectionCancelled, build_connect_kwargs,
                                  interactive_transport_factory)
 
@@ -148,7 +149,7 @@ def close_stdin(stream_) -> bool:
         close()
         return True
     except Exception as exc:  # noqa: BLE001 — the command's own answer outranks the clean-up's
-        log = _log()
+        log = optional_logger("cli.exec")
         if log:
             log.debug("Closing the exec stdin failed: %s", exc)
         return False
@@ -199,7 +200,7 @@ class Session:
         try:
             self._client.close()
         except Exception as exc:  # noqa: BLE001 — the run's own answer outranks the clean-up's
-            log = _log()
+            log = optional_logger("cli.exec")
             if log:
                 log.debug("Closing the exec client failed: %s", exc)
 
@@ -207,15 +208,6 @@ class Session:
 def _client_class():
     """The client class this run builds (a test's factory, otherwise paramiko's own)."""
     return CLIENT_FACTORY or paramiko.SSHClient
-
-
-def _log():
-    """The application log, or None — the surface works without it (`modules/logger.py`)."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("cli.exec")
-    except Exception:  # noqa: BLE001 — optional import: a run without a log is not a failed run
-        return None
 
 
 def verify_presented_key(client, expected) -> None:

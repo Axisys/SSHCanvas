@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from modules.logger import optional_logger
+
 try:  # v1.9.8: the vector icon set of the header's icon-only buttons
     from ..ui.icons import refresh_button_icon
 except ImportError:
@@ -105,15 +107,6 @@ def get_translator():
         except Exception:
             _t_cache = lambda k, **kw: f"[{k}]"
     return _t_cache
-
-
-def _log():
-    """The app logger (lazy, the terminal_widget._get_app_log pattern)."""
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.command_library")
-    except Exception:
-        return None
 
 
 def _save_config(partial_update: dict) -> bool:
@@ -276,7 +269,7 @@ class CommandLibraryStore:
         if not os.path.isfile(self.path):
             seeded = _seed_entries()
             if not _atomic_write_json(self.path, {"seeded": True, "commands": seeded}):
-                lg = _log()
+                lg = optional_logger("modules.command_library")
                 if lg is not None:
                     lg.warning(f"command library: seed write failed for {self.path}")
             return [dict(e) for e in seeded]
@@ -284,12 +277,12 @@ class CommandLibraryStore:
             with open(self.path, "r", encoding=LIBRARY_ENCODING) as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-            lg = _log()
+            lg = optional_logger("modules.command_library")
             if lg is not None:
                 lg.warning(f"command library: corrupt file {self.path} — starting empty")
             return []
         if not isinstance(data, dict) or not isinstance(data.get("commands"), list):
-            lg = _log()
+            lg = optional_logger("modules.command_library")
             if lg is not None:
                 lg.warning(f"command library: unexpected document type in {self.path} — starting empty")
             return []
@@ -1701,7 +1694,7 @@ class CommandLibraryPanel(QWidget):
         try:
             self._connect_sink(node)
         except Exception as e:  # noqa: BLE001 — a refused connect must not break the panel
-            log = _log()
+            log = optional_logger("modules.command_library")
             if log is not None:
                 log.warning(f"The server row's connect door failed: {e}")
 
@@ -1772,7 +1765,7 @@ class CommandLibraryPanel(QWidget):
         try:
             self._quick_launch_entry(node, entry)
         except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
-            log = _log()
+            log = optional_logger("modules.command_library")
             if log is not None:
                 log.warning(f"The quick launch door failed: {e}")
 
@@ -1792,7 +1785,7 @@ class CommandLibraryPanel(QWidget):
         try:
             self._quick_launch_configure(node)
         except Exception as e:  # noqa: BLE001 — a door must never break the panel
-            log = _log()
+            log = optional_logger("modules.command_library")
             if log is not None:
                 log.warning(f"The quick launch editor door failed: {e}")
 

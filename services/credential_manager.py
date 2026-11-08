@@ -14,6 +14,8 @@ Without a keyring the app still works and nothing is persisted.
 from typing import Optional
 import platform as _platform_mod
 
+from modules.logger import optional_logger
+
 #: The ONE marker of "this entry belongs to an endpoint" in the node record's own spelling.
 SCOPE_SUFFIX = "#scope"
 
@@ -49,15 +51,6 @@ def node_scope(data) -> str:
         return endpoint_scope(user, host, port)
     except Exception:  # noqa: BLE001 — a broken record is not a credential scope
         return ""
-
-
-def _log():
-    """The module logger, or None — the manager must work without the logging stack."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("services.credential_manager")
-    except Exception:  # noqa: BLE001
-        return None
 
 
 class CredentialManager:
@@ -112,10 +105,8 @@ class CredentialManager:
                 self._keyring_backend = kr
                 self._backend_available = True
             else:
-                # AUDIT v1.2.10 (manual #2): get_logger() with no argument raised TypeError
-                # (name — a required positional argument, modules/logger.py), which was swallowed
-                # by the surrounding except — the warning never made it to the log.
-                log = _log()
+                # `get_logger()` needs its name argument — a TypeError here would swallow the warning.
+                log = optional_logger("services.credential_manager")
                 if log:
                     log.warning(
                         f"Rejected keyring backend '{backend_name}' "
@@ -127,7 +118,7 @@ class CredentialManager:
             # No keyring backend available (e.g., headless system). The REASON is the answer the user
             # needs: an unavailable store is not an empty one, and nothing here is persisted.
             self._backend_available = False
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.debug("No usable keyring backend (%s) — no credential is persisted", e)
 
@@ -150,12 +141,12 @@ class CredentialManager:
         try:
             return self._keyring_backend.get_password(service, username)
         except keyring.errors.NoKeyringError as e:
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.debug("No keyring store answered the read of %s (%s)", username, e)
             return None
         except Exception as e:  # noqa: BLE001
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.warning(f"Failed to load credential entry {username!r}: {e}")
             return None
@@ -167,13 +158,13 @@ class CredentialManager:
             self._keyring_backend.set_password(service, username, value)
             return True
         except keyring.errors.NoKeyringError as e:
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.debug("No keyring store accepted the write of %s (%s) — nothing was saved",
                           username, e)
             return False
         except Exception as e:  # noqa: BLE001
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.warning(f"Failed to save credential entry {username!r}: {e}")
             return False
@@ -185,7 +176,7 @@ class CredentialManager:
             self._keyring_backend.delete_password(service, username)
             return True
         except keyring.errors.NoKeyringError as e:
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.debug("No keyring store answered the delete of %s (%s) — there was nothing "
                           "to drop", username, e)
@@ -194,7 +185,7 @@ class CredentialManager:
             _pde = getattr(keyring.errors, "PasswordDeleteError", None)
             if _pde is not None and isinstance(e, _pde):
                 return True
-            log = _log()
+            log = optional_logger("services.credential_manager")
             if log:
                 log.warning(f"Failed to delete credential entry {username!r}: {e}")
             return False
@@ -274,7 +265,7 @@ class CredentialManager:
         saved = self.stored_scope(server_id)
         if saved == wanted:
             return secret
-        log = _log()
+        log = optional_logger("services.credential_manager")
         if not saved:
             # The one-time adoption: every entry written before the scope existed is bare, and asking
             # the user again for every stored password on the first run of this release is worse.

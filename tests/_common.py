@@ -50,6 +50,12 @@ def bootstrap(faulthandler_timeout=180):
     if root not in sys.path:
         sys.path.insert(0, root)
 
+    # The SSH library's records stay off the suite's stderr through the SHIPPED door of the headless
+    # surface, ONCE per process: a topical file installing its own `NullHandler` would drift from the
+    # silence it claims to guard (`AGENTS.md` §8.1).
+    from cli.main import silence_library_logs
+    silence_library_logs()
+
     # A parallel run_all.py passes a per-file unique directory via
     # SSHMAP_TEST_WORKDIR (otherwise the bootstrap() of the neighbouring process would wipe the scratch);
     # a single run — the fixed _tmp_testdata (gitignored).
@@ -500,7 +506,7 @@ def example_plugin_problems(name, source):
 # in 12 i18n files + the APP_VERSION/requirements pins in 7 release-state sections).
 # The misses of the keys themselves against the code are caught by check_i18n_keys.py.
 # ─────────────────────────────────────────────────────────────────────────────
-EXPECTED_APP_VERSION = "1.15.1.1"     # the current release (a sentinel: it catches "a bump to the wrong version")
+EXPECTED_APP_VERSION = "1.15.1.2"     # the current release (a sentinel: it catches "a bump to the wrong version")
 EXPECTED_I18N_KEYS = 1205       # the parity of the TRANSLATION keys of every language file vs en (the
                                 # "name"/"partial" meta keys are excluded) — ONE number per release; the
                                 # per-release counts live in the changelog family, never here

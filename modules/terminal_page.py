@@ -18,6 +18,8 @@ from PySide6.QtCore import Qt, QEvent, QRectF, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTabWidget
 
+from modules.logger import optional_logger
+
 try:
     from .terminal_screen import SCROLL_MODE_PIN, TerminalScreen
 except ImportError:
@@ -120,19 +122,6 @@ def get_translator():
     """Safe i18n helper — returns cached translator or fallback (as in ssh_terminal)."""
     mod = _st_module()
     return mod.get_translator()
-
-
-def _log():
-    """The app logger (lazy — the command_history / terminal_widget pattern).
-
-    v1.5.7: the output path uses it for a FEED FAILURE — a swallowed emulator error would otherwise
-    cost the repaint silently, and silence is what made the symptom unguessable from outside.
-    """
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.terminal_page")
-    except Exception:
-        return None
 
 
 # ── v1.3.3.4: the transfer rate / ETA — the meter of ONE transfer.
@@ -1724,7 +1713,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             pos_before = self.tscreen.scroll_info()[0]
             self.tscreen.feed(data)
         except Exception as exc:  # noqa: BLE001 — the canvas must repaint whatever state exists
-            log = _log()
+            log = optional_logger("modules.terminal_page")
             if log is not None:
                 log.warning(f"terminal: feed failed ({exc!r}) — repainting the current state")
         # v1.3.3.4: the transcript tee. Inside the output path but

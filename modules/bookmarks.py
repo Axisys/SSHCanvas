@@ -15,6 +15,8 @@ but it is user data: loaded, written back untouched, never listed); the file is 
 import json
 import os
 
+from modules.logger import optional_logger
+
 try:  # the ONE entry sanitizer of the project — never a second copy of it
     from ..models.server import sanitize_quick_launch
 except ImportError:  # flat layout: the project root is on sys.path
@@ -38,15 +40,6 @@ MAX_BOOKMARKS = 200
 #: The document key holding the entry list. A bare JSON list is accepted on READ as well
 #: (a hand-edited file), so a hand-edit is never a reason to lose the links.
 DOC_KEY = "bookmarks"
-
-
-def _log():
-    """The app logger (lazy — the module is imported by the startup path)."""
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.bookmarks")
-    except Exception:  # noqa: BLE001 — logging must never break a read
-        return None
 
 
 def default_store_path() -> str:
@@ -120,7 +113,7 @@ class BookmarkStore:
             with open(self.path, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
-            lg = _log()
+            lg = optional_logger("modules.bookmarks")
             if lg is not None:
                 lg.warning(f"bookmarks: unreadable file {self.path} — skipped ({e})")
             return None
@@ -128,7 +121,7 @@ class BookmarkStore:
             return {DOC_KEY: data}
         if isinstance(data, dict):
             return data
-        lg = _log()
+        lg = optional_logger("modules.bookmarks")
         if lg is not None:
             lg.warning(f"bookmarks: unexpected document type in {self.path} — skipped")
         return None

@@ -1,6 +1,8 @@
 import json
 from typing import Dict, TYPE_CHECKING
 
+from modules.logger import optional_logger
+
 try:
     from version import VERSION_FORMAT
 except ImportError:
@@ -21,15 +23,6 @@ if TYPE_CHECKING:  # AUDIT v0.7.2 (low #16): annotation without a runtime circul
         from ..graphics.server_node import ServerNode
     except ImportError:
         from graphics.server_node import ServerNode
-
-
-def _log():
-    """Lazy-imported logger — doesn't break the module if the logger is unavailable."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("storage.project")
-    except Exception:
-        return None
 
 
 #: The suffixes a project FILE carries — the ONE declaration of "this path is a project": the drop
@@ -82,7 +75,7 @@ def load_project(path: str) -> dict:
     so every reader of this function asks its own question instead of meeting `AttributeError`
     (`N104`). A missing file and unparseable JSON stay the caller's failure and still raise.
     """
-    log = _log()
+    log = optional_logger("storage.project")
     try:
         with open(path, 'r', encoding='utf-8') as f:
             raw = json.load(f)
@@ -203,7 +196,7 @@ def save_project(
     background=None,  # v0.9.1: BackgroundImage — the background image ("background" key)
 ):
     """Save the project to a JSON file (scene → serialize_scene → atomic write)."""
-    log = _log()
+    log = optional_logger("storage.project")
     try:
         data = serialize_scene(
             nodes=nodes, arrows=arrows, zoom=zoom,

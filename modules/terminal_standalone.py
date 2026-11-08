@@ -15,6 +15,8 @@ import os
 
 from PySide6.QtWidgets import QDialog, QFileDialog, QWidget
 
+from modules.logger import optional_logger
+
 try:
     from ..dialogs.ssh_connect_dialog import SSHConnectDialog
     from ..models.server import is_launchable_url, is_unmanaged
@@ -54,15 +56,6 @@ def get_translator():
         except Exception:
             _t_cache = lambda k, **kw: f"[{k}]"
     return _t_cache
-
-
-def _log():
-    """The app logger (lazy — a build without the logger keeps the surface working)."""
-    try:
-        from modules.logger import get_logger as _gl
-        return _gl("modules.terminal_standalone")
-    except Exception:
-        return None
 
 
 def project_filter_text() -> str:
@@ -134,7 +127,7 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
         try:
             return bool(hook(node))
         except Exception as e:  # noqa: BLE001 — a refused connect must not break the panel
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The standalone connect door failed: {e}")
             return False
@@ -147,7 +140,7 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
         try:
             return bool(hook())
         except Exception as e:  # noqa: BLE001 — a door must never break the panel
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The Open project door failed: {e}")
             return False
@@ -160,7 +153,7 @@ class StandaloneTerminalWindow(SSHTerminalWindow):
         try:
             return bool(hook(node, entry))
         except Exception as e:  # noqa: BLE001 — a refused entry must not break the panel
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The standalone quick launch door failed: {e}")
             return False
@@ -249,7 +242,7 @@ class StandaloneSurface(QWidget):
         self._refresh_servers()
         self._notify(t("terminal.standalone.project_opened",
                        name=os.path.basename(chosen), count=len(servers)))
-        log = _log()
+        log = optional_logger("modules.terminal_standalone")
         if log is not None:
             log.info("Standalone project loaded", extra={"file": chosen, "servers": len(servers)})
         return True
@@ -274,7 +267,7 @@ class StandaloneSurface(QWidget):
         try:
             dlg = SSHConnectDialog(data, self.window)
         except Exception as e:  # noqa: BLE001 — a dialog that cannot be built opens no session
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The connect dialog could not be built: {e}")
             return False
@@ -318,7 +311,7 @@ class StandaloneSurface(QWidget):
             import webbrowser
             opened = bool(webbrowser.open(url))
         except Exception as e:  # noqa: BLE001 — a browser that cannot start is ONE sentence
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The quick launch URL failed: {e}")
             opened = False
@@ -369,7 +362,7 @@ class StandaloneSurface(QWidget):
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 self._notify(get_translator()("status.profile_updated"))
         except Exception as e:  # noqa: BLE001 — a dialog must never break the surface
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The profile manager failed: {e}")
 
@@ -383,7 +376,7 @@ class StandaloneSurface(QWidget):
                 self.window or self, get_translator()("terminal.cmdlib.open_project"),
                 start, project_filter_text())
         except Exception as e:  # noqa: BLE001 — a dialog that cannot be shown picks nothing
-            log = _log()
+            log = optional_logger("modules.terminal_standalone")
             if log is not None:
                 log.warning(f"The project file dialog failed: {e}")
             return ""

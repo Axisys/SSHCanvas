@@ -14,19 +14,12 @@ import os
 from dataclasses import dataclass, asdict
 from typing import Optional, List
 
+from modules.logger import optional_logger
+
 try:  # the ONE atomic-write mechanism (`AGENTS.md` §4.4, `DOCUMENTATION.md` §71)
     from ..storage import atomic as _atomic
 except ImportError:  # flat launch from the project root
     from storage import atomic as _atomic
-
-
-def _log():
-    """Lazy-imported logger — the model keeps working without the logger tree."""
-    try:
-        from modules.logger import get_logger
-        return get_logger("models.profile")
-    except Exception:  # noqa: BLE001 — a build without the logger keeps the store working
-        return None
 
 
 @dataclass
@@ -150,7 +143,7 @@ def load_profiles() -> List[Profile]:
     """
     state, profiles, path, reason = read_store()
     if state == STORE_UNREADABLE:
-        log = _log()
+        log = optional_logger("models.profile")
         if log is not None:
             log.warning("The profiles file %s cannot be read (%s) — read as an empty store; "
                         "a write is refused until it is repaired", path, reason or "unreadable")
