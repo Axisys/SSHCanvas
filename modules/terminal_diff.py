@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The Diff tab of ONE session — the pure line engine and the two-column view (`v1.13.4`).
+"""The Diff tab of ONE session — the pure line engine and the two-column view.
 
 `diff_rows()` / `side_blocks()` / `diff_stats()` / `intra_spans()` / `utf16_spans()` are PURE over
 `difflib`; `read_local_side()` is the bounded local read. `DiffTab` is the widget: two read-only

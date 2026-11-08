@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v0.9.7: project backups dialog (ring buffer) + the last autosave.
+"""Project backups dialog (ring buffer) + the last autosave.
 
 Data-driven: the caller (MainWindow) passes a list of items
 ``[{label, path, mtime, size}, ...]`` (newest first — see

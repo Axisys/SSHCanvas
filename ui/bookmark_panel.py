@@ -8,7 +8,7 @@ legend / minimap / filter-plaque rule.
 
 It is built on what the three shipped panels prove: a FOLD (a click on the title band; the window
 remembers `ui_bookmarks_collapsed`), a SAVED POSITION (dragging the band reports `moved` and the window
-persists `ui_bookmarks_position`, with the v1.5 `SNAP_PX` snap re-anchoring a drop on the anchored edge),
+persists `ui_bookmarks_position`, with the `SNAP_PX` snap re-anchoring a drop on the anchored edge),
 a FILTER ROW over the PURE `modules/bookmarks.filter_entries()` policy (the widget renders, it does not
 decide), and ONE OPENER behind a callback (a double click or Enter calls what the WINDOW hands in — `SshMixin._quick_launch_url` — so the browser, its failure sentence and its status line keep ONE home). The rows carry the URL as the SECOND CHANNEL (the name first, the address under it in the muted tone), because a list of link NAMES is exactly what a team cannot recognise; a `command` entry is not listed at all (the panel's declared scope). `ui.main_window` is never imported."""
 

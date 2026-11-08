@@ -296,11 +296,11 @@ def session_tab_tooltip(page, t) -> str:
     """The tab tooltip of ONE session — the state sentence, the IDENTITY and the REMOTE title.
 
     The tooltip is the shipped SECOND channel of the tab (marked → "new output", otherwise "close
-    session") and v1.7.2 added the title the remote program set over `OSC 0`/`OSC 2` as its own line:
-    the tab TEXT stays the node alias, so this is where "which of my eight shells is this?" is
-    answered. v1.9.8 adds the session's IDENTITY (`user@ip:port`) beside that alias — the
-    account and the endpoint are what tell two shells of one host apart. Every line is optional, so
-    an unidentified page keeps the shipped sentence alone. Never raises.
+    session"), and the title the remote program set over `OSC 0`/`OSC 2` is its own line: the tab
+    TEXT stays the node alias, so this is where "which of my eight shells is this?" is answered. The
+    session's IDENTITY (`user@ip:port`) sits beside that alias — the account and the endpoint are
+    what tell two shells of one host apart. Every line is optional, so an unidentified page keeps
+    the shipped sentence alone. Never raises.
     """
     head = t("terminal.tab_new_output") if getattr(page, "has_activity", False) \
         else t("terminal.tab_close_tooltip")
@@ -318,7 +318,7 @@ def session_tab_tooltip(page, t) -> str:
 
 
 def install_tab_close(tabs, index: int, page, t) -> bool:
-    """Give ONE tab the theme's own CLOSE mark (v1.9.8) — and keep `tabsClosable` intact.
+    """Give ONE tab the theme's own CLOSE mark — and keep `tabsClosable` intact.
 
     The style's stock tab-close glyph is a hard red cross: measured on this checkout it paints
     `rgb(215, 55, 39)`, which reads as an ALERT for a control a user presses all day. A QToolButton
@@ -363,10 +363,10 @@ def render_session_activity(tabs, page, t) -> bool:
     A page without a tab (the SPLIT PANE) answers False — it has no tab strip to mark, and the
     amber frame of the pane is the multi-input's own channel, not this one's.
 
-    The ICON is the fixed slot of the tab (v1.6.4: the width may never change): the ACTIVITY mark
-    while the session produced unseen output, otherwise the session's STATE mark in the card's own
-    declaration (`session_tab_icon()`). The tooltip is the mark's SECOND channel (the state sentence,
-    the identity and the remote title), and the close glyph is replaced with the theme's own. 
+    The ICON is the fixed slot of the tab (the width may never change): the ACTIVITY mark while the
+    session produced unseen output, otherwise the session's STATE mark in the card's own declaration
+    (`session_tab_icon()`). The tooltip is the mark's SECOND channel (the state sentence, the
+    identity and the remote title), and the close glyph is replaced with the theme's own.
     Re-applying is idempotent, so the same helper serves the first paint, the clear-on-focus, a
     language switch, a theme switch and a title change.
     """
@@ -412,12 +412,12 @@ def refresh_session_activity(container) -> int:
 
 
 def tmux_attach_command(name) -> str:
-    """The `tmux attach` command line of a session name — PURE (v1.9.1).
+    """The `tmux attach` command line of a session name — PURE.
 
-    `sh_quote()` (`services/system_info_collector.py`) is the SHIPPED quoting rule of this
-    codebase: the name travels as ONE single-quoted word, so a space, a quote or a shell
-    metacharacter can never become a second word of the command. An empty name answers "" —
-    there is nothing to attach to, and the caller refuses it with ONE sentence.
+    `sh_quote()` (`services/system_info_collector.py`) is the SHIPPED quoting rule of this codebase:
+    the name travels as ONE single-quoted word, so a space, a quote or a shell metacharacter can
+    never become a second word of the command. An empty name answers "" — there is nothing to attach
+    to, and the caller refuses it with ONE sentence.
     """
     clean = str(name or "").strip()
     if not clean:
@@ -430,11 +430,11 @@ def tmux_attach_command(name) -> str:
 
 
 def ask_tmux_name(parent=None) -> str:
-    """The session-name field of `Attach tmux session…` — the ONE dialog (v1.9.1).
+    """The session-name field of `Attach tmux session…` — the ONE dialog.
 
-    `QInputDialog` is read from the `ssh_terminal` module at call time — the same live-namespace
-    seam as `ST.QMessageBox` (`AGENTS.md` §4.1), so a suite substitutes it on that module and no
-    container grows a dialog of its own. A cancelled field answers "" (the caller does nothing).
+    `QInputDialog` is read from the `ssh_terminal` module at call time — the same live-namespace seam
+    as `ST.QMessageBox` (`AGENTS.md` §4.1), so a suite substitutes it on that module and no container
+    grows a dialog of its own. A cancelled field answers "" (the caller does nothing).
     """
     try:
         dialog = _st_module().QInputDialog
@@ -447,16 +447,16 @@ def ask_tmux_name(parent=None) -> str:
 
 
 def add_session_actions(menu, page, on_reconnect, on_tmux, on_diff=None) -> tuple:
-    """Append the Reconnect / Attach tmux / Diff rows of `page` to `menu` — the ONE builder (v1.9.1).
+    """Append the Reconnect / Attach tmux / Diff rows of `page` to `menu` — the ONE builder.
 
-    Both containers build their menus per right click (the `_build_context_menu` test seam), which
-    is what makes the enabled state a READ of the session at that moment instead of something an
-    action has to keep in step: a LIVE session disables Reconnect, an ended one enables it. The
-    actions belong to the menu (`menu.addAction()`, so Qt keeps them alive) and the handlers
-    receive the page they act on — the tab a user right-clicked is not always the active one.
-    v1.13.4: the third row is the Diff door — live only on a session that carries the Files tab
-    (a split pane is a command line) and only when the caller passed the door.
-    Never raises. Answers `(act_reconnect, act_tmux, act_diff)`.
+    Both containers build their menus per right click (the `_build_context_menu` test seam), which is
+    what makes the enabled state a READ of the session at that moment instead of something an action
+    has to keep in step: a LIVE session disables Reconnect, an ended one enables it. The actions
+    belong to the menu (`menu.addAction()`, so Qt keeps them alive) and the handlers receive the page
+    they act on — the tab a user right-clicked is not always the active one. The third row is the
+    Diff door — live only on a session that carries the Files tab (a split pane is a command line)
+    and only when the caller passed the door. Never raises. Answers
+    `(act_reconnect, act_tmux, act_diff)`.
     """
     t = get_translator()
     can = getattr(page, "can_reconnect", None)
@@ -501,15 +501,14 @@ def format_duration(seconds) -> str:
 
 
 class TransferMeter:
-    """v1.3.3.4: the throughput (bytes/s) and the ETA of one SFTP task.
+    """The throughput (bytes/s) and the ETA of one SFTP task.
 
-    A SLIDING WINDOW of (time, bytes-done) samples (default 4 s): the average since
-    the start of a 100 MB transfer is useless after a stall, while the average over
-    the last few seconds follows the link. The clock is injectable (`clock=`) — the
-    tests drive the meter without sleeping. `update()` returns (rate, eta) or None
-    while there is nothing honest to show (a single sample, a zero/negative delta
-    between the samples, a stalled transfer); an unknown total gives (rate, None),
-    so a rate can still be displayed.
+    A SLIDING WINDOW of (time, bytes-done) samples (default 4 s): the average since the start of a
+    100 MB transfer is useless after a stall, while the average over the last few seconds follows the
+    link. The clock is injectable (`clock=`) — the tests drive the meter without sleeping. `update()`
+    returns (rate, eta) or None while there is nothing honest to show (a single sample, a
+    zero/negative delta between the samples, a stalled transfer); an unknown total gives (rate,
+    None), so a rate can still be displayed.
     """
 
     WINDOW_SEC = 4.0     # how far back the rate is measured
@@ -546,34 +545,32 @@ class TransferMeter:
 
 class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, TerminalPageCwdMixin,
                           QWidget):
-    """v1.2: an SSH session as a reusable widget.
+    """An SSH session as a reusable widget.
 
     Composition: terminal_thread (SSHTerminalThread) + tscreen (TerminalScreen) +
     widget (TerminalWidget, the canvas) + a QTabWidget [Terminal | Files | History]
     (SftpTab, a lazy worker; CommandHistoryPanel, the per-server command history) +
     the history STORE of this server. The terminal_* config is read from config.json at
-    creation time (load_terminal_settings — defaults = the v1.0 behaviour).
+    creation time (load_terminal_settings — defaults = the shipped ones).
 
     The host (SSHTerminalWindow / a future dock) creates the page with a parent
     and may:
       * attach the bridge signals status_message/progress_* to its own UI — **the
         HOST's status surface is the ONE place a session state is rendered**
-        (the v1.4.7 follow-up: the page's own status line is a hidden label now);
+        (the page's own status line is a hidden label);
       * call set_host_window(w) — close_terminal() will close this session's tab
-        on the host (v1.2.1: the last tab closes the window);
+        on the host (the last tab closes the window);
       * run the teardown through shutdown() (a single method, idempotent).
 
-    v1.3.3.5 (the terminal SPLIT): `with_sftp=False` builds a page WITHOUT the SFTP
-    tab — the split pane is a command line (see __init__): `tabs` then holds the
-    canvas alone and `sftp_tab` is None. The default (True) is every other caller —
-    tabs and the dock are untouched. v1.4.7 follow-up: such a page ALSO hides its tab
-    strip (one tab — nothing to switch) and has no status line, so a pane is its
-    canvas + the QTabWidget frame; `with_status_line` is kept as the public ctor
-    argument it has always been, no longer selecting a layout.
-    v1.5.7: the same flag governs the THIRD tab — a pane never gets the command
-    History tab (its layout budget is a command line, and it has no SFTP channel to
-    import a history through); the history STORE and the record hook exist on every
-    page, because what the application sends belongs to the server either way.
+    `with_sftp=False` builds a page WITHOUT the SFTP tab — the split pane is a command line (see
+    __init__): `tabs` then holds the canvas alone and `sftp_tab` is None. The default (True) is
+    every other caller — tabs and the dock are untouched. Such a page ALSO hides its tab strip (one
+    tab — nothing to switch) and has no status line, so a pane is its canvas + the QTabWidget frame;
+    `with_status_line` is kept as the public ctor argument it has always been, no longer selecting a
+    layout. The same flag governs the THIRD tab — a pane never gets the command History tab (its
+    layout budget is a command line, and it has no SFTP channel to import a history through); the
+    history STORE and the record hook exist on every page, because what the application sends
+    belongs to the server either way.
     """
 
     # v1.0RC3: resize PTY — a grid-change guard + a ~150 ms debounce before
@@ -904,11 +901,11 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         thread.start()
 
     def can_reconnect(self) -> bool:
-        """May this page be re-armed? — the ONE state reader of the Reconnect row (v1.9.1).
-        True exactly when `closed_signal` has arrived and the page is still alive: a LIVE session
-        is never re-armed (the row is disabled) and a page whose `shutdown()` ran has no host left
-        to report to. A container reads this at the moment it builds a menu, so the state is never
-        cached in an action. Never raises.
+        """May this page be re-armed? — the ONE state reader of the Reconnect row.
+        True exactly when `closed_signal` has arrived and the page is still alive: a LIVE session is never
+        re-armed (the row is disabled) and a page whose `shutdown()` ran has no host left to report to. A
+        container reads this at the moment it builds a menu, so the state is never cached in an action.
+        Never raises.
         """
         if getattr(self, "_shut_down", False):
             return False
@@ -916,27 +913,27 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
 
     @property
     def last_error(self) -> str:
-        """The session's last failure ("" — none): the reader behind the tab's WARN state (v1.9.8)."""
+        """The session's last failure ("" — none): the reader behind the tab's WARN state."""
         return str(getattr(self, "_last_error", "") or "")
 
     def reconnect(self) -> bool:
-        """Bring THIS session back — the ONE re-arm path (v1.9.1, `AGENTS.md` §4.3).
+        """Bring THIS session back — the ONE re-arm path (`AGENTS.md` §4.3).
 
-        The page is REUSED: the screen (so the dead output stays as scrollback), the canvas, the
-        SFTP tab, the registrations of the host and the credential are the session's own — only the
-        THREAD is created again, through the ONE `_build_thread()` + `_wire_thread()` pair. The
-        dead thread leaves through the shipped `stop()` + orphan registry, the marker line is
-        written into the screen BEFORE the new life starts (it is the boundary the user sees), the
-        session's own command (`_session_command`) is re-armed — a `tmux attach` comes back — and
-        the PTY grid is handed over by the shipped `_flush_pty_grid()` on `connected_signal`.
+        The page is REUSED: the screen (so the dead output stays as scrollback), the canvas, the SFTP
+        tab, the registrations of the host and the credential are the session's own — only the THREAD is
+        created again, through the ONE `_build_thread()` + `_wire_thread()` pair. The dead thread leaves
+        through the shipped `stop()` + orphan registry, the marker line is written into the screen BEFORE
+        the new life starts (it is the boundary the user sees), the session's own command
+        (`_session_command`) is re-armed — a `tmux attach` comes back — and the PTY grid is handed over
+        by the shipped `_flush_pty_grid()` on `connected_signal`.
 
-        THREE refusals, each ONE status line and a False: a page already torn down, a session that
-        is still LIVE, and a branch of the ONE connect builder whose credential is really GONE — the
-        page records the branch it was built with, so a KEY session needs its key file, a PASSWORD
-        session the keyring or its own memory, and a session opened through the ssh-agent or the
-        default keys re-arms with the very arguments of its first connect (`AGENTS.md` §4.29; the
-        keyring is READ, never asked (§4.4)). The host-key question is not re-asked for a key the
-        store already pinned: the policy of `modules/ssh_connect.py` accepts a known key silently.
+        THREE refusals, each ONE status line and a False: a page already torn down, a session that is
+        still LIVE, and a branch of the ONE connect builder whose credential is really GONE — the page
+        records the branch it was built with, so a KEY session needs its key file, a PASSWORD session the
+        keyring or its own memory, and a session opened through the ssh-agent or the default keys re-arms
+        with the very arguments of its first connect (`AGENTS.md` §4.29; the keyring is READ, never asked
+        (§4.4)). The host-key question is not re-asked for a key the store already pinned: the policy of
+        `modules/ssh_connect.py` accepts a known key silently.
         """
         t = get_translator()
         if getattr(self, "_shut_down", False):
@@ -1008,14 +1005,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             pass
 
     def attach_tmux(self, name) -> bool:
-        """Ask this session for a `tmux attach` — the ONE entry both containers call (v1.9.1).
+        """Ask this session for a `tmux attach` — the ONE entry both containers call.
 
-        The command is built by the PURE `tmux_attach_command()` (the SHIPPED `sh_quote()` is the
-        quoting rule) and becomes the session's OWN command, so a later Reconnect attaches again —
-        that is what "bring this session back" means to a shell that exists for a `tmux attach`.
-        A LIVE session sends it at once through the ONE `send_macro()` (and the command history
-        records it like any other explicit send); an ENDED one rides the re-arm instead. An empty
-        name answers False — there is nothing to attach to.
+        The command is built by the PURE `tmux_attach_command()` (the SHIPPED `sh_quote()` is the quoting
+        rule) and becomes the session's OWN command, so a later Reconnect attaches again — that is what
+        "bring this session back" means to a shell that exists for a `tmux attach`. A LIVE session sends
+        it at once through the ONE `send_macro()` (and the command history records it like any other
+        explicit send); an ENDED one rides the re-arm instead. An empty name answers False — there is
+        nothing to attach to.
         """
         cmd = tmux_attach_command(name)
         if not cmd:
@@ -1065,19 +1062,18 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def retranslate(self):
-        """v1.3.3.1: re-text the page's own strings in the current language.
+        """Re-text the page's own strings in the current language.
 
         The tab titles of the inner QTabWidget (`Terminal | Files | History`; a page built with
-        `with_sftp=False` has the `Terminal` tab alone) — the walk reads the tab COUNT and asks
-        each page which widget it is, so a page with a different tab set re-texts exactly what
-        it has; and v1.3.3.5: the `Terminal` title is re-composed by `_apply_session_tab_title()`
-        — the multi-input badge a SPLIT PANE carries there AND its live status text, both of
-        which must survive the switch. Every
-        string already has an i18n key (ZERO new keys) and the module translator is
-        looked up at call time — no cache to invalidate. The status label carries the
-        LIVE session state (connecting/opened/closed — emitted by the thread), so it
-        is deliberately left alone; the SFTP tab and the History panel re-text themselves. Never
-        raises — the dead-C++-object discipline of every container method.
+        `with_sftp=False` has the `Terminal` tab alone) — the walk reads the tab COUNT and asks each page
+        which widget it is, so a page with a different tab set re-texts exactly what it has; and the
+        `Terminal` title is re-composed by `_apply_session_tab_title()` — the multi-input badge a SPLIT
+        PANE carries there AND its live status text, both of which must survive the switch. Every string
+        already has an i18n key (ZERO new keys) and the module translator is looked up at call time — no
+        cache to invalidate. The status label carries the LIVE session state
+        (connecting/opened/closed — emitted by the thread), so it is deliberately left alone; the SFTP
+        tab and the History panel re-text themselves. Never raises — the dead-C++-object discipline of
+        every container method.
         """
         t = get_translator()
         try:
@@ -1124,12 +1120,11 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
                 pass  # Qt teardown — the canvas is already destroyed
 
     def refresh_theme(self):
-        """v1.4.3: re-apply the theme to this session.
+        """Re-apply the theme to this session.
 
-        The page's status label, the canvas (the find bar is its child), the SFTP tab and the
-        History panel. The terminal's OUTPUT palette is deliberately out of the UI
-        theme's scope (AGENTS.md §4.6) — a session keeps its colours. Never
-        raises: a session may be closing under the switch.
+        The page's status label, the canvas (the find bar is its child), the SFTP tab and the History
+        panel. The terminal's OUTPUT palette is deliberately out of the UI theme's scope (`AGENTS.md`
+        §4.6) — a session keeps its colours. Never raises: a session may be closing under the switch.
         """
         if theme_qss is not None:
             try:
@@ -1158,29 +1153,26 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.3.3.5: the multi-input badge of a SPLIT PANE ──────────────────────
 
     def set_session_badge(self, key=None, **kwargs):
-        """v1.3.3.5: mark THIS session's inner `Terminal` tab with the i18n key `key`.
+        """Mark THIS session's inner `Terminal` tab with the i18n key `key`.
 
         The container's multi-input highlight badges the TABS of `session_tabs`
-        (modules/multi_input.py) — a split pane has no tab there, so the badge of the
-        pane goes on the only title it owns (its `Terminal` tab). The KEY (plus its
-        format kwargs) is stored instead of the rendered text, so the badge follows a
-        language switch: `retranslate()` re-renders it in the new language. `key=None`
-        restores the plain title. No new i18n key — the caller passes the SAME
+        (modules/multi_input.py) — a split pane has no tab there, so the badge of the pane goes on the
+        only title it owns (its `Terminal` tab). The KEY (plus its format kwargs) is stored instead of
+        the rendered text, so the badge follows a language switch: `retranslate()` re-renders it in the
+        new language. `key=None` restores the plain title. No new i18n key — the caller passes the SAME
         `terminal.multi_tab_badge` / `terminal.multi_excluded_badge`. Never raises.
         """
         self._session_badge = (str(key), dict(kwargs)) if key else None
         self._apply_session_tab_title()
 
     def _apply_session_tab_title(self):
-        """Compose the inner `Terminal` tab title of THIS session (v1.3.3.5).
+        """Compose the inner `Terminal` tab title of THIS session.
 
-        Base — `sftp.tab_terminal`; plus the multi-input badge if the container set one
-        (a split pane). **The LIVE status text is deliberately NOT part of it any more**
-        (the v1.4.7 follow-up): the state of a session lives in the host's status
-        surface alone, and the pane of a split — the only page whose tab strip is hidden
-        (`__init__`) — keeps the badge as state while the amber frame carries it
-        visibly. The badge is a KEY and is rendered with the current language. Never
-        raises.
+        Base — `sftp.tab_terminal`; plus the multi-input badge if the container set one (a split pane).
+        **The LIVE status text is deliberately NOT part of it**: the state of a session lives in the
+        host's status surface alone, and the pane of a split — the only page whose tab strip is hidden
+        (`__init__`) — keeps the badge as state while the amber frame carries it visibly. The badge is a
+        KEY and is rendered with the current language. Never raises.
         """
         try:
             t = get_translator()
@@ -1200,13 +1192,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._host_window = window
 
     def send_macro(self, text) -> bool:
-        """v1.3: a command-library macro → the terminal canvas
+        """A command-library macro → the terminal canvas
         (widget.send_macro: a direct send_data of its own session, not a broadcast).
         RuntimeError — a close race (the C++ object was destroyed) → False.
 
-        v1.5.7: this is the send path the History tab's "Send to terminal"
-        uses, and the canvas records it through `command_sent_hook` — the timestamp and the
-        count of the entry move as a result of the send."""
+        This is the send path the History tab's "Send to terminal" uses, and the canvas records it
+        through `command_sent_hook` — the timestamp and the count of the entry move as a result of the
+        send.
+        """
         try:
             return self.widget.send_macro(text)
         except RuntimeError:
@@ -1215,14 +1208,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.5.7: the COMMAND history of this server ──────────────────────────
 
     def record_sent_command(self, text) -> bool:
-        """Append what the APPLICATION sent to this server's command history (v1.5.7).
+        """Append what the APPLICATION sent to this server's command history.
 
         Called by the canvas hook after a successful `TerminalWidget.send_macro()` and by the
-        quick-launch path — the two places where the application knows the exact command line it
-        put on the wire. **Nothing is inferred from the typed input**: the canvas sees raw bytes
-        and key events, not the shell's line editing, so a reconstruction of what a user typed
-        would be a guess (the documented non-goal of the version). An over-long or empty text is
-        ignored by the store's own rules. Never raises — a history failure must not break a send.
+        quick-launch path — the two places where the application knows the exact command line it put on
+        the wire. **Nothing is inferred from the typed input**: the canvas sees raw bytes and key
+        events, not the shell's line editing, so a reconstruction of what a user typed would be a guess
+        (the documented non-goal). An over-long or empty text is ignored by the store's own rules. Never
+        raises — a history failure must not break a send.
         """
         store = getattr(self, "command_history", None)
         if store is None:
@@ -1370,14 +1363,14 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         return True
 
     def ensure_sftp_worker(self):
-        """The SFTP worker of this session, started lazily — or None (v1.5.7).
+        """The SFTP worker of this session, started lazily — or None.
 
-        The ONE way the History tab reaches the channel the Files tab uses: the panel asks for
-        the worker and queues its read into it, so the file of the server is read OFF the GUI
-        thread. A page without the SFTP tab (`with_sftp=False`, the split pane) has no channel
-        and answers None — its History tab does not exist either. A channel that is still OPENING
-        answers None too, WITH the `sftp.opening` sentence on the status bridge: that moment is a
-        channel on its way, never the panel's `terminal.history.server_no_channel`.
+        The ONE way the History tab reaches the channel the Files tab uses: the panel asks for the worker
+        and queues its read into it, so the file of the server is read OFF the GUI thread. A page without
+        the SFTP tab (`with_sftp=False`, the split pane) has no channel and answers None — its History
+        tab does not exist either. A channel that is still OPENING answers None too, WITH the
+        `sftp.opening` sentence on the status bridge: that moment is a channel on its way, never the
+        panel's `terminal.history.server_no_channel`.
         """
         try:
             if self._ensure_sftp():
@@ -1398,14 +1391,15 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.2: teardown — one method for all paths ───────────────────────────
 
     def confirm_close(self) -> bool:
-        """The gate before teardown (v1.1): terminal_close_behavior.
+        """The gate before teardown: terminal_close_behavior.
 
         "ask": an active session (the SSH thread is still running) → a
         confirmation; a cancel — False (the host must event.ignore() and keep
         living). "close" (default) and an already-finished session — no dialog.
-        _force_close (the v1.1.1 limit path: the "close the oldest" decision is
-        already confirmed by the user) — also no dialog. Teardown robustness:
-        RuntimeError on C++ objects does not block the close."""
+        _force_close (the limit path: the "close the oldest" decision is already confirmed by the
+        user) — also no dialog. Teardown robustness: RuntimeError on C++ objects does not block the
+        close.
+        """
         try:
             if getattr(self, "_close_behavior", "close") == "ask" \
                     and not getattr(self, "_force_close", False):
@@ -1433,12 +1427,13 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             pass  # the C++ object was already destroyed (a close race)
 
     def close_terminal(self):
-        """Close the session (v1.2.1): stop the thread + close THIS session's tab
+        """Close the session: stop the thread + close THIS session's tab
         on the host (window.close_page → confirm_close → shutdown; the last tab
         closes the window). The MainWindow._shutdown_background_threads path and
         the "4 own terminals" limit: in a tabbed window, closing a session does
         NOT touch the neighbouring tabs. Without a host / the host has no
-        close_page (a fake) — teardown directly."""
+        close_page (a fake) — teardown directly.
+        """
         self.stop_thread()
         w = getattr(self, "_host_window", None)
         if w is not None:
@@ -1452,11 +1447,11 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self.shutdown()
 
     def shutdown(self):
-        """The SINGLE teardown method (v1.2): every teardown path
+        """The SINGLE teardown method: every teardown path
         (window close, session error, MainWindow shutdown, the limit path) goes
         through it. Idempotent (a repeated call — no-op).
 
-        Order (the v1.1.x closeEvent order is kept):
+        Order:
           1. the SFTP worker FIRST (it depends on the terminal thread's transport):
              disconnect the page's slots, stop with a bounded wait; a wait that does
              not finish (a transfer stalled on a dead network) — the orphan worker
@@ -1467,9 +1462,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
              the wait always makes it in practice; the window/page may be destroyed
              after this event (WA_DeleteOnClose), while paramiko may still be
              connecting for up to 15 s → a thread that outlives the wait is
-             registered in the orphan thread registry `_orphan_threads`
-             (v1.1.2RC1 N4): a live QThread without a QObject parent must not be
-             left to GC, and late emits without receivers are a safe no-op.
+             registered in the orphan thread registry `_orphan_threads`: a live
+             QThread without a QObject parent must not be left to GC, and late emits
+             without receivers are a safe no-op.
         """
         if self._shut_down:
             return
@@ -1599,7 +1594,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.0RC3: dirty rendering without a timer ────────────────────────────
 
     def eventFilter(self, obj, event):
-        """v1.2: a canvas resize (inside the tab) → a grid recompute. Before —
+        """A canvas resize (inside the tab) → a grid recompute. Before —
         SSHTerminalWindow.resizeEvent; the grid-change guard and the debounce are the same.
 
         The canvas is asked through `getattr()`: Qt delivers events to a filter from the moment it is
@@ -1611,18 +1606,17 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         return super().eventFilter(obj, event)
 
     def claim_focus(self) -> bool:
-        """v1.6.1: give the keyboard to THIS session's canvas.
+        """Give the keyboard to THIS session's canvas.
 
         `setFocus()` called while the page is still HIDDEN never reaches the container —
         no `FocusIn` is delivered (the fact `modules/ssh_terminal.py` states at
         `_wire_page()`), so without the claim a fresh session opens with a blinking cursor and
-        keystrokes that go nowhere until the user clicks the canvas. The claim is
-        therefore ONE DEFERRED `setFocus` (singleShot(0), when the layout has run) and it
-        is armed from the two places that know the session is really on screen: the first
-        `showEvent` and the tab-current hook of the container.
+        keystrokes that go nowhere until the user clicks the canvas. The claim is therefore ONE DEFERRED
+        `setFocus` (singleShot(0), when the layout has run) and it is armed from the two places that know
+        the session is really on screen: the first `showEvent` and the tab-current hook of the container.
 
-        A SPLIT PANE is deliberately left alone — with two shells on one screen the choice
-        of the target belongs to the user. Returns True when the request was made.
+        A SPLIT PANE is deliberately left alone — with two shells on one screen the choice of the target
+        belongs to the user. Returns True when the request was made.
         """
         if getattr(self, "_is_split_pane", False) or self._shut_down:
             return False
@@ -1650,7 +1644,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             pass  # the C++ object was already destroyed
 
     def showEvent(self, event):
-        """v1.5.7: the first SHOW re-computes the grid, so a session never depends on a
+        """The first SHOW re-computes the grid, so a session never depends on a
         resize event to find out how big it is.
 
         A page that is shown without its canvas changing size (a dock tab revealed later, a
@@ -1658,10 +1652,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         `invoke_shell`'s 120×32 as its only grid definition. Deferred with singleShot(0): at
         show time the layout has not run yet, and `_sync_grid` guards the not-laid-out case.
 
-        v1.6.1: the FIRST show also claims the keyboard (`claim_focus()`),
-        deferred the same way. A LATER show (a tab switched back, a window re-shown) does not
-        re-claim it — the container's tab hook is the place for that, and a minimise/restore
-        must not move the focus the user placed somewhere else.
+        The FIRST show also claims the keyboard (`claim_focus()`), deferred the same way. A LATER show
+        (a tab switched back, a window re-shown) does not re-claim it — the container's tab hook is the
+        place for that, and a minimise/restore must not move the focus the user placed somewhere else.
         """
         super().showEvent(event)
         QTimer.singleShot(0, self._sync_grid)
@@ -1678,31 +1671,28 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         (HistoryScreen.before_event), so new output is visible immediately, even
         if the user was viewing the history.
 
-        v1.1.2RC3 (N7): if this output auto-returned the scrollback to live
-        (the history position changed) — the selection is reset: the (row, col)
-        coordinates were pinned on the HISTORICAL screen in the release, and after
-        the return they point at OTHER cells of the live screen — Ctrl+C would
-        copy someone else's text. Without new output / without an active selection,
-        the behaviour of a plain click and of Ctrl+C does not change.
+        If this output auto-returned the scrollback to live (the history position changed) — the
+        selection is reset: the (row, col) coordinates were pinned on the HISTORICAL screen, and after
+        the return they point at OTHER cells of the live screen — Ctrl+C would copy someone else's text.
+        Without new output / without an active selection, the behaviour of a plain click and of Ctrl+C
+        does not change.
 
-        v1.5.7: a failure INSIDE the emulator does not cost the repaint. A bare
-        `return` would leave the canvas on the previous frame until the NEXT
-        output arrived, which from the outside looks like "the full-screen application is gone
-        but the prompt only appears when I press a key" (a TUI's exit sequence is followed by
-        silence until the user types). The state is now whatever pyte managed to apply: it is
-        repainted, and the failure is LOGGED instead of swallowed.
+        A failure INSIDE the emulator does not cost the repaint. A bare `return` would leave the canvas
+        on the previous frame until the NEXT output arrived, which from the outside looks like "the
+        full-screen application is gone but the prompt only appears when I press a key" (a TUI's exit
+        sequence is followed by silence until the user types). The state is whatever pyte managed to
+        apply: it is repainted, and the failure is LOGGED instead of swallowed.
 
-        v1.6.3: the OSC 7 SCAN runs on the RAW bytes FIRST — a directory
-        report is never delayed by the echo hold-back — and the hold-back itself follows:
-        while the injected hook's echo is being suppressed the canvas, the transcript and
-        pyte see NOTHING (the filtered stream); the first report drops the held bytes and a
-        shell that never answers gets them back at the deadline or at the cap.
+        The OSC 7 SCAN runs on the RAW bytes FIRST — a directory report is never delayed by the echo
+        hold-back — and the hold-back itself follows: while the injected hook's echo is being suppressed
+        the canvas, the transcript and pyte see NOTHING (the filtered stream); the first report drops the
+        held bytes and a shell that never answers gets them back at the deadline or at the cap.
 
-        v1.6.4 fix: the answer and the echo are usually in ONE chunk (bash echoes the line and
-        prints the next prompt — report first, prompt after — within one read), so the scan
-        answers WHERE that answer ends and the hold-back drops the head of the SAME chunk with
-        the held bytes (`osc7_report_end()`); releasing the hold without filtering the chunk
-        that released it was the leak that put the whole hook command on the screen.
+        The answer and the echo are usually in ONE chunk (bash echoes the line and prints the next
+        prompt — report first, prompt after — within one read), so the scan answers WHERE that answer
+        ends and the hold-back drops the head of the SAME chunk with the held bytes
+        (`osc7_report_end()`); releasing the hold without filtering the chunk that released it would put
+        the whole hook command on the screen.
         """
         cut = self._scan_osc7(data)
         data = self._hold_cwd_echo(data, cut)
@@ -1793,10 +1783,10 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     def _sync_grid(self):
         """A recompute of the visible grid (after the layout settled).
 
-        v1.5.7: a canvas that is not laid out yet (width/height 0 — a page built into a
-        hidden dock) is left alone. `_visible_grid()` clamps to 2×1, and pushing that into
-        pyte/the PTY would destroy the session's grid for a frame (the showEvent hook makes
-        this reachable in cases where no resize event would have been).
+        A canvas that is not laid out yet (width/height 0 — a page built into a hidden dock) is left
+        alone. `_visible_grid()` clamps to 2×1, and pushing that into pyte/the PTY would destroy the
+        session's grid for a frame (the showEvent hook makes this reachable in cases where no resize
+        event would have been).
         """
         try:
             if self.widget.width() <= 0 or self.widget.height() <= 0:
@@ -1838,14 +1828,13 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     def _on_pty_debounce(self):
         """The debounce expired — resize_pty with the LAST grid (only a live channel).
 
-        v1.5.7: a grid computed BEFORE the connection is never thrown away. The layout
-        runs when the window appears — long before paramiko has authenticated — so the first
-        (and, on a window nobody resizes, the ONLY) grid change must not be dropped right here:
-        `_last_cols/_last_rows` would already be updated, no further Resize event follows, and the
-        session keeps `invoke_shell`'s 120×32 for its whole life while the pyte grid holds the
-        real canvas size. Every full-screen application then drew a 120×32 screen inside a
-        differently sized canvas (the tester's "not full screen until I resize the window").
-        The request now WAITS: it stays pending and `_flush_pty_grid()` sends it on connect.
+        A grid computed BEFORE the connection is never thrown away. The layout runs when the window
+        appears — long before paramiko has authenticated — so the first (and, on a window nobody
+        resizes, the ONLY) grid change must not be dropped right here: `_last_cols/_last_rows` would
+        already be updated, no further Resize event follows, and the session keeps `invoke_shell`'s
+        120×32 for its whole life while the pyte grid holds the real canvas size. Every full-screen
+        application then drew a 120×32 screen inside a differently sized canvas. The request WAITS: it
+        stays pending and `_flush_pty_grid()` sends it on connect.
         """
         if self._pending_pty is None:
             return
@@ -1871,7 +1860,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._set_status_text(text)
 
     def _guard_paste(self, lines: int) -> bool:
-        """v1.9: the production-tag guard for a MULTI-LINE paste into THIS session.
+        """The production-tag guard for a MULTI-LINE paste into THIS session.
 
         The page is the ONE owner of the session's own tags (`server_data.tags`), so the canvas asks it
         through `widget.guard_hook`; the policy is PURE (`modules/production_guard.py`) and the dialog is
@@ -1884,16 +1873,15 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         return guard_confirm(VERB_PASTE, tag, alias=alias, lines=lines, parent=self)
 
     def _set_status_text(self, text: str):
-        """The SINGLE status write of the page (v1.3.3.5, completed in the v1.4.7 follow-up).
+        """The SINGLE status write of the page.
 
-        The page owns NO status surface of its own any more (`__init__`: the old status
-        line is a hidden, un-laid-out label), so the text goes exactly one way: into
-        `_session_status` (the `session_status` property — what a host reads to render
-        its own strip) and through the `status_message` bridge into the HOST's status
-        bar / status strip. Routing EVERY status write through here is what makes the
-        ERROR path readable too: a line written only to the modal dialog would leave the
-        status bar on the previous text. Never raises: a
-        dying C++ object must not break the status path.
+        The page owns NO status surface of its own (`__init__`: the old status line is a hidden,
+        un-laid-out label), so the text goes exactly one way: into `_session_status` (the
+        `session_status` property — what a host reads to render its own strip) and through the
+        `status_message` bridge into the HOST's status bar / status strip. Routing EVERY status write
+        through here is what makes the ERROR path readable too: a line written only to the modal dialog
+        would leave the status bar on the previous text. Never raises: a dying C++ object must not break
+        the status path.
         """
         self._session_status = text or ""
         try:
@@ -1910,8 +1898,8 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         """The LIVE status text of this session ("" before the first write).
 
         The status of a session is DATA of the session and the display belongs to the
-        host (a status bar with room for more than one session — the v1.4.7 follow-up
-        renders the split pane's state next to the active session's).
+        host (a status bar with room for more than one session — it renders the split pane's state next
+        to the active session's).
         """
         return self._session_status
 
@@ -1948,7 +1936,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
         self._note_tab_state()
 
     def _note_tab_state(self) -> None:
-        """Tell the host to re-render this session's tab after a STATE change (v1.9.8).
+        """Tell the host to re-render this session's tab after a STATE change.
 
         The shipped hook is the activity mark's own (`session_activity_changed`); a state change
         (connected / closed / an error) is the other half of what the tab's fixed icon slot shows.
@@ -1965,7 +1953,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     # ── v1.0RC4: Quick Launch ───────────────────────────────────────────────
 
     def _send_initial_command(self):
-        """v1.0RC4: send the first command (Quick Launch) to the shell after the connection.
+        """Send the first command (Quick Launch) to the shell after the connection.
 
         A deferred call (INITIAL_COMMAND_DELAY_MS): invoke_shell returns the channel
         immediately, while the remote shell may still be writing motd/login scripts;

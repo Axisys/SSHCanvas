@@ -1,4 +1,4 @@
-"""Map background image (v0.9.1): a building diagram or data-centre floor plan UNDER all nodes
+"""Map background image: a building diagram or data-centre floor plan UNDER all nodes
 (AGENTS.md §4.13; DOCUMENTATION.md §25).
 
 `BackgroundImage` is a QGraphicsPixmapItem at the lowest z (below the groups, the arrows and the nodes),

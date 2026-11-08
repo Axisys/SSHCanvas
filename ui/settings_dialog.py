@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QKeySequenceEdit, QFileDialog, QSlider,
 )
 
+from modules.logger import optional_logger
+
 try:  # v1.2.5: central theme (colors/radii/fonts — ui/theme.py); no literals in the UI code
     from . import theme
 except ImportError:
@@ -94,11 +96,9 @@ def _t(key: str, **kw) -> str:
 
 def _log_dialog(message: str) -> None:
     """A non-fatal failure goes to ~/.sshmap/logs; the open dialog never breaks on it."""
-    try:
-        from modules.logger import get_logger
-        get_logger("ui.settings_dialog").warning(message)
-    except Exception:  # noqa: BLE001 — logging must never break the dialog
-        pass
+    log = optional_logger("ui.settings_dialog")
+    if log is not None:
+        log.warning(message)
 
 
 def _viewer_max_module():
@@ -2206,11 +2206,9 @@ class SettingsDialog(QDialog):
         except Exception as e:
             # v1.2.10 (AUDIT auto #3): the quiet `return` left a "frozen" dialog without an explanation;
             # now — a log + a visible error, as in the save_config()==False branch above (the same i18n keys).
-            try:
-                from modules.logger import get_logger
-                get_logger("ui.settings_dialog").warning(f"save_config failed: {e}")
-            except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the failure
-                pass
+            log = optional_logger("ui.settings_dialog")
+            if log is not None:
+                log.warning(f"save_config failed: {e}")
             QMessageBox.warning(
                 self, _t("msg.error_title"),
                 _t("msg.save_failed", error="~/.sshmap/config.json"))

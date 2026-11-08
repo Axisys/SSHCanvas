@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The READER's own verbs: the find bar and the background hue of ONE Files pane (v1.14.1).
+"""The READER's own verbs: the find bar and the background hue of ONE Files pane.
 
 `SftpViewerVerbsMixin` adds the two controls the preview lacked to the panel `SftpPaneViewerMixin`
 builds: a find bar over the reader's DOCUMENT (`Ctrl+F`, `Enter` / `Shift+Enter`, `Esc`, a `k / N`

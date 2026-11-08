@@ -14,6 +14,11 @@ with an exit button and the tab badges / container frame (`apply_container_highl
 
 import time
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a bare tree silences the hub's diagnostics
+    from modules.logger import optional_logger
+except ImportError:  # a flat launch: the modules/ directory itself is on sys.path
+    from logger import optional_logger
+
 try:  # v1.2.5: central theme (ui/theme.py — pure data, no PySide6)
     from ..ui import theme
 except ImportError:
@@ -133,12 +138,9 @@ class MultiInputHub:
         if on == self._active:
             return
         self._active = on
-        try:
-            from modules.logger import get_logger as _get_log
-            _get_log("modules.multi_input").info(
-                f"Multi-input mode {'enabled' if on else 'disabled'}")
-        except Exception:  # noqa: BLE001 — optional import: the logger may be unavailable
-            pass  # the logger is unavailable — the state change matters more than logging it
+        log = optional_logger("modules.multi_input")
+        if log is not None:
+            log.info(f"Multi-input mode {'enabled' if on else 'disabled'}")
         self.refresh()
 
     def refresh(self):
@@ -226,14 +228,12 @@ class MultiInputHub:
         if now - self._last_zero_warn < 5.0:
             return
         self._last_zero_warn = now
-        try:
-            from modules.logger import get_logger as _get_log
-            _get_log("modules.multi_input").warning(
+        log = optional_logger("modules.multi_input")
+        if log is not None:
+            log.warning(
                 f"multi-input: active but 0 receivers "
                 f"(other sessions={others}, dead threads={dead}, excluded={excluded}) — "
                 f"input is NOT being duplicated")
-        except Exception:  # noqa: BLE001 — optional import: the logger may be unavailable
-            pass  # the logger is unavailable — the broadcast matters more than logging it
 
     def participant_count(self, pages=None) -> int:
         """v1.3.3.4: how many sessions the broadcast would reach.

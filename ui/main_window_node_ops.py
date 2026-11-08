@@ -6,7 +6,7 @@ resolved on the facade at call time (`host_attr`), which is the test seam (`MW.A
 
 The cluster owns the whole TXT import (the entry, the thread slots and the assembly — ONE feature, not
 splittable), the ping/DNS/import thread references (`self._ping_thread`, `self._dns_thread`,
-`self._import_resolve_thread` plus the batch context) and, since v1.5.3, "why is it offline?":
+`self._import_resolve_thread` plus the batch context) and "why is it offline?":
 `_diagnose_node()` and the report slots, whose registry is `self._diagnose_threads` keyed by server id
 (the same node twice is refused while a different node is fine). The report RUNS in
 `services/diagnostics.ReachabilityThread`, never on the GUI thread. `_is_scene_point` moved here with the cluster and `main_window.py` imports it back (`_add_group_at`)."""

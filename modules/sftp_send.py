@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The cross-session relay behind `Send to ▸ <session>` (v1.7.3) — the orchestrator and its dialog.
+"""The cross-session relay behind `Send to ▸ <session>` — the orchestrator and its dialog.
 
 ONE conversation over the SHIPPED worker kinds: the SAME `(host, ssh_port, user)` is a server-side
 `queue_copy()` on the source worker, a DIFFERENT end is a RELAY through this machine — a download

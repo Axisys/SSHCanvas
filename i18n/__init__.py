@@ -19,6 +19,11 @@ from typing import Optional, Dict
 # language import/export pair write through it, so "atomic" is a mechanism here, not a habit.
 from storage import atomic as _atomic
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — i18n loads without the application tree
+    from modules.logger import optional_logger
+except ImportError:  # a bare headless script: the language files still load
+    optional_logger = None
+
 
 # ── Configuration ──────────────────────────────────────────────
 
@@ -65,29 +70,22 @@ _LANG_ERR_EMPTY = "no_keys"
 
 
 def _log_debug(message: str) -> None:
-    """A DEBUG line into ~/.sshmap/logs/sshmap.log — never raises (the logger may be
-    uninitialized, e.g. in a bare headless script)."""
-    try:
-        from modules.logger import get_logger
-        get_logger("i18n").debug(message)
-    except Exception:  # noqa: BLE001 — i18n must work without the app
-        pass
+    """A DEBUG line into ~/.sshmap/logs/sshmap.log — silent while no handler owns the record."""
+    log = optional_logger("i18n") if optional_logger is not None else None
+    if log is not None:
+        log.debug(message)
 
 
 def _log_warning(message: str) -> None:
-    """A WARNING line — the v1.5.2 LANGUAGE-FALLBACK record.
+    """A WARNING line — the LANGUAGE-FALLBACK record; silent while no handler owns the record.
 
-    A language that cannot be loaded is a real fallback (the app keeps the previous
-    one, or English), and until v1.5.2 it was a DEBUG line — invisible in the activity
-    panel and easy to miss in the file. `_log_debug` stays for the chatty cases (a
-    missing key, a missing "name" meta key); this one is for "your choice was not
-    applied, and here is why". Never raises.
+    A language that cannot be loaded is a real fallback (the app keeps the previous one, or English):
+    this one says "your choice was not applied, and here is why". `_log_debug` stays for the chatty
+    cases (a missing key, a missing "name" meta key). Never raises.
     """
-    try:
-        from modules.logger import get_logger
-        get_logger("i18n").warning(message)
-    except Exception:  # noqa: BLE001 — i18n must work without the app
-        pass
+    log = optional_logger("i18n") if optional_logger is not None else None
+    if log is not None:
+        log.warning(message)
 
 
 def _strip_meta(data) -> Dict[str, str]:

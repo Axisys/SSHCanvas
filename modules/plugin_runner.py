@@ -22,6 +22,11 @@ from PySide6.QtCore import QThread, Signal
 
 from modules.plugin_context import PluginNode, PluginRunResult, node_record
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a bare script keeps this runner importable
+    from modules.logger import optional_logger
+except ImportError:  # no application tree: `_log_line()` stays silent
+    optional_logger = None
+
 COMMAND_TIMEOUT_S = 30.0      # per-node budget (connect + command) — the `timeout=` default
 STOP_WAIT_MS = 1500           # the wait budget of `stop()` (the v1.2 orphan-registry budget)
 OUTPUT_MAX = 1_000_000        # a cap on the captured stdout/stderr (bytes of text)
@@ -427,12 +432,10 @@ def _accepts_control(fn) -> bool:
 
 
 def _log_line(level: str, message: str) -> None:
-    """Log without ever raising (the logger may be uninitialized)."""
-    try:
-        from modules.logger import get_logger
-        getattr(get_logger("modules.plugin_runner"), level)(message)
-    except Exception:  # noqa: BLE001 — optional import
-        pass
+    """Log through the optional door — silent while no handler owns the record."""
+    log = optional_logger("modules.plugin_runner") if optional_logger is not None else None
+    if log is not None:
+        getattr(log, level)(message)
 
 
 __all__ = ["PluginCommandRunner", "CommandControl", "run_command_over_ssh", "default_credentials",

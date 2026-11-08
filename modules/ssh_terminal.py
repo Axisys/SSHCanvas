@@ -217,7 +217,7 @@ _orphan_threads: List["SSHTerminalThread"] = []
 
 
 def register_orphan_thread(thread: "SSHTerminalThread"):
-    """Keep a still-running terminal thread alive until finished() (v1.1.2RC1, N4).
+    """Keep a still-running terminal thread alive until finished().
 
     Idempotent; self-cleans on the finished() signal.
     """
@@ -312,12 +312,10 @@ class SSHTerminalThread(QThread):
             try:
                 client.get_transport().set_keepalive(TERMINAL_KEEPALIVE_SEC)
             except Exception as keepalive_error:  # noqa: BLE001
-                try:
-                    from modules.logger import get_logger as _gl
-                    _gl("modules.ssh_terminal").warning(
+                log = optional_logger("modules.ssh_terminal")
+                if log is not None:
+                    log.warning(
                         f"Keepalive could not be enabled for {self.host}: {keepalive_error}")
-                except Exception:  # noqa: BLE001 — the logger must never break a session
-                    pass
             # v1.0RC4: channel ready — the window may send the first command (Quick Launch)
             self.connected_signal.emit()
             self.status_signal.emit(t("terminal.session_opened"))
@@ -368,11 +366,9 @@ class SSHTerminalThread(QThread):
 
         except paramiko.BadHostKeyException as e:
             # AUDIT v0.7.2 (high #4): the stored host key changed — a likely MITM
-            try:
-                from modules.logger import get_logger as _gl
-                _gl("modules.ssh_terminal").warning(f"Host key mismatch for {self.host}: {e}")
-            except Exception:  # noqa: BLE001 — the log is a side channel: the error signal carries it
-                pass
+            log = optional_logger("modules.ssh_terminal")
+            if log is not None:
+                log.warning(f"Host key mismatch for {self.host}: {e}")
             msg = t("ssh.host_key_changed", host=self.host) + "\n" + str(e)
             # v1.1.2RC1 (N4): guard like in the recv loop — the window may have
             # closed during the connection (stop() → running=False); a late emit
@@ -438,7 +434,7 @@ class SSHTerminalThread(QThread):
         self._wake.set()
 
     def _window_open(self) -> bool:
-        """Is there room in the channel's send window RIGHT NOW? Never waits (v1.7.5.1).
+        """Is there room in the channel's send window RIGHT NOW? Never waits.
 
         `Channel.send()` BLOCKS while the window is shut (up to the channel timeout, 0.2 s, per call),
         and the drain runs on the SESSION thread — the thread that must keep receiving — so it ASKS
@@ -770,7 +766,7 @@ class SSHTerminalWindow(QMainWindow):
     # ── v1.3.3.1: live i18n — re-text on a language switch ──
 
     def retranslate(self):
-        """v1.3.3.1: re-text the window and its sessions in the current language.
+        """Re-text the window and its sessions in the current language.
 
         The window title (`terminal.window_title`), the close tooltip of every tab
         (`terminal.tab_close_tooltip`) and — through each page — the `Terminal | Files`
@@ -778,9 +774,9 @@ class SSHTerminalWindow(QMainWindow):
         already has an i18n key (ZERO new keys); the module translator is looked up at
         call time, so its cache needs no invalidation.
 
-        v1.7.2: the SPLIT action's label and tooltip are the controller's (one label,
-        one tooltip, two views, plus the owner's alias), and the window title names the session ON
-        SCREEN — a shared window cannot keep naming the first one. Never raises.
+        The SPLIT action's label and tooltip are the controller's (one label, one tooltip, two views,
+        plus the owner's alias), and the window title names the session ON SCREEN — a shared window
+        cannot keep naming the first one. Never raises.
         """
         t = get_translator()
         # v1.2.3: the multi-input prefix lives on the window title (multi_input.py); the base is
@@ -856,13 +852,13 @@ class SSHTerminalWindow(QMainWindow):
     # ── v1.4.3: live theme — the container and its sessions ──
 
     def refresh_theme(self):
-        """v1.4.3: re-apply the theme to the window and every live session.
+        """Re-apply the theme to the window and every live session.
 
         The twin of `retranslate()` (the same registry, the same dead-C++-object
         discipline): the window owns the container, and each `TerminalSessionPage`
         re-applies its status line, its canvas's floating find panel and its SFTP
         tab. The terminal's own OUTPUT palette is deliberately out of scope
-        (AGENTS.md §4.6). Never raises.
+        (`AGENTS.md` §4.6). Never raises.
         """
         try:
             pages = self._all_pages()
@@ -927,20 +923,17 @@ class SSHTerminalWindow(QMainWindow):
 
     def add_session(self, server_data: ServerData, password: str = None,
                     initial_command: str = "", split: bool = False) -> "TerminalSessionPage":
-        """v1.2.1: a new session = a new tab (the existing
-        "connect to the node" path). The page is created with parent=session_tabs
-        (destroyed together with the window), bound to the host and added as a tab —
-        title: the node alias, tooltip: terminal.tab_close_tooltip. The new tab
-        becomes active (setCurrentIndex → currentChanged → the signal bridge to the
-        status bar).
+        """A new session = a new tab (the existing "connect to the node" path).
 
-        v1.3.3.5: `split=True` — the SPLIT PANE instead of a tab: the
-        page is created in the split host (the same TerminalSessionPage, the same
-        set_host_window()/close_page()/shutdown() contract), it carries the
-        `_is_split_pane` marker (the terminal_max_open limit and
-        _find_terminal_window_for skip it — ui/main_window_ssh.py) and it does NOT
-        become the active tab (it is not a tab at all). The caller — the ONE split
-        action — shows the host.
+        The page is created with parent=session_tabs (destroyed together with the window), bound to the
+        host and added as a tab — title: the node alias, tooltip: terminal.tab_close_tooltip. The new
+        tab becomes active (setCurrentIndex → currentChanged → the signal bridge to the status bar).
+
+        `split=True` — the SPLIT PANE instead of a tab: the page is created in the split host (the same
+        TerminalSessionPage, the same set_host_window()/close_page()/shutdown() contract), it carries the
+        `_is_split_pane` marker (the terminal_max_open limit and _find_terminal_window_for skip it —
+        ui/main_window_ssh.py) and it does NOT become the active tab (it is not a tab at all). The
+        caller — the ONE split action — shows the host.
         """
         t = get_translator()
         if split:
@@ -992,12 +985,12 @@ class SSHTerminalWindow(QMainWindow):
         return page
 
     def close_page(self, page):
-        """v1.2.1: close ONE tab — the page's existing cleanup logic
+        """Close ONE tab — the page's existing cleanup logic
         (the "ask" gate confirm_close → the single shutdown teardown); the
         neighbouring tabs are not touched. Closing the LAST tab closes the window
-        (WA_DeleteOnClose — current behaviour).
+        (WA_DeleteOnClose).
 
-        v1.3.3.5: the SPLIT PANE has no tab, so its own close paths (the session error
+        The SPLIT PANE has no tab, so its own close paths (the session error
         → page.close_terminal() → here, the MainWindow shutdown) are routed to the
         split teardown through the ONE action; the window itself is never closed by a
         pane (closing the window stays the user's action).
@@ -1050,7 +1043,7 @@ class SSHTerminalWindow(QMainWindow):
         return None
 
     def reconnect_session(self, page=None) -> bool:
-        """Re-arm ONE session — the DELEGATE the Reconnect row fires (v1.9.1).
+        """Re-arm ONE session — the DELEGATE the Reconnect row fires.
 
         The row lives on the container's menus (the tab's and the window's) while the WORK belongs
         to the session: this method resolves the page — the row passes the tab it was built for and
@@ -1069,7 +1062,7 @@ class SSHTerminalWindow(QMainWindow):
             return False  # Qt teardown — the session is already gone
 
     def attach_tmux_session(self, page=None) -> bool:
-        """Ask for a tmux session name and hand it to the session (v1.9.1).
+        """Ask for a tmux session name and hand it to the session.
 
         The name field is the ONE `ask_tmux_name()` (the `ST.QInputDialog` seam); the command is
         built by the PURE builder and sent by `page.attach_tmux()` — a container owns the surface,
@@ -1104,7 +1097,7 @@ class SSHTerminalWindow(QMainWindow):
             return False  # Qt teardown — the session is already gone
 
     def _build_tab_context_menu(self, index):
-        """The context menu of ONE session TAB (v1.9.1) — the test seam.
+        """The context menu of ONE session TAB — the test seam.
 
         Built per right click, which is what makes the Reconnect row's state a READ of the session
         (`can_reconnect()`) instead of something an action has to keep in step. The window's own
@@ -1178,11 +1171,10 @@ class SSHTerminalWindow(QMainWindow):
         self.split.ratio = float(value)
 
     def active_session(self):
-        """v1.3.3.5: the session the USER is working in — the focused
-        split pane when the keyboard focus is inside it, otherwise the ACTIVE tab (the
-        v1.2.1 rule). The command library asks the container for it, so a macro lands
-        in the pane the user clicked — the "send to the active session" promise is
-        extended to the pane instead of a second concept being introduced.
+        """The session the USER is working in — the focused
+        split pane when the keyboard focus is inside it, otherwise the ACTIVE tab. The command library
+        asks the container for it, so a macro lands in the pane the user clicked — the "send to the
+        active session" promise covers the pane instead of a second concept being introduced.
         """
         return self.page
 
@@ -1196,7 +1188,7 @@ class SSHTerminalWindow(QMainWindow):
         return getattr(self, "cmdlib_panel", None)
 
     def focused_split_pane(self):
-        """v1.3.3.5: the split pane while the focus is INSIDE it.
+        """The split pane while the focus is INSIDE it.
 
         `QApplication.focusWidget()` is the single source of truth (the canvas of a
         pane that the user clicked has it; `hasFocus()` on the pane itself would not
@@ -1219,7 +1211,7 @@ class SSHTerminalWindow(QMainWindow):
         return None
 
     def set_split_enabled(self, on: bool) -> bool:
-        """v1.3.3.5 + v1.7.2: the ONE split switch.
+        """The ONE split switch.
 
         ON — the pane is created for the ACTIVE session (a REAL second session of the same node: a
         fresh SSHTerminalThread with that session's credentials, WITHOUT its Quick Launch command
@@ -1241,7 +1233,7 @@ class SSHTerminalWindow(QMainWindow):
         return self.split.close_pane()
 
     def _wire_page(self, page):
-        """v1.3.3.5: let the window follow the FOCUS of a canvas.
+        """Let the window follow the FOCUS of a canvas.
 
         The bridge and `win.page` follow the ACTIVE TAB — and, with a
         split, two sessions on the screen at once — the FOCUS as well; the container follows
@@ -1258,18 +1250,19 @@ class SSHTerminalWindow(QMainWindow):
             pass  # a test double without a canvas / a dead C++ object
 
     def eventFilter(self, obj, event):
-        """v1.3.3.5: a canvas FocusIn re-points the status-bar bridge
-        (and therefore `win.page`) at the session the user just clicked into."""
+        """A canvas FocusIn re-points the status-bar bridge
+        (and therefore `win.page`) at the session the user just clicked into.
+        """
         if event.type() == QEvent.Type.FocusIn:
             self._refresh_bridge()
         return super().eventFilter(obj, event)
 
     def _on_app_focus_changed(self, _old=None, _now=None):
-        """v1.3.3.5: the application focus moved anywhere — re-point the bridge.
+        """The application focus moved anywhere — re-point the bridge.
 
         Idempotent and cheap (`_set_bridged_page` returns immediately when the page did
         not change), so the signal may be connected once per terminal window without
-        guarding for ancestry first. v1.7.2: the split action and the window title are
+        guarding for ancestry first. The split action and the window title are
         re-read here too — the whole "who owns the pane / whose name is on the window"
         answer follows the keyboard, not the tab strip.
         """
@@ -1278,8 +1271,9 @@ class SSHTerminalWindow(QMainWindow):
         self._refresh_window_title()
 
     def _refresh_bridge(self):
-        """v1.3.3.5: the bridge target — the FOCUSED pane if the
-        keyboard focus is inside it, otherwise the ACTIVE tab (the v1.2.1 rule)."""
+        """The bridge target — the FOCUSED pane if the
+        keyboard focus is inside it, otherwise the ACTIVE tab.
+        """
         pane = self.focused_split_pane()
         if pane is not None:
             self._set_bridged_page(pane)
@@ -1291,7 +1285,7 @@ class SSHTerminalWindow(QMainWindow):
         self._set_bridged_page(cur)
 
     def _all_pages(self) -> list:
-        """v1.3.3.5: EVERY live session of this window — the tabs AND the split pane.
+        """EVERY live session of this window — the tabs AND the split pane.
 
         Single source for the teardown (closeEvent), the re-text (retranslate) and the
         focus lookup: a pane must never be missed by a loop over `session_tabs`.
@@ -1318,7 +1312,8 @@ class SSHTerminalWindow(QMainWindow):
     def split_password(self, page=None):
         """The credentials of the pane — the SAME node, the SAME password as its own session
         (the explicit one the session was created with is kept on the thread; the model itself
-        never carries it, AUDIT v0.7.2 medium #7)."""
+        never carries it).
+        """
         if page is None:
             try:
                 page = self.session_tabs.currentWidget()
@@ -1328,21 +1323,21 @@ class SSHTerminalWindow(QMainWindow):
         return getattr(thread, "password", "") or ""
 
     def _split_server_data(self):
-        """v1.3.3.5 compat reader: the node of the pane (see `split_server_data`)."""
+        """Compat reader: the node of the pane (see `split_server_data`)."""
         return self.split_server_data()
 
     def _split_password(self):
-        """v1.3.3.5 compat reader: the credentials of the pane (see `split_password`)."""
+        """Compat reader: the credentials of the pane (see `split_password`)."""
         return self.split_password()
 
     def _session_sink(self):
-        """v1.3.3.5: the host's session-registry hook, on the PARENT CHAIN.
+        """The host's session-registry hook, on the PARENT CHAIN.
 
         The pane is a real session (green dot, multi-input) that was NOT created by
         `SshMixin._spawn_terminal_window`, so it must reach `MainWindow._terminal_windows`
         through the host — duck-typed, because `modules/*` never imports `ui.main_window`
         (the cycle rule) and a test window may be created with parent=None (the pane then
-        simply lives and dies with it). v1.7.2: the walk is what lets the DOCK reach the
+        simply lives and dies with it). The walk is what lets the DOCK reach the
         same hook through `TerminalsDock` without a constructor argument.
         """
         return find_host_hook(self, "_adopt_split_session")
@@ -1583,7 +1578,7 @@ class SSHTerminalWindow(QMainWindow):
         return bool(getattr(self, "_files_panel_on", False))
 
     def set_files_panel_enabled(self, on: bool):
-        """v1.7.1: the ONE switch of the Files panel — called from `act_files_panel.toggled`.
+        """The ONE switch of the Files panel — called from `act_files_panel.toggled`.
 
         ON — the panel is shown, every session's Files widget moves into its stack, the
         two-pane view of each session is forced OFF and REMEMBERED, the canvas gets its
@@ -1827,7 +1822,7 @@ class SSHTerminalWindow(QMainWindow):
     def _set_files_panel_action_checked(self, checked: bool):
         """Set the checkmark WITHOUT re-entering the slot (the `btn_split` discipline).
 
-        v1.7.1.1: the checkmark is the ONLY view of the state left — the corner button is
+        The checkmark is the ONLY view of the state left — the corner button is
         gone, so there is nothing to mirror. Kept as the ONE write path, because the switch
         itself (`set_files_panel_enabled`) corrects the action when it could not do what it
         was asked (no session to serve, a teardown race).
@@ -1843,7 +1838,7 @@ class SSHTerminalWindow(QMainWindow):
                 pass   # teardown — the action is gone
 
     def _split_min_height(self) -> int:
-        """v1.3.3.5: the size floor of the bottom pane, in PIXELS.
+        """The size floor of the bottom pane, in PIXELS.
 
         The floor is BUILT, not guessed (`SPLIT_MIN_ROWS` rows measured from the live cell
         metrics + the pane's own CHROME measured from the live geometry) and installed as an
@@ -1863,13 +1858,14 @@ class SSHTerminalWindow(QMainWindow):
         return self.split.current_ratio()
 
     def _on_split_moved(self, _pos=None, _index=None):
-        """v1.3.3.5: the user dragged the divider — the new
+        """The user dragged the divider — the new
         proportion becomes THE ratio, so the next window resize keeps it (the explicit
-        drag is respected; the clamp only guards the unusable extremes)."""
+        drag is respected; the clamp only guards the unusable extremes).
+        """
         return self.split.on_moved(_pos, _index)
 
     def _apply_split_sizes(self):
-        """v1.3.3.5: the two geometry answers of the split.
+        """The two geometry answers of the split.
 
         (1) The pane is a FRACTION of the height, so a window resize keeps the proportion —
             applied on open, on every resize and after the user drags the divider;
@@ -1887,7 +1883,7 @@ class SSHTerminalWindow(QMainWindow):
         return self.split.reset_floors(pane)
 
     def _save_split_state(self, extra: dict = None) -> dict:
-        """v1.3.3.5: the window's persistence payload for ONE `save_config()`.
+        """The window's persistence payload for ONE `save_config()`.
 
         Returns the extra top-level keys of the geometry write — the split's two
         (`ui_terminal_split` + `ui_terminal_split_ratio`, from the controller), the Files
@@ -1933,9 +1929,10 @@ class SSHTerminalWindow(QMainWindow):
         return payload
 
     def resizeEvent(self, event):
-        """v1.3.3.5: a window resize re-applies the split geometry
+        """A window resize re-applies the split geometry
         (the proportion is kept, the floors hold). The pane's own canvas resize — and
-        therefore the PTY debounce — is handled inside the page (its eventFilter)."""
+        therefore the PTY debounce — is handled inside the page (its eventFilter).
+        """
         super().resizeEvent(event)
         if self.split.on:
             self.split.apply_sizes()
@@ -1943,7 +1940,7 @@ class SSHTerminalWindow(QMainWindow):
     # ── v1.3.3.5: the context menu of the window (the second view of the action) ──
 
     def _build_context_menu(self):
-        """v1.3.3.5: the window's context menu — the SAME
+        """The window's context menu — the SAME
         `act_split` QAction as the tab-bar button (one action, two views).
 
         Test seam (the TerminalWidget pattern): the menu is created by the method, the
@@ -2022,15 +2019,13 @@ class SSHTerminalWindow(QMainWindow):
                 pass  # Qt teardown (a close race)
 
     def _set_bridged_page(self, page):
-        """Bridge of the ACTIVE tab's signals into the window's status bar
-        (the v1.2 look); on tab switch — a reconnect: the status bar shows the
-        active session, and inactive tabs' messages do not touch it. The SFTP
-        progress bar syncs with the active tab's state (inactive transfers do
-        not update the bar).
+        """Bridge of the ACTIVE tab's signals into the window's status bar; on tab switch — a reconnect:
+        the status bar shows the active session, and inactive tabs' messages do not touch it. The SFTP
+        progress bar syncs with the active tab's state (inactive transfers do not update the bar).
 
-        v1.6.4: the bridged page IS the session the user is looking at — the
-        activity mark is cleared here, which is what makes a tab switch (and the focus moving
-        into the split pane) clear it in ONE place. Idempotent.
+        The bridged page IS the session the user is looking at — the activity mark is cleared here,
+        which is what makes a tab switch (and the focus moving into the split pane) clear it in ONE
+        place. Idempotent.
         """
         old = self._bridged_page
         if old is not None and old is not page:
@@ -2087,7 +2082,7 @@ class SSHTerminalWindow(QMainWindow):
     def session_is_visible(self, page) -> bool:
         """The container's answer to "is `page` the session on screen?" — the mark's ONE rule.
 
-        The v1.3.3.5 "active session" rule of this window: the FOCUSED split pane wins over the
+        The "active session" rule of this window: the FOCUSED split pane wins over the
         active tab (with two shells on one screen the user's attention is where the keyboard
         is). A page this window never showed is not visible. Never raises.
         """
@@ -2305,14 +2300,13 @@ class SSHTerminalWindow(QMainWindow):
 
     @property
     def page(self):
-        """v1.2.1: the active (current) tab = the "window session"; for a
-        single-tab window — the only session (v1.2 compatibility). All the compat
+        """The active (current) tab = the "window session"; for a
+        single-tab window — the only session. All the compat
         properties below read it, so existing code/tests work unchanged.
 
-        v1.3.3.5: the FOCUSED split pane WINS over the active tab —
-        the v1.2.1 "active session" rule extended to the second pane instead of a
-        second concept. With the focus elsewhere (the map, another window) the pane is
-        not "active" and the property behaves exactly as before.
+        The FOCUSED split pane WINS over the active tab — the "active session" rule extended to the
+        second pane instead of a second concept. With the focus elsewhere (the map, another window) the
+        pane is not "active" and the property behaves exactly like the tab-only rule.
         """
         pane = self.focused_split_pane()
         if pane is not None:
@@ -2383,15 +2377,15 @@ class SSHTerminalWindow(QMainWindow):
 
     @property
     def _sftp_worker(self):
-        """v1.1.3: the lazy SFTP worker — since v1.2 it lives on the page (a live link)."""
+        """The lazy SFTP worker — it lives on the page (a live link)."""
         return self.page._sftp_worker
 
     # ── v1.2: teardown — the page (a single method) ─────────────────────────
 
     def close_terminal(self):
-        """v1.0RC3 kept for the MainWindow cleanup path: since v1.2 it delegates
-        to the page; since v1.2.1 it closes the ACTIVE tab (page.close_terminal →
-        host.close_page), not the whole window."""
+        """Kept for the MainWindow cleanup path: delegates to the page and closes the ACTIVE tab
+        (page.close_terminal → host.close_page), not the whole window.
+        """
         p = self.page
         if p is not None:
             p.close_terminal()

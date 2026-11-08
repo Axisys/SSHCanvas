@@ -5,7 +5,7 @@ It closes a SILENT problem: the map search (Ctrl+F), the tag filter, the status 
 and the "problems only" lens all DIM the map, and a dimmed card looks exactly like a card that is not
 there any more — a forgotten filter would be indistinguishable from deleted servers.
 
-The plaque is a WIDGET over the scene (`MapView`'s child), never a scene item (the v1.4.2/v1.4.5 rule),
+The plaque is a WIDGET over the scene (`MapView`'s child), never a scene item (the floating-panel rule),
 so it stays out of the exports, out of a rubber-band selection, out of `itemsBoundingRect()` and out of
 "fit to content"; it joins the floating-panel priority resolver, which keeps the collapse diamond from
 landing under it. It owns NO filter logic (like the search bar and the legend): the window reports the

@@ -14,11 +14,9 @@ selection (`..._selection.py`) — each resolving a facade global through `MODUL
 
 import math
 
-# The full `wcwidth(3)` — the SAME library pyte 0.8.2 itself uses for grid layout
-# (`pyte.screens`: `from wcwidth import wcwidth`); a hard dependency of pyte, so it is always present
-# when pyte is. Since the fork's patch 0005 the grid measures a CELL with `wcswidth`: a cell may hold a
-# grapheme cluster (a ZWJ emoji, a base + mark) and `wcswidth` is not a per-code-point sum — it knows
-# the emoji ZWJ sequences, so the canvas must read the same table as `Screen.draw()`.
+# The full `wcwidth(3)` — the SAME library pyte uses for grid layout; since the fork's patch 0005 a
+# cell may hold a grapheme cluster and `wcswidth` is not a per-code-point sum, so the canvas reads
+# the same table as `Screen.draw()`.
 try:
     from wcwidth import wcswidth as _wcswidth, wcwidth as _wcwidth
 except ImportError as e:  # pragma: no cover
@@ -31,9 +29,13 @@ try:
 except ImportError:
     from modules.terminal_screen import PALETTES, resolve_color
 
-# v1.6.4: the pinned scrollback — the canvas reads the MODE of its screen
-# (`terminal_scroll`) to decide whether new output may move the view and what "the user wants
-# the live line again" means. The resolver is the screen module's (ONE declaration, one default).
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a record nobody handles is never printed
+    from .logger import optional_logger
+except ImportError:
+    from modules.logger import optional_logger
+
+# The pinned scrollback — the canvas reads the MODE of its screen (`terminal_scroll`) to decide
+# whether new output may move the view; the resolver is the screen module's (ONE declaration).
 try:
     from .terminal_screen import (SCROLL_MODE_DEFAULT as _SCROLL_MODE_DEFAULT,
                                   SCROLL_MODE_PIN as _SCROLL_MODE_PIN)
@@ -941,11 +943,9 @@ class TerminalWidget(TerminalInputMixin, TerminalMouseMixin, TerminalFindMixin,
             self._paint(painter)
         except Exception as e:
             # The SSH output is an arbitrary stream; the rendering must not crash the window.
-            try:
-                from modules.logger import get_logger
-                get_logger("modules.terminal_widget").warning(f"paint failed: {e}")
-            except Exception:  # noqa: BLE001 — the log is a side channel: the paint already returned
-                pass
+            log = optional_logger("modules.terminal_widget")
+            if log is not None:
+                log.warning(f"paint failed: {e}")
         finally:
             painter.end()
 

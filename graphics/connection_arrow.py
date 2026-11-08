@@ -1,9 +1,9 @@
-"""Connection arrows between nodes (v0.7).
+"""Connection arrows between nodes.
 
 Bezier curves from the edge of a node to the edge of a node + typed connections
 with a color code: SSH / VPN / HTTP / Database / NFS / Kubernetes.
 
-**v1.5rc2: a type is no longer a colour alone.** Every type also
+**A type is not a colour alone.** Every type also
 carries a declared PEN style (`theme.ARROW_TYPE_STYLES`: a dash pattern, a width and
 a "double rail" flag), and this item paints from that declaration — so the six types
 stay apart in greyscale, in print and for a colour-vision deficiency. The style is

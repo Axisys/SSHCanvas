@@ -15,6 +15,11 @@ without one is valid and inert, and nothing here raises."""
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a bare script keeps this context importable
+    from modules.logger import optional_logger
+except ImportError:  # no application tree: `log()` stays inert
+    optional_logger = None
+
 # The record fields a plugin may see (PLUGINS.md §5) — nothing else is exposed.
 NODE_FIELDS = ("id", "alias", "host", "port", "user")
 
@@ -230,9 +235,10 @@ class PluginContext:
         except Exception:  # noqa: BLE001 — logging must never break a plugin
             pass
         try:  # no adapter (or a broken one) — the module logger still records it
-            from modules.logger import get_logger
-            get_logger("modules.plugin_context").info(f"[plugin {self._plugin_id}] {message}")
-        except Exception:  # noqa: BLE001 — optional import
+            log = optional_logger("modules.plugin_context") if optional_logger is not None else None
+            if log is not None:
+                log.info(f"[plugin {self._plugin_id}] {message}")
+        except Exception:  # noqa: BLE001 — logging must never break a plugin
             pass
 
     def status(self, text, timeout_ms: int = DEFAULT_STATUS_TIMEOUT_MS) -> bool:

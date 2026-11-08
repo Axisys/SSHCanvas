@@ -113,6 +113,7 @@ of the file itself.
 | `test_canvas_truth.py` | — | v1.6.3 — the canvas at the cell: the glyph grid, the mouse the TUI asks for, the Files tab that answers back. |
 | `test_chrome.py` | — | v1.5rc4 — Density, focus & findability: the chrome answers the same questions as the map. |
 | `test_cleanup_v11512.py` | — | v1.15.1.2 — the cleanup of v1.15.1.1: ONE logging door, two texts and ONE harness silence. |
+| `test_cleanup_v11513.py` | — | v1.15.1.3 — the `1.15.1` residue: the last sixteen logging doors and the version-tag ratchet. |
 | `test_cli.py` | — | v1.15rc2 — the HEADLESS SURFACE: the frozen `CLI.md`, the `cli/` skeleton and the two report verbs. |
 | `test_cli_contract.py` | — | v1.15 — `CLI.md` clause by clause: the headless surface as the regression file of the base release. |
 | `test_cli_exec.py` | — | v1.15rc4 — `exec`: the three policies (guard, credential, host key) and the REMOTE exit code. |

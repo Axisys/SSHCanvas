@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The production-tag guard — ONE policy, TWO verbs (v1.9).
+"""The production-tag guard — ONE policy, TWO verbs.
 
 A node's own `tags` decide whether a gesture that reaches MORE THAN ONE session, or that pushes a whole
 BLOCK of text into one, must be confirmed first: the two verbs are the MULTI-INPUT broadcast and a

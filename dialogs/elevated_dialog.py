@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The elevation dialogue of the Files pane — the target user and the sudo password (v1.8).
+"""The elevation dialogue of the Files pane — the target user and the sudo password.
 
 ONE dialogue for the two things the handshake needs (`ELEVATED_PANE.md` §4): the USER the pane
 should read the server as (empty means `root`) and the PASSWORD, asked only when the host's sudo

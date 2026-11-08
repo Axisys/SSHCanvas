@@ -1,4 +1,4 @@
-"""Host importer — bulk import of servers from a text file (v0.9.5.5; DOCUMENTATION.md §27).
+"""Host importer — bulk import of servers from a text file (DOCUMENTATION.md §27).
 
 The file format is one server per line: an IP address or a DNS name, and a line may carry SEVERAL
 whitespace-separated entries (see `parse_hosts_file()`). Empty lines are ignored, and `#` or `//` — at the
@@ -9,7 +9,7 @@ DNS name and is resolved through `socket.getaddrinfo()` — on success the found
 field while `host` KEEPS the name (the SSH connection then uses the name), and on failure the node is still
 created with `host` = the name and an empty `ip`, for the user to sort out. Passwords and users are never
 touched: the user sets them up after the import.
- The DNS stage now leaves a record: the resolver thread writes ONE summary per run — how many names got an address, how many did not and whether the run was cancelled — so the activity history can answer "did the import actually resolve anything", which the batch's own "Imported N servers" line cannot (a node is created either way)."""
+ The DNS stage leaves a record: the resolver thread writes ONE summary per run — how many names got an address, how many did not and whether the run was cancelled — so the activity history can answer "did the import actually resolve anything", which the batch's own "Imported N servers" line cannot (a node is created either way)."""
 
 import ipaddress
 import socket

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The archive READER behind `Open archive` (v1.13) — the pure parse, the policy and the spool.
+"""The archive READER behind `Open archive` — the pure parse, the policy and the spool.
 
 The suffix table decides the reader (`zipfile` / `tarfile`), `archive_listing()` answers the READABLE
 members of ONE level, `read_member()` is the bounded read of the preview and

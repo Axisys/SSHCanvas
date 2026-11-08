@@ -65,7 +65,7 @@ ENV_TAGS = ("prod", "staging", "stage", "dev", "test")
 
 
 def env_tag(tags) -> str:
-    """The card's PRIMARY tag — the environment it belongs to (v1.5).
+    """The card's PRIMARY tag — the environment it belongs to.
 
     The DECLARED vocabulary WINS the pick and its order IS the precedence, so
     `["dev", "prod"]` is production and `["web", "prod"]` is too (a user's tag order must
@@ -74,9 +74,9 @@ def env_tag(tags) -> str:
     which is what makes the badge useful on maps that never used the vocabulary.
 
     Returns the tag AS THE USER WROTE IT (the colour lookup is case-insensitive, but a
-    badge must not rename the user's own data), or "" for a card without tags — and such a
-    card paints exactly like a pre-v1.5 card. Pure, so `tests/test_tags.py` pins the
-    precedence without a window.
+    badge must not rename the user's own data), or "" for a card without tags — such a
+    card paints like any untagged card. Pure, so `tests/test_tags.py` pins the precedence
+    without a window.
     """
     by_name = {}
     first = ""
@@ -106,7 +106,7 @@ SHADOW_CACHE_SIZE = 64     # at most this many distinct card SIZES keep a pixmap
 
 @functools.lru_cache(maxsize=SHADOW_CACHE_SIZE)
 def _shadow_pixmap(width: int, height: int, radius: float) -> QPixmap:
-    """The soft shadow of a card of this size (v1.4.2) — the cache key is the SIZE.
+    """The soft shadow of a card of this size — the cache key is the SIZE.
 
     The pixmap is `SHADOW_BLUR` wider than the card on every side (+`SHADOW_DY` at the
     bottom), and the card's top-left corner sits exactly at `(SHADOW_BLUR, SHADOW_BLUR)`
@@ -115,9 +115,9 @@ def _shadow_pixmap(width: int, height: int, radius: float) -> QPixmap:
     inflated by `SHADOW_BLUR/LAYERS` and with `SHADOW_LAYER_ALPHA` — the inner layers
     overlap the outer ones, so the alpha grows towards the card and the edge fades.
 
-    `lru_cache` is the whole point of the feature (the v1.2.10 audit): a cache HIT
-    costs nothing, a MISS paints ~9 paths once. A QPixmap needs a live QGuiApplication,
-    and this function is only ever reached from a card being built — i.e. after one.
+    `lru_cache` is the whole point: a cache HIT costs nothing, a MISS paints ~9 paths
+    once. A QPixmap needs a live QGuiApplication, and this function is only ever reached
+    from a card being built — i.e. after one.
     """
     blur = int(SHADOW_BLUR)
     w = max(int(width), 1)
@@ -146,7 +146,7 @@ def _shadow_pixmap(width: int, height: int, radius: float) -> QPixmap:
 
 
 def shadow_cache_info():
-    """The `lru_cache` stats of the shadow pixmaps (v1.4.2 — the topical test)."""
+    """The `lru_cache` stats of the shadow pixmaps — the topical test's seam."""
     return _shadow_pixmap.cache_info()
 
 
@@ -502,13 +502,13 @@ class ServerNode(QGraphicsItemGroup):
         return path
 
     def _apply_shadow(self, width: float, height: float):
-        """v1.4.2: give the shadow item the cached pixmap of THIS card size.
+        """Give the shadow item the cached pixmap of THIS card size.
 
         The cache is keyed by whole pixels (a 0.4 px difference must not cost a miss),
         and the card's top-left corner sits at (SHADOW_BLUR, SHADOW_BLUR) inside the
         pixmap — hence the item's position. The pixmap is generated once per distinct
-        size and SHARED by every card of that size (the memory story of the feature);
-        an unchanged size reaches `lru_cache` and costs nothing.
+        size and SHARED by every card of that size; an unchanged size reaches `lru_cache`
+        and costs nothing.
         """
         pixmap = _shadow_pixmap(int(round(float(width))), int(round(float(height))),
                                 float(self.CORNER_RADIUS))
@@ -533,7 +533,7 @@ class ServerNode(QGraphicsItemGroup):
         The pick is `env_tag()` (the declared vocabulary, its precedence included); the
         tone is the SAME `tag_color()` the badge chip and the tag filter use, so the two
         channels of one tag can never disagree. A card WITHOUT tags answers the neutral
-        `NODE_ICON_BG` — it paints exactly like a card from before v1.5.
+        `NODE_ICON_BG` — an untagged card paints exactly like a card that never carried tags.
         """
         text = env_tag(getattr(self.data, "tags", None))
         if not text:
@@ -548,11 +548,10 @@ class ServerNode(QGraphicsItemGroup):
             pass  # Qt teardown — the item is already destroyed
 
     def refresh_tags(self):
-        """v0.9.4: public hook to update the environment marks after editing data.tags.
+        """Public hook to update the environment marks after editing data.tags.
 
-        v1.5.6: the tags reach the card through TWO channels — the ICON's
-        tone and the chip's TEXT — so this hook re-applies both (the tag filter's own
-        dimming is not part of the card).
+        The tags reach the card through TWO channels — the ICON's tone and the chip's TEXT —
+        so this hook re-applies both (the tag filter's own dimming is not part of the card).
         """
         self._apply_env_icon()
         self._apply_badges()
@@ -648,7 +647,7 @@ class ServerNode(QGraphicsItemGroup):
         return w
 
     def _badge_readable(self, shown: str) -> bool:
-        """Does an ELIDED chip label still say something (v1.5.6)?
+        """Does an ELIDED chip label still say something?
 
         A chip must keep at least `BADGE_MIN_CHARS` characters of the label before the
         ellipsis; below that it is noise that costs a band. Font-independent on purpose —
@@ -664,9 +663,9 @@ class ServerNode(QGraphicsItemGroup):
     def _band_right(self, reserved: float = 0.0) -> float:
         """The RIGHT edge of the free band, short of what the marks to its right took.
 
-        ONE arithmetic for the three marks of the band (v1.6.5, `BAND_ORDER`): every
-        right-aligned mark asks for the room already taken, and the environment chip — the
-        last of the order — receives the same number and elides into what is left.
+        ONE arithmetic for the three marks of the band (`BAND_ORDER`): every right-aligned
+        mark asks for the room already taken, and the environment chip — the last of the order
+        — receives the same number and elides into what is left.
         """
         right = float(self._current_width) - self.BADGE_RIGHT_INSET - float(reserved or 0.0)
         if reserved:
@@ -674,7 +673,7 @@ class ServerNode(QGraphicsItemGroup):
         return right
 
     def _apply_env_badge(self, width: float, reserved: float = 0.0):
-        """The primary tag as TEXT in the free band ABOVE the alias (v1.5).
+        """The primary tag as TEXT in the free band ABOVE the alias.
 
         The chip is the second channel of the tag: the card's ICON carries the TONE and the
         WORDS sit in the measured band over the alias, which leaves the alias row itself to
@@ -687,8 +686,7 @@ class ServerNode(QGraphicsItemGroup):
         unmanaged card): the tag chip elides into what is left, and it is HIDDEN (never
         reduced to "…") when that is less than `BADGE_MIN_SPAN` or when the elided label
         would keep fewer than `BADGE_MIN_CHARS` characters. A card without tags — and every
-        COLLAPSED card, whose single line has no second row — hides the chip and paints
-        exactly like a pre-v1.5 card.
+        COLLAPSED card, whose single line has no second row — hides the chip entirely.
         """
         text = "" if (getattr(self.data, "collapsed", False) or self._is_compact()) \
             else env_tag(getattr(self.data, "tags", None))
@@ -703,14 +701,13 @@ class ServerNode(QGraphicsItemGroup):
                           self.tag_color(text), self.ENV_BADGE_Y, right, self.LABEL_X)
 
     def _apply_demo_badge(self, collapsed: bool, reserved: float = 0.0) -> float:
-        """The EMULATED marker — a status the demo map declares is always MARKED (v1.5).
+        """The EMULATED marker — a status the demo map declares is always MARKED.
 
-        The honesty rule of the closing release: `node.status.emulated` sits in the card's
-        free band, right-aligned, in the card's own label tone on a neutral `dot_idle` frame
-        (the "this is not a fresh measurement" tone the stale mark already uses), so a
-        colour-blind reader, a greyscale print and a screenshot all say the same thing.
-        Returns the width it occupies (0.0 when it is hidden) — the marks after it in
-        `BAND_ORDER` yield to it.
+        `node.status.emulated` sits in the card's free band, right-aligned, in the card's
+        own label tone on a neutral `dot_idle` frame (the "this is not a fresh measurement"
+        tone the stale mark already uses), so a colour-blind reader, a greyscale print and a
+        screenshot all say the same thing. Returns the width it occupies (0.0 when it is
+        hidden) — the marks after it in `BAND_ORDER` yield to it.
         """
         if not self._status_emulated:
             if self._demo_badge is not None:
@@ -731,7 +728,7 @@ class ServerNode(QGraphicsItemGroup):
         return bool(getattr(self.data, "unmanaged", False))
 
     def _apply_unmanaged_badge(self, collapsed: bool, reserved: float = 0.0) -> float:
-        """The "NO SSH" chip — the card's KIND, said in the band in WORDS (v1.6.5).
+        """The "NO SSH" chip — the card's KIND, said in the band in WORDS.
 
         The `_apply_demo_badge()` mechanism exactly: the same measured band, the same
         `dot_idle` frame, the same card tone for the label — because "this card is not
@@ -777,23 +774,22 @@ class ServerNode(QGraphicsItemGroup):
 
     @property
     def status_emulated(self) -> bool:
-        """v1.5: is the shown status an EMULATED (demo) one? Never true for a probe."""
+        """Is the shown status an EMULATED (demo) one? Never true for a probe."""
         return bool(self._status_emulated)
 
     def refresh_theme(self):
-        """v1.4.3: re-apply every theme-dependent brush/pen.
+        """Re-apply every theme-dependent brush/pen.
 
-        The colours this card paints with are read live (`ThemeColor` /
-        `ThemeMap` descriptors), but a QBrush/QPen handed to a child item is a
-        VALUE — it keeps what it was given, and a QGraphicsItem does not repaint
-        itself just because a colour moved. This method is the one place that
-        rebuilds those values; `MainWindow.apply_theme()` reaches every card
-        through the scene. The status/SSH dots return to their current STATE
-        (idle grey, or the status colour that is showing), never to a stale one.
+        The colours this card paints with are read live (`ThemeColor` / `ThemeMap`
+        descriptors), but a QBrush/QPen handed to a child item is a VALUE — it keeps what it
+        was given, and a QGraphicsItem does not repaint itself just because a colour moved.
+        This method is the one place that rebuilds those values; `MainWindow.apply_theme()`
+        reaches every card through the scene. The status/SSH dots return to their current
+        STATE (idle grey, or the status colour that is showing), never to a stale one.
 
-        v1.6: the CARD DENSITY rides the same walk — `sync_density()`
-        re-lays the card out when the mode moved, before the brushes are re-applied
-        (so a card switched to `compact` repaints in one pass).
+        The CARD DENSITY rides the same walk — `sync_density()` re-lays the card out when the
+        mode moved, before the brushes are re-applied (so a card switched to `compact`
+        repaints in one pass).
         """
         self.sync_density()
         self._bg.setBrush(QBrush(self.COLOR_BG))
@@ -867,10 +863,10 @@ class ServerNode(QGraphicsItemGroup):
         """The path of the availability mark for the CURRENT status.
 
         The shape comes from the declaration (`theme.STATUS_SHAPES` through
-        `ui/status_shape.py`); an unchecked/unknown status gets the plain dot in the
-        idle grey. The box keeps the local anchor of the v1.4.x `QGraphicsEllipseItem`
+        `ui/status_shape.py`); an unchecked/unknown status gets the plain dot in the idle
+        grey. The box keeps the local anchor of the `QGraphicsEllipseItem`
         (`rect = (0, 23, 14, 14)` + the two `setPos` calls of the expanded/collapsed
-        layouts), so both layouts are untouched by the change of the item type.
+        layouts), so both layouts keep their geometry.
         """
         size = float(self.STATUS_DOT_SIZE)
         if status_shape is not None:
@@ -884,11 +880,11 @@ class ServerNode(QGraphicsItemGroup):
     def _apply_status_dot(self):
         """Rebuild the mark: its SHAPE follows the status, its brush keeps the status colour.
 
-        v1.5rc3: a STALE datum keeps the DECLARED SHAPE of its status but
-        is painted in the idle tone — the mark that means "no fresh information" (the same
-        tone an unchecked card carries). The status itself is untouched, so the frame of
-        the card keeps the online/warn/offline colour: the user sees WHAT was measured and
-        that the measurement is old, in two channels, exactly as v1.5rc2 arranged them.
+        A STALE datum keeps the DECLARED SHAPE of its status but is painted in the idle tone
+        — the mark that means "no fresh information" (the same tone an unchecked card
+        carries). The status itself is untouched, so the frame of the card keeps the
+        online/warn/offline colour: the user sees WHAT was measured and that the measurement
+        is old, in two channels.
         """
         try:
             self._status_dot.setPath(self._status_dot_path())
@@ -910,9 +906,9 @@ class ServerNode(QGraphicsItemGroup):
         again from its freshness tick. `timestamp <= 0` means "never checked" (the idle
         card). Never raises — a repaint is cosmetic.
 
-        v1.5: an EMULATED status is not the result of a probe, so it can never
-        carry an age — the timestamp is refused here (ONE place) and the freshness line
-        stays empty, which is what keeps the demo from claiming a measurement.
+        An EMULATED status is not the result of a probe, so it can never carry an age — the
+        timestamp is refused here (ONE place) and the freshness line stays empty, which is
+        what keeps the demo from claiming a measurement.
         """
         if self._status_emulated:
             timestamp = 0.0
@@ -933,8 +929,7 @@ class ServerNode(QGraphicsItemGroup):
         threshold is the window's decision (`StatusChecker.stale_threshold_s()`), not a
         number invented here; a card that was never checked is never stale — it has no
         datum to be old. Called by the window's freshness tick and by `set_status`.
-
-        v1.5: an EMULATED status is never stale either — there is no datum to age.
+        An EMULATED status is never stale either — there is no datum to age.
         """
         moment = time.time() if now is None else float(now)
         stale = bool(self._status) and not self._status_emulated \
@@ -949,12 +944,12 @@ class ServerNode(QGraphicsItemGroup):
 
     @property
     def is_stale(self) -> bool:
-        """v1.5rc3: the shown status is older than the threshold ("" status — False)."""
+        """The shown status is older than the threshold ("" status — False)."""
         return bool(self._stale)
 
     @property
     def status_checked_at(self) -> float:
-        """v1.5rc3: epoch seconds of the shown status (0.0 — never checked)."""
+        """Epoch seconds of the shown status (0.0 — never checked)."""
         return float(self._checked_at)
 
     def freshness_text(self, now: float = None) -> str:
@@ -963,8 +958,8 @@ class ServerNode(QGraphicsItemGroup):
         Built here — not by the window — because it describes THIS card's datum; the
         i18n keys are `node.status.checked_now` / `node.status.checked_ago` ({minutes}).
 
-        v1.5: an EMULATED status answers "" — an age would be a lie about a
-        probe that never happened (the demo map's RFC 5737 addresses are never probed).
+        An EMULATED status answers "" — an age would be a lie about a probe that never
+        happened (the demo map's RFC 5737 addresses are never probed).
         """
         if self._checked_at <= 0.0 or self._status_emulated:
             return ""
@@ -995,9 +990,9 @@ class ServerNode(QGraphicsItemGroup):
     def refresh_info_freshness(self, now: float = None) -> bool:
         """Recompute the info mark + the plaque tooltip from the stored timestamp.
 
-        The IDLE TONE is the whole mark (the v1.5rc3 pattern): no colour is invented, no
-        value is rewritten and no geometry changes. A card that was never collected is
-        never stale — there is no datum to age.
+        The IDLE TONE is the whole mark: no colour is invented, no value is rewritten and no
+        geometry changes. A card that was never collected is never stale — there is no datum
+        to age.
         """
         moment = time.time() if now is None else float(now)
         stale = bool(self._info_at > 0.0) \
@@ -1010,20 +1005,20 @@ class ServerNode(QGraphicsItemGroup):
 
     @property
     def is_info_stale(self) -> bool:
-        """v1.5.3: the collected facts are older than `INFO_STALE_AFTER_SEC`."""
+        """The collected facts are older than `INFO_STALE_AFTER_SEC`."""
         return bool(self._info_stale)
 
     @property
     def info_collected_at(self) -> float:
-        """v1.5.3: epoch seconds of the collected facts (0.0 — never collected)."""
+        """Epoch seconds of the collected facts (0.0 — never collected)."""
         return float(self._info_at)
 
     def info_freshness_text(self, now: float = None) -> str:
         """"collected … ago" — the age line of the info plaque ("" when not dated).
 
         Built here, not by the window, because it describes THIS card's datum (the
-        `freshness_text()` rule of v1.5rc3). Three granularities on purpose: minutes for
-        "just did it", hours for today, days for the fact that has become a memory
+        `freshness_text()` rule). Three granularities on purpose: minutes for "just did it",
+        hours for today, days for the fact that has become a memory
         (`node.info.collected_now` / `.min` / `.hours` / `.days`). The values are never
         touched — the sentence is a LABEL on them.
         """
@@ -1044,9 +1039,9 @@ class ServerNode(QGraphicsItemGroup):
     def _apply_info_tone(self):
         """Paint the info plaque's text in the idle tone once the facts are old.
 
-        The v1.5rc3 mark is the SAME channel for both families: the idle grey says "this
-        is not current" while every value stays exactly where it was. A dead C++ object
-        (Qt teardown) is a silent no-op.
+        The idle grey is the SAME channel for both families: it says "this is not current"
+        while every value stays exactly where it was. A dead C++ object (Qt teardown) is a
+        silent no-op.
         """
         try:
             self._info.setDefaultTextColor(
@@ -1091,7 +1086,7 @@ class ServerNode(QGraphicsItemGroup):
         return lines
 
     def _empty_info_text(self) -> str:
-        """What the plaque says with no line to show — a STATEMENT, never a promise (v1.6.5).
+        """What the plaque says with no line to show — a STATEMENT, never a promise.
 
         An unmanaged card says WHAT IT IS rather than claiming that no data was collected yet
         (a collection that will never happen for this card).
@@ -1099,13 +1094,13 @@ class ServerNode(QGraphicsItemGroup):
         return _t("node.unmanaged.status") if self.unmanaged else _t("node.no_data")
 
     def _disk_line(self) -> str:
-        """The `DISK` info line — the chosen DEVICE's figure, or the plain figure (v1.7.1.2).
+        """The `DISK` info line — the chosen DEVICE's figure, or the plain figure.
 
         `disk` stays a PURE size string in the model (`"100 gb"`), because the inventory's
         `list_sort_key()` parses that field WHOLE — so the device NAME is composed into the
         line HERE and never stored into the figure. A card with no choice renders
-        `DISK: 9.8 gb` byte for byte as it did before; a card whose chosen device was not in
-        the last listing has no figure at all and therefore claims no line.
+        `DISK: 9.8 gb`; a card whose chosen device was not in the last listing has no figure
+        at all and therefore claims no line.
         """
         figure = str(getattr(self.data, "disk", "") or "")
         device = str(getattr(self.data, "disk_device", "") or "").strip()
@@ -1128,7 +1123,7 @@ class ServerNode(QGraphicsItemGroup):
         return _t("node.disk_devices", devices=_DEVICE_SEP.join(devices))
 
     def _disk_mount_line(self) -> str:
-        """The info line of the MEASURED data mount (v1.6.6) — `""` when there is none.
+        """The info line of the MEASURED data mount — `""` when there is none.
 
         Built from the measured pair (`disk_path` = the mount point `df` really reported,
         `disk_free`/`disk_size` = its figures): `DISK /opt: 48 gb free of 59 gb`. The line
@@ -1137,10 +1132,10 @@ class ServerNode(QGraphicsItemGroup):
         REQUEST (`disk_mount`) and the ANSWER (`disk_path`) apart. Purely presentational: no
         value is derived and no measurement is invented here.
 
-        v1.8.4: an inode table at or above `INODE_ALERT_PERCENT` joins the SAME line (the
-        second sentence of `node.disk_mount_inodes`), because 40 % free space beside 100 %
-        used inodes is the lie the card must not keep telling. Below the line the percentage
-        stays in the tooltip alone, so an ordinary card renders byte for byte as before.
+        An inode table at or above `INODE_ALERT_PERCENT` joins the SAME line (the second
+        sentence of `node.disk_mount_inodes`), because 40 % free space beside 100 % used
+        inodes is the lie the card must not keep telling. Below the line the percentage stays
+        in the tooltip alone.
         """
         path = str(getattr(self.data, "disk_path", "") or "")
         free = str(getattr(self.data, "disk_free", "") or "")
@@ -1154,7 +1149,7 @@ class ServerNode(QGraphicsItemGroup):
         return _t("node.disk_mount", mount=path, free=free, size=size)
 
     def _disk_inodes_text(self) -> str:
-        """The measured inode use as ONE tooltip line (v1.8.4) — `""` when nothing was measured.
+        """The measured inode use as ONE tooltip line — `""` when nothing was measured.
 
         The fact is always readable (a hover answers "how full is the table"), while the CARD
         names it only past the alert line — the device list's channel, one line above the note.
@@ -1165,7 +1160,7 @@ class ServerNode(QGraphicsItemGroup):
         return _t("node.disk_inodes", pct=str(percent))
 
     def _disk_note_text(self) -> str:
-        """The durable WHY of a refused disk request (v1.8rc6, N35) — a tooltip line, or `""`.
+        """The durable WHY of a refused disk request — a tooltip line, or `""`.
 
         The note is stored BESIDE the answers it explains (`disk_note` for the data mount the
         user asked for, `disk_device_note` for the chosen device) and rendered by the ONE
@@ -1194,9 +1189,9 @@ class ServerNode(QGraphicsItemGroup):
 
         The plaque's tooltip is the one place that already answers "what is written here"
         (the elided full line), so the age joins it instead of opening a second home, and the
-        discovered DEVICE list joins it too (v1.7.1.2) rather than growing a card line; the
-        durable refusal NOTE joins it for the same reason (v1.8rc6). A non-elided, undated
-        plaque with no device list and no refusal keeps its empty tooltip.
+        discovered DEVICE list joins it too rather than growing a card line; the durable
+        refusal NOTE joins it for the same reason. A non-elided, undated plaque with no device
+        list and no refusal keeps its empty tooltip.
         """
         lines = []
         if self._info_tip_full:
@@ -1232,37 +1227,36 @@ class ServerNode(QGraphicsItemGroup):
 
     @property
     def status_report(self) -> str:
-        """v1.5.3: the last reachability report of this card ("" — none was asked)."""
+        """The last reachability report of this card ("" — none was asked)."""
         return self._status_report
 
     # ── v1.6.5: the MANUAL result of an opt-in reachability check ─────────────────────
 
     def set_manual_report(self, text: str) -> None:
-        """Attach the line of the last ON-DEMAND check the user asked for (v1.6.5).
+        """Attach the line of the last ON-DEMAND check the user asked for.
 
-        The second home of "a measurement the user requested", beside the v1.5.3
-        reachability report: an unmanaged card has NO status to refine (nothing ever probes
-        it), so its one ICMP answer is a note of its own — MARKED as a manual result — and
-        it never becomes a fourth kind of status. An empty text clears it.
+        The second home of "a measurement the user requested", beside the reachability
+        report: an unmanaged card has NO status to refine (nothing ever probes it), so its
+        one ICMP answer is a note of its own — MARKED as a manual result — and it never
+        becomes a fourth kind of status. An empty text clears it.
         """
         self._manual_report = str(text or "")
         self._apply_card_tooltip()
 
     @property
     def manual_report(self) -> str:
-        """v1.6.5: the line of the last manual reachability check ("" — none was asked)."""
+        """The line of the last manual reachability check ("" — none was asked)."""
         return self._manual_report
 
     def _apply_card_tooltip(self):
-        """The ONE composer of the card's tooltip (v1.6.5).
+        """The ONE composer of the card's tooltip.
 
-        Two families ride it. A card WITH a status keeps the v0.7.1/v1.4rc2/v1.5.3 sentence
-        exactly as before (the status line, the plugin detail, the age or the emulated
-        marker, the report) — that path is untouched, including the rule that a status
-        replaces the explanation. A card WITHOUT one is the UNMANAGED case: it says what it
-        is ("not monitored" — there is no measurement behind the idle mark), then the
-        sentences of the checks the user asked for by hand, each of which names itself as
-        such. Called wherever one of those facts changes and from `_apply_badges()`, so a
+        Two families ride it. A card WITH a status keeps its shipped sentence (the status
+        line, the plugin detail, the age or the emulated marker, the report) — including the
+        rule that a status replaces the explanation. A card WITHOUT one is the UNMANAGED case:
+        it says what it is ("not monitored" — there is no measurement behind the idle mark),
+        then the sentences of the checks the user asked for by hand, each of which names itself
+        as such. Called wherever one of those facts changes and from `_apply_badges()`, so a
         layout change repaints the words with the marks.
         """
         if self._status:
@@ -1283,24 +1277,23 @@ class ServerNode(QGraphicsItemGroup):
     def update_appearance(self):
         """Rebuild the text elements when the data changes.
 
-        Review fix v0.8.0 (#4): the card width is bounded by the range
-        [MIN_NODE_WIDTH, MAX_NODE_WIDTH]. A long alias/host/comment no longer
-        stretches the node endlessly: text that doesn't fit the final width is
-        elided (…), the full text — in the tooltip of the shortened label. Alias and host
-        additionally don't go under the indicator dots on the right [W-46, W-10].
+        The card width is bounded by [MIN_NODE_WIDTH, MAX_NODE_WIDTH]: a long
+        alias/host/comment does not stretch the node endlessly — text that doesn't fit the
+        final width is elided (…), the full text lives in the tooltip of the shortened label,
+        and alias and host additionally don't go under the indicator dots on the right
+        [W-46, W-10].
 
-        Algorithm: the width is computed from the full text with the same formula as before,
-        but capped at MAX_NODE_WIDTH; then (in a single pass) the text that doesn't fit the
-        final width is shortened to it. Single pass — a deliberate decision:
-        "shrink and recompute the width" doesn't converge to a clean fixed point
-        (elidedText leaves a gap to the limit), and a card stretched by a single
-        long field is still wider than MIN — but the visible information
-        is maximal and the geometry is deterministic for any font/platform.
+        Algorithm: the width is computed from the full text, capped at MAX_NODE_WIDTH; then
+        (in a single pass) the text that doesn't fit the final width is shortened to it.
+        Single pass — a deliberate decision: "shrink and recompute the width" doesn't converge
+        to a clean fixed point (elidedText leaves a gap to the limit), and a card stretched by
+        a single long field is still wider than MIN — but the visible information is maximal
+        and the geometry is deterministic for any font/platform.
 
-        v0.8.4 (former DESIGN.md §D): when data.collapsed, one line is drawn —
-        _info/_info_bg/_host_label are hidden, alias is merged with host ("alias @host"), height —
-        COLLAPSED_HEIGHT. The indicator dots stay visible (the most valuable in the
-        collapsed view). prepareGeometryChange() is required before a size change.
+        When data.collapsed, one line is drawn — _info/_info_bg/_host_label are hidden, alias
+        is merged with host ("alias @host"), height — COLLAPSED_HEIGHT. The indicator dots stay
+        visible (the most valuable in the collapsed view). prepareGeometryChange() is required
+        before a size change.
         """
         if getattr(self.data, "collapsed", False):
             self._update_appearance_collapsed()
@@ -1468,7 +1461,7 @@ class ServerNode(QGraphicsItemGroup):
         return self._density
 
     def sync_density(self) -> bool:
-        """Re-lay the card out when the ACTIVE density changed (v1.6).
+        """Re-lay the card out when the ACTIVE density changed.
 
         Returns True when it really rebuilt. Called from `refresh_theme()` — the ONE walk
         a density switch travels (`MainWindow.apply_theme()` → `MapScene.refresh_theme()`
@@ -1494,7 +1487,7 @@ class ServerNode(QGraphicsItemGroup):
         return min(max(int(width), self.MIN_NODE_WIDTH), int(self.MAX_NODE_WIDTH))
 
     def _show_compact(self):
-        """The compact layout's item visibility and base positions (v1.6).
+        """The compact layout's item visibility and base positions.
 
         The info plaque disappears (the field is not painted at all), the host stays under
         the alias and the two text items return to the expanded positions and font — the
@@ -1511,7 +1504,7 @@ class ServerNode(QGraphicsItemGroup):
             self._alias.setFont(QFont(self._alias_font_expanded))
 
     def _update_appearance_compact(self):
-        """The COMPACT card: alias, host and the status marks — no info plaque (v1.6).
+        """The COMPACT card: alias, host and the status marks — no info plaque.
 
         The plaque leaves the PAINT but never the MEASUREMENT: the width comes from the SAME
         content as the ordinary layout (`_info_lines()`), so this mode may not elide an
@@ -1663,37 +1656,36 @@ class ServerNode(QGraphicsItemGroup):
         super().mousePressEvent(event)
 
     def boundingRect(self) -> QRectF:
-        """Explicit node geometry: the card + the shadow halo (v1.4.2).
+        """Explicit node geometry: the card + the shadow halo.
 
-        QGraphicsItemGroup in PySide6/Qt6 doesn't recompute boundingRect from child
-        elements automatically (verified: it stays zero), so sceneBoundingRect()
-        gave the top-left corner point — the v0.6 arrows effectively went "from the corner".
-        The rect is the CARD inflated by the cached shadow halo on all four sides
-        (SHADOW_BLUR; + SHADOW_DY at the bottom, because the shadow sits lower) — Qt
-        clips child elements by it, so the pixmap item needs the room. The size change
-        is protected by prepareGeometryChange() in update_appearance().
+        QGraphicsItemGroup in PySide6/Qt6 doesn't recompute boundingRect from child elements
+        automatically (verified: it stays zero), so sceneBoundingRect() gave the top-left
+        corner point — the arrows effectively went "from the corner". The rect is the CARD
+        inflated by the cached shadow halo on all four sides (SHADOW_BLUR; + SHADOW_DY at the
+        bottom, because the shadow sits lower) — Qt clips child elements by it, so the pixmap
+        item needs the room. The size change is protected by prepareGeometryChange() in
+        update_appearance().
 
         This rect IS "everything the item paints" (fit/zoom, the rubber band, the export).
-        The ANCHORS are `card_rect_scene()` (v1.4.2) — they must not move when
-        the shadow's blur changes.
+        The ANCHORS are `card_rect_scene()` — they must not move when the shadow's blur
+        changes.
         """
         return QRectF(-SHADOW_BLUR, -SHADOW_BLUR,
                       self._current_width + 2 * SHADOW_BLUR,
                       self._current_height + 2 * SHADOW_BLUR + SHADOW_DY)
 
     def card_rect(self) -> QRectF:
-        """v1.4.2: the card WITHOUT the shadow halo — the anchor rect.
+        """The card WITHOUT the shadow halo — the anchor rect.
 
-        Until v1.4.1 the shadow was a 3 px strip below the card, so the boundingRect
-        could double as the anchor of the arrows and of the pinned notes. With the halo
-        that shortcut would leave every arrow tip 9 px away from the card, so the anchors
-        ask for THIS rect (via `card_rect_scene()`); the boundingRect keeps meaning
-        "everything the item paints".
+        The boundingRect cannot double as the anchor of the arrows and of the pinned notes:
+        with the halo it would leave every arrow tip 9 px away from the card. The anchors ask
+        for THIS rect (via `card_rect_scene()`); the boundingRect keeps meaning "everything
+        the item paints".
         """
         return QRectF(0.0, 0.0, float(self._current_width), float(self._current_height))
 
     def card_rect_scene(self) -> QRectF:
-        """v1.4.2: `card_rect()` in scene coordinates — the single anchor of the map.
+        """`card_rect()` in scene coordinates — the single anchor of the map.
 
         Consumers: `ConnectionArrow._compute_geometry` (both ends), the pinned-note
         anchor (`MapScene.attach_note_to_node` / `update_note_anchor_for_node` /
@@ -1708,12 +1700,11 @@ class ServerNode(QGraphicsItemGroup):
             return QRectF(self.sceneBoundingRect())
 
     def set_shadow_visible(self, visible: bool):
-        """v1.4.2: show/hide the shadow halo of this card.
+        """Show/hide the shadow halo of this card.
 
         Used by the VECTOR export (`MapScene.render_to_svg`): a QGraphicsPixmapItem is
-        written into an SVG as a base64 PNG, which would break the v1.3.3.7 promise
-        ("the SVG is vector text, not a raster blob"). PNG/PDF keep the halo — they are
-        raster formats anyway.
+        written into an SVG as a base64 PNG, which would break the promise "the SVG is vector
+        text, not a raster blob". PNG/PDF keep the halo — they are raster formats anyway.
         """
         try:
             self._shadow.setVisible(bool(visible))
@@ -1745,7 +1736,7 @@ class ServerNode(QGraphicsItemGroup):
     # ── v0.9.8: map search (Ctrl+F) — highlight of matches ──
 
     def set_search_match(self, matched: bool):
-        """v0.9.8: map search — an accent frame on the matched node (and removing it).
+        """Map search — an accent frame on the matched node (and removing it).
 
         The highlight — a static pen in _state_pen (priority: selection > match
         > hover > status). Separate from reveal_flash (a short-lived flash overlay)
@@ -1759,7 +1750,7 @@ class ServerNode(QGraphicsItemGroup):
 
     @property
     def search_matched(self) -> bool:
-        """v0.9.8: the node matches the active map-search query."""
+        """The node matches the active map-search query."""
         return self._search_matched
 
     def set_ssh_connected(self, connected: bool):
@@ -1768,25 +1759,24 @@ class ServerNode(QGraphicsItemGroup):
         self._ssh_status.setBrush(QBrush(color))
 
     def set_status(self, status: str, detail: str = "", emulated: bool = False):
-        """v0.7.1: set the availability status (online/warn/offline).
+        """Set the availability status (online/warn/offline).
 
         Updates the frame color (via _state_pen) and starts a short
         pulse animation of the overlay on status change. Unknown statuses
         are ignored; a repeated call with the same status — no-op (the pulse is not
         restarted), EXCEPT for the tooltip detail below.
 
-        v1.4rc2 (plugin foundation, rc2): `detail` is the optional text a plugin's
-        `status_probe` contributed to the merged result (`PLUGINS.md` §3 — "appended to
-        the node's tooltip"). It travels on its own signal and can arrive after the
-        status, so a changed detail updates the tooltip without restarting the pulse;
-        an empty detail keeps the status-only tooltip of v0.7.1.
+        `detail` is the optional text a plugin's `status_probe` contributed to the merged
+        result (`PLUGINS.md` §3 — "appended to the node's tooltip"). It travels on its own
+        signal and can arrive after the status, so a changed detail updates the tooltip
+        without restarting the pulse; an empty detail keeps the status-only tooltip.
 
-        v1.5: `emulated` marks a status the DEMO MAP declared instead of
-        measuring (`storage/example_project.DEMO_STATUSES`). An emulated status is drawn
-        exactly like a real one — the same colour, the same declared shape — and is
-        MARKED as emulated (the badge, the tooltip) and stripped of any age. ANY ordinary
-        `set_status()` call clears the flag, so a probe result replaces an emulation and
-        the marker goes with it; the project format still carries no status field at all.
+        `emulated` marks a status the DEMO MAP declared instead of measuring
+        (`storage/example_project.DEMO_STATUSES`). An emulated status is drawn exactly like a
+        real one — the same colour, the same declared shape — and is MARKED as emulated (the
+        badge, the tooltip) and stripped of any age. ANY ordinary `set_status()` call clears
+        the flag, so a probe result replaces an emulation and the marker goes with it; the
+        project format carries no status field at all.
         """
         if status not in self.STATUS_COLORS:
             return
@@ -1831,7 +1821,7 @@ class ServerNode(QGraphicsItemGroup):
         self._notify_group_aggregate()
 
     def _notify_group_aggregate(self) -> None:
-        """v1.5.4: tell the MAP that this card's status changed.
+        """Tell the MAP that this card's status changed.
 
         A group paints an AGGREGATE of its members (the worst status + the counts) and
         reads the values LIVE at paint time, so the only thing a status change needs is a
@@ -1850,13 +1840,13 @@ class ServerNode(QGraphicsItemGroup):
             pass  # no scene yet / Qt teardown — the aggregate is cosmetic
 
     def _apply_status_tooltip(self, status: str):
-        """v0.7.1/v1.4rc2/v1.5rc3/v1.5: the status tooltip — the plugin detail and the AGE.
+        """The status tooltip — the plugin detail and the AGE.
 
         Lines, in order: the status sentence (`node.status.*` with the host), the plugin
-        detail of a merged probe result (v1.4rc2) and the freshness line (v1.5rc3 —
-        "checked 3 min ago"), so the tooltip answers "what is it" AND "how old is that".
-        v1.5: an EMULATED status replaces the age line with the marker that NAMES the
-        emulation — there is no probe behind it to date.
+        detail of a merged probe result and the freshness line ("checked 3 min ago"), so the
+        tooltip answers "what is it" AND "how old is that". An EMULATED status replaces the
+        age line with the marker that NAMES the emulation — there is no probe behind it to
+        date.
         """
         try:
             from i18n import t as _translate
@@ -1884,7 +1874,7 @@ class ServerNode(QGraphicsItemGroup):
         self.setToolTip("\n".join(lines))
 
     def _start_pulse(self, color: QColor):
-        """v0.7.1/v0.9.6: start the fade-out overlay of a frame in the given color.
+        """Start the fade-out overlay of a frame in the given color.
 
         Shared path for the status-change pulse (set_status) and the "Reveal on
         map" accent (reveal_flash). The _pulse overlay follows the card geometry
@@ -1923,7 +1913,7 @@ class ServerNode(QGraphicsItemGroup):
         anim.start()
 
     def reveal_flash(self):
-        """v0.9.6: the "Reveal on map" accent from the sidebar — a flash frame (900 ms).
+        """The "Reveal on map" accent from the sidebar — a flash frame (900 ms).
 
         The same pattern as the set_status pulse (a ready overlay + QVariantAnimation),
         but in REVEAL_COLOR and WITHOUT changing the status: reveal is a navigational
@@ -1940,11 +1930,11 @@ class ServerNode(QGraphicsItemGroup):
         return self._status
 
     def reset_status(self):
-        """v0.7.1: reset the status (e.g. after changing the node's host/port).
+        """Reset the status (e.g. after changing the node's host/port).
 
-        v1.6.5: a card without a status and without a manual check's line has nothing to
-        reset — but an UNMANAGED card is exactly the case where the second family is the
-        only one that can be set, so the guard asks about both.
+        A card without a status and without a manual check's line has nothing to reset — but
+        an UNMANAGED card is exactly the case where the second family is the only one that can
+        be set, so the guard asks about both.
         """
         if not self._status and not self._manual_report:
             return

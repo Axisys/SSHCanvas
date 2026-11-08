@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The archive EXTRACT behind `Extract` (v1.13.1) — the pure plan, the stage and the member reader.
+"""The archive EXTRACT behind `Extract` — the pure plan, the stage and the member reader.
 
 The WRITE half of the archive surface. `plan_extract()` walks ONE local copy of an archive and
 answers the members a local disk may receive — the Zip Slip, a link / device member, a name the

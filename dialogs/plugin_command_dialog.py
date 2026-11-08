@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The command a CORE-owned run sends to the servers it targets (v1.9.3).
+"""The command a CORE-owned run sends to the servers it targets.
 
 ONE dialogue over the SHIPPED `PluginManager.plugin_run_command()`: the target list arrives ALREADY
 resolved (the Plugins window's checked rows, or the whole registry when nothing is checked) and is

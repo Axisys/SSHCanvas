@@ -2,6 +2,11 @@ import socket
 from typing import Dict, Optional
 from PySide6.QtCore import QThread, Signal
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a bare tree silences the worker's diagnostics
+    from modules.logger import optional_logger
+except ImportError:  # a flat launch: the modules/ directory itself is on sys.path
+    from logger import optional_logger
+
 
 # Cached translator for this module (loaded once on first call)
 _t_cache = None
@@ -201,11 +206,9 @@ class SSHWorker(QThread):
             self._emit_success(msg if not msg.startswith("[") else f"✓ Connected to {self.host}")
         except paramiko.BadHostKeyException as e:
             # AUDIT v0.7.2 (high #4): the stored host key changed — a likely MITM
-            try:
-                from modules.logger import get_logger as _gl
-                _gl("modules.ssh_worker").warning(f"Host key mismatch for {self.host}: {e}")
-            except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the failure
-                pass
+            log = optional_logger("modules.ssh_worker")
+            if log is not None:
+                log.warning(f"Host key mismatch for {self.host}: {e}")
             msg = t("ssh.host_key_changed", host=self.host) + "\n" + str(e)
             self._emit_error(msg if not msg.startswith("[") else f"Host key changed for {self.host}: {e}")
         except paramiko.AuthenticationException:

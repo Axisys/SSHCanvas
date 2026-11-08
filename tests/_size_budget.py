@@ -23,11 +23,11 @@ PIN_SLACK_LINES = 60
 # paste-ready from `python tests/_size_budget.py`. A pin only ever goes DOWN; a module at or over
 # the band that has NO line here is a module the release had to pin.
 LINE_PINS = {
-    "modules/ssh_terminal.py": 2469,
-    "ui/settings_dialog.py": 2573,
+    "modules/ssh_terminal.py": 2442,
+    "ui/settings_dialog.py": 2571,
     "modules/command_library.py": 2362,
-    "modules/terminal_page.py": 2017,
-    "graphics/server_node.py": 2009,
+    "modules/terminal_page.py": 1994,
+    "graphics/server_node.py": 1999,
     "modules/sftp_worker.py": 1879,
     "modules/sftp_pane_viewer.py": 1808,
     "ui/main_window.py": 1778,

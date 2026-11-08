@@ -23,6 +23,11 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a record nobody handles is never printed
+    from ..modules.logger import optional_logger
+except ImportError:
+    from modules.logger import optional_logger
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QFormLayout, QLineEdit, QSpinBox,
     QPushButton, QHBoxLayout, QFileDialog, QMessageBox, QComboBox,
@@ -487,11 +492,9 @@ class SSHConnectDialog(QDialog):
                                                      scope=scope))
                 except Exception as e:
                     saved_ok = False  # credential manager failure is non-critical
-                    try:
-                        from modules.logger import get_logger
-                        get_logger(__name__).warning(f"keyring save failed: {e}")
-                    except Exception:  # noqa: BLE001 — the log is a side channel: the dialog reports the save
-                        pass
+                    log = optional_logger("dialogs.ssh_connect_dialog")
+                    if log is not None:
+                        log.warning(f"keyring save failed: {e}")
                 if not saved_ok:
                     # The same i18n key as in _do_save (behavior parity)
                     QMessageBox.warning(
@@ -543,13 +546,11 @@ class SSHConnectDialog(QDialog):
                     worker.wait(50)
                     deadline_ms -= 50
                 if worker.isRunning():
-                    try:
-                        from modules.logger import get_logger as _get_log
-                        _get_log(__name__).warning(
+                    log = optional_logger("dialogs.ssh_connect_dialog")
+                    if log is not None:
+                        log.warning(
                             "SSHWorker still running at dialog close; "
                             "detaching (internal timeouts will finish it)")
-                    except Exception:  # noqa: BLE001 — the log is a side channel: the close already detached it
-                        pass
                     worker.setParent(None)  # detach from the dialog: the QObject outlives the window close
         event.accept()
 

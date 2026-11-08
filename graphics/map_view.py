@@ -37,6 +37,11 @@ try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
 except ImportError:
     from ui import theme
 
+try:  # the ONE optional door (`AGENTS.md` §12.2) — a record nobody handles is never printed
+    from ..modules.logger import optional_logger
+except ImportError:
+    from modules.logger import optional_logger
+
 try:  # v1.4.4: the motion standards — the camera flights
     from ..ui import motion
 except ImportError:
@@ -65,7 +70,6 @@ try:  # v1.9.8: the ONE order of the server menu (the sidebar reads it too)
     from ..ui import server_menu
 except ImportError:  # flat layout: the ui/ directory itself is on sys.path
     from ui import server_menu
-
 
 if TYPE_CHECKING:
     from ..graphics.map_scene import MapScene
@@ -1159,11 +1163,9 @@ class MapView(QGraphicsView):
                 menu.exec(self._event_global_point(event))
             except Exception as e:  # noqa: BLE001 — a GUI component must not crash the app
                 # logger instead of print to stderr, like the rest of the code.
-                try:
-                    from modules.logger import get_logger
-                    get_logger(__name__).error(f"contextMenuEvent: menu.exec failed: {e}")
-                except Exception:  # noqa: BLE001 — a logger failure must not break the context menu
-                    pass
+                log = optional_logger("graphics.map_view")
+                if log is not None:
+                    log.error(f"contextMenuEvent: menu.exec failed: {e}")
         else:
             super().contextMenuEvent(event)
 
@@ -1446,11 +1448,9 @@ class MapView(QGraphicsView):
                 try:
                     fn(menu, win_node)
                 except Exception as e:  # noqa: BLE001 — a plugin must not break the menu
-                    try:
-                        from modules.logger import get_logger
-                        get_logger(__name__).warning(f"plugin context menu failed: {e}")
-                    except Exception:  # noqa: BLE001 — the log is a side channel
-                        pass
+                    log = optional_logger("graphics.map_view")
+                    if log is not None:
+                        log.warning(f"plugin context menu failed: {e}")
 
         # ── v0.9.3: group operations on multi-selection ─────────
         if node is not None and hasattr(win, "selected_nodes"):
