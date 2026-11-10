@@ -15,7 +15,7 @@ import ast
 import os
 import re
 
-from _common import (bootstrap, check, finish, check_i18n_parity, check_i18n_format,
+from _common import (I18N_PIN_STORY_V182_V198, I18N_PIN_STORY_V110RC, bootstrap, check, finish, check_i18n_parity, check_i18n_format,
                      check_release_state, load_i18n_langs, pane_family_files,
                      pane_family_sources, pane_func_body, pane_func_owner,
                      EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, releases_at_least)
@@ -570,11 +570,8 @@ print("== §7 the release state ==")
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
-check("§7 the waves add NO i18n key and NO schema move (the release's OWN feature adds its 20, "
-      "`ELEVATED_PANE.md`; v1.8.1 adds its 41 and v1.8.1.1 ONE) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair"
-      " — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its"
-      " export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 and VERSION_FORMAT == "0.9",
+check("§7 the waves add NO i18n key and NO schema move (the release's OWN feature adds its 20, `ELEVATED_PANE.md`; v1.8.1 adds its 41 and v1.8.1.1 ONE) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
+      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51 and VERSION_FORMAT == "0.9",
       f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
 check("§7 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)

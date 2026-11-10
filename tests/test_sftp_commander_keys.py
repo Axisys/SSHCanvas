@@ -10,7 +10,7 @@ import os
 import re
 import sys
 
-from _common import (VERSION_FORMAT_RE, bootstrap, check, docs_mode, finish, wait_until, load_i18n_langs,
+from _common import (I18N_PIN_STORY_V182_V198, I18N_PIN_STORY_V110RC, VERSION_FORMAT_RE, bootstrap, check, docs_mode, finish, wait_until, load_i18n_langs,
                      check_i18n_parity, check_i18n_format, check_release_state, clear_cfg,
                      releases_at_least, EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS)
 
@@ -710,17 +710,8 @@ check("the version pin is the release this file describes (its own line or a lat
       releases_at_least(EXPECTED_APP_VERSION, "1.7")
       and VERSION_FORMAT_RE.fullmatch(EXPECTED_APP_VERSION) is not None,
       EXPECTED_APP_VERSION)
-check("the i18n pin counts the SHIPPED release (854 + the 9 keys of v1.7rc3"
-      " + the 4 of the v1.7.1 Files panel + the 3 of the v1.7.1.1 Files display mode"
-      " + the 4 of the v1.7.1.2 device choice + the 4 of v1.7.2: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab"
-      " + the 19 of v1.7.3: the Send-to row and its dialog, the busy/progress/done/failed reports,"
-      " the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and Word wrap"
-      " + the 17 of v1.7.4rc1: the local source switch of a pane, its two refusals, the permanent-"
-      " delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a"
-      " move that would cross the two sources + the 4 of v1.7.5: the Files settings page, its"
-      " ceiling row and its warning, and the truncation notice + the 41 of v1.8.1: the trust surface,"
-      " and v1.8.1.1 adds ONE: the send identity sentence) and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row",
-      EXPECTED_I18N_KEYS == 854 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7, str(EXPECTED_I18N_KEYS))
+check("the i18n pin counts the SHIPPED release (854 + the 9 keys of v1.7rc3 + the 4 of the v1.7.1 Files panel + the 3 of the v1.7.1.1 Files display mode + the 4 of the v1.7.1.2 device choice + the 4 of v1.7.2: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab + the 19 of v1.7.3: the Send-to row and its dialog, the busy/progress/done/failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and Word wrap + the 17 of v1.7.4rc1: the local source switch of a pane, its two refusals, the permanent- delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a move that would cross the two sources + the 4 of v1.7.5: the Files settings page, its ceiling row and its warning, and the truncation notice + the 41 of v1.8.1: the trust surface, and v1.8.1.1 adds ONE: the send identity sentence) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
+      EXPECTED_I18N_KEYS == 854 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51, str(EXPECTED_I18N_KEYS))
 check("VERSION_FORMAT did NOT move (the project schema is unchanged)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("no new dependency was added for the walk (the four pinned ones)",

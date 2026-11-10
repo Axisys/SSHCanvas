@@ -23,10 +23,11 @@ try:
     from ..dialogs.ssh_connect_dialog import SSHConnectDialog
     # v1.4.1: the SSH-config import picker (used by NodeOpsMixin via host_attr — the test seam)
     from ..dialogs.ssh_config_import_dialog import SshConfigImportDialog
+    # the GENERIC import preview — the drawio picker and the profile manager's own rows (host_attr)
+    from ..dialogs.import_drafts_dialog import ImportDraftsDialog
     # v1.5rc2: the export palette question (the print-friendly default + its opt-out)
     from ..dialogs.export_options_dialog import ExportOptionsDialog
-    # v1.6: the bulk edit of the selection and the group arrangement —
-    # both are used by the mixin through host_attr (the MW.<name> test seam).
+    # the bulk edit of the selection and the group arrangement — both via host_attr (the test seam)
     from ..dialogs.bulk_edit_dialog import BulkEditDialog
     from ..dialogs.arrange_group_dialog import ArrangeGroupDialog
     # v1.9.3: the CORE-owned command question — asked by PluginMixin through
@@ -37,6 +38,7 @@ except ImportError:
     from dialogs.connection_dialog import ConnectionDialog
     from dialogs.ssh_connect_dialog import SSHConnectDialog
     from dialogs.ssh_config_import_dialog import SshConfigImportDialog
+    from dialogs.import_drafts_dialog import ImportDraftsDialog
     from dialogs.export_options_dialog import ExportOptionsDialog
     from dialogs.bulk_edit_dialog import BulkEditDialog
     from dialogs.arrange_group_dialog import ArrangeGroupDialog
@@ -51,10 +53,8 @@ except ImportError:  # flat launch from the project root
         _unmanaged_gate = None
 
 # AddServerDialog / ConnectionDialog / SSHConnectDialog / SSHTerminalWindow / _ext_term are TEST
-# SUBSTITUTION POINTS (`MW.<name> = Fake`): the methods moved to the mixins
-# (`NodeOpsMixin._add_server`/_add_connection, `SshMixin._run_ssh_connect`/_spawn_terminal_window/
-# _connect_ssh_external) resolve them from THIS module at call time (`host_attr`), so the imports stay
-# here even when the core no longer uses them directly (`AGENTS.md` §4.1).
+# SUBSTITUTION POINTS (`MW.<name> = Fake`): the mixins resolve them from THIS module at call time
+# (`host_attr`), so the imports stay here even when the core no longer uses them (§4.1).
 
 try:
     from ..modules.ssh_terminal import SSHTerminalWindow

@@ -180,6 +180,7 @@ of the file itself.
 | `test_hotkeys_palette.py` | — | Hotkeys and command palette v0.9.2 (a former smoke-test part). |
 | `test_i18n_languages.py` | — | v1.3.3 — Languages without writing code ("name" in JSON + parity policy + documentation): the release's themed test. |
 | `test_i18n_live.py` | slow | v1.3.3.1 — Live i18n: the containers follow a language switch + the checks of the policy. |
+| `test_import_drafts.py` | — | v1.15.2 — the import draft rows: three Qt-free sources, ONE row model, the CLI preview and the GUI apply. |
 | `test_index.py` | — | The generated suite map — `tests/INDEX.md` is fresh and every test file carries its docstring. |
 | `test_inventory.py` | — | v1.5.5 — The inventory: the LIST mode becomes a report (v1.5.5). |
 | `test_keyring_fail_backend.py` | — | Regression v0.9.4b: the keyring fail backend + review notes. |

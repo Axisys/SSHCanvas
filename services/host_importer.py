@@ -11,7 +11,6 @@ created with `host` = the name and an empty `ip`, for the user to sort out. Pass
 touched: the user sets them up after the import.
  The DNS stage leaves a record: the resolver thread writes ONE summary per run — how many names got an address, how many did not and whether the run was cancelled — so the activity history can answer "did the import actually resolve anything", which the batch's own "Imported N servers" line cannot (a node is created either way)."""
 
-import ipaddress
 import socket
 import threading
 from typing import Dict, List, Optional
@@ -66,13 +65,10 @@ def parse_hosts_file(text: str) -> List[str]:
     return hosts
 
 
-def is_ip_address(entry: str) -> bool:
-    """True if the string is a valid IPv4/IPv6 address."""
-    try:
-        ipaddress.ip_address(entry)
-        return True
-    except ValueError:
-        return False
+try:  # the ONE address predicate (`models/server.py`) — re-exported under this module's shipped name
+    from ..models.server import is_ip_address
+except ImportError:  # pragma: no cover — the flat launch from the project root
+    from models.server import is_ip_address
 
 
 def resolve_host(hostname: str) -> Optional[str]:

@@ -161,12 +161,12 @@ OFF = closed_port()
 print("== §1 the `hostkey` subcommand grammar and the registry ==")
 
 _ROWS = dict(DISPATCH.registered())
-check("§1 the lazy load registers SIX verbs — the `hostkey` family beside the five of the base release",
-      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+check("§1 the lazy load registers SEVEN verbs — the `hostkey` and `import` families beside the five of the base release",
+      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey", "import"},
       str(sorted(_ROWS)))
-check("§1 `cli.hostkey` is the sixth built-in module, LAST in the ONE declaration of that load",
+check("§1 `cli.hostkey` is the sixth built-in module of the ONE declaration (`cli.imports` follows)",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec", "cli.hostkey"),
+                                        "cli.doctor", "cli.exec", "cli.hostkey", "cli.imports"),
       str(DISPATCH.BUILTIN_VERB_MODULES))
 check("§1 the row declares EXACTLY one argument, a renderer, a verdict, and is not mutating",
       DISPATCH.VERBS["hostkey"].min_args == 1 and DISPATCH.VERBS["hostkey"].max_args == 1
@@ -447,7 +447,7 @@ check(f"§5 this release is v{EXPECTED_APP_VERSION} (the 1.15 line's first follo
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
 check(f"§5 the release adds NO i18n key (the parity pin stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1205
+      EXPECTED_I18N_KEYS == 1256
       and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
       {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)

@@ -309,7 +309,7 @@ check("N11: pyflakes reports no `undefined name` in the application code",
 #: pins (`modules/terminal_widget.py`) and the three GUI homes whose names the suite imports through them.
 _SEAM_FILES = ("ssh_terminal.py", "services/diagnostics.py", "services/status_checker.py",
                "modules/terminal_widget.py", "graphics/node_group.py", "ui/sidebar.py",
-               "ui/main_window_project_io.py")
+               "ui/main_window_project_io.py", "ui/main_window.py", "services/host_importer.py")
 
 
 def _is_seam_report(line):

@@ -1,17 +1,13 @@
-"""`NodeOpsMixin` — the "operations on the map's nodes and connections" cluster (AGENTS.md §4.1, §4.2).
+"""`NodeOpsMixin` — the "operations on the map's nodes and connections" cluster (§4.1, §4.2).
 
-Methods only: `MainWindow` stays the facade and the public API is unchanged. The mixin does NOT import
-the window module (cycle) — it duck-types the instance, and `AddServerDialog` / `ConnectionDialog` are
-resolved on the facade at call time (`host_attr`), which is the test seam (`MW.AddServerDialog = Fake`).
-
-The cluster owns the whole TXT import (the entry, the thread slots and the assembly — ONE feature, not
-splittable), the ping/DNS/import thread references (`self._ping_thread`, `self._dns_thread`,
-`self._import_resolve_thread` plus the batch context) and "why is it offline?":
-`_diagnose_node()` and the report slots, whose registry is `self._diagnose_threads` keyed by server id
-(the same node twice is refused while a different node is fine). The report RUNS in
-`services/diagnostics.ReachabilityThread`, never on the GUI thread. `_is_scene_point` moved here with the cluster and `main_window.py` imports it back (`_add_group_at`)."""
+Methods only: `MainWindow` stays the facade. The mixin does NOT import the window module (cycle) — it
+duck-types the instance, and `AddServerDialog` / `ConnectionDialog` resolve on the facade at call time
+(`host_attr`, the test seam). The cluster owns the THREE imports (TXT, SSH config, `.drawio` drafts), the
+ping/DNS thread references and "why is it offline?" (`_diagnose_node()`, registry `_diagnose_threads` —
+the report runs in `services/diagnostics.ReachabilityThread`). `_is_scene_point` is imported back by
+`main_window.py` (`_add_group_at`)."""
 from PySide6.QtCore import QPointF, QRectF
-from PySide6.QtWidgets import QDialog, QMessageBox, QApplication
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QApplication
 
 try:
     from ..graphics.server_node import ServerNode
@@ -67,12 +63,9 @@ except ImportError:
 
 
 def _is_scene_point(value) -> bool:
-    """v0.8.1: is a scene point (QPoint/QPointF) passed, and not something else.
+    """A scene point (QPoint/QPointF), never the bool `QAction.triggered` hands a direct slot.
 
-    QAction.triggered passes the bool `checked` to a Python slot — when the
-    action is connected directly (toolbar/menu) it arrives as the first
-    positional argument. Without this check `_add_server(True)` crashed on
-    `center.x()` ("'bool' object has no attribute 'x'").
+    Without the check `_add_server(True)` crashed on `center.x()`.
     """
     if value is None or isinstance(value, bool):
         return False
@@ -127,18 +120,11 @@ class NodeOpsMixin:
             QMessageBox.critical(self, self.t("msg.error_title"), self.t("msg.add_failed", error=str(e)))
 
     def _import_servers_from_txt(self):
-        """v0.9.5.5: bulk import of servers from a text file.
+        """Bulk import of servers from a text file: one host per line, `#`/`//` comments.
 
-        Format: one host per line (IP or DNS name), '#'/'//' — comments.
-        IP → host=IP; a name → resolved to an IP (the `ip` field), host stays
-        the name. Duplicates (already on the map or repeated in the file) are
-        skipped. A single undo unit — the whole batch is added/rolled back by
-        one CmdAddRemoveNodeBatch command.
-
-        v1.1.2RC2 (N6): the DNS name resolution — off the GUI thread
-        (HostResolverThread, the progress in the status bar): a file with
-        dozens of names with an unavailable resolver no longer freezes the
-        interface. IP addresses need no resolution — they are added immediately.
+        IP → `host=ip`; a name → `host` keeps the name and `ip` is its resolution; a duplicate (on the
+        map or in the file) is skipped. ONE undo unit (`CmdAddRemoveNodeBatch`). DNS names resolve in
+        `HostResolverThread` with the status-bar progress — IP addresses are added immediately.
         """
         from PySide6.QtWidgets import QFileDialog
 
@@ -252,11 +238,10 @@ class NodeOpsMixin:
             pass  # Qt teardown — the widgets are already destroyed
 
     def _finish_import_from_txt(self, pending, resolved_map, path, skipped):
-        """v1.1.2RC2 (N6): the ServerData assembly + the grid layout + one undo command.
+        """The TXT import's ServerData assembly + grid layout + ONE undo command.
 
-        `resolved_map` — {name: IP or None} from HostResolverThread; IP
-        addresses are absent from it (they needed no resolution) and are
-        taken as-is.
+        `resolved_map` = {name: IP or None} from `HostResolverThread` (an IP entry is absent — it
+        needed no resolution and is taken as-is).
         """
         import uuid as _uuid
         from services.host_importer import is_ip_address
@@ -298,14 +283,16 @@ class NodeOpsMixin:
             data.x = center.x() - 90 + c * col_w
             data.y = center.y() - 65 + r * row_h
 
-    def _commit_import_batch(self, added_data, source_label):
+    def _commit_import_batch(self, added_data, source_label, keep_positions=False):
         """Add a batch of ServerData as ONE undo command + the usual post-add refresh.
 
-        Never raises on an empty list — the caller decides what to report.
+        `keep_positions` — the source carries its own geometry (the drawio draft rows), so the grid
+        placement of `_layout_imported_nodes()` is skipped. Never raises on an empty list.
         """
         if not added_data:
             return
-        self._layout_imported_nodes(added_data)
+        if not keep_positions:
+            self._layout_imported_nodes(added_data)
         from modules.undo_commands import CmdAddRemoveNodeBatch
         self._push_command(CmdAddRemoveNodeBatch(self, self.scene, added_data, "add"))
         self.refresh_sidebar()
@@ -319,10 +306,8 @@ class NodeOpsMixin:
     def _map_import_keys(self) -> set:
         """The `(host, port, user)` keys of the nodes already on the map.
 
-        v1.4.1: the deduplication rule of the SSH-config import — the same
-        machine reached with another login or on another port is another node,
-        so the port and the user are part of the key (the TXT import compares
-        host/ip alone: it has no port or user to compare).
+        The SSH-config dedupe rule: the same machine behind another login or port is another node
+        (the TXT import compares host/ip alone — it has neither to compare).
         """
         keys = set()
         for node in self.scene.nodes():
@@ -333,15 +318,11 @@ class NodeOpsMixin:
         return keys
 
     def _import_servers_from_ssh_config(self):
-        """v1.4.1: bulk import from the OpenSSH client config.
+        """Bulk import from the OpenSSH client config: parser → dedupe → the picker → ONE batch.
 
-        `~/.ssh/config` → the parser (`services/ssh_config_importer.py`) →
-        deduplication against the map (a host the map already knows is reported,
-        never added twice) → the checkbox dialog → ONE `CmdAddRemoveNodeBatch`
-        (the TXT-import precedent: Ctrl+Z rolls the whole import back at once).
-        `Host/HostName/User/Port/IdentityFile` land in `alias/host/user/ssh_port/
-        key_path`; a wildcard pattern, a `Match` block and an unreadable
-        `Include` are reported by the dialog and imported by nobody.
+        `Host/HostName/User/Port/IdentityFile/ProxyJump` land in `alias/host/user/ssh_port/key_path/
+        jump_host`; a wildcard pattern, a `Match` block, an unreadable `Include` and a host the map
+        already knows are REPORTED by the dialog and imported by nobody. Ctrl+Z rolls the batch back.
         """
         from services.ssh_config_importer import (
             ERROR_MISSING, REASON_DUPLICATE, SshConfigError, SshConfigIssue,
@@ -418,6 +399,100 @@ class NodeOpsMixin:
             self.t("msg.import_ssh_config_result",
                    added=len(added_data), skipped=len(skipped)))
 
+    def _import_map_from_drawio(self):
+        """File → Import from draw.io… — ONE `.drawio` file's drafts as cards, links and notes.
+
+        The drafts are the SHARED row model (`services/import_drafts.py`), so this picker lists exactly
+        what `sshcanvas-cli import drawio` prints; a group frame, the background image and a foreign
+        shape are SKIP rows of the dialog's report, never a guess. Cards keep the file's geometry.
+        """
+        from services import import_drafts
+
+        path, _filter = QFileDialog.getOpenFileName(
+            self, self.t("file.import_drawio"), "", "draw.io (*.drawio)")
+        if not path:
+            return
+        try:
+            report = import_drafts.collect(import_drafts.SOURCE_DRAWIO, path)
+        except import_drafts.SourceError as exc:
+            QMessageBox.critical(self, self.t("msg.error_title"),
+                                 self.t("msg.import_servers_failed", error=exc.detail or exc.code))
+            return
+        try:
+            dlg_cls = host_attr(self, "ImportDraftsDialog")
+            if dlg_cls is None:
+                raise RuntimeError("ImportDraftsDialog is not available in the MainWindow module")
+            dlg = dlg_cls(report, self)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            selected = list(dlg.selected_drafts())
+        except Exception as e:  # noqa: BLE001 — the dialog must never kill the window
+            if self.log:
+                self.log.exception("draw.io import dialog failed")
+            QMessageBox.critical(self, self.t("msg.error_title"),
+                                 self.t("msg.import_servers_failed", error=str(e)))
+            return
+        cards, links, notes = self._apply_import_drafts(selected, path)
+        QMessageBox.information(
+            self, self.t("msg.success_title"),
+            self.t("msg.import_drawio_result", added=cards, links=links, notes=notes,
+                   skipped=len(report.skipped())))
+
+    def _apply_import_drafts(self, drafts, source_label):
+        """Apply the CHECKED drafts: cards as ONE batch, then their links and notes; (n, n, n).
+
+        Cards are placed at the draft's own x/y — a source that carries geometry keeps it, so the grid
+        of `_layout_imported_nodes()` is skipped. A link needs both endpoints AMONG the applied cards
+        (the source's cell ref → the new node id); a note comes across with its size.
+        """
+        import uuid as _uuid
+        from models.server import ServerData
+        from modules.undo_commands import CmdAddRemoveConnection, CmdAddRemoveNote
+        from services.import_drafts import KIND_CONNECTION, KIND_NOTE, KIND_SERVER
+        from services.host_importer import is_ip_address
+
+        node_ids, added_data = {}, []
+        for draft in drafts:
+            if draft.kind != KIND_SERVER:
+                continue
+            fields = draft.fields or {}
+            host = str(fields.get("host") or "")
+            data = ServerData(
+                id=str(_uuid.uuid4())[:8], alias=str(fields.get("alias") or ""), host=host,
+                user=str(fields.get("user") or ""), password="",
+                # a host that IS an address gives the card its ip field for free (the SSH-config rule)
+                ip=host if is_ip_address(host) else "",
+                ssh_port=int(fields.get("port") or 22), tags=list(fields.get("tags") or ()),
+                comment=str(fields.get("comment") or ""),
+                x=float(fields.get("x") or 0.0), y=float(fields.get("y") or 0.0))
+            if fields.get("ref"):
+                node_ids[str(fields["ref"])] = data.id
+            added_data.append(data)
+        self._commit_import_batch(added_data, source_label, keep_positions=True)
+        links = notes = 0
+        for draft in drafts:
+            fields = draft.fields or {}
+            if draft.kind == KIND_CONNECTION:
+                src = node_ids.get(str(fields.get("source") or ""))
+                tgt = node_ids.get(str(fields.get("target") or ""))
+                if not src or not tgt or src == tgt:
+                    continue
+                self._push_command(CmdAddRemoveConnection(
+                    self, self.scene, src, tgt, str(fields.get("label") or ""),
+                    str(fields.get("type") or "ssh"), "add",
+                    bidirectional=bool(fields.get("bidirectional"))))
+                links += 1
+            elif draft.kind == KIND_NOTE:
+                self._push_command(CmdAddRemoveNote(self, self.scene, {
+                    "text": str(fields.get("text") or ""),
+                    "x": float(fields.get("x") or 0.0), "y": float(fields.get("y") or 0.0),
+                    "width": float(fields.get("width") or 240.0),
+                    "height": float(fields.get("height") or 160.0)}, "add"))
+                notes += 1
+        if links or notes:
+            self._mark_dirty()
+        return len(added_data), links, notes
+
     def _add_connection(self, default_source_id=None, default_target_id=None):
         """Create a connection: the dialog with the node, label and type choice (v0.7).
 
@@ -469,12 +544,10 @@ class NodeOpsMixin:
             QMessageBox.critical(self, self.t("msg.error_title"), self.t("msg.create_connection_failed", error=str(e)))
 
     def _duplicate_node(self, node: "ServerNode", offset: float = 40.0):
-        """Ctrl+D / right click: a copy of the node (all fields except id) with an offset.
+        """Ctrl+D / right click: a copy of the node (every field but the id) with an offset.
 
-        The password is not stored in the JSON — it lives in the keyring by
-        server_id, so for the copy we load the original's password and save
-        it under the NEW id. Returns the new ServerNode or None (the node was
-        not found).
+        The password lives in the keyring under the server id — the copy loads the original's and
+        saves it under the NEW id. Answers the new `ServerNode`, or None when the node is gone.
         """
         if node is None or node.scene() is None:
             return None
@@ -534,31 +607,14 @@ class NodeOpsMixin:
     # ── v1.3.3.3: "Check statuses now" ──────────────────────────────────────────
 
     def _check_statuses_now(self, node: "ServerNode" = None) -> bool:
-        """Run ONE status round for the selected nodes, on demand.
+        """Run ONE status round for the selected nodes, on demand (`start_round`, no wire here).
 
-        The periodic rounds (``StatusChecker.start``, ~every 30 s) probe the WHOLE map;
-        this is the explicit "check these right now" of the node context menu (the map
-        and the sidebar both call it) and of the Edit-menu item. The nodes probed are
-        the current SELECTION when there is one, otherwise the node the menu was opened
-        on — so "check this one" and "check the selected five" are the same entry point.
-
-        ``node`` is duck-typed on purpose: the menu/toolbar path connects the slot to
-        ``QAction.triggered``, which delivers a bool ``checked`` as the first argument
-        (gotchas #10/#12 of AGENTS.md, the ``_is_scene_point`` guard pattern) — anything
-        that is not a node object is ignored and the selection decides.
-
-        Not one byte of network traffic happens here: ``start_round`` spawns the
-        existing ``_ProbeThread`` (``ThreadPoolExecutor``, cap ``status_max_parallel``)
-        — the GUI thread only builds the target list. The interval/cancellation
-        semantics are untouched (``_busy`` still refuses a second concurrent round, and
-        a manual round does not restart the QTimer countdown).
-
-        Returns True when a round was actually started. Never raises.
-
-        v1.6.5: an UNMANAGED card is refused before the target list is
-        built. It is also absent from the checker's own plan (`_status_skip_ids`), so this
-        is the sentence that explains WHY the menu row was disabled rather than a silent
-        no-op — and a selection that mixes kinds still checks every card it can.
+        The nodes probed are the SELECTION, else the node the menu was opened on; `node` is duck-typed
+        because a `QAction.triggered` hands over a bool (gotchas #10/#12). `_ProbeThread` does the work
+        (`status_max_parallel`); `_busy` still refuses a second round and the QTimer countdown is not
+        restarted. An UNMANAGED card is refused before the list is built — the sentence behind the
+        disabled menu row, and a mixed selection still checks every card it can. True when a round
+        started; never raises.
         """
         checker = getattr(self, "_status_checker", None)
         if checker is None:
@@ -594,20 +650,11 @@ class NodeOpsMixin:
     # ── v1.5.3: "why is it red?" ────────────────────────────────────────────────
 
     def _diagnose_node(self, node: "ServerNode" = None) -> bool:
-        """Run ONE reachability report for a node and answer with its own sentence.
+        """Run ONE reachability report for a node: DNS → TCP → banner (→ ping), first failure named.
 
-        The problem the report solves: `probe_ssh` collapses DNS, refused and timeout into
-        one `offline`, while the user's question is "which one is it?". The report runs the
-        EXISTING pieces in order — DNS resolve → TCP connect → SSH banner → ICMP ping —
-        and names the FIRST step that failed (`services/diagnostics.diagnose_reachability`).
-
-        `node` is duck-typed like `_check_statuses_now()`: the Edit menu hands the slot a
-        bool (`QAction.triggered`) and a selection decides in that case, the context menus
-        hand over the clicked node. Returns True when a report was really started; a second
-        report for the SAME node while the first runs is refused with an honest message.
-
-        Not one byte of network work happens here: the report lives in
-        `ReachabilityThread` (QThread), because it blocks on DNS/TCP and may launch `ping`.
+        The report is `services/reachability.diagnose_reachability()`, inside `ReachabilityThread` —
+        no network on the GUI thread. `node` is duck-typed like `_check_statuses_now()`. True when a
+        report started; a second report for the SAME node is refused with a message.
         """
         target = node
         if target is None or isinstance(target, bool) or getattr(target, "data", None) is None:
@@ -782,15 +829,10 @@ class NodeOpsMixin:
         return True
 
     def _bulk_edit_selection(self) -> bool:
-        """v1.6: edit tags / comment / quick launch for the selection.
+        """Edit tags / comment / quick launch for the selection: ONE `CmdEditSelected`.
 
-        The multi-selection sibling of "properties": the dialog is TRI-STATE (a field left
-        at "leave unchanged" is never written), and the whole apply is ONE command
-        (`CmdEditSelected`), so Ctrl+Z restores every card of the batch at once.
-
-        The action (`edit.selected`) lives in the Edit menu AND in the multi-selection part
-        of the map's context menu, so the keyboard can reach it (§4.9 — an EMPTY default).
-        Returns True when a command really landed.
+        The dialog is TRI-STATE (an unchanged field is never written), so Ctrl+Z restores every card
+        of the batch at once. True when a command really landed.
         """
         nodes = self.selected_nodes()
         if not nodes:
@@ -856,16 +898,10 @@ class NodeOpsMixin:
             return []
 
     def _arrange_group(self, group, mode: str = "", per_line: int = 0) -> bool:
-        """v1.6: line a group's members up in ONE undo step.
+        """Line a group's members up in ONE undo step: `arrange_positions()` + `CmdArrangeGroup`.
 
-        The layout is the pure `graphics.node_group.arrange_positions()`; this method only
-        reads the live geometry, pushes ONE `CmdArrangeGroup` and reports. Two declared
-        boundaries:
-
-          * the arrangement MOVES cards and never resizes the group — the geometric
-            membership of `MapScene.resync_group_members()` keeps deciding who is inside;
-          * a FOLDED group is REFUSED with a status line: its members are drawn on the
-            strip, so there is no honest layout to compute there.
+        It MOVES cards and never resizes the group — `resync_group_members()` keeps deciding who is
+        inside. A FOLDED group is refused with a status line: its members are drawn on the strip.
         """
         if group is None:
             return False
@@ -1055,23 +1091,13 @@ class NodeOpsMixin:
                 else "Nothing to arrange — the map needs at least two groups or free cards")
 
     def _arrange_map(self, mode: str = "", per_line: int = 0, reading=None) -> bool:
-        """Line the WHOLE map up in ONE undo step — the top level, a group riding together.
+        """Line the WHOLE map up in ONE undo step: `arrange_unit_positions()` + `CmdArrangeMap`.
 
-        The layout is the pure `graphics.node_group.arrange_unit_positions()`; this method
-        only reads the live geometry, pushes ONE `CmdArrangeMap` and reports. The declared
-        boundaries: the arrangement MOVES cards and frames and never resizes a group, the
-        geometric membership of `MapScene.resync_group_members()` keeps deciding who is
-        inside, and free-standing notes and the background image are not moved.
-
-        ONE move per UNIT is what the command holds: a group is moved by its FRAME, and the frame's
-        `_apply_move()` carries the members (`CmdArrangeMap._apply`) — a bare `setPos()` moves the
-        frame ALONE, because `NodeGroup` does not set `ItemSendsGeometryChanges` and its
-        `itemChange(ItemPositionChange)` branch therefore never runs. A member is never listed beside
-        its frame for that reason: the frame has already moved it.
-
-        `reading` is the tuple `_arrange_map_units_read()` answers, handed in by a caller that has
-        already read the map's top level (the dialog's own door): the gesture then walks the scene
-        ONCE. `None` — read it here, which is what every other caller does.
+        ONE move per UNIT: a group rides with its FRAME (`CmdArrangeMap._apply()` → `_apply_move()`),
+        because `NodeGroup` sets no `ItemSendsGeometryChanges` and a bare `setPos()` would move the
+        frame alone. Cards and frames MOVE, never resize; free notes and the background stay put.
+        `reading` is `_arrange_map_units_read()`'s tuple from a caller that already read the top level
+        (the dialog's door); `None` reads it here.
         """
         if arrange_unit_positions is None:
             return False
@@ -1118,17 +1144,11 @@ class NodeOpsMixin:
         return True
 
     def _ask_arrange_map(self) -> bool:
-        """The map's "Arrange Map…" entry point (the empty-space context menu): ask, then apply.
+        """The map's "Arrange Map…" door: refuse a trivial map, ask the mode, then `_arrange_map()`.
 
-        The ONE entry point of the gesture. The REFUSAL comes first, before the dialog is built (the
-        order the group door already keeps, `_ask_arrange_group()`): a map whose top level holds fewer
-        than two UNITS has nothing to lay out, and asking its mode would be a question with no answer.
-        Then the SHARED arrangement dialog opens in its MAP scope (the same three modes, the same rows
-        count) and its answer goes to `_arrange_map()`. A cancelled dialog changes nothing.
-
-        ONE reading of the map's top level answers the refusal AND the dialog's row count, and the
-        SAME reading is handed to `_arrange_map()`: the modal dialog blocks the scene, so the map
-        cannot move under it while the answer is pending.
+        The REFUSAL comes before the dialog (the `_ask_arrange_group()` order): fewer than two UNITS
+        has nothing to lay out. ONE reading of the top level answers the refusal, the dialog's row
+        count and the apply — the modal dialog blocks the scene, so the map cannot move under it.
         """
         reading = self._arrange_map_units_read()
         count = len(reading[0])
@@ -1155,24 +1175,13 @@ class NodeOpsMixin:
 
     def _copy_text_to_clipboard(self, text, message_key: str = "status.copied_to_clipboard",
                                 **kw) -> bool:
-        """Put TEXT on the clipboard and report it — the ONE text-clipboard helper (v1.5.5).
+        """Put TEXT on the clipboard and report it — the ONE text-clipboard helper.
 
-        Every text copy of the application goes through here (the node's IP / hostname and,
-        since v1.5.5, the server list of the LIST mode), so the two rules live in ONE place:
-
-          * **the dead-object guard** — a copy can be triggered from a LATE callback (the
-            reverse-DNS thread answers after the window was closed): `QApplication
-            .clipboard()` / `statusBar()` are C++ objects and touching a dead one raises
-            `RuntimeError`. A copy that cannot happen is a silent False, never a crash in
-            a callback Qt no longer knows about;
-          * **the report** — the message carries the action's own words (`message_key` +
-            its placeholders, e.g. `value=` of `status.copied_to_clipboard`).
-
-        The copied text is `text`, NOT `value`: the placeholder of the node copy is spelled
-        `{value}`, and a caller must be able to pass it by keyword (the two names collided
-        once and made that call a TypeError).
-
-        Returns True when the text really reached the clipboard.
+          * **dead-object guard:** a LATE callback (the reverse-DNS thread) may reach a closed window;
+            `QApplication.clipboard()` / `statusBar()` raise `RuntimeError` then — False, never a crash.
+          * **report:** `message_key` + its placeholders (e.g. `value=` of `status.copied_to_clipboard`).
+          * the copied text is `text`, NOT `value` — the placeholder of the node copy is `{value}`, so a
+            caller passes it by keyword. True when the text really reached the clipboard.
         """
         try:
             QApplication.clipboard().setText(str(text))
@@ -1185,13 +1194,10 @@ class NodeOpsMixin:
         return True
 
     def _copy_node_info(self, node: "ServerNode", what: str = "ip"):
-        """Copy the node's IP or hostname to the clipboard (v0.7.3).
+        """Copy the node's IP (or its hostname) — reverse DNS in `diagnostics.ReverseDnsThread`.
 
-        AUDIT v0.7.2 (medium #6): the reverse DNS (gethostbyaddr) runs in a
-        separate thread — with an unavailable resolver the GUI thread earlier
-        froze on the DNS timeout.
-        v0.9.9.3: the thread was moved to services/diagnostics.py (ReverseDnsThread).
-        v1.5.5: the copy itself is the shared `_copy_text_to_clipboard()` helper.
+        `gethostbyaddr` off the GUI thread: an unavailable resolver froze the window. The copy itself
+        is `_copy_text_to_clipboard()`.
         """
         if node is None:
             return
@@ -1242,18 +1248,12 @@ class NodeOpsMixin:
         _copy(node.data.ip.strip() or node.data.host, what)
 
     def _ping_node(self, node: "ServerNode"):
-        """Ping the node in a separate thread without blocking the GUI (v0.7.3).
+        """Ping the node in `diagnostics.PingThread` (`ping -n 3` / `-c 3`); result in the status bar.
 
-        Windows: `ping -n 3`, POSIX: `ping -c 3`. The result — in the status bar.
-        v0.9.9.3: the thread was moved to services/diagnostics.py (PingThread).
-
-        v1.6.5: the SECOND reading of this action is the ONE network call
-        an UNMANAGED card may ever make — pure ICMP, never a TCP/SSH probe — and only when
-        the card itself opted in (`ServerData.unmanaged_ping`, DEFAULT OFF). The answer
-        takes the same status-bar road AND lands on the card as a line MARKED a manual
-        result (`set_manual_report`): it must never become a fourth kind of status, because
-        the counters, the aggregate and the "problems only" lens all read `online`/`warn`/
-        `offline`/unchecked and nothing else.
+        The ONE network call an UNMANAGED card may make — pure ICMP, never TCP/SSH — and only when
+        the card opted in (`unmanaged_ping`, DEFAULT OFF). The answer also lands on the card as a
+        MANUAL mark (`set_manual_report`): it is never a fourth status, because the counters, the
+        aggregate and the "problems only" lens read `online`/`warn`/`offline`/unchecked only.
         """
         if node is None:
             return
@@ -1364,14 +1364,12 @@ class NodeOpsMixin:
         return True
 
     def _ensure_worker_done(self, server_id: str) -> bool:
-        """True — no SSHWorker is running for the server: the caller removes the node NOW.
+        """True — no SSHWorker runs for the server: remove the node NOW. False — the removal is DEFERRED.
 
-        False — a worker is still running. It is asked to stop (`request_stop()`) and the removal
-        is DEFERRED to its `finished()` (`_flush_deferred_deletes`): the GUI thread never waits on
-        a QThread, so deleting a node costs no frozen window (`N137`). The worker cannot be
-        interrupted inside a network wait, so the deferral is what keeps its late answer away from
-        the node it belonged to. A worker that was never STARTED has no `finished()` to wait for
-        and never defers the removal.
+        A running worker is asked to stop (`request_stop()`) and its `finished()` performs the removal
+        (`_flush_deferred_deletes`): the GUI thread never waits on a QThread (`N137`), and the
+        deferral keeps the worker's late answer away from the node. A worker never STARTED has no
+        `finished()` and never defers.
         """
         try:
             from modules.ssh_worker import get_active_worker as _active

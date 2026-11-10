@@ -155,7 +155,7 @@ check("§2 it costs NO new menu entry, action or hotkey (the rejected \"Reset po
       "the 56 of v1.5.5 are the inventory pair, the 59 of v1.6 the bulk-edit/arrangement/report trio, the 60 of v1.6.7 the bookmarks panel, the 61 of v1.6.8 the attention report and the 62 of the "
       "v1.8.1 known-hosts manager)",
       not any("reset_panel" in a or "reset.position" in a for a in HR.HOTKEY_ACTIONS)
-      and len(HR.HOTKEY_ACTIONS) == 62)
+      and len(HR.HOTKEY_ACTIONS) == 63)
 
 win = make_main()
 _legend = win.legend
@@ -324,7 +324,7 @@ _hub.close()
 check("§4 no new action and no new empty default of THIS release (the registry grew with "
       "the two v1.5.1 File actions, the v1.5.2 View item, the v1.5.3 freshness pair and the "
       "v1.5.5 inventory pair after it, and the v1.6.8 attention report at the end)",
-      len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39)
+      len(HR.HOTKEY_ACTIONS) == 63 and len(HR.empty_default_action_ids()) == 40)
 check("§4 no new theme field (the palette is the v1.5rc1 one)",
       len(dataclasses.fields(theme.Theme)) == 61)
 _deps = {"PySide6", "paramiko", "keyring", "wcwidth"}

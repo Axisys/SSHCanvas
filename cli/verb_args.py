@@ -6,10 +6,10 @@ ONE reader of that tail. A TABLE verb declares its flags (`ARGUMENT_TABLE`: `--t
 takes its LAST value) and refuses a bare token; a POSITIONAL verb (`POSITIONAL_VERBS`: `status`, `doctor`)
 declares node tokens and refuses a flag-shaped one; an EXEC verb (`EXEC_VERBS`: `exec`) declares the five
 flags of the command policy beside a node and a VERBATIM command; a SUBCOMMAND verb (`SUBCOMMANDS`:
-`hostkey`) declares the ONE token its tail names. An undeclared token is a USAGE error in every shape —
-the strictness the global parse already applies. The format ids come from the shipped writer
-(`storage/table_text.LIST_DELIMITERS`), never a second list. `AGENTS.md` §4.35; `CLI.md` §2, §3.1, §3.5,
-§3.6.
+`hostkey`) declares the ONE token its tail names; an IMPORT verb (`IMPORT_VERBS`: `import`) declares its
+SOURCE ids, ONE optional file path and `--format`. An undeclared token is a USAGE error in every shape.
+The format ids come from the shipped writer (`storage/table_text.LIST_DELIMITERS`), never a second list.
+`AGENTS.md` §4.35; `CLI.md` §2, §3.1, §3.5, §3.6, §3.7.
 """
 from dataclasses import dataclass
 
@@ -64,6 +64,19 @@ EXEC_SWITCHES = (ACCEPT_NEW_OPTION, ALLOW_DESTRUCTIVE_OPTION, DRY_RUN_OPTION)
 #: flag of its own: the flags of a family belong to the subcommand that would use them, and `verify`
 #: declares none (`CLI.md` §3.6).
 SUBCOMMANDS = {"hostkey": ("verify",)}
+
+#: The ONE verb whose tail is `<source> [PATH] [--format csv|tsv]`: the SOURCE ids are the domain's
+#: (`services/import_drafts.SOURCES`, passed by the verb), and the path is the file it reads.
+IMPORT_VERBS = ("import",)
+
+
+@dataclass(frozen=True)
+class ImportRequest:
+    """What one `import` tail asked for: the source, the file ("" — the source's default) and format."""
+
+    source: str = ""
+    path: str = ""
+    format: str = DEFAULT_FORMAT
 
 
 @dataclass(frozen=True)
@@ -163,6 +176,51 @@ def read_subcommand(verb, arguments) -> str:
         raise usage_error(f"{name} does not take {tokens[0]!r} — it takes {' | '.join(declared)}",
                           late_option_hint(tokens[0]))
     return tokens[0]
+
+
+def read_import(verb, arguments, sources=()) -> ImportRequest:
+    """Read the `import` tail: the SOURCE token, an optional PATH and `--format` (PURE).
+
+    `sources` is the family's declared source ids (the domain's `SOURCES`, passed by the verb, so the
+    grammar never owns a second copy of them). The FIRST token is the source and exactly ONE bare token
+    after it may be the file; a flag the verb does not declare is a USAGE error naming the grammar.
+    """
+    name = str(verb or "")
+    if name not in IMPORT_VERBS:
+        raise usage_error(f"{name} takes no import tail")
+    declared = tuple(str(item) for item in (sources or ()))
+    if not declared:
+        raise usage_error(f"{name} declares no source")
+    tokens = [str(token if token is not None else "") for token in (arguments or ())]
+    if not tokens:
+        raise usage_error(f"{name} needs a source ({' | '.join(declared)})")
+    source = tokens[0].strip()
+    if source.startswith("-"):
+        raise usage_error(f"{name} needs a source ({' | '.join(declared)})",
+                          late_option_hint(source))
+    if source not in declared:
+        raise usage_error(f"{name} does not take {source!r} — it takes {' | '.join(declared)}")
+    path, fmt = "", DEFAULT_FORMAT
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        index += 1
+        flag, separator, value = token.partition("=")
+        if flag == FORMAT_OPTION:
+            if not separator:
+                if index >= len(tokens):
+                    raise usage_error(f"{flag} needs a value")
+                value = tokens[index]
+                index += 1
+            fmt = resolve_format(value)
+            continue
+        if flag.startswith("-"):
+            raise usage_error(f"{name} does not take {flag!r}",
+                              late_option_hint(flag) or "the grammar is: import <source> [PATH]")
+        if path:
+            raise usage_error(f"{name} takes ONE file path, got {token!r}")
+        path = token.strip()
+    return ImportRequest(source=source, path=path, format=fmt)
 
 
 def _exec_value(name, value, next_token) -> str:

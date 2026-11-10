@@ -550,7 +550,7 @@ check_i18n_format(_langs)
 check("the release is v1.7-or-later with the live keys and 62 actions",
       __import__("_common").releases_at_least(__import__("version").APP_VERSION, "1.7")
       and __import__("_common").EXPECTED_I18N_KEYS >= 854
-      and len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39,
+      and len(HR.HOTKEY_ACTIONS) == 63 and len(HR.empty_default_action_ids()) == 40,
       f"{__import__('version').APP_VERSION}"
       f" / {__import__('_common').EXPECTED_I18N_KEYS}"
       f" / {len(HR.HOTKEY_ACTIONS)} / {len(HR.empty_default_action_ids())}")

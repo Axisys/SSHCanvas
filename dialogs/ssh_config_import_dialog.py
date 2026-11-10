@@ -21,21 +21,16 @@ except ImportError:
         def t(key, **kwargs):
             return key.format(**kwargs) if kwargs else key
 
+try:  # the ONE reason-code table of the import family (the generic preview reads it too)
+    from ..services.import_drafts import REASON_KEYS as _REASON_KEYS
+except ImportError:
+    from services.import_drafts import REASON_KEYS as _REASON_KEYS
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem,
     QPushButton, QPlainTextEdit, QHeaderView,
 )
-
-# The parser's reason codes → the keys this dialog renders (the translation owner).
-_REASON_KEYS = {
-    "wildcard": "sshconfig.reason.wildcard",
-    "match": "sshconfig.reason.match",
-    "include_missing": "sshconfig.reason.include_missing",
-    "duplicate": "sshconfig.reason.duplicate",
-    "proxy": "sshconfig.note.proxy",
-    "identity_extra": "sshconfig.note.identity_extra",
-}
 
 # The index of the parsed record inside a row — gotcha #12: QTreeWidgetItem.setData
 # stores a COPY of a dict, so only the (live) index travels through the item.

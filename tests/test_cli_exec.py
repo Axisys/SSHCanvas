@@ -248,12 +248,12 @@ KEY_GONE = os.path.join(WORK, "id_missing")
 print("== §1 the `exec` grammar and the registry ==")
 
 _ROWS = dict(DISPATCH.registered())
-check("§1 the lazy load registers the SIX verbs of this build (the exec row included)",
-      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+check("§1 the lazy load registers the SEVEN verbs of this build (the exec row included)",
+      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey", "import"},
       str(sorted(_ROWS)))
 check("§1 `cli.exec` is the fifth built-in module (ONE declaration of that load)",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec", "cli.hostkey"),
+                                        "cli.doctor", "cli.exec", "cli.hostkey", "cli.imports"),
       str(DISPATCH.BUILTIN_VERB_MODULES))
 check("§1 the row declares 2..MAX_ARGUMENTS, a verdict and the `raw_code` passthrough",
       DISPATCH.VERBS["exec"].min_args == 2
@@ -757,7 +757,7 @@ check(f"§6 this release is v{EXPECTED_APP_VERSION} (the line's base release or 
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
 check(f"§6 the milestone adds NO i18n key (the parity pin stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1205
+      EXPECTED_I18N_KEYS == 1256
       and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
       {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)

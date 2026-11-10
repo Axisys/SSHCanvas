@@ -76,6 +76,15 @@ def _profiles_path() -> str:
     return os.path.join(home, ".sshmap_profiles.json")
 
 
+def profiles_path() -> str:
+    """The PUBLIC door of the store path — `services/import_drafts` reads it for the default source.
+
+    It delegates to `_profiles_path()`, so a test that redirects the private writer redirects the
+    import preview with it (ONE resolution of the path, the `~/.sshmap` family's rule).
+    """
+    return _profiles_path()
+
+
 def read_store():
     """ONE read of the profiles file: `(state, profiles, path, reason)` — the three-state answer.
 

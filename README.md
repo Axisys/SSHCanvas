@@ -1,111 +1,111 @@
 # SSHCanvas (Visual Node Map + SSH Terminal and SFTP manager + CLI)
 
-A Python-based desktop application (PySide6) providing an interactive map of your IT infrastructure with direct SSH connections to nodes.
+A PySide6 desktop application providing an interactive IT infrastructure map with direct SSH connections.
 
 > *"Draw your infrastructure. Organize it. Connect to it."*
 
 ![The example map in SSH Canvas](docs/map-example.png)
 
-***Note:** To view the example map, navigate to `Help → Open the example map`. It features six cards, six connection types, groups, notes, and tags using emulated statuses; every address it carries is part of the RFC 5737 documentation range `192.0.2.0/24`. The image above was generated using `python tests/_gen_docs_image.py`.*
+***Note:** View the example map via `Help → Open the example map`. It features six cards, six connection types, groups, notes, and status-emulated tags. All addresses use the RFC 5737 documentation range `192.0.2.0/24`. Image generated via `python tests/_gen_docs_image.py`.*
 
 ---
 
 ## 1. Features
 
 ### Map & Canvas
-*   **Infinite Canvas:** A zoomable canvas (0.1–5.0) featuring draggable/resizable server cards, sticky notes, and custom backgrounds.
-*   **Sticky Notes:** Pin a note to a card (the anchor line follows), **fold** it to a header strip by double-clicking that header, and give **every** note one tone from Settings → Appearance (the hue shades its paper, frame and ink).
+*   **Infinite Canvas:** Zoomable (0.1–5.0) canvas with draggable/resizable cards, sticky notes, and custom backgrounds.
+*   **Sticky Notes:** Pin notes to cards (with anchor lines). Double-click headers to **fold** notes into strips. Set note tones in Settings → Appearance (affects paper, frame, and ink).
 *   **Connection Types:** Supports `ssh`, `vpn`, `http`, `database`, `nfs`, and `kubernetes`.
-*   **Smart Connections:** Create links via `Shift`+drag or the "Connect to…" dialog. Both include autocomplete for names and addresses.
+*   **Smart Connections:** Create links via `Shift`+drag or the "Connect to…" dialog (includes autocomplete).
 *   **Group Management:**
-    *   **Folding:** Fold groups into a grid of badges (undoable). The frame shows the "worst" member status and a count (e.g., *Offline 2 · Warn 1*).
-    *   **Arrangement:** Use "Arrange group" or "Arrange Map" to align members or the entire map in one undoable step.
-*   **Selection & Bulk Editing:** Drag groups, connect/delete nodes, or bulk-edit tags/comments using `Ctrl`+click or rubber-band selection. Tags filter the sidebar; a card's primary tag colors its icon and is displayed on the card.
-*   **Quick Launch:** Launch URLs in a browser or execute commands as the first line of an SSH session directly from a card.
-*   **Impact Analysis:** `Ctrl`+click a card to highlight all transitive dependencies ("what breaks if I stop this?"). The change is view-only and touches no undo step.
-*   **Density Switch:** Toggle between **Comfortable** and **Compact** modes. Compact shortens cards and hides info blocks, with the same text eliding.
-*   **Navigation Aids:** A minimap mirrors the whole map, and a legend displays all connection styles and status shapes.
-*   **Export & Documentation:** Export to PNG, JPEG, PDF, SVG, or `.drawio`. It is print-friendly by default, with a one-click option to use the current theme. Includes a "Save Documentation Image" option for a fixed 1600×900 @2× poster.
-*   **Shared Bookmarks:** Access a dedicated bookmarks panel (wiki, dashboards, etc.). Filter by typing (`Esc` or the clear button empties the filter) and manage in place. Bookmarks are stored globally in `~/.sshmap/bookmarks.json` to keep project maps clean.
+    *   **Folding:** Fold groups into undoable badge grids. Frames display the "worst" member status and count (e.g., *Offline 2 · Warn 1*).
+    *   **Arrangement:** Use "Arrange group" or "Arrange Map" for undoable alignment.
+*   **Selection & Bulk Editing:** Use `Ctrl`+click or rubber-band selection to drag groups, connect/delete nodes, or bulk-edit tags/comments. Tags filter the sidebar; primary tags color card icons.
+*   **Quick Launch:** Launch URLs in a browser or execute commands as the first SSH session line directly from a card.
+*   **Impact Analysis:** `Ctrl`+click a card to highlight transitive dependencies. View-only; does not affect undo history.
+*   **Density Switch:** Toggle **Comfortable** or **Compact** modes. Compact mode shortens cards and hides info blocks via text eliding.
+*   **Navigation Aids:** Minimap for overview; legend for connection styles and status shapes.
+*   **Export & Documentation:** Export to PNG, JPEG, PDF, SVG, or `.drawio`. Includes print-friendly themes and a 1600×900 @2× "Save Documentation Image" option.
+*   **Shared Bookmarks:** Dedicated panel for bookmarks (wiki, dashboards, etc.). Filter via typing (`Esc` to clear). Stored globally in `~/.sshmap/bookmarks.json`.
 
 ### Statuses, Facts & Diagnostics
-*   **Status Monitoring:** Parallel SSH probes (TCP + banner) gather `online` / `warn` / `offline` statuses off the GUI thread. Statuses include an age and turn grey when stale.
-*   **Manual Interval:** Set `status_interval_sec = 0` in settings to disable automatic probes at startup.
-*   **Hardware Facts:** Gather OS, CPU, RAM, disk, and IP data with age tracking. One click gathers facts for a selection or the entire map via a bounded queue.
+*   **Status Monitoring:** Asynchronous parallel SSH probes (TCP + banner) gather `online`, `warn`, or `offline` statuses. Statuses include age and turn grey when stale.
+*   **Manual Interval:** Set `status_interval_sec = 0` in settings to disable automatic startup probes.
+*   **Hardware Facts:** Gather OS, CPU, RAM, disk, and IP data with age tracking. Collect facts for selections or the entire map via a bounded queue.
 *   **Advanced Disk Reporting:**
-    *   Reads both the root and the card's specific **data mount** (default: `/opt`).
-    *   Monitors the **inode** table; alerts if a volume is >90% used (e.g., `DISK /opt: 48 gb free of 59 gb - inodes 100% used`).
-    *   **Physical Disk Pinning:** Pin a card to a specific device (e.g., `SDB`) to report that device's specific capacity.
-*   **Diagnostic Tool:** Right-click a red card to run a "Why is it offline?" diagnosis (DNS → TCP → SSH → ICMP) to find the first failing step.
-*   **Trouble Mode:** One click dims everything except `warn`, `offline`, or `stale` nodes. A floating plaque displays all active filters (search, tag, status, lens).
-*   **Unmanaged Nodes:** Mark servers as **unmanaged** to preserve their position without storing credentials or running probes. They appear with a "no ssh" mark and "not monitored" tooltip; manual pings remain notes rather than statuses.
+    *   Monitors root and specific **data mounts** (default: `/opt`).
+    *   Monitors **inode** tables; alerts if volume usage exceeds 90% (e.g., `DISK /opt: 48 gb free of 59 gb - inodes 100% used`).
+    *   **Physical Disk Pinning:** Pin cards to specific devices (e.g., `SDB`) to report device-specific capacity.
+*   **Diagnostic Tool:** Right-click red cards to run "Why is it offline?" diagnostics (DNS → TCP → SSH → ICMP).
+*   **Trouble Mode:** Dims all nodes except `warn`, `offline`, or `stale`. A floating plaque displays active filters (search, tag, status, lens).
+*   **Unmanaged Nodes:** Mark servers as **unmanaged** to preserve position without storing credentials or running probes. Displays "no ssh" mark and "not monitored" tooltip.
 
 ### Terminal & SFTP
-*   **Built-in Terminal:** Based on a vendored `pyte` fork. Features include:
-    *   Scrollback, full keyboard/mouse support, and alternate screen support (preserves `vim`, `htop`, etc.).
+*   **Built-in Terminal:** Based on a `pyte` fork. Features:
+    *   Scrollback, full keyboard/mouse, and alternate screen support (preserves `vim`, `htop`, etc.).
     *   Wheel passthrough for TUIs, a find bar, and transcript saving.
-    *   Grid-aligned glyphs for consistent layout with any monospace font.
-    *   A thin blinking bar cursor (Bar, Block, or Underline in Settings) and `Ctrl`+wheel font zoom.
-    *   **Wallpaper:** Set a background image (Settings → Terminal → *Wallpaper image*) with *cover*, *contain*, or *tile* modes (0–100% opacity). Only cells using the terminal's own background are transparent; full-screen TUIs paint over it.
-*   **Full-Screen Mode:** Supports mouse protocols (clicks, drags) and `Shift` as a selection override/exit key. Renders VT100 line graphics (`mc`, `dialog`).
+    *   Grid-aligned glyphs for monospace font consistency.
+    *   Thin blinking cursor (Bar, Block, or Underline) and `Ctrl`+`wheel` font zoom.
+    *   **Wallpaper:** Supports *cover*, *contain*, or *tile* modes (0–100% opacity). Transparency applies only to terminal-background cells; full-screen TUIs override it.
+*   **Full-Screen Mode:** Supports mouse protocols and `Shift` as a selection/exit override. Renders VT100 line graphics (`mc`, `dialog`).
 *   **Terminal Settings:**
     *   Customizable terminal types (e.g., `xterm-256color`, `tmux-256color`).
-    *   **Clickable Links:** URLs wrapped in `OSC 8` sequences are clickable.
-    *   **Persistent Sessions:** Right-click a tab to *Reconnect*. The screen state is preserved, and the first command is automatically re-sent.
-    *   **Follow the Shell:** When enabled, a shell `PROMPT_COMMAND` hook moves the Files listing on every `cd`.
-*   **Window Management:** Sessions can be tabs in separate windows, in a detachable "Terminals" dock, or in a single shared window.
-    *   **Merge Windows:** Consolidates sessions into one window while preserving scrollback and history.
-    *   **Split Terminal:** Create a second shell of the same node below the current tabs.
-*   **Standalone Terminal Mode:** `python main.py --only-terminal` runs the terminal alone: it opens on the **Servers** list; selecting a project file lists its servers, and choosing one opens a full-featured session. Passwords are never stored in project files and are requested if unknown.
+    *   **Clickable Links:** Supports `OSC 8` sequences.
+    *   **Persistent Sessions:** Right-click a tab to *Reconnect*. Preserves screen state and re-sends the initial command.
+    *   **Follow the Shell:** Uses a `PROMPT_COMMAND` hook to update File listings on `cd`.
+*   **Window Management:** Sessions can be window tabs, a detachable "Terminals" dock, or a single shared window.
+    *   **Merge Windows:** Consolidates sessions into one window, preserving scrollback.
+    *   **Split Terminal:** Creates a second shell for the same node below current tabs.
+*   **Standalone Terminal Mode:** `python main.py --only-terminal` runs the terminal using the **Servers** list from a selected project. Passwords are requested on-demand and never stored in project files.
 *   **Guardrails:**
-    *   **Production Tags:** Prevent accidental multi-input broadcasts or pastes to sessions marked with "careful" tags.
-    *   **Destructive Commands:** Automatically prompt for confirmation before executing commands like `rm -rf` or `reboot`.
-*   **Command Library:** Historical commands become macros (version history ring of 10, JSON import/export). The side panel holds two lists: **Commands** (Add/Edit/Delete) and **Servers** (aliases, Open map/Profiles). Sessions start without returning to the map; right-clicking a server gives **Connect to SSH** and **Quick Launch**. A command can be marked **Requires confirmation** (Yes/No first, No the default).
-*   **Command History:** A `History` tab per server is kept between sessions. Import from disk or `~/.bash_history`, filter/sort, and merge duplicates. Secrets are marked with a padlock.
-*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` keeps your reading position during output. An external `ssh` terminal is available as an alternative, supporting per-server **jump hosts** via `~/.ssh/config`.
+    *   **Production Tags:** Prevents accidental broadcasts or pastes to sessions marked with "careful" tags.
+    *   **Destructive Commands:** Prompts for confirmation before executing commands like `rm -rf` or `reboot`.
+*   **Command Library:** Converts historical commands to macros (10-version history, JSON export/import). Side panel manages **Commands** and **Servers**. Commands can be marked **Requires confirmation**.
+*   **Command History:** Per-server `History` tab. Supports importing from disk or `~/.bash_history` with filtering and deduplication. Secrets are marked with a padlock.
+*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` maintains reading position. An external `ssh` terminal is available, supporting per-server **jump hosts** via `~/.ssh/config`.
 *   **SFTP & Files Commander:**
-    *   **SFTP:** Integrated over the live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews (JSON, XML and YAML structure; numbers and IPv4 addresses in plain text).
-    *   **Row Verbs:** Right-click a row to **Download** (file or folder) or **Upload** into the current directory.
-    *   **Files Commander:** A two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete).
-    *   **Sortable Listings:** Click `Name`, `Size`, or `Modified` to sort. Folders and `..` remain grouped at the top.
-    *   **Content Search:** **Find text…** in the row menu — or the row's button — searches the current folder or its whole subtree for a string, with optional case matching. Results list every `path:line` hit in the other pane, and opening a row shows the file in the preview. Large searches stop at a declared limit and say so.
-    *   **Preview Limits:** Reads 1 MB by default (up to 250 MB in Settings). Larger files open with a header indicating the first megabyte.
-    *   **Preview Background:** Tint the preview with a colour hue that keeps the theme's brightness, so highlighted code stays readable. The header chip offers the theme and eight presets.
-    *   **Find in Preview:** `Ctrl`+`F` opens a find bar over the preview: a match counter, `Enter` / `Shift`+`Enter` to step (wrapping) and `Esc` to close.
-    *   **`Network ▸`:** Select an IPv4 address (`10.0.0.5`) or `IPv4:PORT` (`10.0.0.5:5432`), right-click and pick **Ping**, **Trace route** or **Reverse lookup** — the command runs in a new split terminal of the same server. Linux only; the row appears once the facts are collected, and a non-address selection is refused.
-    *   **Encodings:** Supports eight encodings (automatic, UTF-8, CP1251, etc.). The choice is per-pane and is remembered per session, so a CP1251 pane and a Latin-1 pane come back as you left them.
-    *   **Archive Viewer:** Right-click archives (`zip`, `tar`, `jar`, etc.) to **Open Archive**, viewing contents in the other pane. Members open in the read-only preview. **Extract** unpacks the archive into the destination folder (merging files on overwrite). Encrypted archives are listed but never read or extracted.
-    *   **Local Pane:** Access your local filesystem within the Files Commander using the same UI.
-    *   **Elevated Pane:** Provides read-only access to a server using `sudo` via a secure password channel.
-    *   **Cross-Session Transfer:** Send files between different servers via temporary relay through the local machine.
-    *   **Per-Server Memory:** Both panes remember each server's last directory.
-*   **Files Display Mode:** Keep the Files tree in its `Files` tab or as a right-hand panel beside the shell.
-*   **Diff:** Right-click a tab to **Diff** a local file or a file of any open session: a line-based, synchronized-scroll comparison with character-level changes highlighted. Read-only; over-limit files are truncated and binary files refused.
+    *   **SFTP:** Integrated over live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews (JSON, XML, YAML, and plain text).
+    *   **Row Verbs:** Right-click to **Download** or **Upload** files/folders.
+    *   **Files Commander:** Two-pane directory viewer with shared address bars and shortcuts (`F3` view, `F5` copy, `F6` move, `F7` folder, `F8` delete).
+    *   **Sortable Listings:** Sort by `Name`, `Size`, or `Modified`. Folders and `..` stay grouped at the top.
+    *   **Content Search:** Searches current folder or subtree (case-optional). Displays `path:line` hits in the sibling pane. Large searches are capped by a configurable limit.
+    *   **Preview Limits:** Default 1 MB preview (up to 250 MB via Settings). Large files show a header for the first megabyte.
+    *   **Preview Background:** Tinted preview maintains theme brightness for readability. Includes theme and eight presets via header chip.
+    *   **Find in Preview:** `Ctrl`+`F` opens a find bar with match counters and `Enter`/`Shift`+`Enter` stepping.
+    *   **`Network ▸`:** Right-click IPv4 or `IPv4:PORT` to **Ping**, **Trace route**, or **Reverse lookup** in a new split terminal. Linux only; requires collected facts.
+    *   **Encodings:** Supports eight encodings (e.g., UTF-8, CP1251). Encoding is per-pane and persists per session.
+    *   **Archive Viewer:** Right-click archives to **Open Archive** (view contents) or **Extract** (merging on overwrite). Encrypted archives are listed but not accessible.
+    *   **Local Pane:** Access local filesystem via the Files Commander UI.
+    *   **Elevated Pane:** Provides read-only access via `sudo` using a secure password channel.
+    *   **Cross-Session Transfer:** Relay files between servers via a temporary local folder.
+    *   **Per-Server Memory:** Panes persist the last directory per server.
+*   **Files Display Mode:** Toggle Files tree between a dedicated tab or a right-hand panel beside the shell.
+*   **Diff:** Right-click a tab to **Diff** a local or session file: line-based, synchronized-scroll comparison with character-level highlighting. Binary files are refused.
 
 ### Reports & Exports
 *   **Table View:** Collapsing the map converts the sidebar into a 13-column sortable table (Alias, IP, Port, User, Status, OS, CPU, RAM, Disk, Comment, Tags).
 *   **Data Exports:**
     *   **Copy List as TSV / Export List:** (CSV or TSV) in current sorted order.
     *   **Export Connections:** One row per link with endpoint details and bidirectional flags.
-    *   **Export Problems:** A report of all `warn`, `offline`, or `stale` nodes, including the reason and check age.
-    *   **Formula-safe:** a cell that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is exported as text (a leading apostrophe), so a report never runs as a spreadsheet formula.
+    *   **Export Problems:** Report of `warn`, `offline`, or `stale` nodes, including reason and check age.
+    *   **Formula-safe:** Cells starting with `=`, `+`, `-`, `@`, tabs, or carriage returns are exported with a leading apostrophe to prevent spreadsheet formula execution.
 
 ### UI & UX
-*   **Theming:** Dark, Light, and Auto themes with custom accent colors, plus **theme packs**: a JSON file in `themes` recolors the surfaces, text, cards, groups, arrows, notes and syntax palette; statuses, selection, tags, radii and fonts stay the project's. Two ship: **Matrix** (green phosphor, dark) and **Paper** (warm paper, graphite ink, light). Every status keeps a unique shape (dot/ring/triangle) and every connection a unique line style, so meaning never relies on color alone.
+*   **Theming:** Supports Dark, Light, and Auto themes with custom accents. **Theme packs** (JSON) recolor surfaces, text, cards, groups, arrows, and syntax; project settings for status, selection, and fonts are preserved. Includes **Matrix** and **Paper** packs. Uses unique shapes/line styles to ensure meaning is independent of color.
 *   **Motion:** Camera flights and scale-in animations can be interrupted by mouse wheel or dragging.
-*   **Navigation:** Command palette (`Ctrl`+K), searchable settings, and 62 assignable hotkeys (`?` or `F1`). The map is fully navigable via keyboard.
+*   **Navigation:** Command palette (`Ctrl`+K), searchable settings, and 63 assignable hotkeys (`?` or `F1`). Full keyboard navigation for the map.
 
 ### Projects & Plugins
-*   **Project Management:** One JSON project file (`.json` / `.sshmap`) with autosave, backups, and a recent-files list.
-*   **Reopen the Last Project:** Settings → General can be toggled to automatically reopen your last closed map.
-*   **First Screen:** Four entry points: add a server, import a list, open an existing map, or open the example map.
-*   **Add/Edit Server:** Four sections (*Identity*, *Connection*, *Hardware*, *Notes*) with clear labeling for required fields and private keys.
-*   **Import Tools:** Bulk import from text files or `~/.ssh/config`. DNS resolution runs off the GUI thread.
-*   **Profiles:** SSH profiles with passwords stored in the OS keyring—never in project files.
-*   **Plugins:** A system for custom monitors, commands, and menu rows. A broken plugin is reported rather than freezing the application.
-*   **Plugins Window:** Manage plugins, target servers, and view execution reports side-by-side.
+*   **Project Management:** Single JSON project file (`.json` / `.sshmap`) with autosave and backups.
+*   **Reopen the Last Project:** Option in Settings → General to auto-load the last closed map.
+*   **First Screen:** Entry points for adding servers, importing lists, opening existing maps, or the example map.
+*   **Add/Edit Server:** Four sections (*Identity*, *Connection*, *Hardware*, *Notes*) for required fields and private keys.
+*   **Import Tools:** Bulk import from text files, `~/.ssh/config`, or exported `.drawio` maps. Includes a preview of added/skipped rows with reasons. DNS resolution is asynchronous.
+*   **Profiles:** SSH profiles with passwords stored in the OS keyring, never in project files. Imports passwordless profiles; skips existing names to prevent overwriting.
+*   **Plugins:** System for custom monitors, commands, and menu rows. Broken plugins are reported without freezing the app.
+*   **Plugins Window:** Manage plugins, target servers, and execution reports side-by-side.
 *   **Internationalization:** Supports English, Russian, Chinese, and German, with custom JSON language support.
-*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` answers five offline verbs over a project file — `inventory`, `connections`, `status`, `doctor` and `exec` — as text or one `--json` document, and exits with the code of the run's class (no GUI, no Qt). `hostkey verify` checks every pinned host key in `~/.sshmap/known_hosts` against the key its server presents now and reports the ones that changed; it never pins anything.
+*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` provides `inventory`, `connections`, `status`, `doctor`, and `exec` verbs as text or `--json`. `hostkey verify` checks `~/.sshmap/known_hosts` against current server keys without pinning. `import` previews sources (`ssh-config`, `drawio`, `profiles`) as draft rows.
 
 ---
 
@@ -157,9 +157,9 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **Passwords:** Never serialized; stored only in the OS keyring.
 *   **Jump host:** Optional per server; used by the external terminal only.
 *   **Connections:** Types: `ssh|vpn|http|database|nfs|kubernetes`.
-*   **Groups:** Membership is inferred by the card's position relative to the group rectangle.
+*   **Groups:** Membership is inferred by card position relative to the group rectangle.
 *   **Tags/Launch:** Broken arrays are emptied; broken records are dropped.
-*   **Notes:** `server_id` and `folded` are optional; `width`/`height` are always the unfolded size.
+*   **Notes:** `server_id` and `folded` are optional; `width`/`height` are the unfolded size.
 *   **Background:** Stores the image path; move the file with the project.
 
 ---
@@ -167,8 +167,8 @@ The project is stored in a single `.json` or `.sshmap` file:
 ## 4. Security & Limitations
 
 ### Credential Security
-*   **Keyring Integration:** Passwords use secure OS backends (Windows Credential Manager, Linux secret-service, macOS keychain). Plaintext fallbacks are rejected.
-*   **Endpoint Binding:** Passwords are bound to `user@host:port`. Changing the address or login triggers a new password prompt.
+*   **Keyring Integration:** Uses secure OS backends (Windows Credential Manager, Linux secret-service, macOS keychain); plaintext fallbacks are rejected.
+*   **Endpoint Binding:** Passwords are bound to `user@host:port`; address or login changes trigger a new prompt.
 *   **External Terminal:** The external `ssh` process handles its own password entry; credentials are never passed via command-line.
 
 ### Connectivity & Guardrails
@@ -177,16 +177,16 @@ The project is stored in a single `.json` or `.sshmap` file:
 *   **2FA/Passphrases:** Entered via a secure window; closing it cancels the connection.
 *   **Guardrails:** "Production tags" and "Command guards" prompt for confirmation before dangerous actions.
 *   **Relayed Files:** Files between different servers are relayed via a temporary local folder and deleted immediately. Files > 100 MB are refused.
-*   **Archive Viewer:** Archives are copied to a temporary folder for reading/extraction and deleted when closed. The default limit is 256 MB. Extractions are bounded for safety: they are refused if they expand > 1 GB or > 100× their size, contain > 5000 entries, or include invalid names/links.
-*   **Diff Copies:** Files compared from other sessions are copied to a temporary folder, decoded, and deleted immediately. Binary files are refused.
+*   **Archive Viewer:** Copies archives to temporary folders (max 256 MB) and deletes them on close. Extraction is bounded: limits include >1 GB expanded size, >100x original size, >5000 entries, or invalid names/links.
+*   **Diff Copies:** Copies session diff files to temporary folders for decoding and immediate deletion. Binary files are refused.
 
 ### Behavioral Constraints
 *   **Undo/Redo:** Covers map elements but **not** node statuses.
 *   **Unmanaged Cards:** All monitoring, terminals, and SFTP features are disabled.
 *   **File Transfers:** Folder copies are bounded (5000 entries/32 levels). Symlinks are not followed. Both panes share one SFTP channel per session.
-*   **Local Pane:** Deletions go to the OS trash (Recycle Bin on Windows, `gio trash` on Linux) and can be restored from there. Without a trash backend the confirmation names the permanent delete, and a filesystem that cannot trash reports an error instead of deleting.
+*   **Local Pane:** Local deletions use the OS trash (Recycle Bin, `gio trash`). If no trash backend exists, deletions are permanent and explicitly confirmed.
 *   **Elevated Pane:** Strictly read-only for the remote user's permissions.
-*   **Command History:** Stored as plain-text per server under `~/.sshmap/history/`. The padlock marks secrets but does not redact them.
+*   **Command History:** Stored as plain-text per server in `~/.sshmap/history/`. Padlocks mark secrets but do not redact them.
 *   **Profile Store:** Profiles live in `~/.sshmap_profiles.json`. Broken files are reported rather than overwritten.
 *   **Plugins:** Run inside the application process; install only trusted plugins.
 
@@ -242,7 +242,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 199 test files and the parallel runner |
+| `tests/` | 200 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

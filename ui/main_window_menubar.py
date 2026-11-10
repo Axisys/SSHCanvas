@@ -83,6 +83,10 @@ class MenubarMixin:
         # second import path of the same family; both add their batch as ONE undo command.
         self._add_menu_action(file_menu, "file.import_ssh_config",
                               self._import_servers_from_ssh_config, "file.import_ssh_config")
+        # the third import path: the reverse of the shipped .drawio export — the SAME draft rows
+        # the headless `import drawio` previews (`services/import_drafts.py`).
+        self._add_menu_action(file_menu, "file.import_drawio", self._import_map_from_drawio,
+                              "file.import_drawio")
         file_menu.addSeparator()
         self._add_menu_action(file_menu, "file.exit", self.close, "file.exit")
 

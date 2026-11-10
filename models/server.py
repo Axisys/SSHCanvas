@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+import ipaddress
 import uuid
 
 
@@ -113,6 +114,19 @@ def is_unmanaged(target) -> bool:
     `.data`) and a bare `ServerData` both answer, and anything else answers False.
     """
     return bool(getattr(getattr(target, "data", target), "unmanaged", False))
+
+
+def is_ip_address(entry) -> bool:
+    """Is this value an IPv4/IPv6 LITERAL? — the import family's ONE address predicate (PURE).
+
+    `services/host_importer` re-exports the name and `storage/import_drawio` reads it, so the TXT
+    import, the drawio reader and every caller agree on what an address is.
+    """
+    try:
+        ipaddress.ip_address(str(entry if entry is not None else "").strip())
+        return True
+    except ValueError:
+        return False
 
 
 def unmanaged_ping_allowed(target) -> bool:

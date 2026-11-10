@@ -76,6 +76,8 @@ HOTKEY_ACTIONS: Dict[str, dict] = {
     # v1.4.1: the second import path (the OpenSSH client config) — no hotkey out
     # of the box, assignable like the rest.
     "file.import_ssh_config": {"label": "file.import_ssh_config", "default": ""},
+    # the third import path (.drawio) — no hotkey out of the box, assignable like the rest.
+    "file.import_drawio":   {"label": "file.import_drawio",   "default": ""},
     "file.export_png":      {"label": "file.export_png",      "default": ""},
     "file.export_drawio":   {"label": "file.export_drawio",   "default": ""},
     "file.export_pdf":      {"label": "file.export_pdf",      "default": ""},

@@ -506,11 +506,26 @@ def example_plugin_problems(name, source):
 # in 12 i18n files + the APP_VERSION/requirements pins in 7 release-state sections).
 # The misses of the keys themselves against the code are caught by check_i18n_keys.py.
 # ─────────────────────────────────────────────────────────────────────────────
-EXPECTED_APP_VERSION = "1.15.1.3"     # the current release (a sentinel: it catches "a bump to the wrong version")
-EXPECTED_I18N_KEYS = 1205       # the parity of the TRANSLATION keys of every language file vs en (the
+EXPECTED_APP_VERSION = "1.15.2"     # the current release (a sentinel: it catches "a bump to the wrong version")
+EXPECTED_I18N_KEYS = 1256       # the parity of the TRANSLATION keys of every language file vs en (the
                                 # "name"/"partial" meta keys are excluded) — ONE number per release; the
                                 # per-release counts live in the changelog family, never here
 VERSION_FORMAT_RE = re.compile(r"^\d+(\.\d+){1,3}([Rr][Cc]\d+)?$")  # "1.1.3", "1.0RC4", "0.9.9.7", "1.2.10rc1" (v1.2.10: + lowercase rc)
+
+# ONE home for the i18n-pin narrative tail the release-state check labels share.
+I18N_PIN_STORY_V182_V198 = (
+    "v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export "
+    "pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its "
+    "export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, "
+    "and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste "
+    "sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: "
+    "the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and "
+    "the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the "
+    "refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the "
+    "`Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two "
+    "source-switch tooltips and the three fields of the Settings dialog's font row; ")
+I18N_PIN_STORY_V110RC = (
+    "v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row")
 
 # The test-file counter quoted by README.md / ROADMAP.md is checked against the real
 # number of tests/test_*.py : the counter is easy to forget — it went stale twice in one stretch,

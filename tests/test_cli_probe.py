@@ -169,12 +169,12 @@ TWINS = fixture("probe-twins.json", [node("srv-1", "twin", ONLINE.port),
 print("== §1 the registry and the positional grammar ==")
 
 _ROWS = dict(DISPATCH.registered())
-check("§1 the lazy load registers the build's verbs (the two tables, the two probes, `exec`, `hostkey`)",
-      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+check("§1 the lazy load registers the build's verbs (the two tables, the two probes, `exec`, `hostkey`, `import`)",
+      set(_ROWS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey", "import"},
       str(sorted(_ROWS)))
 check("§1 the built-in modules are the ONE declaration of that load (loaded once, in order)",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec", "cli.hostkey"),
+                                        "cli.doctor", "cli.exec", "cli.hostkey", "cli.imports"),
       str(DISPATCH.BUILTIN_VERB_MODULES))
 check("§1 `status` declares 0..MAX_NODES node arguments and the round's verdict; `doctor` exactly ONE",
       DISPATCH.VERBS["status"].min_args == 0
@@ -436,7 +436,7 @@ check(f"§5 this release is v{EXPECTED_APP_VERSION} (the line's base release or 
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
 check(f"§5 the milestone adds NO i18n key (the parity pin stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1205
+      EXPECTED_I18N_KEYS == 1256
       and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
       {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)

@@ -529,7 +529,7 @@ print("== §10 the release — no new key, no schema move, the pins ==")
 check_i18n_parity(LANGS)
 check_release_state(ROOT)
 check(f"§10 the patch adds NO key — the parity stays {EXPECTED_I18N_KEYS}",
-      EXPECTED_I18N_KEYS == 1205, str(EXPECTED_I18N_KEYS))
+      EXPECTED_I18N_KEYS == 1256, str(EXPECTED_I18N_KEYS))
 check("§10 the pin names this release's line",
       releases_at_least(EXPECTED_APP_VERSION, "1.15.1.1"), EXPECTED_APP_VERSION)
 check("§10 the project schema did NOT move", version.VERSION_FORMAT == "0.9", version.VERSION_FORMAT)

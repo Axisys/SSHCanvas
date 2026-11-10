@@ -560,7 +560,7 @@ check("§4 the eleven keys of THIS release stayed in the pin (the later releases
 check("§4 no new registry action of THIS release (the lens and the plaque are controls, not "
       "menu items; the v1.5.5 inventory pair took the registry to 56 / 33 and the later "
       "releases to 61 / 38 and v1.8.1 to 62 / 39)",
-      len(HR.HOTKEY_ACTIONS) == 62 and len(HR.empty_default_action_ids()) == 39,
+      len(HR.HOTKEY_ACTIONS) == 63 and len(HR.empty_default_action_ids()) == 40,
       f"{len(HR.HOTKEY_ACTIONS)} / {len(HR.empty_default_action_ids())}")
 check("§4 no new colour field (the release reuses the status tones and the declared shapes)",
       len(dataclasses.fields(theme.DARK)) == 61

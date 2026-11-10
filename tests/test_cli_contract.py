@@ -312,15 +312,15 @@ print("== §3.0 the verb table ==")
 
 DISPATCH.load_verbs()
 VERBS = DISPATCH.VERBS
-check("§3.0 the registry is the contract's verbs (the base FIVE plus the `hostkey` family), nothing else",
-      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"},
+check("§3.0 the registry is the contract's verbs (the base FIVE plus the `hostkey` and `import` families)",
+      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey", "import"},
       str(sorted(VERBS)))
 check("§3.0 every row declares a summary, a handler and a renderer (two shapes of ONE fact set)",
       all(callable(row.handler) and callable(row.render) and row.summary.strip()
           for row in VERBS.values()))
 check("§3.0 the built-in list is the ONE declaration of the lazy load, in order",
       DISPATCH.BUILTIN_VERB_MODULES == ("cli.inventory", "cli.connections", "cli.status",
-                                        "cli.doctor", "cli.exec", "cli.hostkey"))
+                                        "cli.doctor", "cli.exec", "cli.hostkey", "cli.imports"))
 DISPATCH.register(DISPATCH.Verb("contract-dup", "the duplicate probe", handler=lambda c, a: {}))
 try:
     _DUPLICATE = raises(ValueError, lambda: DISPATCH.register(
@@ -1180,7 +1180,7 @@ finally:
     STATUS.probe_ssh = _STATUS_PROBE_SAVED
     DOCTOR.diagnose_reachability = _DOCTOR_SAVED
 check("§7 no file transfer in the base release (`put` / `get` are a follow-up slot)",
-      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey"})
+      set(VERBS) == {"inventory", "connections", "status", "doctor", "exec", "hostkey", "import"})
 check("§7 no interactive prompt of any kind: `cli/` never reads stdin, an env var or argv for a secret",
       not [name for name, _file, source in _SOURCES if "input(" in source or "getpass" in source],
       [name for name, _file, source in _SOURCES if "input(" in source or "getpass" in source])
@@ -1230,7 +1230,7 @@ check(f"§9 this release is v{EXPECTED_APP_VERSION} (the base of the 1.15 line o
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
 check(f"§9 the base adds NO i18n key — the CLI speaks English (parity stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1205
+      EXPECTED_I18N_KEYS == 1256
       and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
       {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)

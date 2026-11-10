@@ -46,6 +46,15 @@ LAYER_BACKGROUND = "layer-background"
 LAYER_GROUPS = "layer-groups"
 LAYER_MAP = "layer-map"
 
+#: The CELL-ID vocabulary of the format: the writer emits these prefixes and `storage/import_drawio.py`
+#: reads them back, so a second spelling of a cell id cannot silently stop matching.
+NODE_CELL_PREFIX = "node-"
+EDGE_CELL_PREFIX = "edge-"
+NOTE_CELL_PREFIX = "note-"
+GROUP_CELL_PREFIX = "group"
+MEMBER_CELL_INFIX = "-member-"
+BACKGROUND_CELL_ID = "bg-image"
+
 
 def export_palette_colors(palette=PALETTE_PRINT) -> dict:
     """The colours the drawio writer paints with.
@@ -237,7 +246,7 @@ class DrawioExporter:
         except Exception:
             return
         _vertex(
-            root_el, "bg-image", "", x, y, w, h,
+            root_el, BACKGROUND_CELL_ID, "", x, y, w, h,
             f"shape=image;image={_uri_for_style(path)};"
             "verticalLabelPosition=bottom;verticalAlign=top;opacity=60;",
             parent_id=LAYER_BACKGROUND)
@@ -258,7 +267,7 @@ class DrawioExporter:
                 f"fontColor={self._colors['node_text']};"
                 "verticalAlign=top;align=left;spacingLeft=8;"
                 "html=1;whiteSpace=wrap;pointerEvents=0;")
-            cell_id = self._next_id("group")
+            cell_id = self._next_id(GROUP_CELL_PREFIX)
             # A group container — a flat mxCell on the layer-groups layer
             _vertex(root_el, cell_id, getattr(group, "_name", "") or "",
                     gx, gy, gw, gh, style, parent_id=LAYER_GROUPS)
@@ -268,11 +277,11 @@ class DrawioExporter:
             for mi, member in enumerate(group.get_members()):
                 mx, my, mw, mh = _node_geometry(member)
                 _vertex(
-                    root_el, f"{cell_id}-member-{mi}", _node_label(member),
+                    root_el, f"{cell_id}{MEMBER_CELL_INFIX}{mi}", _node_label(member),
                     round(mx - gx, 2), round(my - gy, 2), mw, mh,
                     self._node_style(), parent_id=cell_id)
                 # mapping for the arrows: the id of a member inside a group
-                self._member_cell_ids[member] = f"{cell_id}-member-{mi}"
+                self._member_cell_ids[member] = f"{cell_id}{MEMBER_CELL_INFIX}{mi}"
         return ids
 
     def _node_style(self) -> str:
@@ -293,7 +302,7 @@ class DrawioExporter:
             x, y, w, h = _node_geometry(node)
             nid = getattr(getattr(node, "data", None), "id", None) \
                 or self._next_id("node")
-            cell_id = f"node-{nid}"
+            cell_id = f"{NODE_CELL_PREFIX}{nid}"
             _vertex(root_el, cell_id, _node_label(node), x, y, w, h,
                     self._node_style(), parent_id=LAYER_MAP)
             node_ids[node] = cell_id
@@ -316,7 +325,7 @@ class DrawioExporter:
             # v1.2.6: bidirectional connection — an arrowhead at the start end too (startArrow)
             bidir = bool(getattr(arrow, "bidirectional", False))
             edge = ET.SubElement(root_el, "mxCell", {
-                "id": f"edge-{ai}",
+                "id": f"{EDGE_CELL_PREFIX}{ai}",
                 "value": label,
                 "style": (
                     "edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;"
@@ -341,7 +350,7 @@ class DrawioExporter:
             except Exception:
                 continue
             _vertex(
-                root_el, f"note-{ni}", note.text(), nx, ny, nw, nh,
+                root_el, f"{NOTE_CELL_PREFIX}{ni}", note.text(), nx, ny, nw, nh,
                 f"shape=note;whiteSpace=wrap;html=1;size=16;"
                 f"fillColor={NOTE_FILL};strokeColor=#b45309;"
                 f"fontColor={NOTE_TEXT};align=left;spacingLeft=4;",

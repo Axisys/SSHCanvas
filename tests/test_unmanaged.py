@@ -13,7 +13,7 @@ import os
 import re
 import sys
 
-from _common import (bootstrap, check, finish, check_i18n_parity, check_i18n_format,
+from _common import (I18N_PIN_STORY_V182_V198, I18N_PIN_STORY_V110RC, bootstrap, check, finish, check_i18n_parity, check_i18n_format,
                      check_release_state, load_i18n_langs, i18n_lang_codes,
                      EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS,
                      releases_at_least)
@@ -793,29 +793,8 @@ app.processEvents()
 check_release_state(ROOT)
 check("§8 the pins of this file are the release it describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7"), EXPECTED_APP_VERSION)
-check("§8 the i18n pin moved by the ELEVEN keys of this release and by the ELEVEN "
-      "of v1.6.6 (789 + 11 + 11), v1.6.7 adds 17: the bookmarks panel and its editor, and "
-      "v1.6.8 adds 13: the connect row, the hint, the picker and the attention report, "
-      "and v1.7rc1 adds 5: the Files Commander action with its tooltip, the sentence "
-      "the mode reports when it opens and the two answers of the pane-scoped keys; "
-      "v1.7rc2 adds 8: the copy status line, the no-second-pane sentence, the batch "
-      "start, the two closing reports, the partial-tree report, the refused move and "
-      "the tree-over-its-bound sentence, v1.7rc3 adds 9: the hint row, the walk and the "
-      "preview that opens in the other pane, and v1.7.1 adds 4: the Files panel toggle of "
-      "the terminal window with its tooltip and the two tooltips of its fold, and v1.7.1.1 "
-      "adds 3: the settings hub's Files display mode with its two values, and v1.7.1.2 adds "
-      "4: the device choice of the disk row with its tooltip, the card's device list and the "
-      "sentence of a device the listing lost, and v1.7.2 adds 4: the third row of the display "
-      "mode (the single window), the merge action with its one closing report and the remote "
-      "title of a tab, and v1.7.3 adds 19: the Send-to row and its dialog, the busy/progress/done/"
-      "failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop"
-      " refusals and the Word wrap row, and v1.7.4rc1 adds 17: the local source switch of a pane,"
-      " its two refusals, the permanent-delete warning and the local file-surface sentences, and"
-      " v1.7.4rc2 adds 1: the refusal of a move that would cross the two sources, and"
-      " v1.8.1 adds 41: the host-key question and its manager window, the credential prompt of the"
-      " second factor and of a key's passphrase, and the endpoint-scope sentences, and v1.8.1.1 adds"
-      " ONE: the send identity sentence and v1.8.2 adds SIXTEEN: the library file — the History door, the backup ring and the import/export pair — and v1.8.3 adds TWENTY-THREE: the Plugins window (its chrome, its three columns and its export) and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the dialog's four section titles, the four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; the fifth read adds TWO: the listing's bound sentence and the merge line of the folder's question; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu",
-      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7,
+check("§8 the i18n pin moved by the ELEVEN keys of this release and by the ELEVEN of v1.6.6 (789 + 11 + 11), v1.6.7 adds 17: the bookmarks panel and its editor, and v1.6.8 adds 13: the connect row, the hint, the picker and the attention report, and v1.7rc1 adds 5: the Files Commander action with its tooltip, the sentence the mode reports when it opens and the two answers of the pane-scoped keys; v1.7rc2 adds 8: the copy status line, the no-second-pane sentence, the batch start, the two closing reports, the partial-tree report, the refused move and the tree-over-its-bound sentence, v1.7rc3 adds 9: the hint row, the walk and the preview that opens in the other pane, and v1.7.1 adds 4: the Files panel toggle of the terminal window with its tooltip and the two tooltips of its fold, and v1.7.1.1 adds 3: the settings hub's Files display mode with its two values, and v1.7.1.2 adds 4: the device choice of the disk row with its tooltip, the card's device list and the sentence of a device the listing lost, and v1.7.2 adds 4: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab, and v1.7.3 adds 19: the Send-to row and its dialog, the busy/progress/done/failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and the Word wrap row, and v1.7.4rc1 adds 17: the local source switch of a pane, its two refusals, the permanent-delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a move that would cross the two sources, and v1.8.1 adds 41: the host-key question and its manager window, the credential prompt of the second factor and of a key's passphrase, and the endpoint-scope sentences, and v1.8.1.1 adds ONE: the send identity sentence and " + I18N_PIN_STORY_V182_V198 + "v1.9.7 adds TWELVE: the dialog's four section titles, the four example placeholders, the required-field hint, the key-file tooltip and the two footer words; " + I18N_PIN_STORY_V110RC + "; the fifth read adds TWO: the listing's bound sentence and the merge line of the folder's question; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu",
+      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51,
       str(EXPECTED_I18N_KEYS))
 _missing = {code: [k for k in NEW_KEYS if not str(data.get(k) or "").strip()]
             for code, data in LANGS.items()}

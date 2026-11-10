@@ -4,13 +4,21 @@ Access via Menu → Profiles → Manage profiles.
 """
 
 from typing import Optional
+import uuid
 
 try:
     from ..models.profile import (Profile, ProfileStoreError, load_profiles, add_profile,
-                                  update_profile, delete_profile, get_profile_password)
+                                  save_profiles, update_profile, delete_profile,
+                                  get_profile_password)
 except ImportError:
     from models.profile import (Profile, ProfileStoreError, load_profiles, add_profile,
-                                update_profile, delete_profile, get_profile_password)
+                                save_profiles, update_profile, delete_profile,
+                                get_profile_password)
+
+try:  # the shared import preview — the SAME draft rows `sshcanvas-cli import profiles` prints
+    from .import_drafts_dialog import ImportDraftsDialog
+except ImportError:
+    from import_drafts_dialog import ImportDraftsDialog
 
 try:  # v1.2.5: central theme (palette/radii/fonts — ui/theme.py)
     from ..ui import theme
@@ -20,7 +28,7 @@ except ImportError:
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
     QTableWidgetItem, QLabel, QMessageBox, QLineEdit, QDialogButtonBox,
-    QHeaderView,
+    QFileDialog, QHeaderView,
 )
 
 from modules.logger import optional_logger
@@ -135,9 +143,14 @@ class ProfileManagerDialog(QDialog):
         self.btn_delete.clicked.connect(self._on_delete_selected)
         self.btn_delete.setEnabled(False)
 
+        # a PASSWORDLESS profiles file — the merge is by NAME and nothing is overwritten (§27)
+        self.btn_import = QPushButton(self.t("profile.import") if self._i18n_available else "Import...")
+        self.btn_import.clicked.connect(self._on_import_profiles)
+
         btn_layout.addWidget(self.btn_add)
         btn_layout.addWidget(self.btn_edit)
         btn_layout.addWidget(self.btn_delete)
+        btn_layout.addWidget(self.btn_import)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
@@ -182,6 +195,55 @@ class ProfileManagerDialog(QDialog):
     def _warn(self, text: str):
         """ONE warning box (`QMessageBox.Yes` on the delete confirmations is the shipped pattern)."""
         QMessageBox.warning(self, self.t("msg.error_title") if self._i18n_available else "Error", text)
+
+    def _on_import_profiles(self):
+        """Import a profiles FILE: the shared draft rows, a NAME merge and ONE write.
+
+        The file is passwordless by design (`models/profile.py` strips secrets), so every imported
+        profile starts with no keyring entry; a name the store already holds is a SKIP row of the
+        preview, because a stored login is never overwritten by a file.
+        """
+        from services import import_drafts
+
+        path, _filter = QFileDialog.getOpenFileName(
+            self, self.t("profile.import") if self._i18n_available else "Import...", "",
+            "JSON (*.json)")
+        if not path:
+            return
+        try:
+            report = import_drafts.collect(
+                import_drafts.SOURCE_PROFILES, path,
+                store_names={str(p.name or "").strip().lower() for p in load_profiles()})
+        except import_drafts.SourceError as exc:
+            self._warn(str(exc.detail or exc.code))
+            return
+        title = self.t("msg.info_title") if self._i18n_available else "Info"
+        if not report.ready():
+            QMessageBox.information(self, title, self.t("msg.import_profiles_result",
+                                                        added=0, skipped=len(report.skipped())))
+            return
+        dlg = ImportDraftsDialog(report, self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        selected = list(dlg.selected_drafts())
+        profiles = load_profiles()
+        for draft in selected:
+            fields = draft.fields or {}
+            profiles.append(Profile(id=str(uuid.uuid4())[:8],
+                                    name=str(fields.get("name") or ""),
+                                    user=str(fields.get("user") or "")))
+        try:
+            save_profiles(profiles)
+        except ProfileStoreError as e:
+            warn_store_refused(self, self.t, e)
+            return
+        except OSError as e:  # the atomic publish failed — the file is untouched
+            self._warn(str(e))
+            return
+        self.refresh_table()
+        QMessageBox.information(self, title, self.t("msg.import_profiles_result",
+                                                    added=len(selected),
+                                                    skipped=len(report.skipped())))
 
     def _on_edit_profile(self, profile: Optional[Profile]):
         """Open the add/edit dialog for a single profile."""
