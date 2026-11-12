@@ -18,8 +18,8 @@ from paramiko.ssh_exception import NoValidConnectionsError
 from models.server import is_unmanaged
 from modules.command_guard import dangerous_token, excerpt
 from modules.logger import optional_logger
-from modules.ssh_connect import (ConnectionCancelled, build_connect_kwargs,
-                                 interactive_transport_factory)
+from modules.ssh_connect import (ConnectionCancelled, ROLE_TARGET, JumpSpecError, connect_client,
+                                 interactive_transport_factory, parse_jump)
 
 from . import credentials, hostkeys
 from . import project as PROJECT_SOURCE
@@ -236,25 +236,39 @@ def verify_presented_key(client, expected) -> None:
 def open_session(node, credential, options, timeout, note=None) -> Session:
     """Open ONE authenticated client through the SHIPPED builder and the CLI's host-key policy.
 
-    The builder owns the arguments (`build_connect_kwargs()`: Key → Password → Agent) and this function
-    owns only WHAT it hands over: the credential `cli/credentials.py` resolved, the timeout, and the
-    answering transport — the shipped factory whose keyboard-interactive handler REFUSES instead of
-    reading the process's stdin (`AGENTS.md` §4.4.1). After the handshake the presented key is compared
-    with `--host-key` on EVERY path (pinned host included). Every failure goes through `classify()`.
+    The builder owns the arguments (`connect_client()`: Key → Password → Agent), the known-hosts policy
+    and the ONE internal hop when the node names a `jump_host`. This function owns only WHAT it hands
+    over: the resolved credential, the timeout, the answering transport whose keyboard-interactive
+    handler REFUSES instead of reading the process's stdin (`AGENTS.md` §4.4.1), and the policy factory:
+    `--accept-new` covers BOTH endpoints, while `--host-key` names the TARGET alone. The bastion reuses
+    the target's KEY or the agent — never its password — and `--accept-new` is its ONE pin opt-in. After
+    the handshake the presented target key is compared with `--host-key` on EVERY path (pinned host
+    included). Every failure goes through `classify()`; a malformed jump field is a REFUSAL, not a wire
+    error, and costs no connection.
     """
     host = str(getattr(node, "host", "") or "")
     user = str(getattr(node, "user", "") or "")
     port = node_port(node)
-    client = _client_class()()
-    policy = hostkeys.CliHostKeyPolicy(host, port, accept_new=options.accept_new,
-                                       expected=options.host_key, note=note)
-    policy.apply_to_client(client)
-    kwargs = build_connect_kwargs(host, user, port, password=credential.password,
-                                  key_path=credential.key_path, timeout=timeout,
-                                  banner_timeout=timeout, auth_timeout=timeout,
-                                  transport_factory=interactive_transport_factory(host, user, port))
     try:
-        client.connect(**kwargs)
+        jump = parse_jump(getattr(node, "jump_host", "") or "", default_user=user)
+    except JumpSpecError as exc:
+        raise refusal(f"{label(node)}: {exc}", "fix the node's jump host on the map") from exc
+
+    def policy_factory(hostname, port_number, role):
+        """Both endpoints get the CLI policy; only the TARGET carries the explicitly named key."""
+        return hostkeys.CliHostKeyPolicy(
+            hostname, port_number, accept_new=options.accept_new,
+            expected=(options.host_key if role == ROLE_TARGET else ""), note=note)
+
+    client_factory = _client_class()
+    client = client_factory()
+    try:
+        client, _policy = connect_client(
+            host, user, port, password=credential.password, key_path=credential.key_path,
+            client=client, timeout=timeout, banner_timeout=timeout, auth_timeout=timeout,
+            transport_factory=interactive_transport_factory(host, user, port),
+            jump=jump, jump_key_path=credential.key_path,
+            client_factory=client_factory, policy_factory=policy_factory)
         verify_presented_key(client, options.host_key)
     except Exception as exc:  # noqa: BLE001 — the ONE table answers the class, the verb raises
         Session(client).close()

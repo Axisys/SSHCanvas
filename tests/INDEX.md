@@ -183,6 +183,7 @@ of the file itself.
 | `test_import_drafts.py` | — | v1.15.2 — the import draft rows: three Qt-free sources, ONE row model, the CLI preview and the GUI apply. |
 | `test_index.py` | — | The generated suite map — `tests/INDEX.md` is fresh and every test file carries its docstring. |
 | `test_inventory.py` | — | v1.5.5 — The inventory: the LIST mode becomes a report (v1.5.5). |
+| `test_jump_host.py` | — | The internal jump host: ONE `direct-tcpip` hop in `connect_client()`, its policy seam and its wiring. |
 | `test_keyring_fail_backend.py` | — | Regression v0.9.4b: the keyring fail backend + review notes. |
 | `test_keyring_validation.py` | — | Regression v0.9.5.5 (security #1): the keyring backend — validation and guard. |
 | `test_language_folder.py` | — | v1.3.3.8 — the user language folder, the import/export manager and ONE `terminal_max_open` range. |

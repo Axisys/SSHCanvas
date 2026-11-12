@@ -371,6 +371,7 @@ class SSHConnectDialog(QDialog):
             server_id=self.server_data.id,  # for load_password from the keyring
             password=password,
             key_path=key_path,
+            jump_host=getattr(self.server_data, "jump_host", "") or "",
             test_only=test_only,
             parent=self,
         )

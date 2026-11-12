@@ -4,7 +4,7 @@
 `Authorization:` header and `openssl passwd` join the DECLARED list, and such a command is still
 WRITTEN; §2 the jump host on `ServerData`, its round trip through the project file and the server
 dialog; §3 the importer: `ProxyJump` FILLS the field while `ProxyCommand` stays a note; §4 the
-external terminal receives it at BOTH doors and the internal path never sees it; §5 the reader's
+external terminal receives it at BOTH doors and the internal path follows it; §5 the reader's
 encoding is a PER-PANE choice over ONE remembered default; §6 the standalone's exemption from
 `terminal_max_open`, in the contract and in the code; §7 the i18n and the release state.
 Rule — `AGENTS.md` §4.3.6, §4.3.9, §4.4.2; mechanism — `DOCUMENTATION.md` §27, §49, §64, §75.
@@ -277,7 +277,7 @@ check("§3 ...and the parsed record the row returns is the one the import writes
 _dlg_imp.deleteLater()
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §4 the external terminal carries the jump, the internal path does not ==")
+print("== §4 the external terminal carries the jump, the internal path follows it ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 _EXT_ARGS = ET.build_ssh_args("10.0.0.9", "ops", 2222, None, "bastion.example.com")
@@ -383,18 +383,16 @@ _sdlg.deleteLater()
 
 _connect_src = _read("modules", "ssh_connect.py")
 _mws_src = _read("ui", "main_window_ssh.py")
-check("§4 the INTERNAL path never reads the field — no `direct-tcpip`, no jump in the builder",
-      "jump" not in _connect_src
-      and all("jump_host" not in _read(*parts)
-              for parts in (("modules", "ssh_terminal.py"), ("modules", "terminal_page.py"),
-                            ("services", "system_info_collector.py")))
-      and "jump_host" in _func_body(_mws_src, "_connect_ssh_external")
-      and "jump_host" not in _func_body(_mws_src, "_run_ssh_connect"),
-      str(_mws_src.count("jump_host")))
-check("§4 ...and the ONE connect builder keeps its signature (the jump is the OS client's job)",
-      "jump" not in SC.build_connect_kwargs.__code__.co_varnames
-      and "sock" not in SC.build_connect_kwargs.__code__.co_varnames,
-      str(SC.build_connect_kwargs.__code__.co_varnames))
+check("§4 the INTERNAL path reads the field too: ONE `direct-tcpip` hop in the builder",
+      "direct-tcpip" in _connect_src and "parse_jump" in _connect_src
+      and "jump" in SC.connect_client.__code__.co_varnames
+      and "jump_host" in _read("modules", "terminal_page.py")
+      and "jump=self.jump_host" in _read("modules", "ssh_terminal.py")
+      and "jump=" in _read("services", "system_info_collector.py"),
+      str(SC.connect_client.__code__.co_varnames))
+check("§4 ...while the external door still hands the value to `ssh -J`",
+      "jump_host" in _func_body(_mws_src, "_connect_ssh_external")
+      and "jump_host" not in _func_body(_mws_src, "_run_ssh_connect"))
 
 # ════════════════════════════════════════════════════════════════════════════
 print("== §5 the reader's encoding is a PER-PANE choice ==")

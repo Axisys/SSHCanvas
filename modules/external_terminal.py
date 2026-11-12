@@ -252,7 +252,8 @@ def jump_problem(jump: str) -> Optional[str]:
     """Is this `-J` value unusable on a FOREIGN command line? PURE — the reason, or None.
 
     A jump spec is `[user@]host[:port]`, so it is judged by the same two rules (the ONE home of
-    each). Nothing in the UI passes a jump today, which is exactly why the check is free here.
+    each). The external door hands the node's value to `ssh -J`, and `modules/jump_host.py` reuses
+    this pair for the INTERNAL hop, so both doors refuse the same alphabet.
     """
     text = str(jump or "").strip()
     if not text:

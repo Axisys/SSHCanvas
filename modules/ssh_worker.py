@@ -64,7 +64,7 @@ class SSHWorker(QThread):
     error = Signal(str)
 
     def __init__(self, host: str, user: str, port: int, server_id: str = "",
-                 password: str = "", key_path: str = "",
+                 password: str = "", key_path: str = "", jump_host: str = "",
                  test_only: bool = False, load_from_store: bool = True,
                  passphrase: str = "", verification_code: str = "",
                  parent=None):
@@ -80,6 +80,7 @@ class SSHWorker(QThread):
         self.server_id = server_id  # for loading from the keyring
         self.password = password
         self.key_path = key_path
+        self.jump_host = str(jump_host or "").strip()
         self.test_only = test_only
         self.load_from_store = load_from_store
         # v1.8.1 (N63): a secret the caller already collected — never logged, never serialized.
@@ -191,7 +192,8 @@ class SSHWorker(QThread):
                                             password=final_password, key_path=self.key_path,
                                             client=client, timeout=CONNECT_TIMEOUT_S,
                                             passphrase=self.passphrase,
-                                            verification_code=self.verification_code)
+                                            verification_code=self.verification_code,
+                                            jump=self.jump_host, jump_key_path=self.key_path)
 
             msg = t("ssh.connected_ok", host=self.host)
             # AUDIT v0.7.2 (high #4): first connection — warn about the accepted key

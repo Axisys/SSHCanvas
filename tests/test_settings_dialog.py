@@ -195,8 +195,8 @@ class _FakeSSHThread(_FakeSSHThreadBase):
     """+ a deterministic isRunning: the active session is simulated with the
     _running_override flag (the test_terminal_acceptance.py pattern)."""
 
-    def __init__(self, host, user, port, password="", key_path=""):
-        super().__init__(host, user, port, password, key_path)
+    def __init__(self, host, user, port, password="", key_path="", jump_host=""):
+        super().__init__(host, user, port, password, key_path, jump_host=jump_host)
         self._running_override = False
 
     def isRunning(self):

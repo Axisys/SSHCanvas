@@ -88,11 +88,10 @@ class ServerData:
     # the inventory's sort key parses that field WHOLE. Additive: a foreign value loads as "" / [].
     disk_device: str = ""
     disk_devices: "list | None" = None
-    # v1.12.3: the JUMP HOST of the EXTERNAL terminal — the value the OS ssh client
-    # takes after `-J` (`[user@]host[:port]`, a comma-separated chain). REQUEST-like and additive: a
-    # project without the key loads as "" ("no jump") and an older version ignores it, so
-    # `VERSION_FORMAT` stays "0.9". `modules/external_terminal.py` is the ONLY consumer — the INTERNAL
-    # path would need `open_channel("direct-tcpip")` (`AGENTS.md` §4.4.2).
+    # The JUMP HOST: `[user@]host[:port]`, the value `ssh -J` takes and `modules/jump_host.py` parses
+    # for the internal ONE-hop `direct-tcpip` channel. A comma-separated chain belongs to the external
+    # terminal alone. REQUEST-like and additive: a project without the key loads as "" (no jump) and
+    # an older version ignores it, so `VERSION_FORMAT` stays "0.9".
     jump_host: str = ""
 
     def __post_init__(self):

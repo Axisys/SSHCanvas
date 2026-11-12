@@ -70,10 +70,11 @@ class _BlockingTermThread(QThread):
     closed_signal = QtSignal()
     connected_signal = QtSignal()
 
-    def __init__(self, host, user, port, password="", key_path=""):
+    def __init__(self, host, user, port, password="", key_path="", jump_host=""):
         super().__init__()
         self.host, self.user, self.port = host, user, port
         self.password, self.key_path = password, key_path
+        self.jump_host = jump_host
         self.client = None
         self.channel = None
         self.running = True

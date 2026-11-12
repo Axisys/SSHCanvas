@@ -189,9 +189,11 @@ def default_credentials(node: PluginNode, node_facts: Optional[Dict[str, dict]] 
     facts = (node_facts or {}).get(node.id) or {}
     try:
         key_path = str(facts.get("key_path") or "")
+        jump_host = str(facts.get("jump_host") or "")
     except Exception:  # noqa: BLE001
         key_path = ""
-    return {"password": password, "key_path": key_path}
+        jump_host = ""
+    return {"password": password, "key_path": key_path, "jump_host": jump_host}
 
 
 def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAND_TIMEOUT_S,
@@ -213,6 +215,7 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
     credentials = credentials or {}
     password = str(credentials.get("password") or "")
     key_path = str(credentials.get("key_path") or "")
+    jump_host = str(credentials.get("jump_host") or "")
     client = None
     try:
         # v1.8rc6 (N50): the ONE connect builder (`AGENTS.md` §4.4) — the branch table, the
@@ -225,7 +228,8 @@ def run_command_over_ssh(node: PluginNode, command: str, timeout: float = COMMAN
         client, _policy = connect_client(node.host, node.user, node.port,
                                          password=password, key_path=key_path,
                                          timeout=timeout, banner_timeout=timeout,
-                                         auth_timeout=timeout)
+                                         auth_timeout=timeout,
+                                         jump=jump_host, jump_key_path=key_path)
 
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         try:

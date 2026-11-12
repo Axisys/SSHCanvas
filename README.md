@@ -62,7 +62,7 @@ A PySide6 desktop application providing an interactive IT infrastructure map wit
     *   **Destructive Commands:** Prompts for confirmation before executing commands like `rm -rf` or `reboot`.
 *   **Command Library:** Converts historical commands to macros (10-version history, JSON export/import). Side panel manages **Commands** and **Servers**. Commands can be marked **Requires confirmation**.
 *   **Command History:** Per-server `History` tab. Supports importing from disk or `~/.bash_history` with filtering and deduplication. Secrets are marked with a padlock.
-*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` maintains reading position. An external `ssh` terminal is available, supporting per-server **jump hosts** via `~/.ssh/config`.
+*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` maintains reading position. Every built-in session and `sshcanvas-cli exec` can traverse one per-server **jump host**; the external `ssh` terminal passes the same value as `-J`.
 *   **SFTP & Files Commander:**
     *   **SFTP:** Integrated over live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews (JSON, XML, YAML, and plain text).
     *   **Row Verbs:** Right-click to **Download** or **Upload** files/folders.
@@ -105,7 +105,7 @@ A PySide6 desktop application providing an interactive IT infrastructure map wit
 *   **Plugins:** System for custom monitors, commands, and menu rows. Broken plugins are reported without freezing the app.
 *   **Plugins Window:** Manage plugins, target servers, and execution reports side-by-side.
 *   **Internationalization:** Supports English, Russian, Chinese, and German, with custom JSON language support.
-*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` provides `inventory`, `connections`, `status`, `doctor`, and `exec` verbs as text or `--json`. `hostkey verify` checks `~/.sshmap/known_hosts` against current server keys without pinning. `import` previews sources (`ssh-config`, `drawio`, `profiles`) as draft rows.
+*   **Headless CLI:** `sshcanvas-cli` / `sshmap-cli` provides `inventory`, `connections`, `status`, `doctor`, and `exec` verbs as text or `--json` (a node's jump host is followed by `exec`). `hostkey verify` checks `~/.sshmap/known_hosts` against current server keys without pinning. `import` previews sources (`ssh-config`, `drawio`, `profiles`) as draft rows.
 
 ---
 
@@ -155,7 +155,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 
 ### Format Invariants
 *   **Passwords:** Never serialized; stored only in the OS keyring.
-*   **Jump host:** Optional per server; used by the external terminal only.
+*   **Jump host:** Optional per server; one internal hop for built-in sessions and `exec`, and `-J` for the external terminal.
 *   **Connections:** Types: `ssh|vpn|http|database|nfs|kubernetes`.
 *   **Groups:** Membership is inferred by card position relative to the group rectangle.
 *   **Tags/Launch:** Broken arrays are emptied; broken records are dropped.
@@ -169,7 +169,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 ### Credential Security
 *   **Keyring Integration:** Uses secure OS backends (Windows Credential Manager, Linux secret-service, macOS keychain); plaintext fallbacks are rejected.
 *   **Endpoint Binding:** Passwords are bound to `user@host:port`; address or login changes trigger a new prompt.
-*   **External Terminal:** The external `ssh` process handles its own password entry; credentials are never passed via command-line.
+*   **External Terminal:** The external `ssh` process handles its own password entry; credentials are never passed via command-line. The internal jump host authenticates to the bastion with your SSH key or agent; a password-only bastion is not supported.
 
 ### Connectivity & Guardrails
 *   **Host Keys:** Missing or changed keys trigger a verification window. Fingerprints are stored atomically.
@@ -242,7 +242,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 200 test files and the parallel runner |
+| `tests/` | 201 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

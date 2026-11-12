@@ -133,12 +133,13 @@ class FakeSSHThread(QThread):
     closed_signal = QtSignal()
     connected_signal = QtSignal()
 
-    def __init__(self, host, user, port, password="", key_path="", record=None):
+    def __init__(self, host, user, port, password="", key_path="", record=None, jump_host=""):
         super().__init__()
         if record is None:
             record = self.RECORD
         self.host, self.user, self.port = host, user, port
         self.password, self.key_path = password, key_path
+        self.jump_host = jump_host
         self.client = None
         self.channel = FakeSSHChannel(record) if record is not None else None
         self.running = True
@@ -162,8 +163,8 @@ class BlockingFakeSSHThread(FakeSSHThread):
     """Simulation of a paramiko connection: run() blocks until release() — a
     "live" session for the ask gate (stop() does not interrupt, like a real connect)."""
 
-    def __init__(self, host, user, port, password="", key_path=""):
-        super().__init__(host, user, port, password, key_path)
+    def __init__(self, host, user, port, password="", key_path="", jump_host=""):
+        super().__init__(host, user, port, password, key_path, jump_host=jump_host)
         self.channel = None
         self._release = threading.Event()
 

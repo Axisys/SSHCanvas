@@ -766,7 +766,9 @@ class SystemInfoCollector(QThread):
                 client, _policy = connect_client(
                     self.data.host, self.data.user, self.data.ssh_port or 22,
                     password=final_password, key_path=self.data.key_path, client=client,
-                    timeout=_TIMEOUT_S, banner_timeout=_TIMEOUT_S)
+                    timeout=_TIMEOUT_S, banner_timeout=_TIMEOUT_S,
+                    jump=getattr(self.data, "jump_host", "") or "",
+                    jump_key_path=self.data.key_path)
 
                 # v1.6.6: the batch carries THIS node's requested data mount
                 # (`build_info_batch` quotes it into the `df` argument and the existence test).

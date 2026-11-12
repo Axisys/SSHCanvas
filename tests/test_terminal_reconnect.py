@@ -68,7 +68,7 @@ class _FakeThread(QThread):
 
     created = []
 
-    def __init__(self, host, user, port, password="", key_path=""):
+    def __init__(self, host, user, port, password="", key_path="", jump_host=""):
         super().__init__()
         self.host, self.user, self.port = host, user, port
         self.password, self.key_path = password, key_path

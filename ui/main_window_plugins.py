@@ -159,8 +159,9 @@ class PluginMixin:
         facts = {}
         for node in nodes:
             key_path = getattr(node.data, "key_path", "") or ""
-            if key_path:
-                facts[node.data.id] = {"key_path": key_path}
+            jump_host = getattr(node.data, "jump_host", "") or ""
+            if key_path or jump_host:
+                facts[node.data.id] = {"key_path": key_path, "jump_host": jump_host}
         try:
             self._plugin_manager.set_nodes([n.data for n in nodes], facts=facts)
         except Exception as e:  # noqa: BLE001 — a plugin registry must never break the menu

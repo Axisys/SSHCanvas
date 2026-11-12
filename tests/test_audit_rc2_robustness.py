@@ -124,7 +124,7 @@ class _FakeWorker(QThread):
     error = QtSignal(str)
 
     def __init__(self, host, user, port, server_id, password="", key_path="",
-                 test_only=False, parent=None):
+                 test_only=False, parent=None, jump_host=""):
         super().__init__(parent)
         self.test_only = test_only
         self._release = threading.Event()

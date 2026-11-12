@@ -43,7 +43,7 @@ HISTORY_MARKERS = (
 # `VERSION_TAG_PINS` is the ratchet of three SURFACES, one pin each, and a pin only goes DOWN: the
 # module header, the function/class docstrings and the body comments (AGENTS.md §12.5 owns the rule).
 VERSION_TAG_RE = re.compile(r"\bv\d+(?:\.\d+)+(?:rc\d+)?\b", re.I)
-VERSION_TAG_PINS = {"headers": 0, "docstrings": 1055, "comments": 1898}
+VERSION_TAG_PINS = {"headers": 0, "docstrings": 1037, "comments": 1894}
 # The surfaces are the APPLICATION tree's: the suite's own comments describe the release they guard.
 APP_TREES = ("main.py", "version.py", "models", "graphics", "modules", "storage", "services",
              "dialogs", "ui", "i18n")
@@ -54,7 +54,7 @@ BLOCK_BUDGET_LINES = 5     # a comment block in the body: the invariant + the po
 
 # ── The pins (the goal state, REACHED: every budget below is the rule itself) ─────────────────
 NARRATIVE_PIN = 0          # HISTORY_MARKERS matches in the code text — the goal state
-HEADER_LINES_PIN = 3788    # module docstring lines, all files — RAISED only by a NEW module or topical
+HEADER_LINES_PIN = 3805    # module docstring lines, all files — RAISED only by a NEW module or topical
                            # file, whose header the changelog family's own entry names
 MAX_HEADER_PIN = 12        # the longest module docstring — the budget itself
 HEADER_FILES_PIN = 0       # module docstrings longer than HEADER_BUDGET_LINES — the goal state

@@ -247,7 +247,7 @@ class SSHTerminalThread(QThread):
     # command).
     connected_signal = Signal()
 
-    def __init__(self, host, user, port, password="", key_path="", term=""):
+    def __init__(self, host, user, port, password="", key_path="", term="", jump_host=""):
         super().__init__()
         # v1.6.4: the managed session thread names itself — Qt's abort on a
         # thread destroyed while running names an UNNAMED thread as '', and THIS is the class
@@ -258,6 +258,7 @@ class SSHTerminalThread(QThread):
         self.port = port
         self.password = password
         self.key_path = key_path
+        self.jump_host = str(jump_host or "").strip()
         # The PTY's `TERM` (`terminal_term`, `AGENTS.md` §4.3): an EXPLICIT argument passes the ONE
         # allowlist here, an empty one leaves the answer to the connect — `run()` reads the key on
         # the SESSION thread, so the birth and every re-arm ask for it the same way.
@@ -289,14 +290,13 @@ class SSHTerminalThread(QThread):
         try:
             self.status_signal.emit(t("terminal.connecting", user=self.user, host=self.host, port=self.port))
 
-            # AUDIT v0.7.2 (high #4): known_hosts pinning instead of AutoAddPolicy — the policy is
-            # applied by the builder, and the KEY branch passes the password as well: paramiko
-            # treats `password` as an AUTH METHOD tried LAST, so it is what makes the main surface
-            # (terminal + the Files tab riding the same transport) authenticate on a host where the
-            # key alone is refused — the three diagnostic paths already did (v1.7.5.1, N50 minimum).
+            # The policy is applied by the builder; the KEY branch also passes the password (paramiko's
+            # LAST method), so a host refusing the key alone still authenticates the terminal and Files.
             client, policy = connect_client(self.host, self.user, self.port,
                                             password=self.password or "",
                                             key_path=self.key_path,
+                                            jump=self.jump_host,
+                                            jump_key_path=self.key_path,
                                             timeout=CONNECT_TIMEOUT_S)
 
             self.client = client

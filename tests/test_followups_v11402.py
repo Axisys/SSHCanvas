@@ -211,18 +211,27 @@ check("§1b a probe that RAISES is reported offline and the crash is kept",
       _answer == (SC.STATUS_OFFLINE, "") and "probe" in sink.text().lower(),
       f"answer={_answer} log={sink.text()!r}")
 
-_thread = SC._ProbeThread([("sid-1", "example.test", 22)], status_provider=_raise(RuntimeError))
-with _records(SC_LOG) as sink:
-    _answer = _thread._probe_one("sid-1", "example.test", 22)
-check("§1b a status provider that raises is skipped and the skip is recorded",
-      _answer == (SC.STATUS_OFFLINE, "") and "provider" in sink.text().lower(),
-      f"answer={_answer} log={sink.text()!r}")
+# The probe itself is stubbed here: a wildcard resolver maps `example.test` to a live port on some
+# networks, and these two checks are about the PROVIDER's failure being recorded, not about the wire.
+_real_probe_ssh = SC.probe_ssh
+SC.probe_ssh = lambda *_a, **_k: SC.STATUS_OFFLINE
+try:
+    _thread = SC._ProbeThread([("sid-1", "example.test", 22)],
+                              status_provider=_raise(RuntimeError))
+    with _records(SC_LOG) as sink:
+        _answer = _thread._probe_one("sid-1", "example.test", 22)
+    check("§1b a status provider that raises is skipped and the skip is recorded",
+          _answer == (SC.STATUS_OFFLINE, "") and "provider" in sink.text().lower(),
+          f"answer={_answer} log={sink.text()!r}")
 
-_thread = SC._ProbeThread([("sid-1", "example.test", 22)], status_provider=lambda *_a: 42)
-with _records(SC_LOG) as sink:
-    _answer = _thread._probe_one("sid-1", "example.test", 22)
-check("§1b a provider answering a FOREIGN shape is recorded, not dropped in silence",
-      _answer == (SC.STATUS_OFFLINE, "") and sink.lines, f"answer={_answer} log={sink.text()!r}")
+    _thread = SC._ProbeThread([("sid-1", "example.test", 22)], status_provider=lambda *_a: 42)
+    with _records(SC_LOG) as sink:
+        _answer = _thread._probe_one("sid-1", "example.test", 22)
+    check("§1b a provider answering a FOREIGN shape is recorded, not dropped in silence",
+          _answer == (SC.STATUS_OFFLINE, "") and sink.lines,
+          f"answer={_answer} log={sink.text()!r}")
+finally:
+    SC.probe_ssh = _real_probe_ssh
 
 _real_one = SC._ProbeThread._probe_one
 SC._ProbeThread._probe_one = _raise(RuntimeError)

@@ -849,10 +849,9 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
     def _build_thread(self):
         """The session thread of THIS page — the ONE constructor of `terminal_thread`.
 
-        The birth and every re-arm call it, so the two threads of a page describe the SAME
-        endpoint, the SAME resolved settings and the SAME credential: the class is fetched from
-        the `ssh_terminal` module at call time (the suite's seam) and the password travels only
-        as an argument — never through the model, a file or a log (`AGENTS.md` §4.4).
+        The birth and every re-arm call it: the SAME endpoint, settings and credential. The class is
+        fetched at call time (the suite's seam) and the password travels only as an argument — never
+        through the model, a file or a log (`AGENTS.md` §4.4).
         """
         thread_cls = _st_module().SSHTerminalThread
         return thread_cls(
@@ -861,6 +860,7 @@ class TerminalSessionPage(TerminalFilesPanelMixin, TerminalPageSftpMixin, Termin
             port=self.server_data.ssh_port or 22,
             password=getattr(self, "_session_password", ""),
             key_path=self.server_data.key_path,
+            jump_host=getattr(self.server_data, "jump_host", "") or "",
         )
 
     def _wire_thread(self):
