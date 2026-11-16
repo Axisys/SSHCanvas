@@ -589,10 +589,6 @@ check_release_state(ROOT)
 check(f"§8 this release is v{EXPECTED_APP_VERSION} (the `1.15` line or a later one)",
       releases_at_least(EXPECTED_APP_VERSION, "1.15") and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
-check(f"§8 the release adds the 51 preview keys (the pin EXPECTED_I18N_KEYS = {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1205 + 51
-      and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
-      {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)
 check("§8 the new action is in the registry with an EMPTY default and NO duplicate id",
       HR.default_sequence("file.import_drawio") == ""

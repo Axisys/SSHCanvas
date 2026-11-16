@@ -208,6 +208,12 @@ def ssh_client_available() -> bool:
 HOST_ALLOWED_RE = re.compile(r"^[A-Za-z0-9._:\-\[\]]+$")
 USER_ALLOWED_RE = re.compile(r"^[A-Za-z0-9._\-]+$")
 
+# A `-J` value is a chain of these hops: the bound is the command-line guard (the comma is not a
+# `cmd.exe` / Windows Terminal metacharacter), and a space inside the value stays a refusal.
+MAX_JUMP_HOPS = 8
+MAX_JUMP_CHARS = 1024
+_SPACE_RE = re.compile(r"\s")
+
 # The refusal codes `validate_target()` answers (`connect_external()` returns them as its error_code).
 TARGET_BAD_HOST = "bad_host"
 TARGET_BAD_USER = "bad_user"
@@ -251,18 +257,26 @@ def user_problem(user: str) -> Optional[str]:
 def jump_problem(jump: str) -> Optional[str]:
     """Is this `-J` value unusable on a FOREIGN command line? PURE — the reason, or None.
 
-    A jump spec is `[user@]host[:port]`, so it is judged by the same two rules (the ONE home of
-    each). The external door hands the node's value to `ssh -J`, and `modules/jump_host.py` reuses
-    this pair for the INTERNAL hop, so both doors refuse the same alphabet.
+    The value is a CHAIN of `[user@]host[:port]` hops separated by `,` — the form OpenSSH itself takes
+    after `-J` — and EVERY hop is judged by the same two rules (the ONE home of each). The bound is the
+    command-line guard: `MAX_JUMP_HOPS` hops and `MAX_JUMP_CHARS` characters. A space inside the value,
+    an empty hop and a hop outside the address alphabet are all refused. `modules/jump_host.py` reads
+    the SAME field as ONE internal hop, so a chain is the external door's alone.
     """
     text = str(jump or "").strip()
     if not text:
         return None
-    who, _, where = text.rpartition("@")
-    if who and user_problem(who):
+    if len(text) > MAX_JUMP_CHARS or _SPACE_RE.search(text):
         return "characters"
-    if host_problem(where or text):
+    hops = text.split(",")
+    if len(hops) > MAX_JUMP_HOPS:
         return "characters"
+    for hop in hops:
+        who, _, where = hop.rpartition("@")
+        if who and user_problem(who):
+            return "characters"
+        if host_problem(where or hop):
+            return "characters"
     return None
 
 

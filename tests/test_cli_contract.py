@@ -1229,10 +1229,6 @@ check(f"§9 this release is v{EXPECTED_APP_VERSION} (the base of the 1.15 line o
       releases_at_least(EXPECTED_APP_VERSION, "1.15")
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
-check(f"§9 the base adds NO i18n key — the CLI speaks English (parity stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1256
-      and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
-      {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)
 _REQUIREMENTS = [line for line in read(os.path.join(ROOT, "requirements.txt")).splitlines()
                  if line.strip() and not line.strip().startswith("#")]

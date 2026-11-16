@@ -5,14 +5,15 @@
 verification code) as the LAST method paramiko tries, a PASSWORD alone refuses to poll the local keys or
 the ssh-agent, and neither falls back to the shipped key/agent pair. `connect_client()` is the live half —
 the application's known-hosts policy, the ANSWERING transport (a second factor is answered by the user,
-never the process's stdin) and the ONE retry after a CHANGED host key was replaced. A non-empty `jump`
-adds ONE internal hop: the bastion's own client and a `direct-tcpip` channel handed to the target as
-`sock=`; the bastion uses the KEY/AGENT sources only and its OWN host-key policy.
-A caller keeps its own timeouts and error handling: the builder owns the ARGUMENTS, never the failure,
-and a password, a passphrase or a code never reaches a log, a file or an argv.
-Tests — `tests/test_ssh_connect.py`, `tests/test_jump_host.py`; mechanism — §16."""
+never the process's stdin), the passphrase resolved ONCE and the ONE retry after a CHANGED host key. A
+non-empty `jump` adds ONE internal hop: the bastion's client and a `direct-tcpip` channel handed to the
+target as `sock=`; the bastion uses the KEY/AGENT sources only, its OWN host-key policy, and its failure
+is a `JumpHopError` (`jump_error_text()` answers the sentence — never the target's). A caller keeps the
+timeouts and the error handling: the builder owns the ARGUMENTS, never the failure, and no secret
+reaches a log, a file or an argv. Tests — `tests/test_ssh_connect.py`, `tests/test_jump_host.py`; §16."""
 
 import os
+import socket
 
 import paramiko
 
@@ -65,6 +66,56 @@ class ConnectionCancelled(paramiko.SSHException):
 
 #: The refusal `missing_host_key()` raises — re-exported so a call site gets both from ONE import.
 HostKeyRejected = _host_key_policy.HostKeyRejected
+
+
+class JumpHopError(Exception):
+    """A BASTION failure — reported as the hop's, never as the target's (`N194`).
+
+    `cause` is what the bastion's own connect or `direct-tcpip` open raised; `spec.label` is the ONE
+    spelling of the endpoint the sentence names. This is NOT a translated refusal, and the two the
+    USER decided (`HostKeyRejected`, `ConnectionCancelled`) are never wrapped in it: their message is
+    already a finished sentence. `jump_error_text()` is the ONE reader of both shapes.
+    """
+
+    def __init__(self, spec, cause):
+        super().__init__(str(cause))
+        self.spec = spec
+        self.cause = cause
+
+
+#: The jump failures a call site catches BEFORE its generic branch (`AGENTS.md` §4.5).
+JUMP_ERRORS = (JumpSpecError, JumpHopError)
+
+
+def _hop_sentence(error) -> str:
+    """The bastion's own failure through the SHIPPED `ssh.*` keys — the target's endpoint is never named."""
+    spec, cause = error.spec, error.cause
+    if isinstance(cause, paramiko.BadHostKeyException):
+        return _t("ssh.host_key_changed", host=spec.host)
+    if isinstance(cause, paramiko.AuthenticationException):
+        return _t("ssh.auth_failed")
+    if isinstance(cause, paramiko.PasswordRequiredException):
+        return _t("ssh.key_passphrase_required", host=spec.host)
+    if isinstance(cause, (socket.timeout, TimeoutError)):
+        return _t("ssh.socket_timeout", host=spec.host, port=spec.port)
+    if isinstance(cause, (paramiko.SSHException, OSError)):
+        return _t("ssh.connection_failed", host=spec.host, port=spec.port)
+    return str(cause)
+
+
+def jump_error_text(error) -> str:
+    """The ONE translated sentence of a refused jump value or a failed hop (`modules/jump_host.py`).
+
+    A `JumpSpecError` is answered by its `reason` code (the six `ssh.jump_*` keys); a `JumpHopError`
+    maps its CAUSE through the shipped `ssh.*` keys and appends the hop label — unless that sentence
+    already names the host (the two `{host}`/`{port}` keys do), so the hop is named exactly once. A
+    surface therefore never shows the parser's English or blames the target for the bastion's refusal.
+    """
+    if isinstance(error, JumpHopError):
+        sentence = _hop_sentence(error)
+        return sentence if error.spec.host in sentence else f"{sentence} — {error.spec.label}"
+    key = _jump.JUMP_ERROR_KEYS.get(getattr(error, "reason", _jump.REASON_HOST), "ssh.jump_host_invalid")
+    return _t(key)
 
 
 def build_connect_kwargs(host, user, port, password="", key_path="", passphrase="",
@@ -251,15 +302,6 @@ class _JumpSocket:
         self._owner = owner
         self._closed = False
 
-    def send(self, data):
-        return self._channel.send(data)
-
-    def recv(self, size):
-        return self._channel.recv(size)
-
-    def settimeout(self, timeout):
-        return self._channel.settimeout(timeout)
-
     def close(self):
         if self._closed:
             return
@@ -285,29 +327,37 @@ def _jump_policy_factory(policy_factory):
     return lambda hostname, port, _role: policy_factory(hostname, port, ROLE_JUMP)
 
 
-def _open_jump_socket(spec, jump_key_path, timeout, banner_timeout, auth_timeout,
+def _open_jump_socket(spec, jump_key_path, jump_passphrase, timeout, banner_timeout, auth_timeout,
                       client_factory, policy_factory, target_host, target_port):
     """Authenticate to the bastion and open ONE `direct-tcpip` channel to the target.
 
     The bastion is a CONNECT like any other (`connect_client()` with its own policy and the picking
-    transport), then one channel is opened and wrapped; a failure closes the bastion client before it
-    reaches the caller.
+    transport), then one channel is opened and wrapped. `jump_passphrase` is the value the TARGET's
+    connect already resolved, so an encrypted key is asked about ONCE (`N193`); a failure closes the
+    bastion client before it reaches the caller and is a `JumpHopError`, so the sentence names the hop.
     """
-    jump_client, _jump_policy = connect_client(
-        spec.host, spec.user, spec.port, password="", key_path=jump_key_path,
-        timeout=timeout, banner_timeout=banner_timeout, auth_timeout=auth_timeout,
-        transport_factory=interactive_transport_factory(spec.host, spec.user, spec.port),
-        client_factory=client_factory, policy_factory=_jump_policy_factory(policy_factory))
+    try:
+        jump_client, _jump_policy = connect_client(
+            spec.host, spec.user, spec.port, password="", key_path=jump_key_path,
+            passphrase=jump_passphrase, timeout=timeout, banner_timeout=banner_timeout,
+            auth_timeout=auth_timeout,
+            transport_factory=interactive_transport_factory(spec.host, spec.user, spec.port),
+            client_factory=client_factory, policy_factory=_jump_policy_factory(policy_factory))
+    except (HostKeyRejected, ConnectionCancelled):
+        raise   # the user's own decision already carries a finished sentence for ITS endpoint
+    except Exception as exc:
+        raise JumpHopError(spec, exc) from exc
     try:
         transport = jump_client.get_transport()
         if transport is None:
             raise paramiko.SSHException("the jump host answered no transport")
         channel = transport.open_channel("direct-tcpip", (target_host, target_port),
                                          ("127.0.0.1", 0), timeout=timeout)
-    except Exception:
+    except Exception as exc:
         _close_quiet(jump_client)
-        raise
+        raise JumpHopError(spec, exc) from exc
     return _JumpSocket(channel, jump_client)
+
 
 
 def connect_client(host, user, port, password="", key_path="", client=None,
@@ -327,7 +377,8 @@ def connect_client(host, user, port, password="", key_path="", client=None,
     bastion client and a `direct-tcpip` channel to this endpoint, handed over as `sock=`. The bastion
     authenticates with `jump_key_path` or the key/agent fallback — NEVER the target's password — and
     gets its OWN policy from `policy_factory(hostname, port, role)`, so both endpoints are judged and
-    reported separately. The channel and the bastion client die with the target's `close()`.
+    reported separately; its passphrase is the ONE this call resolved. The channel and the bastion
+    client die with the target's `close()`, and a bastion failure is a `JumpHopError`.
 
     A CHANGED host key is ONE question, not a failure: `resolve_changed_key()` asks the user, and a yes
     replaces the stored entry and reconnects on a FRESH client and a FRESH hop (the failed ones are
@@ -336,10 +387,13 @@ def connect_client(host, user, port, password="", key_path="", client=None,
     client handed IN belongs to its caller, so it is never closed here (`N101`).
     """
     spec = parse_jump(jump, default_user=user) if jump else None
+    # ONE ask for the key's passphrase: the value the target's kwargs carry is the one the bastion
+    # gets, so an encrypted key never prompts twice during ONE connect (`N193`).
+    resolved_passphrase = resolve_passphrase(host, user, port, key_path, passphrase,
+                                             password=password, verification_code=verification_code)
     kwargs = build_connect_kwargs(
         host, user, port, password, key_path,
-        passphrase=resolve_passphrase(host, user, port, key_path, passphrase,
-                                      password=password, verification_code=verification_code),
+        passphrase=resolved_passphrase,
         verification_code=verification_code, timeout=timeout,
         banner_timeout=banner_timeout, auth_timeout=auth_timeout,
         transport_factory=(transport_factory or interactive_transport_factory(host, user, port)))
@@ -355,7 +409,7 @@ def connect_client(host, user, port, password="", key_path="", client=None,
             policy.apply_to_client(client)
             if spec is not None:
                 jump_socket = _open_jump_socket(
-                    spec, jump_key_path, timeout, banner_timeout, auth_timeout,
+                    spec, jump_key_path, resolved_passphrase, timeout, banner_timeout, auth_timeout,
                     client_factory, policy_factory, host, port)
                 kwargs["sock"] = jump_socket
             client.connect(**kwargs)

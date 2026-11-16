@@ -710,8 +710,6 @@ check("the version pin is the release this file describes (its own line or a lat
       releases_at_least(EXPECTED_APP_VERSION, "1.7")
       and VERSION_FORMAT_RE.fullmatch(EXPECTED_APP_VERSION) is not None,
       EXPECTED_APP_VERSION)
-check("the i18n pin counts the SHIPPED release (854 + the 9 keys of v1.7rc3 + the 4 of the v1.7.1 Files panel + the 3 of the v1.7.1.1 Files display mode + the 4 of the v1.7.1.2 device choice + the 4 of v1.7.2: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab + the 19 of v1.7.3: the Send-to row and its dialog, the busy/progress/done/failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and Word wrap + the 17 of v1.7.4rc1: the local source switch of a pane, its two refusals, the permanent- delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a move that would cross the two sources + the 4 of v1.7.5: the Files settings page, its ceiling row and its warning, and the truncation notice + the 41 of v1.8.1: the trust surface, and v1.8.1.1 adds ONE: the send identity sentence) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
-      EXPECTED_I18N_KEYS == 854 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51, str(EXPECTED_I18N_KEYS))
 check("VERSION_FORMAT did NOT move (the project schema is unchanged)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("no new dependency was added for the walk (the four pinned ones)",

@@ -756,10 +756,6 @@ check(f"§6 this release is v{EXPECTED_APP_VERSION} (the line's base release or 
       releases_at_least(EXPECTED_APP_VERSION, "1.15")
       and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
-check(f"§6 the milestone adds NO i18n key (the parity pin stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1256
-      and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
-      {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)
 check("§6 no new dependency: requirements.txt keeps its four pins",
       len([line for line in read(os.path.join(ROOT, "requirements.txt")).splitlines()

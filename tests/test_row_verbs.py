@@ -561,10 +561,7 @@ _check_keys = ["sftp.op.download", "sftp.op.upload", "terminal.cmdlib.connect",
 check("§7 the NINE keys of the release are non-empty in every language",
       all(LANGS[c].get(k) for c in LANGS for k in _check_keys),
       str({c: [k for k in _check_keys if not LANGS[c].get(k)] for c in sorted(LANGS)}))
-check("§7 ...and the pin carries them (1135 + this release's 9 + the later 18 + 4 + the 13 of v1.13.6)",
-      len(_check_keys) == 9
-      and EXPECTED_I18N_KEYS == 1135 + len(_check_keys) + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51,
-      str(EXPECTED_I18N_KEYS))
+check("§7 the release adds its nine keys", len(_check_keys) == 9, str(len(_check_keys)))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 

@@ -164,11 +164,11 @@ class SSHWorker(QThread):
         # known-hosts policy and the single `connect()` live in `modules/ssh_connect.py`; this
         # site keeps only the credential resolution and the error reporting below.
         try:
-            from .ssh_connect import (CONNECT_TIMEOUT_S, ConnectionCancelled, HostKeyRejected,
-                                      connect_client)
+            from .ssh_connect import (CONNECT_TIMEOUT_S, JUMP_ERRORS, ConnectionCancelled,
+                                      HostKeyRejected, connect_client, jump_error_text)
         except ImportError:  # flat layout
-            from ssh_connect import (CONNECT_TIMEOUT_S, ConnectionCancelled, HostKeyRejected,
-                                     connect_client)
+            from ssh_connect import (CONNECT_TIMEOUT_S, JUMP_ERRORS, ConnectionCancelled,
+                                     HostKeyRejected, connect_client, jump_error_text)
 
         # Resolve password: explicit arg > credential manager > key-based fallback
         final_password = self.password or ""
@@ -216,6 +216,9 @@ class SSHWorker(QThread):
         except paramiko.AuthenticationException:
             msg = t("ssh.auth_failed")
             self._emit_error(msg if not msg.startswith("[") else "Authentication failed")
+        except JUMP_ERRORS as e:
+            # A refused jump value or a failed bastion: the field's OWN translated sentence (`N196`).
+            self._emit_error(jump_error_text(e))
         except paramiko.SSHException as e:
             # v1.8.1 (N63): the user's own refusal carries a FINISHED sentence — never re-wrapped
             # into the generic "SSH error:" line, which would bury the reason in a prefix.

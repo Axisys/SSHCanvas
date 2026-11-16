@@ -172,7 +172,7 @@ class SSHConnectDialog(QDialog):
         self.user_edit.textChanged.connect(self._refresh_credential_hint)
         self.port_edit.valueChanged.connect(self._refresh_credential_hint)
 
-        # UI polish: emojis removed from the i18n values (server.key, ssh.connect, ssh.test);
+        # UI polish: emojis removed from the i18n values (server.key, ssh.connect, ssh.test_direct);
         # don't add them in the code — there was a duplication bug ("🔑 🔑 SSH key").
         key_btn = QPushButton(self.t("server.key"))
         key_btn.clicked.connect(self._select_key_file)
@@ -226,7 +226,10 @@ class SSHConnectDialog(QDialog):
         self.connect_btn = QPushButton(self.t("ssh.connect"))
         self.connect_btn.clicked.connect(self._connect_ssh)
 
-        self.test_btn = QPushButton(self.t("ssh.test"))
+        self.test_btn = QPushButton(self.t("ssh.test_direct"))
+        # The probe is a DIRECT TCP connect (`SSHWorker._run_socket_test()`): it never follows the
+        # node's jump host, so the label says so and a bastion-only target is "Connect via SSH".
+        self.test_btn.setToolTip(self.t("ssh.test_direct"))
         self.test_btn.clicked.connect(self._test_connection)
 
         # v0.8.2: "Open in external terminal" button — the OS ssh client

@@ -7,10 +7,10 @@ an exclusion, FIRST OBTAINED VALUE WINS per option, `Include` resolved recursive
 (globs expanded); `load_ssh_config()` logs ONE record and answers `skipped`/`notes`.
 
 IMPORTED: `HostName` → host (unset → the alias), `User` (unset → the local user), `Port` (unset →
-22), `IdentityFile` (the first one; `none` clears it), `ProxyJump` → jump_host (the `-J` value of the
-external terminal). SKIPPED WITH A NOTE: a wildcard or `Match` block, `ProxyCommand` (a command line
-that is NOT a `-J` spec), a second `IdentityFile`, an unreadable `Include`. HEADLESS: no Qt, no i18n,
-no network; every user string is a `REASON_*`/`NOTE_*` code plus a `detail`."""
+22), `IdentityFile` (the first one; `none` clears it), `ProxyJump` → jump_host (the `-J` value: a comma
+chain for the external terminal, ONE hop for the built-in path). SKIPPED WITH A NOTE: a wildcard or
+`Match` block, `ProxyCommand` (a command line that is NOT a `-J` spec), a second `IdentityFile`, an
+unreadable `Include`. HEADLESS: no Qt, no i18n, no network; every string is a `REASON_*`/`NOTE_*` code."""
 
 import getpass
 import glob
@@ -73,7 +73,7 @@ class SshConfigHost:
     key_path: str = ""
     source: str = ""      # the config file the alias was first seen in
     line: int = 0         # …and the line number of its `Host` directive
-    jump_host: str = ""   # the `ProxyJump` value — the `-J` argument of the external terminal
+    jump_host: str = ""   # the `ProxyJump` value — the `-J` argument (a chain, or ONE internal hop)
                           # (appended LAST: a positional caller keeps its meaning)
 
 

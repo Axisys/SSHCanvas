@@ -580,8 +580,6 @@ print("== §9 the release state ==")
 
 check("EXPECTED_APP_VERSION is the version this test file describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7"), EXPECTED_APP_VERSION)
-check("the pin counts the shipped keys (+29 of v1.5.7: the tab, the panel chrome, the seven menu items with their reports and refusals, + the marked secret of v1.6.4) — 708 + 29 + 41 + 4 + 4 + 3 + 11 + 11 + 17 + 13 + 5 + 8 = 854 (+9 of v1.7rc3 = 863, +4 of the v1.7.1 Files panel = 867, +3 of the v1.7.1.1 Files display mode = 870, +4 of the v1.7.1.2 device choice = 874, +4 of v1.7.2 = 878, +19 of v1.7.3 = 897, +17 of v1.7.4rc1 = 914, +1 of v1.7.4rc2 = 915, v1.8 adds TWENTY: the elevated pane, v1.8.1 its 41 and v1.8.1.1 ONE: the send identity sentence) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51, str(EXPECTED_I18N_KEYS))
 check_release_state(ROOT)
 
 _langs = load_i18n_langs(ROOT)

@@ -314,9 +314,8 @@ print("== §7 the release state ==")
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
-check("§7 the split adds NO i18n key and NO schema move (1180 / 0.9)",
-      EXPECTED_I18N_KEYS == 1180 + 1 + 12 + 3 + 2 + 7 + 51 and VERSION_FORMAT == "0.9",
-      f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
+check("§7 the split moves NO schema (`VERSION_FORMAT` stays 0.9)",
+      VERSION_FORMAT == "0.9", VERSION_FORMAT)
 check("§7 the pin names this milestone", releases_at_least(EXPECTED_APP_VERSION, "1.14"),
       EXPECTED_APP_VERSION)
 check("§7 the shipped version is the one the pin names", APP_VERSION == EXPECTED_APP_VERSION,

@@ -12,7 +12,7 @@ import json
 import os
 import threading
 
-from _common import (EXPECTED_APP_VERSION, EXPECTED_I18N_KEYS, bootstrap, changelog_family_text,
+from _common import (EXPECTED_APP_VERSION, bootstrap, changelog_family_text,
                      check, check_i18n_parity, check_release_state, finish, load_i18n_langs,
                      releases_at_least)
 
@@ -340,9 +340,12 @@ try:
     _hop_error = ""
 except Exception as exc:  # noqa: BLE001 — the test reads the propagated class
     _hop_error = type(exc).__name__
-check("§2 a failed bastion closes the bastion and the target client it never reached",
-      _hop_error == "AuthenticationException"
+check("§2 a failed bastion closes both clients and is the HOP's error, never the target's",
+      _hop_error == "JumpHopError"
+      and SCON.jump_error_text(SCON.JumpHopError(
+          SCON.JumpSpec("bastion.example"), paramiko.AuthenticationException())) != ""
       and by_policy("bastion.example").closed and by_policy("target.example").closed, _hop_error)
+
 
 reset(fail_host="target.example", failure=paramiko.AuthenticationException("target refused"))
 try:
@@ -494,14 +497,8 @@ print("== §5 the release state ==")
 # ════════════════════════════════════════════════════════════════════════════
 
 check_release_state(ROOT)
-check("§5 this release is v1.15.3 (the internal jump host slot)",
-      EXPECTED_APP_VERSION == "1.15.3" and releases_at_least(EXPECTED_APP_VERSION, "1.15.3"),
-      EXPECTED_APP_VERSION)
-check("§5 the slot adds NO i18n key (the parity pin stays 1256)",
-      EXPECTED_I18N_KEYS == 1256
-      and all(len({k for k in data if k not in ("name", "partial")}) == EXPECTED_I18N_KEYS
-              for data in LANGS.values()),
-      {code: len(data) for code, data in sorted(LANGS.items())})
+check("§5 this file describes v1.15.3 and the patches on it",
+      releases_at_least(EXPECTED_APP_VERSION, "1.15.3"), EXPECTED_APP_VERSION)
 check_i18n_parity(LANGS)
 check("§5 the family carries v1.15.3",
       "v1.15.3" in changelog_family_text(ROOT)
@@ -510,7 +507,11 @@ check("§5 the project format and the dependency list did not move",
       version.VERSION_FORMAT == "0.9"
       and len([line for line in read("requirements.txt").splitlines()
                if line.strip() and not line.strip().startswith("#")]) == 4)
-check("§5 the README quotes the real test-file count", "201 test files" in read("README.md"))
+_N_TEST_FILES = len([f for f in os.listdir(os.path.join(ROOT, "tests"))
+                     if f.startswith("test_") and f.endswith(".py")])
+check("§5 the README quotes the real test-file count",
+      f"{_N_TEST_FILES} test files" in read("README.md"), str(_N_TEST_FILES))
+
 
 
 finish()

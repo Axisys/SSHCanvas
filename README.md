@@ -62,7 +62,7 @@ A PySide6 desktop application providing an interactive IT infrastructure map wit
     *   **Destructive Commands:** Prompts for confirmation before executing commands like `rm -rf` or `reboot`.
 *   **Command Library:** Converts historical commands to macros (10-version history, JSON export/import). Side panel manages **Commands** and **Servers**. Commands can be marked **Requires confirmation**.
 *   **Command History:** Per-server `History` tab. Supports importing from disk or `~/.bash_history` with filtering and deduplication. Secrets are marked with a padlock.
-*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` maintains reading position. Every built-in session and `sshcanvas-cli exec` can traverse one per-server **jump host**; the external `ssh` terminal passes the same value as `-J`.
+*   **Scroll Mode & External Terminal:** `terminal_scroll = "pin"` maintains reading position. Every built-in session and `sshcanvas-cli exec` can traverse one per-server **jump host**; the external `ssh` terminal passes the same value as `-J`, where a comma chain routes through several bastions.
 *   **SFTP & Files Commander:**
     *   **SFTP:** Integrated over live SSH transport. Supports drag & drop, atomic transfers, and syntax-highlighted previews (JSON, XML, YAML, and plain text).
     *   **Row Verbs:** Right-click to **Download** or **Upload** files/folders.
@@ -155,7 +155,7 @@ The project is stored in a single `.json` or `.sshmap` file:
 
 ### Format Invariants
 *   **Passwords:** Never serialized; stored only in the OS keyring.
-*   **Jump host:** Optional per server; one internal hop for built-in sessions and `exec`, and `-J` for the external terminal.
+*   **Jump host:** Optional per server; ONE internal hop for built-in sessions and `exec`, and `-J` for the external terminal, where a comma chain (up to 8 hops) is accepted.
 *   **Connections:** Types: `ssh|vpn|http|database|nfs|kubernetes`.
 *   **Groups:** Membership is inferred by card position relative to the group rectangle.
 *   **Tags/Launch:** Broken arrays are emptied; broken records are dropped.
@@ -242,7 +242,7 @@ python tests/run_all.py --failed-only  # Re-run previous failures
 | `ui/` | Main window, sidebar, themes, palettes, icons |
 | `i18n/` | Internationalization JSON files |
 | `themes/` | Theme packs: one JSON file per pack |
-| `tests/` | 201 test files and the parallel runner |
+| `tests/` | 202 test files and the parallel runner |
 | `examples/plugins/` | Example plugins and walkthroughs |
 | `third_party/` | Managed `pyte` fork and patches |
 | `docs/` | Documentation assets |

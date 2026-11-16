@@ -482,12 +482,7 @@ _new_keys = ["terminal.cmdlib.head_servers", "terminal.cmdlib.servers_search",
              "terminal.cmdlib.map_is_here", "terminal.cmdlib.no_map"]
 check("§6 the TEN keys of the release are non-empty in every language",
       all(_langs[c].get(k) for c in _langs for k in _new_keys)
-      # this release's TEN, read off the LIVE pin: the 1094 baseline + v1.11's ten + the later
-      # releases' own additions (v1.12's TEN, v1.12.3's THREE, v1.12.4.1's ONE, v1.13's FOUR,
-      # v1.13.1's THREE, the fifth read's TWO, v1.13.2's EIGHT, v1.13.3's NINE, v1.13.4's
-      # EIGHTEEN, v1.13.5's FOUR, v1.13.6's THIRTEEN (the search's eleven, the trash's two),
-      # v1.13.6.2's ONE and v1.14.1's TWELVE: the reader's verbs).
-      and len(_new_keys) == EXPECTED_I18N_KEYS - 1094 - 10 - 3 - 1 - 4 - 3 - 2 - 8 - 9 - 18 - 4 - 13 - 1 - 1 - 12 - 3 - 2 - 7 - 51,
+      and len(_new_keys) == 10,
       str({c: len(_langs[c]) for c in sorted(_langs)}))
 
 

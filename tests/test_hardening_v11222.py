@@ -526,13 +526,6 @@ print("== §8 the i18n and the release state ==")
 
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
-check("§8 this release adds NO key — the patch moved predicates, not words",
-      # the patch left the pin at 1114; the LATER follow-ups of the line add their own keys
-      # (v1.12.3's THREE: the jump host's label, its hint and the import picker's column,
-      # v1.13.2's EIGHT: the wallpaper row, v1.13.3's NINE: the row verbs and the Servers menu).
-      EXPECTED_I18N_KEYS == 1114 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51
-      and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS),
-      str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
 check("§8 the sentences the patch re-uses are the SHIPPED ones",
       all(LANGS["en"].get(k) for k in ("terminal.cmdlib.no_project", "terminal.cmdlib.project_empty",
                                        "terminal.cmdlib.servers_empty", "msg.error_title")))

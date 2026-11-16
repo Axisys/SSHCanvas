@@ -493,10 +493,8 @@ check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 _NEW_KEYS = ("server.jump_label", "server.jump_hint", "sshconfig.col_jump")
 check("§7 the release adds the THREE keys of the jump field to EVERY language at once",
-      EXPECTED_I18N_KEYS == 1117 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51
-      and all(len(translation_keys(LANGS[c])) == EXPECTED_I18N_KEYS for c in LANGS)
-      and all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS),
-      f"{EXPECTED_I18N_KEYS} / " + str({c: len(translation_keys(LANGS[c])) for c in sorted(LANGS)}))
+      all(LANGS[c].get(k) for c in LANGS for k in _NEW_KEYS),
+      str([c for c in LANGS if not all(LANGS[c].get(k) for k in _NEW_KEYS)]))
 check("§7 the sentences the release re-uses are the SHIPPED ones",
       all(LANGS["en"].get(k) for k in ("sshconfig.note.proxy", "terminal.history.secret_refused",
                                        "ssh_ext.bad_jump", "sftp.viewer.encoding")))

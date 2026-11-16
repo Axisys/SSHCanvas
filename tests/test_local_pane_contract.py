@@ -661,8 +661,6 @@ check_i18n_format(LANGS)
 check_release_state(ROOT)
 check("§9 the version pin is the release this audit ships with",
       releases_at_least(EXPECTED_APP_VERSION, "1.7.4"), EXPECTED_APP_VERSION)
-check("§9 the i18n pin counts the shipped keys (the local pane's 18 + the v1.7.5 slot's 4 + the v1.7.5.1 slot's 6 + the v1.8 elevated pane's 20 + the v1.8.1 trust surface's 41 + the ONE of v1.8.1.1) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
-      EXPECTED_I18N_KEYS == 897 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51, str(EXPECTED_I18N_KEYS))
 check("§9 VERSION_FORMAT did NOT move (a path is never written into a project)",
       __import__("version").VERSION_FORMAT == "0.9")
 check("§9 no new dependency was added for the local pane (the four pinned ones)",

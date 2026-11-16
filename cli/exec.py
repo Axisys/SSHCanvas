@@ -18,14 +18,15 @@ from paramiko.ssh_exception import NoValidConnectionsError
 from models.server import is_unmanaged
 from modules.command_guard import dangerous_token, excerpt
 from modules.logger import optional_logger
-from modules.ssh_connect import (ConnectionCancelled, ROLE_TARGET, JumpSpecError, connect_client,
-                                 interactive_transport_factory, parse_jump)
+from modules.ssh_connect import (ConnectionCancelled, ROLE_JUMP, ROLE_TARGET, JumpHopError,
+                                 JumpSpecError, connect_client, interactive_transport_factory,
+                                 parse_jump)
 
 from . import credentials, hostkeys
 from . import project as PROJECT_SOURCE
 from . import verb_args
 from .dispatch import Verb, register
-from .errors import CliError, auth_error, network_error, refusal, timeout_error, usage_error
+from .errors import (CliError, auth_error, network_error, refusal, timeout_error, usage_error)
 from .hostkeys import HostKeyRejected
 
 NAME = "exec"
@@ -77,6 +78,11 @@ def classify(exc, where="") -> CliError:
     a socket error the table does not know is still a network answer, never a traceback.
     """
     prefix = f"{where}: " if where else ""
+    if isinstance(exc, JumpHopError):
+        # The BASTION failed, not the target: the hop's OWN label is the prefix (`N194`), so the
+        # cause keeps its class and hint while `where` (the target endpoint) is not used.
+        inner = classify(exc.cause, "")
+        return CliError(f"{exc.spec.label}: {inner.message}", inner.code, inner.hint)
     if isinstance(exc, paramiko.BadHostKeyException):
         got = getattr(exc, "key", None) or getattr(exc, "got_key", None)
         return refusal(f"{prefix}the host key CHANGED (now {hostkeys.fingerprint(got) if got else '?'}) "
@@ -258,7 +264,8 @@ def open_session(node, credential, options, timeout, note=None) -> Session:
         """Both endpoints get the CLI policy; only the TARGET carries the explicitly named key."""
         return hostkeys.CliHostKeyPolicy(
             hostname, port_number, accept_new=options.accept_new,
-            expected=(options.host_key if role == ROLE_TARGET else ""), note=note)
+            expected=(options.host_key if role == ROLE_TARGET else ""),
+            bastion=(role == ROLE_JUMP), note=note)
 
     client_factory = _client_class()
     client = client_factory()

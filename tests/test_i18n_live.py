@@ -5,7 +5,7 @@ The release added `retranslate()` to the terminal containers (`sftp_tab`, `termi
 `MainWindow._apply_ui_translations()`, with ZERO new keys beyond `lang.reload` /
 `status.language_reloaded`, and it closed the note-debounce hotfix (`_note_edit_pending` flushed by
 `_do_save()` and by `closeEvent` before the "unsaved changes" question).
-§1 the containers follow the switch in windows mode; §2 the dock, the SFTP tab and the macro panel too; §3 the files (BOM, `"partial"`, the meta keys); §4 the language list without a restart (the submenu rebuild on `aboutToShow`, the settings combo, `lang.reload`); §5 placeholders and line breaks end to end; §6 the counter guards over README.md / ROADMAP.md; §7 zh.json's missing break + the release state."""
+§1 the containers follow the switch in windows mode; §2 the dock, the SFTP tab and the macro panel too; §3 the files (BOM, `"partial"`, the meta keys); §4 the language list without a restart (the submenu rebuild on `aboutToShow`, the settings combo, `lang.reload`); §5 placeholders and line breaks end to end; §6 the counter guards over README.md / ROADMAP.md; §7 zh.json's missing break; §8 the note debounce; §9 the parity ledger (`R20`) and the release state."""
 # tags: slow
 import importlib.util
 import io
@@ -811,78 +811,42 @@ check("_do_save() without a pending edit is a no-op for the note state",
 
 
 # ════════════════════════════════════════════════════════════════════════════
-print("== §9 the release state ==")
+print("== §9 the parity ledger and the release state ==")
 # ════════════════════════════════════════════════════════════════════════════
 
-check("EXPECTED_APP_VERSION is the version this test file describes",
-      releases_at_least(EXPECTED_APP_VERSION, "1.6.8"), EXPECTED_APP_VERSION)
-check("the pin counts the keys of the SHIPPED release (v1.5.2 added THIRTEEN — all the CHROME "
-      "of the activity panel — v1.5.3 added TWENTY in three families: the age of the "
-      "collected facts (`node.info.collected_now` plus the minutes/hours/days steps), the "
-      "batch collection (progress / done / failed / none) and the reachability report "
-      "(`ctx.diagnose`, `status.diagnose_running` and the eight `diagnose.*` verdicts with "
-      "their two ICMP evidence lines), v1.5.4 added ELEVEN: the group aggregate's two "
-      "captions, the three strings of the \"problems only\" chip and the six of the "
-      "active-filter plaque, v1.5.5 added FOURTEEN: the five inventory columns, the four "
-      "compact age captions of the two age cells and the two report actions with their three "
-      "reports, v1.5.6 added TWO: the new top-level `menu.export` container and the third "
-      "door of the first screen (`empty.state.open_map`), and v1.5.7 added TWENTY-NINE: the "
-      "`History` tab, the panel's chrome (the filter, the three columns, the empty / "
-      "no-matches / counts lines, the `last_unknown` marker) and the six context-menu items "
-      "with their import reports and refusal lines; the numbers and the behaviour of a "
-      "release cost no key, so 661 + 20 + 11 + 14 + 2 + 29 + 41 + 4 + 4 + 3 + 11 = 800)"
-      " (v1.6.4 adds THREE: the activity mark's tooltip, the zoom's status line and the "
-      "marked-secret tooltip of the command history), v1.6.5 adds ELEVEN (the "
-      "unmanaged card) and v1.6.6 adds ELEVEN: the "
-      "unmanaged card — its two dialog checkboxes with their tooltips, the band mark "
-      "and the card tooltip, the one caption the inventory table and the info plaque "
-      "share, the two lines of a MANUAL reachability check and the gate's refusal "
-      "sentence with the status-bar line that carries it), and v1.6.7 adds SEVENTEEN: "
-      "the bookmarks panel (its switch, its title, its tooltip, the filter placeholder, "
-      "the empty and the no-match sentences and the editor button with its tooltip), the "
-      "editor dialog (its title, the description, the two column captions, Add, Remove "
-      "and the URL hint) and the two reports of a save — 811 + 17 = 828), and v1.6.8 "
-      "adds THIRTEEN: the \"Connect to…\" row, the first screen's Shift+drag sentence "
-      "(its `{add_connection}` placeholder is the action's own label), the picker's "
-      "no-match answer, the attention report's action and its five column captions with "
-      "the one new word of its vocabulary (\"stale\") and the three sentences it reports "
-      "with — 828 + 13 = 841), and v1.7rc1 adds FIVE: the Files Commander action with "
-      "its tooltip, the one sentence the two-pane mode reports when it opens (the "
-      "active-pane rule) and the two answers of the pane-scoped keys (the reserved "
-      "F5 copy and \"select a row first\") — 841 + 5 = 846), and v1.7rc2 adds EIGHT: "
-      "the copy's status line, the \"no second pane\" sentence, the batch-start line, "
-      "the two closing reports (copy and move), the partial-tree report, the refused "
-      "cross-directory move and the tree-over-its-bound sentence — 846 + 8 = 854; v1.7rc3 adds "
-      "EIGHT: the five `sftp.hint.*` labels of the second pane's hint row and the three keys of the "
-      "mc/far walk — 854 + 8 = 862; v1.7rc3 adds the sentence that answers a second preview opened "
-      "while the other pane is previewing — 862 + 1 = 863; v1.7.1 adds FOUR: the Files panel toggle "
-      "of the terminal window, its tooltip and the two tooltips of the panel's fold — 863 + 4 = 867; "
-      "v1.7.1.1 moves that mode into the settings hub and adds THREE: the row of the Files display "
-      "mode and its two values (the tab and the panel) — 867 + 3 = 870; v1.7.1.2 adds FOUR: the "
-      "device row of the disk question with its precedence hint, the card's one-line device list "
-      "and the sentence of a chosen device the listing does not hold — 870 + 4 = 874; v1.7.2 adds "
-      "FOUR: the third row of the display mode (the single window), the merge action and its one "
-      "closing report, and the remote title of a session's tab tooltip — 874 + 4 = 878; v1.7.3 adds "
-      "NINETEEN: the Send-to row and its dialog, the busy / progress / done / failed reports, the "
-      "two-sided conflict facts, the remembered-folder sentence, the two drop refusals and the Word "
-      "wrap row — 878 + 19 = 897; v1.7.4rc1 adds SEVENTEEN: the source switch of a pane (its "
-      "label and its two values), the local wordings (\"This computer\" and the two structural "
-      "refusals of the switch and of a transfer), the permanent-delete warning and the nine "
-      "refusal sentences of the local file surface — 897 + 17 = 914; v1.7.4rc2 adds ONE: the "
-      "refusal of a move that would cross the two sources — 914 + 1 = 915; v1.7.5 adds FOUR: the "
-      "Files page of the settings hub with its ceiling row and its warning, and the "
-      "truncation notice of the reader — 915 + 4 = 919; v1.7.5.1 adds SIX: the three external-terminal "
-      "refusals, the unpinned host-key warning, the send-queue notice and the refused download name — "
-      "919 + 6 = 925, and v1.8 adds TWENTY: the elevated pane, v1.8.1 its 41 (the trust surface) and "
-      "v1.8.1.1 adds ONE: the identity sentence of a send) and v1.8.2 adds SIXTEEN: the library file "
-      "menu of the macro panel with the ring's restore, the import/export pair and their reports, the "
-      "door's three sentences on the History row and the confirmation of an import"
-      " — 925 + 20 + 41 + 1 + 16 = 1003, and v1.8.3 adds TWENTY-THREE: the Plugins window — its "
-      "title and the three column captions, its three buttons, the door of the Plugins menu, the "
-      "checked-servers hint, the two empty sentences and the twelve column headers of its tables"
-      " — 1003 + 23 = 1026, and v1.8.4 adds TEN: the whole-map layout, the reverse traversal and the inode fact, and v1.9 adds FOUR: the production-tag guard — its title, the broadcast sentence and the paste sentence — and the notice of a checked selection that has left the map, and v1.9.1 adds ELEVEN: the reconnect and its `tmux attach`; v1.9.3 adds THIRTEEN: the command dialog's ten keys and the reader's encoding three; v1.9.6 adds THREE: the command guard's two sentences and the refusal line; v1.9.8 adds THIRTEEN: the two `Clear` asks with their hints and their title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.9.7 adds TWELVE: the four section titles of the Add Server dialog, its four example placeholders, the required-field hint, the key-file tooltip and the two footer words; v1.9.8 adds THIRTEEN: the two `Clear` asks with their two hints and their one title, the `Diagnostics ▸` submenu with its imperative row, the session tab's identity line, the two source-switch tooltips and the three fields of the Settings dialog's font row; v1.10rc1 adds ONE: the auto-open checkbox; v1.10rc2 adds ONE: the PTY's `TERM` row; v1.13.2 adds EIGHT: the wallpaper row of the terminal settings — its label, its two buttons, its placement with its three values and its opacity row; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu with its connect row, its `All tags`, its two sort directions and their tooltip and the two quick-launch sentences; v1.13.4 adds EIGHTEEN: the Diff tab — its tab title, its row and tooltip, its two side names, its empty sentence, its header, its two buttons, its encoding line, its three comparison sentences, its binary and read refusals, and the Files menu's submenu with its row and its no-targets sentence; v1.13.5 adds FOUR: the confirmation box of a library record (its label and its tooltip) and the question it asks (its title and its sentence); v1.13.6 adds THIRTEEN: the content search of the Files panes, the reversible local delete and the per-session codec, and v1.13.6.2 adds ONE: the per-file cut sentence of that search; v1.14 adds ONE: the `Find text` button's tooltip",
-      EXPECTED_I18N_KEYS == 863 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51,
-      str(EXPECTED_I18N_KEYS))
+# THE ONE LEDGER of the parity count (`R20`). `EXPECTED_I18N_KEYS` is the shipped total, this table is
+# the only place that ADDS IT UP, and a topical test file asserts what its own release OWNS (its keys
+# present, translated, placeholders matching) — never the arithmetic. A release that adds keys appends
+# ONE number; a release that adds none appends nothing. WHICH keys a release added is the changelog
+# family's, not this file's.
+KEY_LEDGER_BASE = 811          # the v1.6.6 total, before the first delta below
+KEY_LEDGER = (                 # every later release's delta, oldest first
+    17, 13, 5, 8, 9, 4, 3, 4, 4, 19, 17, 1, 4, 6, 20, 41, 1, 16, 23, 10, 4, 11, 13, 3, 12, 13,
+    1, 1, 10, 10, 3, 1, 4, 3, 2, 8, 9, 18, 4, 13, 1, 1, 12, 3, 2, 7, 51, 7,
+)
+check(f"§9 the ledger sums to the shipped pin ({KEY_LEDGER_BASE} + {len(KEY_LEDGER)} deltas)",
+      EXPECTED_I18N_KEYS == KEY_LEDGER_BASE + sum(KEY_LEDGER),
+      f"{EXPECTED_I18N_KEYS} != {KEY_LEDGER_BASE} + {sum(KEY_LEDGER)} = "
+      f"{KEY_LEDGER_BASE + sum(KEY_LEDGER)}")
+
+# The GATE behind the ledger: a topical test file that re-sums the pin is a SECOND truth that goes
+# stale one release later (58 files did exactly that). Reading the pin through a COUNT comparison
+# (`len(keys) == EXPECTED_I18N_KEYS`) or a floor (`>= N`) stays legitimate — the pinned claim
+# (`EXPECTED_I18N_KEYS == <number…>`) has ONE home, this file.
+_PIN_EQUALITY_RE = re.compile(r"EXPECTED_I18N_KEYS\s*==\s*[\d(]|(?:^|[^\w.])\d{3,4}\s*==\s*"
+                              r"EXPECTED_I18N_KEYS")
+_TESTS_DIR = os.path.join(ROOT, "tests")
+_topical_files = [f for f in sorted(os.listdir(_TESTS_DIR))
+                  if f.startswith("test_") and f.endswith(".py") and f != os.path.basename(__file__)]
+_pin_offenders = []
+for _fname in _topical_files:
+    with open(os.path.join(_TESTS_DIR, _fname), encoding="utf-8") as _fh:
+        if _PIN_EQUALITY_RE.search(_fh.read()):
+            _pin_offenders.append(_fname)
+check("§9 no topical test file re-sums the parity pin (the ledger is the ONE arithmetic home, R20)",
+      not _pin_offenders, _pin_offenders)
+check("§9 the equality gate really scanned the suite (a guard over nothing is useless)",
+      len(_topical_files) > 100, str(len(_topical_files)))
 check_release_state(ROOT)
 for _code in i18n_lang_codes(ROOT):
     check(f"i18n/{_code}.json carries the v1.5 node.status.emulated marker",

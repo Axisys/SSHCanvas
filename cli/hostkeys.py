@@ -35,16 +35,20 @@ def normalize_fingerprint(value) -> str:
 class CliHostKeyPolicy(SshKnownHostsPolicy):
     """The GUI's policy with the ASK removed: an unknown key refuses unless a flag pinned it.
 
-    `accept_new` is `--accept-new`, `expected` is `--host-key` (already normalised), and `note` is the
-    verb's stderr door — the ONE sentence a pinned key leaves behind (`CLI.md` §5.2). The inherited
-    `apply_to_client()` still loads every pinned entry into the client, so a key the store knows never
-    reaches this class; a key it knows DIFFERENTLY raises inside `connect()` before it runs either.
+    `accept_new` is `--accept-new`, `expected` is `--host-key` (already normalised), `bastion` marks
+    the policy of the JUMP hop and `note` is the verb's stderr door — the ONE sentence a pinned key
+    leaves behind (`CLI.md` §5.2). `--host-key` names the TARGET alone, so the bastion's refusal never
+    advises it (`N198`): a bastion is pre-pinned in `~/.sshmap/known_hosts` or accepted with
+    `--accept-new`. The inherited `apply_to_client()` still loads every pinned entry into the client,
+    so a key the store knows never reaches this class; a key it knows DIFFERENTLY raises inside
+    `connect()` before it runs either.
     """
 
-    def __init__(self, hostname="", port=22, accept_new=False, expected="", note=None):
+    def __init__(self, hostname="", port=22, accept_new=False, expected="", bastion=False, note=None):
         super().__init__(hostname, port)
         self.accept_new = bool(accept_new)
         self.expected = normalize_fingerprint(expected)
+        self.bastion = bool(bastion)
         self.note = note if callable(note) else (lambda message: None)
 
     def missing_host_key(self, client, hostname, key):
@@ -56,11 +60,13 @@ class CliHostKeyPolicy(SshKnownHostsPolicy):
                 f"the host key of {self._entry_name()} is {self.last_fingerprint}, not the "
                 f"{self.expected} --host-key named")
         if not (self.expected or self.accept_new):
+            advice = ("pre-pin the bastion in ~/.sshmap/known_hosts out of band, or accept this one "
+                      "with --accept-new" if self.bastion else
+                      "verify it out of band, then pin it with --host-key <fingerprint> or accept this "
+                      "one with --accept-new")
             raise HostKeyRejected(
                 f"the host key of {self._entry_name()} is not pinned "
-                f"({self.last_keytype or 'unknown key type'} {self.last_fingerprint}) — verify it out "
-                f"of band, then pin it with --host-key <fingerprint> or accept this one with "
-                f"--accept-new")
+                f"({self.last_keytype or 'unknown key type'} {self.last_fingerprint}) — {advice}")
         pinned = False
         try:
             pinned = bool(self.store.replace(self._entry_name(), self.last_keytype, key))

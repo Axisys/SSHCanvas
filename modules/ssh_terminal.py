@@ -281,17 +281,17 @@ class SSHTerminalThread(QThread):
         # known-hosts policy and the single `connect()` moved to `modules/ssh_connect.py`; this
         # thread keeps the session it opens and the sentences it reports.
         try:
-            from .ssh_connect import (CONNECT_TIMEOUT_S, ConnectionCancelled, HostKeyRejected,
-                                      connect_client)
+            from .ssh_connect import (CONNECT_TIMEOUT_S, JUMP_ERRORS, ConnectionCancelled,
+                                      HostKeyRejected, connect_client, jump_error_text)
         except ImportError:  # flat layout
-            from ssh_connect import (CONNECT_TIMEOUT_S, ConnectionCancelled, HostKeyRejected,
-                                     connect_client)
+            from ssh_connect import (CONNECT_TIMEOUT_S, JUMP_ERRORS, ConnectionCancelled,
+                                     HostKeyRejected, connect_client, jump_error_text)
 
         try:
             self.status_signal.emit(t("terminal.connecting", user=self.user, host=self.host, port=self.port))
 
-            # The policy is applied by the builder; the KEY branch also passes the password (paramiko's
-            # LAST method), so a host refusing the key alone still authenticates the terminal and Files.
+            # The policy is applied by the builder; the KEY branch passes the password as paramiko's
+            # LAST method, so a host refusing the key alone still authenticates the terminal and Files.
             client, policy = connect_client(self.host, self.user, self.port,
                                             password=self.password or "",
                                             key_path=self.key_path,
@@ -332,11 +332,9 @@ class SSHTerminalThread(QThread):
                     self.status_signal.emit(warn if not warn.startswith("[")
                                             else "WARNING: host key NOT saved")
 
-            # The loop ends on THREE facts: `channel.closed`, `recv() == b""` (EOF) and
-            # `eof_received` / `exit_status_ready()` — each a real end of the session. An EOF must
-            # never be discarded: a dropped `b""` made `recv_ready()` True forever, so the loop
-            # hot-spun on `recv()` and never signalled. Whatever ends it, `finally` emits
-            # `closed_signal` and `_on_closed` writes the ONE status line (§12).
+            # The loop ends on THREE facts: `channel.closed`, an EOF (`recv() == b""`) and
+            # `eof_received`/`exit_status_ready()`; a dropped `b""` hot-spins `recv_ready()`.
+            # Whatever ends it, `finally` emits `closed_signal` and `_on_closed` writes the line.
             while self.running and self.channel and not self.channel.closed:
                 try:
                     # THE SESSION THREAD IS THE ONE WRITER (AGENTS.md §4.3): whatever the input point
@@ -370,9 +368,7 @@ class SSHTerminalThread(QThread):
             if log is not None:
                 log.warning(f"Host key mismatch for {self.host}: {e}")
             msg = t("ssh.host_key_changed", host=self.host) + "\n" + str(e)
-            # v1.1.2RC1 (N4): guard like in the recv loop — the window may have
-            # closed during the connection (stop() → running=False); a late emit
-            # without receivers is not needed.
+            # A late emit is skipped: the window may have closed during the connection (stop()).
             if self.running:
                 self.error_signal.emit(msg if not msg.startswith("[") else f"Host key changed for {self.host}: {e}")
         except paramiko.AuthenticationException:
@@ -383,6 +379,10 @@ class SSHTerminalThread(QThread):
             if self.running:
                 msg = t("ssh.auth_failed")
                 self.error_signal.emit(msg if not msg.startswith("[") else "Authentication failed")
+        except JUMP_ERRORS as e:
+            # A refused jump value or a failed bastion: its OWN sentence names the hop (`N196`).
+            if self.running:
+                self.error_signal.emit(jump_error_text(e))
         except paramiko.SSHException as e:
             # v1.8.1 (N63): the user's own refusal keeps its FINISHED sentence — a host key that was
             # rejected and a prompt nobody answered are not "SSH error: …".

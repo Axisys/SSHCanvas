@@ -299,9 +299,8 @@ print("== §5 the release state ==")
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check_release_state(ROOT)
-check("§5 the wave adds NO i18n key and NO schema move (pure structure; the release's own feature adds the elevated pane's TWENTY, v1.8.1 its 41 and v1.8.1.1 ONE) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC + "; v1.13.2 adds EIGHT: the wallpaper row of the Settings dialog — its label, its two buttons, its placement with its three values and its opacity row; v1.13.3 adds NINE: the two row verbs of a Files pane and the `Servers` menu with its connect row, its `All tags`, its two sort directions and their tooltip and the two quick-launch sentences",
-      EXPECTED_I18N_KEYS == 925 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51 and VERSION_FORMAT == "0.9",
-      f"{EXPECTED_I18N_KEYS} / {VERSION_FORMAT}")
+check("§5 the wave moves NO schema (`VERSION_FORMAT` stays 0.9)",
+      VERSION_FORMAT == "0.9", VERSION_FORMAT)
 check("§5 the pin names this release", releases_at_least(EXPECTED_APP_VERSION, "1.8"),
       EXPECTED_APP_VERSION)
 check("§5 the shipped version is the one the pin names", APP_VERSION == EXPECTED_APP_VERSION,

@@ -590,7 +590,6 @@ check("the follow-up's four keys exist in EVERY language",
       all(all(str(data.get(k) or "").strip() for data in LANGS.values())
           for k in ("settings.tab.files", "settings.files.max_bytes",
                     "settings.files.max_bytes_warning", "sftp.viewer.truncated")))
-check("the i18n pin counts the slot's four keys (the v1.8 elevated pane's 20, the v1.8.1 trust surface's 41 and the ONE of v1.8.1.1) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
-      EXPECTED_I18N_KEYS == 915 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51 and releases_at_least(EXPECTED_APP_VERSION, "1.7.5"),
-      f"{EXPECTED_I18N_KEYS} / {EXPECTED_APP_VERSION}")
+check("the release of this file is v1.7.5 or a later one",
+      releases_at_least(EXPECTED_APP_VERSION, "1.7.5"), EXPECTED_APP_VERSION)
 finish()

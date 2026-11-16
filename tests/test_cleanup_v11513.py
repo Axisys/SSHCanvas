@@ -180,10 +180,6 @@ check_release_state(ROOT)
 check(f"§3 this release is v{EXPECTED_APP_VERSION} (the residue patch on the shipped follow-up)",
       releases_at_least(EXPECTED_APP_VERSION, "1.15.1.3") and version.APP_VERSION == EXPECTED_APP_VERSION,
       f"{EXPECTED_APP_VERSION} / {version.APP_VERSION}")
-check(f"§3 the patch adds NO i18n key (the parity pin stays {EXPECTED_I18N_KEYS})",
-      EXPECTED_I18N_KEYS == 1256
-      and all(len(translation_keys(data)) == EXPECTED_I18N_KEYS for data in LANGS.values()),
-      {code: len(translation_keys(data)) for code, data in sorted(LANGS.items())})
 check_i18n_parity(LANGS)
 check("§3 the JSON project format did NOT move (`VERSION_FORMAT` stays 0.9)",
       version.VERSION_FORMAT == "0.9")

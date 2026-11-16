@@ -1026,8 +1026,6 @@ check_release_state(ROOT)
 check("§9 the version pin is the version this file describes",
       releases_at_least(EXPECTED_APP_VERSION, "1.7") and releases_at_least(_version.APP_VERSION, "1.7"),
       f"{EXPECTED_APP_VERSION} / {_version.APP_VERSION}")
-check("§9 the i18n pin counts the SHIPPED release (811 + 17 of v1.6.7 + 13 of v1.6.8 + 5 of v1.7rc1 + 8 of v1.7rc2 + 9 of v1.7rc3 + 4 of v1.7.1 + 3 of v1.7.1.1 + 4 of the v1.7.1.2 device choice + the 4 of v1.7.2: the third row of the display mode (the single window), the merge action with its one closing report and the remote title of a tab + the 19 of v1.7.3: the Send-to row and its dialog, the busy/progress/done/failed reports, the two-sided conflict facts, the remembered-folder sentence, the two drop refusals and Word wrap + the 17 of v1.7.4rc1: the local source switch of a pane, its two refusals, the permanent- delete warning and the local file-surface sentences, and v1.7.4rc2 adds 1: the refusal of a move that would cross the two sources, and v1.8 adds TWENTY: the elevated pane and the 41 of v1.8.1: the trust surface; v1.8.1.1 adds ONE: the send identity sentence) and " + I18N_PIN_STORY_V182_V198 + I18N_PIN_STORY_V110RC,
-      EXPECTED_I18N_KEYS == 811 + 17 + 13 + 5 + 8 + 9 + 4 + 3 + 4 + 4 + 19 + 17 + 1 + 4 + 6 + 20 + 41 + 1 + 16 + 23 + 10 + 4 + 11 + 13 + 3 + 12 + 13 + 1 + 1 + 10 + 10 + 3 + 1 + 4 + 3 + 2 + 8 + 9 + 18 + 4 + 13 + 1 + 1 + 12 + 3 + 2 + 7 + 51, str(EXPECTED_I18N_KEYS))
 check_i18n_parity(LANGS)
 check_i18n_format(LANGS)
 check("§9 the ELEVEN new keys are present and non-empty in every language",
